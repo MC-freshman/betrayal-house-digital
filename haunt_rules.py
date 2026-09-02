@@ -541,6 +541,41 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [22, 93],
     },
+    12: {
+        # 校准记录（2026-09-02，对照英雄手册 p23 / 叛徒手册 p94）：
+        #   机制落在 FleshwalkerMode：无叛徒；邪恶双胞胎（shadow 模板承载，
+        #   属性=对应玩家作祟开局值、整局冻结）全部在门厅生成；轮转回合序
+        #   天然让怪物阶段落在揭示者回合之后；双胞胎永远追本体、同房优先
+        #   攻击本体否则随机（引擎 rng，可复现）；本体死后其双胞胎由该玩家
+        #   控制（bot 近似：追最近其他英雄）。
+        #   水晶球规则：持球者击败自己的双胞胎即杀死；击败他人双胞胎默认
+        #   击晕，持球且其本体已死则杀死；昏迷双胞胎只有持球者能攻击、
+        #   防守不反击（monster_counterattack_disabled 钩子）；无球与自己的
+        #   双胞胎交手无论胜负四属性各掉 1（on_attack_resolved 钩子）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "fleshwalkers",
+        "traitor_rule": "revealer",
+        "hero_goal": "在至少一名英雄存活的前提下消灭所有邪恶双胞胎。",
+        "traitor_goal": "邪恶双胞胎杀死所有探险者。",
+        "suggested_monsters": ["shadow"],
+        "required_cards": ["omen_crystal_ball"],
+        "key_rooms": ["entrance_hall"],
+        "tokens": ["evil_twin"],
+        "setup": {
+            "tracks": {
+                "twins_killed": {"label": "已消灭双胞胎", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"twin_of": {}, "twins_killed": 0},
+        },
+        "monsters": [
+            {"template_id": "shadow", "name": "邪恶双胞胎", "spawn": "deferred", "count": "player_count"},
+        ],
+        "actions": [],
+        "win_conditions": [],
+        "source_pages": [23, 94],
+    },
 }
 
 
@@ -701,7 +736,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    12: dict(mode="evil_twins", traitor_rule="revealer", hero_goal="消灭所有对应英雄的邪恶双胞胎，并让自己的英雄存活。", traitor_goal="利用邪恶双胞胎杀死所有英雄。", rooms=("entrance_hall", "foyer", "grand_staircase"), monsters=("shadow",), tokens=("evil_twin", "crystal_ball"), hero_task="辨认并击破邪恶双胞胎", traitor_task="驱使双胞胎发动袭击", hero_stat="knowledge", hero_target=5, hero_detail="知识检定成功后压制一个邪恶双胞胎。", traitor_detail="叛徒检定成功后让双胞胎更接近英雄。", monster_count="player_count", engine_note="邪恶双胞胎使用阴影模板，保持不携带物品的特性。"),
     13: dict(mode="nightmare_escape", traitor_rule="revealer", hero_goal="在噩梦逃出房屋前唤醒卧室中的做梦者。", traitor_goal="让噩梦沿逃生房间逃出，或杀死所有英雄。", rooms=("bedroom", "master_bedroom", "entrance_hall", "garden", "graveyard"), monsters=("shadow",), tokens=("nightmare", "escape", "sanity_check", "might_check"), hero_task="唤醒做梦者", traitor_task="放出噩梦", hero_stat=["sanity", "might"], hero_target=5, hero_detail="携带圣徽在做梦者所在房间完成一次唤醒检定。", traitor_detail="推进噩梦逃生轨道；每次成功代表一个噩梦找到出口。", monster_count="player_count"),
     14: dict(mode="paint_the_pentagram", traitor_rule="revealer", hero_goal="把所有油漆罐投入五芒星室，亵渎仪式。", traitor_goal="在五芒星室积累祭品并召唤古神。", rooms=("kitchen", "larder", "junk_room", "research_laboratory", "attic", "pentagram_chamber"), monsters=("cultist",), tokens=("paint", "cultist", "sacrifice"), hero_task="收集并倾倒油漆", traitor_task="献祭并召唤古神", hero_stat="knowledge", hero_target=5, hero_detail="在关键房间找到油漆并推进亵渎进度。", traitor_detail="在五芒星室完成一次献祭检定。", monster_count="player_count", hero_requires=(), traitor_requires=()),
     15: dict(mode="dragon_siege", traitor_rule="revealer", hero_goal="击败龙。", traitor_goal="让龙造成足够破坏并杀死所有英雄。", rooms=("entrance_hall", "chasm", "vault", "catacombs", "underground_lake"), monsters=("giant",), tokens=("dragon", "ancient_armor", "shield", "fire"), hero_task="准备屠龙并造成伤害", traitor_task="指挥龙喷火", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="在龙所在房间完成屠龙行动；长矛、盾牌和古董盔甲可提供帮助。", traitor_detail="推进龙的破坏轨道，代表一次喷火或撕咬。", monster_count=1, engine_note="龙使用巨人模板；火焰免疫和双重攻击待独立组件完成后再细化。"),

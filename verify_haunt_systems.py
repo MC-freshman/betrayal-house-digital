@@ -30,6 +30,7 @@ if __package__ in {None, ""}:
         DeathDanceMode,
         ExorcismMode,
         GenericModeHandler,
+        FleshwalkerMode,
         SeanceRaceMode,
         SpecterInvasionMode,
         WebEscapeMode,
@@ -50,6 +51,7 @@ else:  # pragma: no cover
         CarnivorousIvyMode,
         DeathDanceMode,
         ExorcismMode,
+        FleshwalkerMode,
         GenericModeHandler,
         SeanceRaceMode,
         SpecterInvasionMode,
@@ -99,8 +101,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(DeathDanceMode) == [9], f"剧本 9 未走定制 handler: {handlers.get(DeathDanceMode)}"
     assert handlers.get(ZombieTrapMode) == [10], f"剧本 10 未走定制 handler: {handlers.get(ZombieTrapMode)}"
     assert handlers.get(SpecterInvasionMode) == [11], f"剧本 11 未走定制 handler: {handlers.get(SpecterInvasionMode)}"
+    assert handlers.get(FleshwalkerMode) == [12], f"剧本 12 未走定制 handler: {handlers.get(FleshwalkerMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 59, f"应有 59 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 58, f"应有 58 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -111,7 +114,7 @@ def verify_mode_dispatch() -> None:
 
     assert set(registered_modes()) == {
         "alien_abduction", "banishment_escort", "carnivorous_ivy", "delayed_traitor_relic",
-        "exorcism", "generic", "seance_race", "spectre_exorcism", "trap_zombies", "web_escape",
+        "exorcism", "fleshwalkers", "generic", "seance_race", "spectre_exorcism", "trap_zombies", "web_escape",
         "werewolf_hunt", "witch_and_frogs",
     }
 
@@ -142,6 +145,9 @@ def verify_mode_handler_reaches_engine() -> None:
 
     engine.state.haunt = engine.catalog.haunt_defs[11]
     assert isinstance(engine._mode_handler(), SpecterInvasionMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[12]
+    assert isinstance(engine._mode_handler(), FleshwalkerMode)
 
     engine.state.haunt = engine.catalog.haunt_defs[35]
     assert isinstance(engine._mode_handler(), GenericModeHandler)
@@ -1412,6 +1418,70 @@ def verify_haunt11_specter_invasion() -> None:
     assert engine._haunt_track_value("exorcism_successes") == 1
 
 
+def verify_haunt12_fleshwalkers() -> None:
+    """剧本 12：双胞胎镜像冻结、追本体、水晶球规则、四属性反噬（p23/p94）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=12)
+    handler = engine._mode_handler()
+    assert isinstance(handler, FleshwalkerMode)
+
+    # 无叛徒；双胞胎数 = 玩家数，全部在门厅，属性=对应玩家作祟开局值
+    assert engine.state.traitor_id is None and all(p.role == "hero" for p in engine.state.players)
+    entrance = next(k for k, r in engine.state.board.items() if r.template_id == "entrance_hall")
+    twins = [m for m in engine.state.monsters if m.template_id == "shadow"]
+    assert len(twins) == len(engine.state.players), "双胞胎数应等于玩家数"
+    for twin in twins:
+        assert twin.room_key == entrance, "双胞胎应全部生成在门厅"
+        counterpart = handler._counterpart(engine, twin)
+        assert counterpart is not None
+        assert twin.might == counterpart.stats["might"], "双胞胎属性应镜像本体"
+
+    # 追自己的本体（而非最近英雄）
+    twin = twins[0]
+    counterpart = handler._counterpart(engine, twin)
+    counterpart.room_key = next(k for k in engine.state.board if k != twin.room_key)
+    far_hero = next(p for p in engine.state.players if p.id != counterpart.id and not p.dead)
+    far_hero.room_key = twin.room_key  # 最近英雄就在同房，双胞胎仍应去追本体
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 9):
+        assert handler.on_monster_move(engine, twin, 9) is True
+    assert twin.room_key == counterpart.room_key, "双胞胎应优先追自己的本体"
+
+    # 无球与自己的双胞胎交手：四属性各 -1；击败默认只击晕
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    hero_twin = next(
+        (m for m in engine.state.monsters if m.template_id == "shadow"
+         and handler._counterpart(engine, m).id == hero.id),
+        None,
+    )
+    assert hero_twin is not None, "应能找到该英雄的双胞胎"
+    hero_twin.room_key = hero.room_key
+    before = dict(hero.stat_positions)
+    engine._active_player_id = hero.id
+    with patch.object(engine, "_roll_attack", return_value=9), patch.object(
+        engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 1
+    ):
+        assert engine.attack(hero, hero_twin) is True
+    for stat in ("speed", "might", "sanity", "knowledge"):
+        if before.get(stat) is not None and before[stat] > 0:
+            assert hero.stat_positions[stat] < before[stat], f"无球对本体交手应掉 {stat}"
+    assert hero_twin in engine.state.monsters and hero_twin.stunned_turns > 0, "无球只能击晕"
+
+    # 昏迷双胞胎只有持球者能攻击；持球击败自己的双胞胎 → 杀死
+    hero.items.append("omen_crystal_ball")
+    assert handler.attack_allowed(engine, hero, hero_twin) is True, "持球者可攻击昏迷双胞胎"
+    someone = next((p for p in engine.state.players if p.id != hero.id and not p.dead), None)
+    if someone is not None:
+        someone.items = [c for c in someone.items if c != "omen_crystal_ball"]
+        assert handler.attack_allowed(engine, someone, hero_twin) is False, "无球者不能攻击昏迷双胞胎"
+    hero.attack_used = False
+    engine._active_player_id = hero.id
+    with patch.object(engine, "_roll_attack", return_value=9), patch.object(
+        engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 1
+    ):
+        assert engine.attack(hero, hero_twin) is True
+    assert hero_twin not in engine.state.monsters, "持球击败自己的双胞胎应直接杀死"
+    assert engine._haunt_track_value("twins_killed") == 1
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -1757,6 +1827,7 @@ def main():
     verify_haunt9_dance_of_death()
     verify_haunt10_family_gathering()
     verify_haunt11_specter_invasion()
+    verify_haunt12_fleshwalkers()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

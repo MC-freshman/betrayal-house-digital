@@ -2171,12 +2171,17 @@ class GameEngine:
         else:
             if ranged and isinstance(target, Player):
                 self._log(f"{target_name} 反击成功，但远程攻击不会让攻击者受伤。")
+            elif isinstance(target, Monster) and self._mode_handler().monster_counterattack_disabled(self, target):
+                self._log(f"{target_name} 反击了，但昏迷中使不上力。")
             else:
                 self._apply_attack_damage(attacker, diff, attack_attr)
                 self._log(f"{target_name} 反击成功。")
         if weapon is not None:
             self._resolve_attack_weapon_use(attacker, weapon)
         attacker.attack_used = True
+        # 剧本可对"攻击结束"做后处理（剧本 12 p23：与自己的双胞胎交手，
+        # 无论谁赢都要额外掉 1 点各属性）。
+        self._mode_handler().on_attack_resolved(self, attacker, target, attacker_wins)
         self.check_victory()
         return True
 
