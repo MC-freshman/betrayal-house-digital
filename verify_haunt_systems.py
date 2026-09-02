@@ -29,6 +29,7 @@ if __package__ in {None, ""}:
         CarnivorousIvyMode,
         DeathDanceMode,
         ExorcismMode,
+        NightmareDreamMode,
         GenericModeHandler,
         FleshwalkerMode,
         SeanceRaceMode,
@@ -52,6 +53,7 @@ else:  # pragma: no cover
         DeathDanceMode,
         ExorcismMode,
         FleshwalkerMode,
+        NightmareDreamMode,
         GenericModeHandler,
         SeanceRaceMode,
         SpecterInvasionMode,
@@ -102,8 +104,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ZombieTrapMode) == [10], f"剧本 10 未走定制 handler: {handlers.get(ZombieTrapMode)}"
     assert handlers.get(SpecterInvasionMode) == [11], f"剧本 11 未走定制 handler: {handlers.get(SpecterInvasionMode)}"
     assert handlers.get(FleshwalkerMode) == [12], f"剧本 12 未走定制 handler: {handlers.get(FleshwalkerMode)}"
+    assert handlers.get(NightmareDreamMode) == [13], f"剧本 13 未走定制 handler: {handlers.get(NightmareDreamMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 58, f"应有 58 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 57, f"应有 57 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -114,7 +117,7 @@ def verify_mode_dispatch() -> None:
 
     assert set(registered_modes()) == {
         "alien_abduction", "banishment_escort", "carnivorous_ivy", "delayed_traitor_relic",
-        "exorcism", "fleshwalkers", "generic", "seance_race", "spectre_exorcism", "trap_zombies", "web_escape",
+        "exorcism", "fleshwalkers", "generic", "nightmare_escape", "seance_race", "spectre_exorcism", "trap_zombies", "web_escape",
         "werewolf_hunt", "witch_and_frogs",
     }
 
@@ -148,6 +151,9 @@ def verify_mode_handler_reaches_engine() -> None:
 
     engine.state.haunt = engine.catalog.haunt_defs[12]
     assert isinstance(engine._mode_handler(), FleshwalkerMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[13]
+    assert isinstance(engine._mode_handler(), NightmareDreamMode)
 
     engine.state.haunt = engine.catalog.haunt_defs[35]
     assert isinstance(engine._mode_handler(), GenericModeHandler)
@@ -1482,6 +1488,76 @@ def verify_haunt12_fleshwalkers() -> None:
     assert engine._haunt_track_value("twins_killed") == 1
 
 
+def verify_haunt13_perchance_to_dream() -> None:
+    """剧本 13：沉睡叛徒、梦魇补位、逃脱路线与秘密总数、圣徽唤醒（p24/p95）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=13)
+    handler = engine._mode_handler()
+    assert isinstance(handler, NightmareDreamMode)
+    flags = engine._haunt_flags()
+
+    # 沉睡者：钉住、掉光物品、不可被攻击
+    sleeper = handler._sleeper(engine)
+    assert sleeper is not None and not sleeper.dead, "叛徒应沉睡而非死亡"
+    assert not sleeper.items, "沉睡者应掉光物品"
+    handler.on_turn_start(engine, sleeper)
+    assert sleeper.movement_stopped, "沉睡者应被钉住"
+    assert handler.attack_allowed(engine, sleeper, sleeper) is False, "沉睡者不可被攻击"
+
+    # 梦魇数量 = 玩家数，生成于沉睡房间；数值 5/4/4
+    nightmares = [m for m in engine.state.monsters if m.template_id == "shadow"]
+    assert len(nightmares) == len(engine.state.players), "梦魇数应等于玩家数"
+    for m in nightmares:
+        assert m.room_key == flags["sleeper_room"], "梦魇应从沉睡房间涌出"
+        assert (m.speed, m.might, m.sanity) == (5, 4, 4)
+
+    # 逃脱房间计数：至少玩家数；含门厅等
+    assert int(flags["escape_total"]) >= len(engine.state.players), "逃脱房间数不应少于玩家数"
+    board_ids = {r.template_id for r in engine.state.board.values()}
+    assert "entrance_hall" in board_ids, "门厅属逃脱房间，应在场"
+
+    # 梦魇逃脱：所在房间是未用逃脱房间 → 逃出并补一只；房间被标记
+    nightmare = nightmares[0]
+    escape_room = next(
+        k for k, r in engine.state.board.items() if handler._is_open_escape_room(engine, k)
+    )
+    nightmare.room_key = escape_room
+    total_before = int(flags["escapes"])
+    assert handler.on_monster_turn_start(engine, nightmare) is True
+    assert int(flags["escapes"]) == total_before + 1, "梦魇应从逃脱房间逃出"
+    assert nightmare not in engine.state.monsters, "逃出的梦魇离场"
+    assert engine.tokens_of_kind("escape"), "应放置逃脱路线令牌"
+    replaced = [m for m in engine.state.monsters if m.template_id == "shadow"]
+    assert len(replaced) == len(engine.state.players), "逃出后应立即补一只"
+
+    # 被攻击击败 → 死亡并补位（p95）
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    hero.items.append("omen_holy_symbol")
+    victim_nightmare = replaced[0]
+    hero.room_key = victim_nightmare.room_key
+    engine._active_player_id = hero.id
+    with patch.object(engine, "_roll_attack", return_value=9), patch.object(
+        engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 1
+    ):
+        assert engine.attack(hero, victim_nightmare) is True
+    assert victim_nightmare not in engine.state.monsters, "被击败的梦魇应死亡"
+    assert len([m for m in engine.state.monsters if m.template_id == "shadow"]) == len(engine.state.players)
+
+    # 唤醒：圣徽同房才能尝试；成功推进唤醒进度
+    _set_current(engine, hero)
+    hero.room_key = flags["sleeper_room"]
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "wake_attempt" in ids, "带圣徽在沉睡房间应能尝试唤醒"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "wake_attempt", {}) is True
+    assert engine._haunt_track_value("waking_progress") == 1
+    assert engine.tokens_in_room(flags["sleeper_room"], "wake_token"), "唤醒成功应放检定令牌"
+
+    # 英雄胜利：唤醒进度满
+    engine._set_haunt_track_value("waking_progress", engine._haunt_track_target("waking_progress"))
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -1828,6 +1904,7 @@ def main():
     verify_haunt10_family_gathering()
     verify_haunt11_specter_invasion()
     verify_haunt12_fleshwalkers()
+    verify_haunt13_perchance_to_dream()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

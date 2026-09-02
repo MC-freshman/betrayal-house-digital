@@ -308,25 +308,25 @@ def verify_supplemental_rooms_and_events() -> None:
 
 
 def verify_generic_haunt_action_and_victory() -> None:
-    # 用仍是模板骨架的 13 号剧本验证通用行动/轨道胜负
-    # （11/12 号已精修，见 verify_haunt_systems 的对应用例）
+    # 用仍是模板骨架的 14 号剧本验证通用行动/轨道胜负
+    # （11-13 号已精修，见 verify_haunt_systems 的对应用例）
     engine = GameEngine(seed=43)
     engine.start_new_game(_configs(4, "normal"))
-    _trigger_specific_haunt(engine, 13)
+    _trigger_specific_haunt(engine, 14)
     hero = next(player for player in engine.state.players if player.role == "hero")
-    room_key = _place_test_room(engine, "bedroom", 13, 0)
+    room_key = _place_test_room(engine, "kitchen", 14, 0)
     hero.room_key = room_key
     engine.state.turn_order = [hero.id]
     engine.state.turn_index = 0
     engine._resolve_check = lambda player, stat, target, label: True  # type: ignore[method-assign]
     actions = engine.available_haunt_actions(hero)
-    assert any(action.id == "h13_hero_task" for action in actions)
-    assert engine.perform_haunt_action(hero, "h13_hero_task")
+    assert any(action.id == "h14_hero_task" for action in actions)
+    assert engine.perform_haunt_action(hero, "h14_hero_task")
     assert engine.state.meta["haunt_rule"]["tracks"]["hero_progress"]["value"] == 1
 
     engine._reset_player_turn_state(hero)
     for _ in range(3):
-        assert engine.perform_haunt_action(hero, "h13_hero_task")
+        assert engine.perform_haunt_action(hero, "h14_hero_task")
         engine._reset_player_turn_state(hero)
     assert engine.state.meta["haunt_rule"]["tracks"]["hero_progress"]["value"] == 4
     assert engine.state.winner == "heroes"

@@ -576,6 +576,52 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [23, 94],
     },
+    13: {
+        # 校准记录（2026-09-02，对照英雄手册 p24 / 叛徒手册 p95）：
+        #   机制落在 NightmareDreamMode：叛徒（揭示者）当场沉睡——钉住、
+        #   掉光物品（狗/女孩/疯子卡一并掉落，属性微调未建模）；
+        #   梦魇（shadow 模板承载，5/4/4）数量=玩家数，生成于沉睡房间。
+        #   逃脱房间 = 朝外窗房间 + 温室/门厅/花园/墓地/阳台/塔楼；
+        #   开局数不足玩家数则从牌堆补房；秘密总数存 flags（联机隐藏
+        #   信息裁剪之外的软秘密，热座单机不影响）。
+        #   梦魇在未用过的逃脱房间花 1 格移动逃脱（每房限一次，放置逃脱
+        #   令牌）；梦魇被杀或逃脱后立即在沉睡房间补一只。
+        #   梦魇力量攻击但造成精神伤害；被攻击击败即死、攻击落败照常
+        #   击晕（p24/p95）。
+        #   唤醒：圣徽被英雄带进沉睡房间，同房任意英雄理智或力量 5+，
+        #   成功次数=玩家数即唤醒（味道盐无法唤醒——唤醒链路本就不用它）。
+        #   简化：沉睡叛徒仍可被人机界面使用物品（bot 不会；人类界面
+        #   未拦，属低风险边界）；沉睡者不可被攻击（attack_allowed）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "nightmare_escape",
+        "traitor_rule": "revealer",
+        "hero_goal": "把圣徽带进沉睡者的房间，在足够多梦魇逃出屋子前唤醒他。",
+        "traitor_goal": "让梦魇按秘密数量逃出房子（逃出数 = 作祟时的逃脱房间数）。",
+        "suggested_monsters": ["shadow"],
+        "required_cards": ["omen_holy_symbol"],
+        "key_rooms": [
+            "entrance_hall", "grand_staircase", "master_bedroom", "bedroom",
+            "chapel", "dining_room", "conservatory", "garden", "graveyard",
+            "patio", "tower", "balcony",
+        ],
+        "tokens": ["nightmare", "wake_token", "escape"],
+        "setup": {
+            "tracks": {
+                "waking_progress": {"label": "唤醒沉睡者", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"sleeper_id": None, "escapes": 0, "escape_total": 0, "escape_used_rooms": []},
+        },
+        "monsters": [
+            {"template_id": "shadow", "name": "梦魇", "spawn": "deferred", "count": "player_count", "speed": 5, "might": 4, "sanity": 4},
+        ],
+        "actions": [
+            {"id": "wake_attempt", "side": "heroes", "label": "唤醒沉睡者", "detail": "圣徽在本房间（任一英雄携带）时，理智或力量检定 5+。", "stat": ["sanity", "might"], "target": 5, "progress": "waking_progress"},
+        ],
+        "win_conditions": [],
+        "source_pages": [24, 95],
+    },
 }
 
 
@@ -736,7 +782,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    13: dict(mode="nightmare_escape", traitor_rule="revealer", hero_goal="在噩梦逃出房屋前唤醒卧室中的做梦者。", traitor_goal="让噩梦沿逃生房间逃出，或杀死所有英雄。", rooms=("bedroom", "master_bedroom", "entrance_hall", "garden", "graveyard"), monsters=("shadow",), tokens=("nightmare", "escape", "sanity_check", "might_check"), hero_task="唤醒做梦者", traitor_task="放出噩梦", hero_stat=["sanity", "might"], hero_target=5, hero_detail="携带圣徽在做梦者所在房间完成一次唤醒检定。", traitor_detail="推进噩梦逃生轨道；每次成功代表一个噩梦找到出口。", monster_count="player_count"),
     14: dict(mode="paint_the_pentagram", traitor_rule="revealer", hero_goal="把所有油漆罐投入五芒星室，亵渎仪式。", traitor_goal="在五芒星室积累祭品并召唤古神。", rooms=("kitchen", "larder", "junk_room", "research_laboratory", "attic", "pentagram_chamber"), monsters=("cultist",), tokens=("paint", "cultist", "sacrifice"), hero_task="收集并倾倒油漆", traitor_task="献祭并召唤古神", hero_stat="knowledge", hero_target=5, hero_detail="在关键房间找到油漆并推进亵渎进度。", traitor_detail="在五芒星室完成一次献祭检定。", monster_count="player_count", hero_requires=(), traitor_requires=()),
     15: dict(mode="dragon_siege", traitor_rule="revealer", hero_goal="击败龙。", traitor_goal="让龙造成足够破坏并杀死所有英雄。", rooms=("entrance_hall", "chasm", "vault", "catacombs", "underground_lake"), monsters=("giant",), tokens=("dragon", "ancient_armor", "shield", "fire"), hero_task="准备屠龙并造成伤害", traitor_task="指挥龙喷火", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="在龙所在房间完成屠龙行动；长矛、盾牌和古董盔甲可提供帮助。", traitor_detail="推进龙的破坏轨道，代表一次喷火或撕咬。", monster_count=1, engine_note="龙使用巨人模板；火焰免疫和双重攻击待独立组件完成后再细化。"),
     16: dict(mode="phantom_bomb", traitor_rule="revealer", hero_goal="击败幻影、救出女孩，并拆除炸弹或及时逃离。", traitor_goal="在倒计时结束前引爆房屋，或杀死所有英雄。", rooms=("catacombs", "crypt", "furnace_room", "basement_landing", "entrance_hall"), monsters=("shadow",), tokens=("phantom", "girl", "bomb", "unique_marker"), hero_task="救出女孩并拆除炸弹", traitor_task="推进爆炸倒计时", hero_stat="knowledge", hero_target=6, hero_progress_target=2, hero_detail="先在地下室击败幻影，再完成拆弹检定。", traitor_detail="推进倒计时；达到目标后房屋爆炸。", monster_count=1, hero_win_target=2, traitor_win_type="track", traitor_progress_target=8),
