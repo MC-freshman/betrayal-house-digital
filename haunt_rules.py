@@ -487,6 +487,60 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "actions": [],
         "source_pages": [21, 92],
     },
+    11: {
+        # 校准记录（2026-09-02，对照英雄手册 p22 / 叛徒手册 p93）：
+        #   机制落在 SpecterInvasionMode（复用剧本 8 的驱魔底座）：
+        #   · 雾中人影（Specter）背面朝下待命于门厅 + 五个朝外窗房间
+        #     （大楼梯/主卧/卧室/教堂/餐厅）；疯子（7/7/7）与叛徒开窗放入，
+        #     放入当回合即可移动与攻击（p93）
+        #   · 疯子每回合自动开最近的窗；全部放入前不攻击（可自卫），之后
+        #     才按常规怪物行动
+        #   · 雾中人影 Speed 4 / Sanity 6，理智攻击，免疫力量/速度（p93）
+        #   · 持戒指者徒手攻击改为理智攻击（引擎 attack_attr_override 钩子），
+        #     击败即放逐；被雾中人影攻击而获胜则只是击晕（p22）
+        #   · 驱魔：与剧本 8 同款八来源，但理智物品来源用戒指替换灵应板
+        #   简化：窗户"假窗"（被邻室挡住即失效）不建模；铃铛/灵应板对
+        #   背面人影无效属物品交互边界，未接。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "spectre_exorcism",
+        "traitor_rule": "revealer",
+        "hero_goal": "用驱魔或持戒指的理智攻击放逐所有雾中人影。",
+        "traitor_goal": "让疯子打开窗户放入雾中人影，杀死所有英雄。",
+        "suggested_monsters": ["ghost", "madman"],
+        "required_cards": ["omen_ring", "omen_holy_symbol", "omen_book", "omen_crystal_ball"],
+        "key_rooms": [
+            "entrance_hall", "grand_staircase", "master_bedroom", "bedroom",
+            "chapel", "dining_room", "crypt", "pentagram_chamber",
+            "library", "research_laboratory",
+        ],
+        "tokens": ["specter", "madman", "sanity_check", "knowledge_check"],
+        "setup": {
+            "tracks": {
+                "exorcism_successes": {"label": "驱魔成功次数", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"used_exorcism_sources": [], "specters_activated": 0, "specters_banished": 0},
+        },
+        "monsters": [
+            {"template_id": "ghost", "name": "雾中人影", "spawn": "deferred", "speed": 4, "might": 0, "sanity": 6, "immune_to": ["might", "speed"]},
+            {"template_id": "madman", "name": "疯子", "spawn": "deferred", "speed": 7, "might": 7, "sanity": 7},
+        ],
+        "actions": [
+            {"id": "chapel", "side": "heroes", "label": "在教堂驱魔", "detail": "理智检定 5+。教堂只能成功使用一次。", "stat": "sanity", "target": 5, "rooms": ["chapel"], "progress": "exorcism_successes"},
+            {"id": "crypt", "side": "heroes", "label": "在地窖驱魔", "detail": "理智检定 5+。地窖只能成功使用一次。", "stat": "sanity", "target": 5, "rooms": ["crypt"], "progress": "exorcism_successes"},
+            {"id": "pentagram_chamber", "side": "heroes", "label": "在五芒星室驱魔", "detail": "理智检定 5+。五芒星室只能成功使用一次。", "stat": "sanity", "target": 5, "rooms": ["pentagram_chamber"], "progress": "exorcism_successes"},
+            {"id": "omen_holy_symbol", "side": "heroes", "label": "借圣徽驱魔", "detail": "理智检定 5+。圣徽只能成功使用一次。", "stat": "sanity", "target": 5, "requires": ["omen_holy_symbol"], "progress": "exorcism_successes"},
+            {"id": "omen_ring", "side": "heroes", "label": "借戒指驱魔", "detail": "理智检定 5+。戒指只能成功使用一次。", "stat": "sanity", "target": 5, "requires": ["omen_ring"], "progress": "exorcism_successes"},
+            {"id": "library", "side": "heroes", "label": "在图书馆驱魔", "detail": "知识检定 5+。图书馆只能成功使用一次。", "stat": "knowledge", "target": 5, "rooms": ["library"], "progress": "exorcism_successes"},
+            {"id": "research_laboratory", "side": "heroes", "label": "在研究实验室驱魔", "detail": "知识检定 5+。研究实验室只能成功使用一次。", "stat": "knowledge", "target": 5, "rooms": ["research_laboratory"], "progress": "exorcism_successes"},
+            {"id": "omen_book", "side": "heroes", "label": "借古书驱魔", "detail": "知识检定 5+。古书只能成功使用一次。", "stat": "knowledge", "target": 5, "requires": ["omen_book"], "progress": "exorcism_successes"},
+            {"id": "omen_crystal_ball", "side": "heroes", "label": "借水晶球驱魔", "detail": "知识检定 5+。水晶球只能成功使用一次。", "stat": "knowledge", "target": 5, "requires": ["omen_crystal_ball"], "progress": "exorcism_successes"},
+            {"id": "open_window", "side": "traitor", "label": "打开窗户/门", "detail": "在本房间放入一只雾中人影（原版开窗耗 1 格移动，电子版占用剧本行动）。"},
+        ],
+        "win_conditions": [],
+        "source_pages": [22, 93],
+    },
 }
 
 
@@ -647,7 +701,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    11: dict(mode="spectre_exorcism", traitor_rule="revealer", hero_goal="完成与玩家数相等的驱魔检定并驱逐所有幽灵。", traitor_goal="打开窗户让幽灵进入并杀死所有英雄。", rooms=("chapel", "crypt", "pentagram_chamber", "library", "research_laboratory"), monsters=("ghost", "madman"), tokens=("ghost", "sanity_check", "knowledge_check"), hero_task="进行驱魔", traitor_task="打开窗户召唤幽灵", hero_stat=["sanity", "knowledge"], hero_target=5, hero_detail="在合适房间或携带合适物品时完成一次驱魔。", traitor_detail="叛徒行动代表打开一个出口；每次成功使幽灵威胁推进。", monster_count="player_count"),
     12: dict(mode="evil_twins", traitor_rule="revealer", hero_goal="消灭所有对应英雄的邪恶双胞胎，并让自己的英雄存活。", traitor_goal="利用邪恶双胞胎杀死所有英雄。", rooms=("entrance_hall", "foyer", "grand_staircase"), monsters=("shadow",), tokens=("evil_twin", "crystal_ball"), hero_task="辨认并击破邪恶双胞胎", traitor_task="驱使双胞胎发动袭击", hero_stat="knowledge", hero_target=5, hero_detail="知识检定成功后压制一个邪恶双胞胎。", traitor_detail="叛徒检定成功后让双胞胎更接近英雄。", monster_count="player_count", engine_note="邪恶双胞胎使用阴影模板，保持不携带物品的特性。"),
     13: dict(mode="nightmare_escape", traitor_rule="revealer", hero_goal="在噩梦逃出房屋前唤醒卧室中的做梦者。", traitor_goal="让噩梦沿逃生房间逃出，或杀死所有英雄。", rooms=("bedroom", "master_bedroom", "entrance_hall", "garden", "graveyard"), monsters=("shadow",), tokens=("nightmare", "escape", "sanity_check", "might_check"), hero_task="唤醒做梦者", traitor_task="放出噩梦", hero_stat=["sanity", "might"], hero_target=5, hero_detail="携带圣徽在做梦者所在房间完成一次唤醒检定。", traitor_detail="推进噩梦逃生轨道；每次成功代表一个噩梦找到出口。", monster_count="player_count"),
     14: dict(mode="paint_the_pentagram", traitor_rule="revealer", hero_goal="把所有油漆罐投入五芒星室，亵渎仪式。", traitor_goal="在五芒星室积累祭品并召唤古神。", rooms=("kitchen", "larder", "junk_room", "research_laboratory", "attic", "pentagram_chamber"), monsters=("cultist",), tokens=("paint", "cultist", "sacrifice"), hero_task="收集并倾倒油漆", traitor_task="献祭并召唤古神", hero_stat="knowledge", hero_target=5, hero_detail="在关键房间找到油漆并推进亵渎进度。", traitor_detail="在五芒星室完成一次献祭检定。", monster_count="player_count", hero_requires=(), traitor_requires=()),

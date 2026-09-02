@@ -31,6 +31,7 @@ if __package__ in {None, ""}:
         ExorcismMode,
         GenericModeHandler,
         SeanceRaceMode,
+        SpecterInvasionMode,
         WebEscapeMode,
         WerewolfHuntMode,
         WitchAndFrogsMode,
@@ -51,6 +52,7 @@ else:  # pragma: no cover
         ExorcismMode,
         GenericModeHandler,
         SeanceRaceMode,
+        SpecterInvasionMode,
         WebEscapeMode,
         WerewolfHuntMode,
         WitchAndFrogsMode,
@@ -96,8 +98,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ExorcismMode) == [8], f"剧本 8 未走定制 handler: {handlers.get(ExorcismMode)}"
     assert handlers.get(DeathDanceMode) == [9], f"剧本 9 未走定制 handler: {handlers.get(DeathDanceMode)}"
     assert handlers.get(ZombieTrapMode) == [10], f"剧本 10 未走定制 handler: {handlers.get(ZombieTrapMode)}"
+    assert handlers.get(SpecterInvasionMode) == [11], f"剧本 11 未走定制 handler: {handlers.get(SpecterInvasionMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 60, f"应有 60 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 59, f"应有 59 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -108,7 +111,7 @@ def verify_mode_dispatch() -> None:
 
     assert set(registered_modes()) == {
         "alien_abduction", "banishment_escort", "carnivorous_ivy", "delayed_traitor_relic",
-        "exorcism", "generic", "seance_race", "trap_zombies", "web_escape",
+        "exorcism", "generic", "seance_race", "spectre_exorcism", "trap_zombies", "web_escape",
         "werewolf_hunt", "witch_and_frogs",
     }
 
@@ -136,6 +139,9 @@ def verify_mode_handler_reaches_engine() -> None:
 
     engine.state.haunt = engine.catalog.haunt_defs[10]
     assert isinstance(engine._mode_handler(), ZombieTrapMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[11]
+    assert isinstance(engine._mode_handler(), SpecterInvasionMode)
 
     engine.state.haunt = engine.catalog.haunt_defs[35]
     assert isinstance(engine._mode_handler(), GenericModeHandler)
@@ -1330,6 +1336,82 @@ def verify_haunt4_spider_blank_reroll() -> None:
     assert engine._roll_monster_attack(spider, "might") >= 0
 
 
+def verify_haunt11_specter_invasion() -> None:
+    """剧本 11：背面人影布点、疯子开窗、戒指理智攻击与放逐（p22/p93）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=11)
+    handler = engine._mode_handler()
+    assert isinstance(handler, SpecterInvasionMode)
+
+    # 背面人影：门厅 + 已在场的窗房间
+    facedown = [t for t in engine.tokens_of_kind("specter") if not t.face_up]
+    entrance = next(k for k, r in engine.state.board.items() if r.template_id == "entrance_hall")
+    assert any(t.room_key == entrance for t in facedown), "门厅应有背面人影"
+    board_ids = {r.template_id for r in engine.state.board.values()}
+    expected_windows = {rid for rid in SpecterInvasionMode.WINDOW_ROOMS if rid in board_ids}
+    rooms_with_facedown = {engine.state.board[t.room_key].template_id for t in facedown}
+    assert expected_windows <= rooms_with_facedown, "每个在场窗房间都应有背面人影"
+
+    # 疯子：顶替在叛徒房间，7/7/7
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    madman = engine._monster_by_template("madman")
+    assert madman is not None and madman.room_key == traitor.room_key
+    assert (madman.speed, madman.might, madman.sanity) == (7, 7, 7)
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    # 疯子自动开最近的窗并放入人影（放入当回合即可行动）
+    before = int(engine._haunt_flags()["specters_activated"])
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 9):
+        assert handler.on_monster_turn_start(engine, madman) is True
+    assert int(engine._haunt_flags()["specters_activated"]) == before + 1, "疯子开窗应放入一只人影"
+    specter = next(m for m in engine.state.monsters if m.template_id == "ghost")
+    assert (specter.speed, specter.might, specter.sanity) == (4, 0, 6), "人影数值应为 4/0/6"
+
+    # 无戒指不能攻击；持戒指徒手改理智；击败即放逐
+    hero.room_key = specter.room_key
+    assert engine.attack(hero, specter) is False, "无戒指不能攻击雾中人影"
+    hero.items.append("omen_ring")
+    assert handler.attack_attr_override(engine, hero, specter, "might") == "sanity"
+    with patch.object(engine, "_roll_attack", return_value=10), patch.object(
+        engine, "_roll_monster_attack", side_effect=lambda monster, attr, reroll_blanks=False: 1
+    ):
+        assert engine.attack(hero, specter) is True
+    assert specter not in engine.state.monsters, "持戒指击败即放逐"
+    assert int(engine._haunt_flags()["specters_banished"]) == 1
+
+    # 人影的理智攻击（同房间）：赢了掉理智
+    target_token = next(t for t in engine.tokens_of_kind("specter") if not t.face_up)
+    assert handler._release_specter(engine, target_token.room_key) is True
+    specter2 = [m for m in engine.state.monsters if m.template_id == "ghost"][0]
+    sanity_pos_before = hero.stat_positions.get("sanity")
+    hero.room_key = specter2.room_key
+    with patch.object(engine, "_roll_monster_attack", side_effect=lambda monster, attr, reroll_blanks=False: 6), \
+         patch.object(engine, "_roll_attack", return_value=4):
+        assert handler._specter_attack(engine, specter2) is True
+    assert not hero.dead, "2 点精神伤害不应致死"
+    assert hero.stat_positions.get("sanity") != sanity_pos_before, "人影应造成精神伤害"
+
+    # 叛徒可亲自开窗（open_window 行动）
+    traitor_room_token = next(t for t in engine.tokens_of_kind("specter") if not t.face_up)
+    traitor.room_key = traitor_room_token.room_key
+    _set_current(engine, traitor)
+    ids = {a.id for a in handler.available_actions(engine, traitor)}
+    assert "open_window" in ids, "叛徒在有背面人影的房间应能开窗"
+    total_before = int(engine._haunt_flags()["specters_activated"])
+    assert handler.perform_action(engine, traitor, "open_window", {}) is True
+    assert int(engine._haunt_flags()["specters_activated"]) == total_before + 1
+
+    # 驱魔底座：戒指可作为一次性理智来源，且不含灵应板
+    hero.room_key = traitor_room_token.room_key
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "omen_ring" in ids, "持戒指应有戒指驱魔来源"
+    assert "omen_spirit_board" not in ids, "剧本 11 的理智来源不含灵应板"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "omen_ring", {}) is True
+    assert engine._haunt_track_value("exorcism_successes") == 1
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -1674,6 +1756,7 @@ def main():
     verify_haunt8_banshee_exorcism()
     verify_haunt9_dance_of_death()
     verify_haunt10_family_gathering()
+    verify_haunt11_specter_invasion()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

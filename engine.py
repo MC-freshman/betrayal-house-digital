@@ -2112,16 +2112,23 @@ class GameEngine:
                 attack_attr = "speed"
         else:
             attack_bonus = self._attack_bonus_from_inventory(attacker, None)
+        # 剧本可覆盖徒手攻击的属性（剧本 11 p22/p93：持戒指者对雾中人影
+        # 的徒手攻击改为理智攻击）。
+        if not isinstance(target, Player):
+            override_attr = self._mode_handler().attack_attr_override(
+                self, attacker, target, attack_attr
+            )
+            if override_attr:
+                attack_attr = override_attr
         # 怪物免疫：immune_to 列出的攻击属性对它无效（p17/p88：外星人免疫
-        # 速度攻击如左轮；剧本 1 木乃伊同理）。数据早就声明了，引擎此前
-        # 从不读取——与剧本 4 的 attack/defense 字段是同一类"假数据"。
+        # 速度攻击如左轮；剧本 1 木乃伊同理；剧本 11 雾中人影免疫力量/速度）。
         if not isinstance(target, Player):
             specs = self._haunt_rule_state().get("monster_specs", {}).get(
                 getattr(target, "template_id", ""), {}
             )
             immune = set(specs.get("immune_to", []) or [])
-            if attack_attr == "speed" and ("speed_attack" in immune or "speed" in immune):
-                self._log(f"{target.name} 免疫速度攻击。")
+            if attack_attr in immune or f"{attack_attr}_attack" in immune:
+                self._log(f"{target.name} 免疫{ {'might': '力量', 'speed': '速度', 'sanity': '理智', 'knowledge': '知识'}[attack_attr] }攻击。")
                 return False
         if isinstance(target, Player):
             # 剧本 6：被控英雄不能被外星人"攻击受伤"之外的手段打死这里不拦；
