@@ -1,0 +1,11 @@
+{
+  "models.py": 24,
+  "content.py": 146,
+  "engine.py": 884,
+  "bot_ai.py": 248,
+  "haunt_rules.py": 431,
+  "haunt_ai_profiles.py": 0,
+  "help_text.py": 37,
+  "haunts_zh.py": 0,
+  "net/serialize.py": 31
+}
