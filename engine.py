@@ -832,7 +832,10 @@ class GameEngine:
                 hostile_count += 1
             elif occupant["kind"] == "monster" and occupant["monster"].stunned_turns <= 0:
                 hostile_count += 1
-        return 1 + hostile_count
+        cost = 1 + hostile_count
+        # 剧本可加倍移动费用（剧本 14 p96：背着尸体入房按 2 格计）。
+        cost *= max(1, int(self._mode_handler().movement_cost_multiplier(self, player)))
+        return cost
 
     def _floor_has_room_capacity(self, floor: int) -> bool:
         if not self.has_remaining_room_cards(floor):
@@ -1760,6 +1763,8 @@ class GameEngine:
             player.dead = True
             self._log(f"{player.name} 倒下了。")
             self._drop_inventory_on_death(player)
+            # 剧本可对死亡做后处理（剧本 14 p96：尸体留在房间里可被搬走）。
+            self._mode_handler().on_player_died(self, player)
 
     def _deal_damage(self, player: Player, damage_type: str, amount: int, source: str = "") -> None:
         if amount <= 0 or player.dead:

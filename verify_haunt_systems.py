@@ -30,6 +30,7 @@ if __package__ in {None, ""}:
         DeathDanceMode,
         ExorcismMode,
         NightmareDreamMode,
+        StarsRightMode,
         GenericModeHandler,
         FleshwalkerMode,
         SeanceRaceMode,
@@ -54,6 +55,7 @@ else:  # pragma: no cover
         ExorcismMode,
         FleshwalkerMode,
         NightmareDreamMode,
+        StarsRightMode,
         GenericModeHandler,
         SeanceRaceMode,
         SpecterInvasionMode,
@@ -105,8 +107,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(SpecterInvasionMode) == [11], f"剧本 11 未走定制 handler: {handlers.get(SpecterInvasionMode)}"
     assert handlers.get(FleshwalkerMode) == [12], f"剧本 12 未走定制 handler: {handlers.get(FleshwalkerMode)}"
     assert handlers.get(NightmareDreamMode) == [13], f"剧本 13 未走定制 handler: {handlers.get(NightmareDreamMode)}"
+    assert handlers.get(StarsRightMode) == [14], f"剧本 14 未走定制 handler: {handlers.get(StarsRightMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 57, f"应有 57 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 56, f"应有 56 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -117,7 +120,7 @@ def verify_mode_dispatch() -> None:
 
     assert set(registered_modes()) == {
         "alien_abduction", "banishment_escort", "carnivorous_ivy", "delayed_traitor_relic",
-        "exorcism", "fleshwalkers", "generic", "nightmare_escape", "seance_race", "spectre_exorcism", "trap_zombies", "web_escape",
+        "exorcism", "fleshwalkers", "generic", "nightmare_escape", "paint_the_pentagram", "seance_race", "spectre_exorcism", "trap_zombies", "web_escape",
         "werewolf_hunt", "witch_and_frogs",
     }
 
@@ -154,6 +157,9 @@ def verify_mode_handler_reaches_engine() -> None:
 
     engine.state.haunt = engine.catalog.haunt_defs[13]
     assert isinstance(engine._mode_handler(), NightmareDreamMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[14]
+    assert isinstance(engine._mode_handler(), StarsRightMode)
 
     engine.state.haunt = engine.catalog.haunt_defs[35]
     assert isinstance(engine._mode_handler(), GenericModeHandler)
@@ -1558,6 +1564,74 @@ def verify_haunt13_perchance_to_dream() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt14_stars_right() -> None:
+    """剧本 14：油漆罐布点/单罐搬运/相邻投掷/尸体献祭/狂信徒偷窃（p25/p96）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=14)  # 109/4 人局英雄存活最多
+    handler = engine._mode_handler()
+    assert isinstance(handler, StarsRightMode)
+    flags = engine._haunt_flags()
+
+    # 布点：罐数 = 玩家数，都在油漆房间；狂信徒 = 其他玩家数，在五芒星室
+    cans = engine.tokens_of_kind("paint")
+    assert len(cans) == len(engine.state.players), "油漆罐应等于玩家数"
+    paint_room_ids = set(StarsRightMode.PAINT_ROOMS)
+    assert all(engine.state.board[t.room_key].template_id in paint_room_ids for t in cans)
+    cultists = [m for m in engine.state.monsters if m.template_id == "cultist"]
+    assert len(cultists) == len(engine.state.players) - 1, "狂信徒应等于其他玩家数"
+    pent = flags["pentagram_room"]
+    assert all(m.room_key == pent for m in cultists), "狂信徒应从五芒星室出发"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # 拿罐 → 一次只能一罐
+    hero.room_key = cans[0].room_key
+    _set_current(engine, hero)
+    assert handler.perform_action(engine, hero, "take_paint", {}) is True
+    assert engine.tokens_held_by(hero.id, "paint")
+    assert "take_paint" not in {a.id for a in handler.available_actions(engine, hero)}, "已背一罐不应再拿"
+
+    # 扔罐：必须与五芒星室门相邻
+    adj = next((k for k in engine.state.board if handler._door_adjacent(engine, k, pent)), None)
+    assert adj is not None, "五芒星室应至少有一个门相邻房间"
+    hero.room_key = adj
+    assert handler.perform_action(engine, hero, "throw_paint", {}) is True
+    assert engine._haunt_track_value("desecration") == 1
+    assert any(t.room_key == pent for t in engine.tokens_of_kind("paint")), "罐应落入五芒星室"
+
+    # 尸体：英雄死亡落尸 → 叛徒背尸（移动加倍）→ 献祭 +4
+    other_hero = next(p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead)
+    engine._drop_inventory_on_death(other_hero)
+    other_hero.dead = True
+    handler.on_player_died(engine, other_hero)
+    corpse = engine.tokens_of_kind("corpse")
+    assert corpse and corpse[0].room_key == other_hero.room_key, "死亡应落尸"
+    traitor.room_key = corpse[0].room_key
+    _set_current(engine, traitor)
+    assert handler.perform_action(engine, traitor, "take_corpse", {}) is True
+    assert handler.movement_cost_multiplier(engine, traitor) == 2, "背尸入房按 2 格计"
+    traitor.room_key = pent
+    assert handler.perform_action(engine, traitor, "sacrifice", {}) is True
+    assert engine._haunt_track_value("sacrifice_points") == 4, "尸体献祭值 4 分"
+    assert not engine.tokens_held_by(traitor.id, "corpse"), "献祭后尸体离场"
+
+    # 狂信徒偷窃：掷出高出 2+ 改为偷窃而非伤害（p96）
+    hero.items.append("item_candle")
+    cultist = cultists[0]
+    cultist.room_key = hero.room_key
+    before_items = list(hero.items)
+    with patch.object(engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 9), \
+         patch.object(engine, "_roll_attack", return_value=1):
+        engine._monster_attack(cultist, hero)
+    stolen = [c for c in before_items if c not in hero.items]
+    assert stolen and stolen[0] in cultist.items, "狂信徒应偷走一件可交易物品"
+
+    # 叛徒胜利：献祭满 13 分
+    engine._set_haunt_track_value("sacrifice_points", 13)
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "traitor"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -1905,6 +1979,7 @@ def main():
     verify_haunt11_specter_invasion()
     verify_haunt12_fleshwalkers()
     verify_haunt13_perchance_to_dream()
+    verify_haunt14_stars_right()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

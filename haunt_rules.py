@@ -622,6 +622,56 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [24, 95],
     },
+    14: {
+        # 校准记录（2026-09-02，对照英雄手册 p25 / 叛徒手册 p96）：
+        #   机制落在 StarsRightMode：
+        #   · 油漆罐（Paint，数量=玩家数）按序放厨房/储藏室/杂物间/储藏室/
+        #     实验室/阁楼（不够则同房叠放；全不在场则补房）；英雄一次背一罐，
+        #     从相邻有门的房间把罐子扔进五芒星室（原版耗 1 格移动，电子版
+        #     占用剧本行动）；所有罐子入室即亵渎胜利
+        #   · 狂信徒（4/4/4）数量 = 其他玩家数，生成于五芒星室；力量攻击，
+        #     掷出高出 2+ 可改为偷窃（p96）；能搬尸体（移动入房按 2 格计）
+        #   · 献祭：叛徒在五芒星室把祭品献上——尸体 4 分 / 狗·女孩·疯子
+        #     2 分 / 其他预兆或物品 1 分，累计 13 分即召唤邪神胜利；
+        #     被献祭物品移出游戏（进弃牌堆近似）
+        #   · 探险者死亡即落尸（引擎新钩子 on_player_died → 尸体令牌）
+        #   简化：扔罐"1 格移动"与搬尸"2 格移动"对英雄/叛徒占剧本行动或
+        #   移动加倍近似；狂信徒偷窃为 bot 自动（人类叛徒弹窗留待接）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "paint_the_pentagram",
+        "traitor_rule": "revealer",
+        "hero_goal": "把屋里所有油漆罐扔进五芒星室，亵渎邪教的召唤法阵。",
+        "traitor_goal": "献祭凑满 13 分召唤邪神，或杀死所有英雄。",
+        "suggested_monsters": ["cultist"],
+        "required_cards": [],
+        # 原版 Storeroom 在本项目 49 房集中与 Larder（储藏室）共用，
+        # 油漆房间序列相应少一间。
+        "key_rooms": [
+            "pentagram_chamber", "kitchen", "larder", "junk_room",
+            "research_laboratory", "attic",
+        ],
+        "tokens": ["paint", "cultist", "corpse"],
+        "setup": {
+            "tracks": {
+                "desecration": {"label": "已扔进法阵的油漆罐", "target": "player_count", "side": "heroes"},
+                "sacrifice_points": {"label": "献祭点数", "target": 13, "side": "traitor"},
+            },
+            "flags": {"total_cans": 0, "corpse_carrier": {}},
+        },
+        "monsters": [
+            {"template_id": "cultist", "name": "狂信徒", "spawn": "deferred", "count": 1, "speed": 4, "might": 4, "sanity": 4},
+        ],
+        "actions": [
+            {"id": "take_paint", "side": "heroes", "label": "拿起油漆罐", "detail": "捡起本房间的一罐油漆（一次只能背一罐，p25）。"},
+            {"id": "throw_paint", "side": "heroes", "label": "扔油漆罐", "detail": "从相邻有门连接的房间把油漆罐扔进五芒星室（原版耗 1 格移动）。"},
+            {"id": "take_corpse", "side": "traitor", "label": "背起尸体", "detail": "狂信徒或叛徒把房间的尸体像物品一样背起（入房按 2 格移动，p96）。"},
+            {"id": "sacrifice", "side": "traitor", "label": "献祭", "detail": "在五芒星室献上尸体(4分)/狗·女孩·疯子(2分)/其他预兆或物品(1分)。"},
+        ],
+        "win_conditions": [],
+        "source_pages": [25, 96],
+    },
 }
 
 
@@ -782,7 +832,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    14: dict(mode="paint_the_pentagram", traitor_rule="revealer", hero_goal="把所有油漆罐投入五芒星室，亵渎仪式。", traitor_goal="在五芒星室积累祭品并召唤古神。", rooms=("kitchen", "larder", "junk_room", "research_laboratory", "attic", "pentagram_chamber"), monsters=("cultist",), tokens=("paint", "cultist", "sacrifice"), hero_task="收集并倾倒油漆", traitor_task="献祭并召唤古神", hero_stat="knowledge", hero_target=5, hero_detail="在关键房间找到油漆并推进亵渎进度。", traitor_detail="在五芒星室完成一次献祭检定。", monster_count="player_count", hero_requires=(), traitor_requires=()),
     15: dict(mode="dragon_siege", traitor_rule="revealer", hero_goal="击败龙。", traitor_goal="让龙造成足够破坏并杀死所有英雄。", rooms=("entrance_hall", "chasm", "vault", "catacombs", "underground_lake"), monsters=("giant",), tokens=("dragon", "ancient_armor", "shield", "fire"), hero_task="准备屠龙并造成伤害", traitor_task="指挥龙喷火", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="在龙所在房间完成屠龙行动；长矛、盾牌和古董盔甲可提供帮助。", traitor_detail="推进龙的破坏轨道，代表一次喷火或撕咬。", monster_count=1, engine_note="龙使用巨人模板；火焰免疫和双重攻击待独立组件完成后再细化。"),
     16: dict(mode="phantom_bomb", traitor_rule="revealer", hero_goal="击败幻影、救出女孩，并拆除炸弹或及时逃离。", traitor_goal="在倒计时结束前引爆房屋，或杀死所有英雄。", rooms=("catacombs", "crypt", "furnace_room", "basement_landing", "entrance_hall"), monsters=("shadow",), tokens=("phantom", "girl", "bomb", "unique_marker"), hero_task="救出女孩并拆除炸弹", traitor_task="推进爆炸倒计时", hero_stat="knowledge", hero_target=6, hero_progress_target=2, hero_detail="先在地下室击败幻影，再完成拆弹检定。", traitor_detail="推进倒计时；达到目标后房屋爆炸。", monster_count=1, hero_win_target=2, traitor_win_type="track", traitor_progress_target=8),
     17: dict(mode="bug_spray", traitor_rule="revealer", hero_goal="制作杀虫剂并消灭三个虫子。", traitor_goal="破坏四种以上成分，或杀死所有英雄。", rooms=("research_laboratory", "kitchen", "larder", "attic", "garden", "servants_quarters"), monsters=("spider", "giant_spider"), tokens=("ingredient", "bug_spray", "insect"), hero_task="制作并使用杀虫剂", traitor_task="销毁杀虫剂成分", hero_stat="knowledge", hero_target=4, hero_progress_target=3, hero_detail="在实验室或厨房完成制作，再逐个消灭虫子。", traitor_detail="把成分带向危险房间并推进破坏进度。", monster_count="player_count"),

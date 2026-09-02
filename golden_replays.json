@@ -410,6 +410,23 @@
       "forced_haunt": 13
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "652eccdcd75466975082f40e9dccdecbdde1162a5ed087f36a2892ad65b29110",
+      "turns": 37,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "英雄们的尸体成了祭坛上的贡品。",
+      "haunt": 14,
+      "haunt_name": "群星归位",
+      "rooms": 26,
+      "monsters": 2,
+      "key": "seed113-3p-haunt14",
+      "forced_haunt": 14
+    },
+    {
       "seed": 131,
       "players": 4,
       "completed": true,
