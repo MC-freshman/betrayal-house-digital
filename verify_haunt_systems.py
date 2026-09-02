@@ -27,11 +27,14 @@ if __package__ in {None, ""}:
         AlienAbductionMode,
         BanishmentEscortMode,
         CarnivorousIvyMode,
+        DeathDanceMode,
+        ExorcismMode,
         GenericModeHandler,
         SeanceRaceMode,
         WebEscapeMode,
         WerewolfHuntMode,
         WitchAndFrogsMode,
+        ZombieTrapMode,
         get_mode_handler,
         registered_modes,
     )
@@ -44,11 +47,14 @@ else:  # pragma: no cover
         AlienAbductionMode,
         BanishmentEscortMode,
         CarnivorousIvyMode,
+        DeathDanceMode,
+        ExorcismMode,
         GenericModeHandler,
         SeanceRaceMode,
         WebEscapeMode,
         WerewolfHuntMode,
         WitchAndFrogsMode,
+        ZombieTrapMode,
         get_mode_handler,
         registered_modes,
     )
@@ -87,8 +93,11 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(WebEscapeMode) == [4], f"剧本 4 未走定制 handler: {handlers.get(WebEscapeMode)}"
     assert handlers.get(AlienAbductionMode) == [6], f"剧本 6 未走定制 handler: {handlers.get(AlienAbductionMode)}"
     assert handlers.get(CarnivorousIvyMode) == [7], f"剧本 7 未走定制 handler: {handlers.get(CarnivorousIvyMode)}"
+    assert handlers.get(ExorcismMode) == [8], f"剧本 8 未走定制 handler: {handlers.get(ExorcismMode)}"
+    assert handlers.get(DeathDanceMode) == [9], f"剧本 9 未走定制 handler: {handlers.get(DeathDanceMode)}"
+    assert handlers.get(ZombieTrapMode) == [10], f"剧本 10 未走定制 handler: {handlers.get(ZombieTrapMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 63, f"应有 63 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 60, f"应有 60 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -97,7 +106,11 @@ def verify_mode_dispatch() -> None:
     # 不存在的 mode 也不能崩
     assert isinstance(get_mode_handler("no_such_mode"), GenericModeHandler)
 
-    assert set(registered_modes()) == {"alien_abduction", "banishment_escort", "carnivorous_ivy", "generic", "seance_race", "web_escape", "werewolf_hunt", "witch_and_frogs"}
+    assert set(registered_modes()) == {
+        "alien_abduction", "banishment_escort", "carnivorous_ivy", "delayed_traitor_relic",
+        "exorcism", "generic", "seance_race", "trap_zombies", "web_escape",
+        "werewolf_hunt", "witch_and_frogs",
+    }
 
 
 def verify_mode_handler_reaches_engine() -> None:
@@ -114,6 +127,15 @@ def verify_mode_handler_reaches_engine() -> None:
 
     engine.state.haunt = engine.catalog.haunt_defs[7]
     assert isinstance(engine._mode_handler(), CarnivorousIvyMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[8]
+    assert isinstance(engine._mode_handler(), ExorcismMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[9]
+    assert isinstance(engine._mode_handler(), DeathDanceMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[10]
+    assert isinstance(engine._mode_handler(), ZombieTrapMode)
 
     engine.state.haunt = engine.catalog.haunt_defs[35]
     assert isinstance(engine._mode_handler(), GenericModeHandler)
@@ -1026,6 +1048,189 @@ def verify_haunt7_elevator_and_destroy() -> None:
     assert engine.state.winner == "traitor", "喷雾被毁 = 叛徒获胜"
 
 
+def verify_haunt8_banshee_exorcism() -> None:
+    """剧本 8：女妖免疫/哀嚎分档/灵应板免疫；一次性驱魔来源与进度（p19/p90）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=8)
+    handler = engine._mode_handler()
+    assert isinstance(handler, ExorcismMode)
+    banshee = engine._monster_by_template("banshee")
+    assert banshee is not None and engine._monster_invulnerable(banshee), "女妖应不可被攻击"
+    assert engine.tokens_of_kind("banshee"), "女妖令牌应已放置"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    _set_current(engine, hero)
+
+    # 驱魔来源一次性：教堂理智 5+ 成功 → 进度 1、来源作废、房间有检定令牌
+    room = next(iter(engine.state.board.values()))
+    original = room.template_id
+    room.template_id = "chapel"
+    try:
+        hero.room_key = room.key
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "chapel" in ids and "library" not in ids, "教堂在房应只提供教堂来源"
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, hero, "chapel", {}) is True
+    finally:
+        room.template_id = original
+    assert engine._haunt_track_value("exorcism_successes") == 1
+    assert "chapel" in engine._haunt_flags()["used_exorcism_sources"]
+    assert engine.tokens_of_kind("sanity_check"), "成功后应放置理智检定令牌"
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "chapel" not in ids, "成功用过的来源不应再出现"
+
+    # 哀嚎：理智检定低（0-2 档）→ 4 骰精神伤害；持灵应板的叛徒免疫
+    hero.room_key = banshee.room_key
+    sanity_before = hero.stats["sanity"]
+    traitor.items.append("omen_spirit_board")
+    traitor.room_key = banshee.room_key
+    with patch.object(engine, "_roll_attack", return_value=1), patch.object(
+        engine, "roll_dice", side_effect=lambda count, label="": 3 if label == "女妖哀嚎" else count
+    ):
+        handler._wail(engine, banshee.room_key, None)
+    assert hero.stats["sanity"] < sanity_before, "哀嚎应造成精神伤害"
+    assert not traitor.dead, "持灵应板的叛徒应免疫哀嚎"
+
+    # 移动计划 0（传送 ≤7 格）
+    old_room = banshee.room_key
+    with patch.object(
+        engine, "roll_dice", side_effect=lambda count, label="": 0 if "移动计划" in label else 4
+    ):
+        assert handler.on_monster_turn_start(engine, banshee) is True
+    assert banshee.room_key != old_room
+    assert engine._path_length(old_room, banshee.room_key) <= 7, "选项 0 只能传送到 ≤7 格"
+
+
+def verify_haunt9_dance_of_death() -> None:
+    """剧本 9：无开局叛徒、补房、诱惑堕落、放逐提琴手、毁圣徽（p20/p91）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=9)
+    handler = engine._mode_handler()
+    assert isinstance(handler, DeathDanceMode)
+
+    # 开局没有叛徒；五芒星室与舞厅被拉进场；提琴手令牌在舞厅
+    assert engine.state.traitor_id is None, "剧本 9 开局不应有叛徒"
+    assert all(p.role == "hero" for p in engine.state.players)
+    board_ids = {r.template_id for r in engine.state.board.values()}
+    assert "pentagram_chamber" in board_ids and "ballroom" in board_ids, "关键房间应被补进场"
+    assert engine.tokens_of_kind("dark_fiddler"), "黑暗提琴手令牌应已放置"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    ballroom_key = next(k for k, r in engine.state.board.items() if r.template_id == "ballroom")
+
+    # 在舞厅抵抗失败 → 直接堕落为叛徒
+    hero.room_key = ballroom_key
+    with patch.object(engine, "_resolve_check", return_value=False):
+        handler.on_turn_start(engine, hero)
+    assert hero.role == "traitor" and engine.state.traitor_id == hero.id, "舞厅诱惑失败应堕落"
+    assert not hero.dead
+
+    # 叛徒回合开始：力量检定 0-2 → 不能移动 + 力量轨道下移一格
+    might_pos_before = hero.stat_positions.get("might")
+    with patch.object(engine, "_roll_attack", return_value=1):
+        handler.on_turn_start(engine, hero)
+    assert hero.movement_stopped, "跳舞检定失败应钉住本回合"
+    assert hero.stat_positions.get("might", 0) < might_pos_before, "跳舞检定失败应 -1 力量（轨道下移一格）"
+
+    # 剩余英雄在五芒星室放逐（理智 5+）：进度 +1、房间放理智令牌
+    pentagram_key = next(k for k, r in engine.state.board.items() if r.template_id == "pentagram_chamber")
+    other = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    other.items.append("omen_holy_symbol")
+    _set_current(engine, other)
+    other.room_key = pentagram_key
+    ids = {a.id for a in handler.available_actions(engine, other)}
+    assert "banish_fiddler" in ids, "圣徽同房时应有放逐行动"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, other, "banish_fiddler", {}) is True
+    assert engine._haunt_track_value("fiddler_banishment") == 1
+    assert engine.tokens_in_room(pentagram_key, "sanity_check"), "成功后五芒星室应有理智令牌"
+
+    # 持圣徽的英雄不能自愿转交
+    engine._ensure_room_in_play("chasm", other.room_key)
+    chasm_key = next(k for k, r in engine.state.board.items() if r.template_id == "chasm")
+    other.room_key = chasm_key
+    assert other.items and "omen_holy_symbol" in other.items
+    assert engine.state.players, "占位断言避免未使用告警"
+
+    # 叛徒在深渊持徽毁徽 → 叛徒胜
+    hero.room_key = chasm_key
+    hero.items.append("omen_holy_symbol")
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "destroy_holy_symbol" in ids
+    assert handler.perform_action(engine, hero, "destroy_holy_symbol", {}) is True
+    assert engine._haunt_flags().get("holy_symbol_destroyed") is True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "traitor"
+
+
+def verify_haunt10_family_gathering() -> None:
+    """剧本 10：叛徒被疯子杀掉、僵尸困房、疯子 5 点伤害容量（p21/p92）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=10)
+    handler = engine._mode_handler()
+    assert isinstance(handler, ZombieTrapMode)
+
+    # 叛徒开局被疯子杀死（游戏继续）；疯子顶替其位置；僵尸数 = 玩家数
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    assert traitor.dead, "叛徒应被疯子杀死"
+    madman = engine._monster_by_template("madman")
+    assert madman is not None and madman.room_key == traitor.room_key, "疯子应顶替叛徒的位置"
+    zombies = [m for m in engine.state.monsters if m.template_id == "zombie"]
+    assert len(zombies) == len(engine.state.players), "僵尸数应等于玩家数"
+
+    # 僵尸走进特殊房间：知识检定失败 → 永困（进度 +1，每房一只）
+    room = next(iter(engine.state.board.values()))
+    original = room.template_id
+    room.template_id = "master_bedroom"
+    zombie = zombies[0]
+    zombie.room_key = room.key
+    try:
+        with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 3):
+            assert handler.on_monster_turn_start(engine, zombie) is True, "困住后应接管回合"
+    finally:
+        room.template_id = original
+    trapped = engine._haunt_flags()["trapped_zombies"]
+    assert zombie.id in trapped and engine._haunt_track_value("zombies_trapped") == 1
+
+    # 同一房间不能再困第二只（即使检定失败）
+    other_zombie = zombies[1]
+    room.template_id = "master_bedroom"
+    other_zombie.room_key = room.key
+    try:
+        with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 0):
+            assert handler.on_monster_turn_start(engine, other_zombie) is False
+    finally:
+        room.template_id = original
+    assert engine._haunt_track_value("zombies_trapped") == 1, "用过的房间不能再困"
+
+    # 疯子挨 5 点物理伤害 → 离场
+    with patch.object(engine, "_advance_haunt_track", wraps=engine._advance_haunt_track):
+        assert handler.on_monster_defeated(engine, madman, 5) is False  # 默认仍会击晕
+    assert madman not in engine.state.monsters, "疯子累计 5 点伤害应离场"
+    assert engine._haunt_track_value("madman_damage") == 5
+
+    # 全部僵尸被困 → 英雄胜
+    zombies_now = [m for m in engine.state.monsters if m.template_id == "zombie"]
+    # 只挑还没困过僵尸的房间（第二次"同房尝试"会把 mon_2 留在被占用的房间）
+    fresh_rooms = [
+        r for r in sorted(engine.state.board.values(), key=lambda x: x.key)
+        if r.key not in set(engine._haunt_flags().get("trapped_rooms", []))
+    ]
+    for z, r in zip(zombies_now, fresh_rooms):
+        if z.id in engine._haunt_flags()["trapped_zombies"]:
+            continue
+        old = r.template_id
+        r.template_id = "chapel"
+        try:
+            z.room_key = r.key
+            with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 3):
+                handler.on_monster_turn_start(engine, z)
+        finally:
+            r.template_id = old
+    assert engine._haunt_track_value("zombies_trapped") >= engine._haunt_track_target("zombies_trapped")
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -1364,6 +1569,9 @@ def main():
     verify_haunt7_spray_creation_and_kill()
     verify_haunt7_grab_release_mulch()
     verify_haunt7_elevator_and_destroy()
+    verify_haunt8_banshee_exorcism()
+    verify_haunt9_dance_of_death()
+    verify_haunt10_family_gathering()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

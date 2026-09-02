@@ -158,6 +158,10 @@ class GenericModeHandler:
         """某张卡是否禁止被该玩家捡起（剧本 7：叛徒不能重拾古书）。"""
         return False
 
+    def item_trade_blocked(self, engine: Any, giver: Any, target: Any, card_id: str) -> bool:
+        """某张卡是否禁止被该玩家自愿交出（剧本 9：持圣徽者不能转交圣徽）。"""
+        return False
+
 
 class BanishmentEscortMode(GenericModeHandler):
     """剧本 1 木乃伊苏醒（The Mummy Walks）。
@@ -1535,8 +1539,521 @@ class CarnivorousIvyMode(GenericModeHandler):
         if engine._haunt_track_value("creepers_killed") >= engine._haunt_track_target("creepers_killed"):
             engine._set_winner("heroes", "喷杀的爬行藤已达目标数，余下的藤蔓仓皇退去。")
             return True
-        # 英雄全灭 / 叛徒阵亡等兜底交给引擎
+        # p89 只规定两种终局（英雄全灭 / 喷雾被毁）：藤蔓自主行动，
+        # 叛徒阵亡【不】构成英雄胜利。吸收引擎兜底，游戏继续。
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "所有英雄都被藤蔓吞噬了。")
+            return True
+        return True
+
+
+class ExorcismMode(GenericModeHandler):
+    """剧本 8 女妖哀嚎（Wail of the Banshee）。
+
+    权威原文：英雄手册 p19 / 叛徒手册 p90。
+
+    核心机制（此前数据只有"看起来对"的骨架，实际全未接上）：
+    · 女妖不可被攻击（invulnerable），没有普通攻击；每次怪物阶段按 p90
+      "移动计划"行动：掷两枚骰（0-2 面），和 0-4 直接对应五个选项：
+        0 传送到 ≤7 格远的任意房间（途中不经任何房间）
+        1 先选第一个房间，此后尽量左转（贴左墙）
+        2 先选第一个房间，此后尽量直行；只剩左右可走时随机
+        3 先选第一个房间，此后尽量右转（贴右墙）
+        4 本回合由叛徒操控移动，且哀嚎对每位探险者至多生效一次
+      贴墙规则（1/3 共用）：左/右转优先，不行直行，再不行反向转，
+      死胡同从原路返回。
+    · 哀嚎：女妖途经或停下的房间，每位探险者理智检定按总点分档受伤：
+        6+ 受 1 骰精神伤害；3-5 受 2 骰；0-2 受 4 骰。持灵应板的叛徒
+      免疫；板被偷走后不再免疫，偷板者自己也不获得免疫。
+    · 驱魔（英雄胜）：成功次数 = 玩家人数即放逐女妖。每次成功需要一个
+      房间/物品来源（理智：教堂/地窖/五芒星室/圣徽/灵应板；知识：图书
+      馆/研究实验室/古书/水晶球），理智或知识 5+，每人每回合一次；每个
+      来源只能成功使用一次（成功后来源作废，房间放一枚检定令牌）。
+    · 已知简化：p90 女妖途经楼梯类房间的"定向传送"（二楼平台/塌房/画廊/
+      门厅等）未实现——引擎连通图已含楼梯链接，抄近路近似；女妖不用
+      神秘电梯（引擎怪物从不触发电梯效果，天然满足）。
+    · 移动目标（选项 1-3 的"先选第一个房间"与选项 4 的操控）统一取
+      "机器人叛徒选择朝最近英雄方向"，保证种子回放可复现。
+    """
+
+    mode = "exorcism"
+
+    BANSHEE = "banshee"
+    SANITY_ROOM_SOURCES = ["chapel", "crypt", "pentagram_chamber"]
+    SANITY_ITEM_SOURCES = ["omen_holy_symbol", "omen_spirit_board"]
+    KNOWLEDGE_ROOM_SOURCES = ["library", "research_laboratory"]
+    KNOWLEDGE_ITEM_SOURCES = ["omen_book", "omen_crystal_ball"]
+    ALL_SOURCES = (
+        SANITY_ROOM_SOURCES + SANITY_ITEM_SOURCES
+        + KNOWLEDGE_ROOM_SOURCES + KNOWLEDGE_ITEM_SOURCES
+    )
+    # 贴墙转向（相对当前行进方向）：1=左墙，3=右墙
+    WALL_TURN = {1: -1, 3: 1}
+
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        # p90：女妖令牌（大）放在叛徒所在房间；p19 检定令牌按需生成
+        engine.spawn_token("banshee", label="女妖", role="marker", room_key=room_key)
+        engine._haunt_flags().setdefault("used_exorcism_sources", [])
+
+    # ------------------------------------------------------------- 女妖回合
+    def on_monster_turn_start(self, engine: Any, monster: Any) -> bool:
+        if _monster_id(monster) != self.BANSHEE:
+            return False
+        self._banshee_turn(engine, monster)
+        return True  # 移动与哀嚎都已处理，跳过引擎默认追击/攻击
+
+    def _banshee_turn(self, engine: Any, monster: Any) -> None:
+        option = engine.roll_dice(2, "女妖移动计划")  # 两枚 0-2 骰 → 0..4
+        steps = engine.roll_dice(getattr(monster, "speed", 8), "女妖速度")
+        engine._log(f"女妖的移动计划掷出 {option}，可移动 {steps} 格。")
+        target = engine._find_monster_target(monster)
+
+        if option == 0:
+            # 传送到任意 ≤7 格的房间（到达即停，仍会哀嚎）
+            candidates = [
+                key for key in engine.state.board
+                if key != monster.room_key
+                and engine._path_length(monster.room_key, key) <= 7
+            ]
+            if not candidates:
+                engine._log("女妖周围七格内空无一物。")
+                return
+            dest = min(
+                candidates,
+                key=lambda key: (
+                    engine._path_length(key, target.room_key) if target is not None else 0,
+                    key,
+                ),
+            )
+            monster.room_key = dest
+            engine._log(f"女妖化作阴风，直接飘进了{engine.state.board[dest].name}。")
+            self._wail(engine, dest, None)
+            return
+
+        if target is None:
+            return
+        path = engine._shortest_path(monster.room_key, target.room_key)
+        if len(path) < 2:
+            return  # 已与目标同房（引擎不会在此阶段调用，防御性返回）
+
+        if option == 2:
+            # 直行优先：沿最短路径走完剩余步数（途经房间照常哀嚎）
+            remaining = path[1 : min(len(path) - 1, steps) + 1]
+            for next_key in remaining:
+                monster.room_key = next_key
+                self._wail(engine, next_key, None)
+                if engine.state.winner:
+                    return
+            return
+
+        # 选项 1/3/4：第一格朝最近英雄方向；1/3 之后按贴墙规则，
+        # 4 为叛徒操控（机器人叛徒选"向目标推进"，哀嚎去重一次）
+        once_set: set | None = set() if option == 4 else None
+        first = path[1]
+        monster.room_key = first
+        self._wail(engine, first, once_set)
+        facing = self._facing(engine, monster.room_key, first)
+        if option == 1 or option == 3:
+            for _ in range(max(0, steps - 1)):
+                nxt = self._wall_step(engine, monster.room_key, facing, option)
+                if nxt is None or nxt == monster.room_key:
+                    break
+                facing = self._facing(engine, monster.room_key, nxt)
+                monster.room_key = nxt
+                self._wail(engine, nxt, None)
+                if engine.state.winner:
+                    return
+        else:
+            chase = engine._shortest_path(monster.room_key, target.room_key)
+            for next_key in chase[1 : min(len(chase) - 1, steps - 1) + 1]:
+                monster.room_key = next_key
+                self._wail(engine, next_key, once_set)
+                if engine.state.winner:
+                    return
+
+    def _facing(self, engine: Any, prev_key: str, curr_key: str) -> str:
+        """上一房间 -> 当前房间 的几何方向；链接跳转等非正交移动返回空串。"""
+        prev = engine.state.board.get(prev_key)
+        curr = engine.state.board.get(curr_key)
+        if not prev or not curr or prev.floor != curr.floor:
+            return ""
+        dx = curr.x - prev.x
+        dy = curr.y - prev.y
+        for direction, (ddx, ddy) in {
+            "north": (0, -1), "east": (1, 0), "south": (0, 1), "west": (-1, 0),
+        }.items():
+            if (dx, dy) == (ddx, ddy):
+                return direction
+        return ""
+
+    def _neighbors(self, engine: Any, room_key: str) -> list[str]:
+        return engine._build_graph().get(room_key, [])
+
+    def _wall_step(self, engine: Any, room_key: str, facing: str, option: int) -> str | None:
+        """按贴墙优先级走一步：左/直/右/原路，返回下一房间；无路返回 None。"""
+        neighbors = self._neighbors(engine, room_key)
+        if not neighbors:
+            return None
+        if not facing:
+            return neighbors[0]
+        order = ["north", "east", "south", "west"]
+        idx = order.index(facing)
+        turn = self.WALL_TURN.get(option, 0)
+        priority_dirs = [
+            order[(idx + turn) % 4],   # 转向侧
+            order[idx],                # 直行
+            order[(idx - turn) % 4],   # 反向侧
+            order[(idx + 2) % 4],      # 原路返回
+        ]
+        for direction in priority_dirs:
+            matches = [k for k in neighbors if self._facing(engine, room_key, k) == direction]
+            if matches:
+                return matches[0]
+        return neighbors[0]
+
+    def _wail(self, engine: Any, room_key: str, once_set: set | None) -> None:
+        """女妖哀嚎：房间里的探险者按理智检定分档吃精神伤害。
+
+        once_set 非空（选项 4）时，本回合已中招的英雄跳过。
+        """
+        occupants = [
+            p for p in engine.state.players
+            if not p.dead and p.room_key == room_key
+            and not (p.role == "traitor" and "omen_spirit_board" in p.items)
+        ]
+        for victim in occupants:
+            if once_set is not None and victim.id in once_set:
+                continue
+            roll = engine._roll_attack(victim, "sanity")
+            dice = 1 if roll >= 6 else (2 if roll >= 3 else 4)
+            amount = engine.roll_dice(dice, "女妖哀嚎")
+            if once_set is not None:
+                once_set.add(victim.id)
+            engine._log(
+                f"女妖的哀嚎撕裂了{victim.name}的心智（理智检定 {roll}，"
+                f"{dice} 骰 → {amount} 点精神伤害）。"
+            )
+            engine._deal_damage(victim, "mental", amount, source="女妖哀嚎")
+            if victim.dead:
+                break
+
+    # ------------------------------------------------------------- 驱魔
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        actions = super().available_actions(engine, player)
+        used = set(engine._haunt_flags().get("used_exorcism_sources", []))
+        return [action for action in actions if action.id not in used]
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        if action_id not in self.ALL_SOURCES:
+            return super().perform_action(engine, player, action_id, data)
+        if action_id in set(engine._haunt_flags().get("used_exorcism_sources", [])):
+            engine._log("这个驱魔来源已经成功用过，不能再用了。")
+            return False
+        ok = super().perform_action(engine, player, action_id, data)
+        if ok:
+            used = list(engine._haunt_flags().get("used_exorcism_sources", []))
+            used.append(action_id)
+            engine._haunt_flags()["used_exorcism_sources"] = used
+            kind = (
+                "sanity_check"
+                if action_id in self.SANITY_ROOM_SOURCES + self.SANITY_ITEM_SOURCES
+                else "knowledge_check"
+            )
+            engine.spawn_token(kind, label="驱魔成功", role="check", room_key=player.room_key)
+        return ok
+
+    def check_victory(self, engine: Any) -> bool:
+        if engine._haunt_track_value("exorcism_successes") >= engine._haunt_track_target("exorcism_successes"):
+            engine._set_winner("heroes", "驱魔完成——女妖在圣咏中化为青烟消散了。")
+            return True
+        # p90 只规定两种终局（放逐 / 英雄全灭）：女妖按自己的计划行动，
+        # 叛徒阵亡【不】构成英雄胜利。吸收引擎兜底，游戏继续。
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "女妖的哀嚎夺走了最后一个活着的灵魂。")
+            return True
+        return True
+
+
+class DeathDanceMode(GenericModeHandler):
+    """剧本 9 死亡之舞（The Dance of Death）。
+
+    权威原文：英雄手册 p20 / 叛徒手册 p91。
+
+    特色是"开局没有叛徒"：每位英雄在自己回合开始都可能被魔音诱惑成叛徒。
+    引擎每次作祟都必然指定一名叛徒，本模式在 setup 里把引擎选出的这名
+    玩家降回英雄（含清空 traitor_id），真正的叛徒由诱惑检定动态诞生。
+
+    · 补房（p20）：五芒星室与舞厅不在场时从房间牌堆拉进场（引擎
+      _ensure_room_in_play 放同楼层空位；原版"五芒星室放最远、舞厅接一楼
+      任选房间"的精确选址省略，只保证房间到场）。
+    · 抵抗诱惑（p20）：每位英雄（持圣徽者豁免）回合开始理智检定 4+；
+      失败 → 若在舞厅，或理智被扣到骷髅格 → 当场堕落为叛徒；否则理智
+      -1 并沿最短路线被迫走向舞厅。
+    · 理智因其他原因降到骷髅格也堕落为叛徒（p20 "you also become
+      insane"）。引擎死亡流程会把 0 属性判死，本模式只在回合开始兜底转
+      化——中途被精神伤害直接打死仍走死亡流程（已知简化）。
+    · 放逐提琴手（英雄胜，p20）：英雄把圣徽带进五芒星室后，同房任意英雄
+      可做理智 5+ 检定（无需本人持徽）；成功在五芒星室放一枚理智令牌；
+      令牌数 = 作祟开局人数 → 放逐成功。每人每回合只能尝试一步。
+    · 持圣徽者不能自愿转交圣徽（引擎 item_trade_blocked 钩子）。
+    · 叛徒每回合开始做力量检定：3+ 无碍；0-2 本回合不能移动且力量 -1
+      （p91 "Dance until your feet go numb"）。
+    · 叛徒胜：圣徽被毁（偷到手后在深渊/熔炉房/地下湖结束回合）或英雄全灭。
+    · 已知简化：叛徒"速度对速度攻击、2+ 可改偷"（p91）属引擎攻击结算级
+      改动，未接（同剧本 1 木乃伊专属战斗的处理方式）；第一个堕落者成为
+      叛徒后，其余英雄诱惑失败只吃 1 点理智伤害并走向舞厅，不再二次转化
+      （原版未说明多人堕落如何处理，电子版取单叛徒模型）。
+    """
+
+    mode = "delayed_traitor_relic"
+
+    PENTAGRAM = "pentagram_chamber"
+    BALLROOM = "ballroom"
+
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        flags = engine._haunt_flags()
+        engine._ensure_room_in_play(self.PENTAGRAM, room_key)
+        engine._ensure_room_in_play(self.BALLROOM, room_key)
+        ballroom_key = next(
+            (k for k, r in engine.state.board.items() if r.template_id == self.BALLROOM),
+            None,
+        )
+        engine.spawn_token("dark_fiddler", label="黑暗提琴手", role="marker",
+                           room_key=ballroom_key or room_key)
+        flags.setdefault("converted_traitor_id", None)
+        flags.setdefault("holy_symbol_destroyed", False)
+        latent = next((p for p in engine.state.players if p.role == "traitor"), None)
+        if latent is not None:
+            latent.role = "hero"
+            engine.state.traitor_id = None
+            engine._log("提琴手的旋律在每个心头埋下种子——目前还没有人堕落。")
+
+    def item_trade_blocked(self, engine: Any, giver: Any, target: Any, card_id: str) -> bool:
+        return card_id == "omen_holy_symbol" and giver.role == "hero"
+
+    def _ballroom_key(self, engine: Any) -> str | None:
+        return next(
+            (k for k, r in engine.state.board.items() if r.template_id == self.BALLROOM), None
+        )
+
+    def _convert_to_traitor(self, engine: Any, player: Any) -> None:
+        flags = engine._haunt_flags()
+        flags["converted_traitor_id"] = player.id
+        player.role = "traitor"
+        engine.state.traitor_id = player.id
+        engine._log(f"{player.name} 被提琴手的魔音攫住——他加入了死亡之舞！")
+        engine.check_victory()
+
+    def on_turn_start(self, engine: Any, player: Any) -> None:
+        if player.dead:
+            return
+        if player.role == "traitor":
+            # p91：叛徒每回合跳舞检定
+            roll = engine._roll_attack(player, "might")
+            if roll <= 2:
+                player.movement_stopped = True
+                engine._apply_stat_loss(player, "might", 1)
+                engine._log(f"{player.name} 跳得双脚发麻（力量检定 {roll}）：本回合不能移动，力量 -1。")
+            else:
+                engine._log(f"{player.name} 在死亡之舞中旋舞（力量检定 {roll}）。")
+            return
+        # 英雄：理智已在骷髅格（其他原因所致）→ 堕落
+        position = player.stat_positions.get("sanity")
+        if position is not None and position <= 0 and not player.dead:
+            self._convert_to_traitor(engine, player)
+            return
+        # 持圣徽者豁免诱惑检定
+        if "omen_holy_symbol" in player.items:
+            return
+        if engine._resolve_check(player, "sanity", 4, "抵抗提琴手的诱惑"):
+            return
+        # 诱惑失败
+        ballroom_key = self._ballroom_key(engine)
+        if ballroom_key is not None and player.room_key == ballroom_key:
+            self._convert_to_traitor(engine, player)
+            return
+        engine._apply_stat_loss(player, "sanity", 1)
+        position = player.stat_positions.get("sanity")
+        if position is not None and position <= 0:
+            self._convert_to_traitor(engine, player)  # 理智扣到骷髅 = 堕落而非死亡
+            return
+        if ballroom_key is not None:
+            path = engine._shortest_path(player.room_key, ballroom_key)
+            if len(path) > 1:
+                steps = max(1, player.stats.get("speed", 1))
+                player.room_key = path[min(len(path) - 1, steps)]
+                engine._log(
+                    f"被魔音牵引的{player.name}身不由己地走向{engine.state.board[player.room_key].name}。"
+                )
+
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        actions = super().available_actions(engine, player)
+        result = []
+        for action in actions:
+            if action.id == "banish_fiddler":
+                symbol_in_room = any(
+                    other.role == "hero" and not other.dead
+                    and other.room_key == player.room_key
+                    and "omen_holy_symbol" in other.items
+                    for other in engine.state.players
+                )
+                if not symbol_in_room:
+                    continue  # 圣徽必须由某位英雄带进五芒星室
+            result.append(action)
+        return result
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        if action_id == "banish_fiddler":
+            symbol_in_room = any(
+                other.role == "hero" and not other.dead
+                and other.room_key == player.room_key
+                and "omen_holy_symbol" in other.items
+                for other in engine.state.players
+            )
+            if not symbol_in_room:
+                engine._log("需要有英雄把圣徽带进五芒星室才能尝试放逐。")
+                return False
+            ok = super().perform_action(engine, player, action_id, data)
+            if ok:
+                engine.spawn_token(
+                    "sanity_check", label="放逐成功", role="check", room_key=player.room_key
+                )
+            return ok
+        if action_id == "destroy_holy_symbol":
+            ok = super().perform_action(engine, player, action_id, data)
+            if ok and not engine._haunt_flags().get("holy_symbol_destroyed"):
+                engine._haunt_flags()["holy_symbol_destroyed"] = True
+                engine._log("圣徽被抛入深渊——再也没有人能阻止死亡之舞了！")
+            return ok
+        return super().perform_action(engine, player, action_id, data)
+
+    def check_victory(self, engine: Any) -> bool:
+        if engine._haunt_flags().get("holy_symbol_destroyed"):
+            engine._set_winner("traitor", "圣徽已毁，死亡之舞将永远继续。")
+            return True
+        if engine._haunt_track_value("fiddler_banishment") >= engine._haunt_track_target("fiddler_banishment"):
+            engine._set_winner("heroes", "提琴手在圣咏中融化——死亡之舞终于落幕。")
+            return True
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "所有人都加入了死亡之舞，再也停不下来。")
+            return True
+        return True  # 本剧本开局无叛徒，吸收引擎"叛徒缺席即英雄胜"兜底
+
+
+class ZombieTrapMode(GenericModeHandler):
+    """剧本 10 家族聚会（Family Gathering）。
+
+    权威原文：英雄手册 p21 / 叛徒手册 p92。
+
+    骨架数据基本正确（僵尸按预兆房间生成、疯子 5 点伤害容量、陷阱房间
+    列表），本模式把机制接通：
+
+    · 叛徒开局即被疯子杀死（p92）——与剧本 4/6 同款"叛徒出局但游戏继续"
+      模型；疯子令牌顶替他的位置，怪物阶段由本轮最后一位存活玩家代跑。
+    · 陷阱（英雄胜）：僵尸进入或回合开始时处于特殊房间（主卧/教堂/温室/
+      游戏室/图书馆/阁楼）→ 知识检定 4+ 成功则挣脱；失败则永远停在该
+      房间（不再移动/攻击/检定），进度 +1；每间房只能困一只（p21）。
+      全部僵尸被困 → 英雄胜。
+    · 疯子（p92）：可承受 5 点物理伤害才死；伤害不影响属性，常规攻击的
+      击晕照旧。累计伤害达容量即整场离场。
+    · 已知简化：p92 的"无视野时叛徒自由操控、有视线才追人"未实现——
+      电子版 bot 始终追最近英雄（引擎默认，接近"看到英雄"后的行为）；
+      "A Zombie attacks as soon as it's in a room with an explorer" 的
+      即时攻击用引擎"移动结束同房即攻击"近似（中途经过不额外攻击）。
+    """
+
+    mode = "trap_zombies"
+
+    ZOMBIE = "zombie"
+    MADMAN = "madman"
+    TRAP_ROOMS = ["master_bedroom", "chapel", "conservatory", "game_room", "library", "attic"]
+
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+        madman = engine._monster_by_template(self.MADMAN)
+        if traitor is not None:
+            if madman is not None:
+                madman.room_key = traitor.room_key  # 疯子令牌顶替叛徒的位置
+            engine._drop_inventory_on_death(traitor)
+            traitor.dead = True
+            engine._log(f"疯子从地板下爬出，把叛徒{traitor.name}拖进了地底。")
+        engine._haunt_flags().setdefault("trapped_zombies", [])
+        engine._haunt_flags().setdefault("trapped_rooms", [])
+
+    # ------------------------------------------------------------- 陷阱
+    def _try_trap(self, engine: Any, zombie: Any) -> bool:
+        """僵尸在特殊房间时尝试困住它。返回 True = 已被困住（或本就困着）。"""
+        trapped = set(engine._haunt_flags().get("trapped_zombies", []))
+        zombie_id = str(getattr(zombie, "id", ""))
+        if zombie_id in trapped:
+            return True
+        room = engine.state.board.get(getattr(zombie, "room_key", ""))
+        if room is None or room.template_id not in self.TRAP_ROOMS:
+            return False
+        if room.key in set(engine._haunt_flags().get("trapped_rooms", [])):
+            return False  # 这间房已经困过一只
+        roll = engine.roll_dice(getattr(zombie, "knowledge", 3), "僵尸滞留检定")
+        if roll >= 4:
+            engine._log(f"{zombie.name} 在{room.name}里嗅了嗅，挣脱了回忆的束缚。")
+            return False
+        flags = engine._haunt_flags()
+        flags["trapped_zombies"] = sorted(trapped | {zombie_id})
+        flags["trapped_rooms"] = sorted(set(flags.get("trapped_rooms", [])) | {room.key})
+        engine._advance_haunt_track("zombies_trapped", 1)
+        engine._log(f"{zombie.name} 在{room.name}前愣住了——他认出了自己的家，永远停在了那里。")
+        engine.check_victory()
+        return True
+
+    def on_monster_turn_start(self, engine: Any, monster: Any) -> bool:
+        if _monster_id(monster) != self.ZOMBIE:
+            return False
+        if self._try_trap(engine, monster):
+            return True  # 困在特殊房间开始回合：直接结算，不再行动
         return False
+
+    def on_monster_move(self, engine: Any, monster: Any, rolled: int) -> bool:
+        """僵尸移动的终点若是特殊房间，先落位再判陷阱（p21 进入即判）。"""
+        if _monster_id(monster) != self.ZOMBIE:
+            return False
+        if str(getattr(monster, "id", "")) in set(
+            engine._haunt_flags().get("trapped_zombies", [])
+        ):
+            return True
+        target = engine._find_monster_target(monster)
+        if target is None:
+            return False
+        path = engine._shortest_path(monster.room_key, target.room_key)
+        if len(path) <= 1:
+            return False
+        dest = path[min(len(path) - 1, rolled)]
+        monster.room_key = dest  # 先落位（引擎默认随后也会走到同一格）
+        if self._try_trap(engine, monster):
+            return True  # 已被困住：跳过引擎的后续移动
+        return False
+
+    def on_monster_defeated(self, engine: Any, monster: Any, amount: int) -> bool:
+        """疯子：物理伤害容量 5，常规击晕照旧（返回 False 让引擎默认击晕）。"""
+        if _monster_id(monster) != self.MADMAN:
+            return False
+        engine._advance_haunt_track("madman_damage", max(1, amount))
+        taken = engine._haunt_track_value("madman_damage")
+        if taken >= engine._haunt_track_target("madman_damage"):
+            monster_id = getattr(monster, "id", None)
+            engine.state.monsters = [
+                m for m in engine.state.monsters if getattr(m, "id", None) != monster_id
+            ]
+            engine._log("疯子轰然倒地——这一家子终于团聚了。")
+            engine.check_victory()
+        return False
+
+    def check_victory(self, engine: Any) -> bool:
+        if engine._haunt_track_value("zombies_trapped") >= engine._haunt_track_target("zombies_trapped"):
+            engine._set_winner("heroes", "所有僵尸都回到了生前最爱的房间，安静地停了下来。")
+            return True
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "疯子和他的家人们收割了整栋房子。")
+            return True
+        return True  # 吸收"叛徒开局已死 → 引擎判英雄胜"的兜底
 
 
 for _handler in (
@@ -1548,9 +2065,11 @@ for _handler in (
     WitchAndFrogsMode(),
     AlienAbductionMode(),
     CarnivorousIvyMode(),
+    ExorcismMode(),
+    DeathDanceMode(),
+    ZombieTrapMode(),
 ):
     register_mode(_handler)
-
 
 def _monster_id(monster: Any) -> str:
     """取怪物模板 id，取不到就返回空串。

@@ -1,9 +1,9 @@
 {
   "models.py": 24,
   "content.py": 146,
-  "engine.py": 899,
+  "engine.py": 903,
   "bot_ai.py": 248,
-  "haunt_rules.py": 481,
+  "haunt_rules.py": 542,
   "haunt_ai_profiles.py": 0,
   "help_text.py": 37,
   "haunts_zh.py": 0,

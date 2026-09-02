@@ -209,11 +209,14 @@ def verify_ranged_targets() -> None:
 
 
 def verify_haunt_rule_catalog() -> None:
+    from game.haunt_modes import get_mode_handler, GenericModeHandler
+
     catalog = build_catalog(17)
     valid_rooms = set(catalog.room_templates)
     valid_monsters = set(catalog.monsters)
     for haunt_id in range(1, 71):
         haunt = catalog.haunt_defs[haunt_id]
+        mode = (haunt.rule_data or {}).get("mode", "")
         assert haunt.mode != "generic", haunt_id
         assert haunt.rule_data, haunt_id
         assert haunt.rule_data.get("version", 0) >= 1, haunt_id
@@ -221,8 +224,12 @@ def verify_haunt_rule_catalog() -> None:
         assert haunt.rule_data.get("hero_goal"), haunt_id
         assert haunt.rule_data.get("traitor_goal"), haunt_id
         assert haunt.rule_data.get("setup", {}).get("tracks"), haunt_id
-        assert haunt.rule_data.get("actions"), haunt_id
-        assert haunt.rule_data.get("win_conditions"), haunt_id
+        # 定制 handler 可以把行动做成自动结算（如剧本 10 困僵尸），允许空表；
+        # 通用规则的剧本必须有可点的 actions（handler 都继承 GenericModeHandler，
+        # 所以用"类型不是基类本身"判断是否定制）
+        has_custom_handler = type(get_mode_handler(mode)) is not GenericModeHandler
+        assert haunt.rule_data.get("actions") or has_custom_handler, haunt_id
+        assert haunt.rule_data.get("win_conditions") or has_custom_handler, haunt_id
         assert set(haunt.rule_data.get("key_rooms", [])) <= valid_rooms, haunt_id
         assert {
             spec.get("template_id")

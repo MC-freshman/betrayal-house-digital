@@ -1819,6 +1819,10 @@ class GameEngine:
         if not card.tradeable:
             self._log(f"{card.name} 不能交易。")
             return False
+        # 剧本 9 p20：持圣徽的英雄不能自愿把圣徽交给别人（只能被偷走）。
+        if self._mode_handler().item_trade_blocked(self, player, target, card_id):
+            self._log(f"{player.name} 无法把 {card.name} 交给别人。")
+            return False
         if player.room_key != target.room_key or player.dead or target.dead:
             return False
         player.items.remove(card_id)

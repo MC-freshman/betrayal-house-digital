@@ -378,8 +378,15 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [18, 89],
     },
     8: {
-        "version": 1,
-        "fidelity": "draft",
+        # 校准记录（2026-09-02，对照英雄手册 p19 / 叛徒手册 p90）：
+        #   机制落在 ExorcismMode：女妖移动计划（掷两骰 0-4 → 传送/贴墙/
+        #   直行/操控）、逐房间哀嚎（理智 6+/3-5/0-2 分档伤害）、灵应板
+        #   免疫、六个一次性驱魔来源（理智 5+ 或知识 5+，来源用后作废，
+        #   检定令牌 = 玩家人数即放逐）。
+        #   女妖数值核对无误：Speed 8；不可被攻击。详见 haunt_modes.py
+        #   该 handler 的模块注释与已知简化清单。
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "exorcism",
         "traitor_rule": "revealer",
@@ -398,19 +405,36 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "monsters": [
             {"template_id": "banshee", "name": "女妖", "spawn": "haunt_room", "speed": 8, "might": 0, "sanity": 0, "attack_attr": "sanity", "invulnerable": True}
         ],
+        # 八个驱魔行动：id 即来源名（房间用 rooms 限制、物品用 requires 限制），
+        # 通用框架负责检定与进度；"同一来源只能成功一次"由 ExorcismMode
+        # 按 used_exorcism_sources 过滤。
         "actions": [
-            {"id": "exorcism_sanity", "side": "heroes", "stat": "sanity", "target": 5, "rooms": ["chapel", "crypt", "pentagram_chamber"], "cards": ["omen_holy_symbol", "omen_spirit_board"]},
-            {"id": "exorcism_knowledge", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["library", "research_laboratory"], "cards": ["omen_book", "omen_crystal_ball"]},
+            {"id": "chapel", "side": "heroes", "label": "在教堂驱魔", "detail": "理智检定 5+。教堂只能成功使用一次。", "stat": "sanity", "target": 5, "rooms": ["chapel"], "progress": "exorcism_successes"},
+            {"id": "crypt", "side": "heroes", "label": "在地窖驱魔", "detail": "理智检定 5+。地窖只能成功使用一次。", "stat": "sanity", "target": 5, "rooms": ["crypt"], "progress": "exorcism_successes"},
+            {"id": "pentagram_chamber", "side": "heroes", "label": "在五芒星室驱魔", "detail": "理智检定 5+。五芒星室只能成功使用一次。", "stat": "sanity", "target": 5, "rooms": ["pentagram_chamber"], "progress": "exorcism_successes"},
+            {"id": "omen_holy_symbol", "side": "heroes", "label": "借圣徽驱魔", "detail": "理智检定 5+。圣徽只能成功使用一次。", "stat": "sanity", "target": 5, "requires": ["omen_holy_symbol"], "progress": "exorcism_successes"},
+            {"id": "omen_spirit_board", "side": "heroes", "label": "借灵应板驱魔", "detail": "理智检定 5+。灵应板只能成功使用一次。", "stat": "sanity", "target": 5, "requires": ["omen_spirit_board"], "progress": "exorcism_successes"},
+            {"id": "library", "side": "heroes", "label": "在图书馆驱魔", "detail": "知识检定 5+。图书馆只能成功使用一次。", "stat": "knowledge", "target": 5, "rooms": ["library"], "progress": "exorcism_successes"},
+            {"id": "research_laboratory", "side": "heroes", "label": "在研究实验室驱魔", "detail": "知识检定 5+。研究实验室只能成功使用一次。", "stat": "knowledge", "target": 5, "rooms": ["research_laboratory"], "progress": "exorcism_successes"},
+            {"id": "omen_book", "side": "heroes", "label": "借古书驱魔", "detail": "知识检定 5+。古书只能成功使用一次。", "stat": "knowledge", "target": 5, "requires": ["omen_book"], "progress": "exorcism_successes"},
+            {"id": "omen_crystal_ball", "side": "heroes", "label": "借水晶球驱魔", "detail": "知识检定 5+。水晶球只能成功使用一次。", "stat": "knowledge", "target": 5, "requires": ["omen_crystal_ball"], "progress": "exorcism_successes"},
         ],
         "source_pages": [19, 90],
     },
     9: {
-        "version": 1,
-        "fidelity": "draft",
+        # 校准记录（2026-09-02，对照英雄手册 p20 / 叛徒手册 p91）：
+        #   机制落在 DeathDanceMode：无开局叛徒（引擎指定者开局降回英雄）、
+        #   五芒星室与舞厅补房、诱惑检定与堕落转化、放逐提琴手
+        #   （理智 5+，圣徽同房即可）、叛徒跳舞检定、毁圣徽即胜。
+        #   详见 haunt_modes.py 该 handler 的模块注释与已知简化清单。
+        #   说明：resist_music 由模式在回合开始自动执行，不作为点击行动；
+        #   banish_fiddler 的"圣徽在房"条件由模式过滤（原文允许不持徽者
+        #   在持徽英雄同房时尝试）。
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "delayed_traitor_relic",
         "traitor_rule": "revealer",
-        "engine_note": "原规则无初始叛徒；当前引擎先用揭示者占位，后续阶段实现被黑暗提琴手腐化后再转叛徒。",
         "hero_goal": "把圣徽带到五芒星室并完成等同初始玩家数的理智检定，驱逐黑暗提琴手。",
         "traitor_goal": "夺取并毁掉圣徽，让死亡之舞继续。",
         "suggested_monsters": [],
@@ -421,18 +445,23 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
             "tracks": {
                 "fiddler_banishment": {"label": "驱逐黑暗提琴手", "target": "player_count", "side": "heroes"},
             },
-            "flags": {"delayed_traitor": True, "holy_symbol_destroyed": False},
+            "flags": {"delayed_traitor": True, "holy_symbol_destroyed": False, "converted_traitor_id": None},
         },
         "actions": [
-            {"id": "resist_music", "side": "heroes", "stat": "sanity", "target": 4, "except_cards": ["omen_holy_symbol"]},
-            {"id": "banish_fiddler", "side": "heroes", "stat": "sanity", "target": 5, "rooms": ["pentagram_chamber"], "requires": ["omen_holy_symbol_in_room"]},
-            {"id": "destroy_holy_symbol", "side": "traitor", "rooms": ["chasm", "furnace_room", "underground_lake"], "requires": ["omen_holy_symbol"]},
+            {"id": "banish_fiddler", "side": "heroes", "label": "放逐黑暗提琴手", "detail": "圣徽同房时理智检定 5+；成功在五芒星室放一枚理智令牌。", "stat": "sanity", "target": 5, "rooms": ["pentagram_chamber"], "progress": "fiddler_banishment"},
+            {"id": "destroy_holy_symbol", "side": "traitor", "label": "毁掉圣徽", "detail": "把偷到手的圣徽丢进深渊、熔炉房或地下湖——叛徒直接获胜。", "rooms": ["chasm", "furnace_room", "underground_lake"], "requires": ["omen_holy_symbol"]},
         ],
         "source_pages": [20, 91],
     },
     10: {
-        "version": 1,
-        "fidelity": "draft",
+        # 校准记录（2026-09-02，对照英雄手册 p21 / 叛徒手册 p92）：
+        #   机制落在 ZombieTrapMode：叛徒开局被疯子杀死、僵尸进特殊房间
+        #   自动知识检定（4+ 挣脱，失败永困，每房一只）、疯子 5 点伤害
+        #   容量。trap_zombie 行动已删除——困僵尸是僵尸自己走进房间时的
+        #   自动结算，不是英雄可点的行动。详见 haunt_modes.py 该 handler
+        #   的模块注释与已知简化清单。
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "trap_zombies",
         "traitor_rule": "revealer",
@@ -447,15 +476,13 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
                 "zombies_trapped": {"label": "已困住僵尸", "target": "player_count", "side": "heroes"},
                 "madman_damage": {"label": "疯子受到的物理伤害", "target": 5, "side": "heroes"},
             },
-            "flags": {"traitor_removed_in_original": True, "used_trap_rooms": []},
+            "flags": {"traitor_removed_in_original": True, "trapped_zombies": [], "trapped_rooms": []},
         },
         "monsters": [
             {"template_id": "zombie", "name": "僵尸", "spawn": "omen_rooms", "count": "player_count", "speed": 2, "might": 6, "sanity": 2, "knowledge": 3},
             {"template_id": "madman", "name": "疯子", "spawn": "haunt_room", "speed": 3, "might": 5, "sanity": 5, "damage_capacity": 5},
         ],
-        "actions": [
-            {"id": "trap_zombie", "side": "heroes", "stat": "knowledge", "target": 4, "rooms": ["master_bedroom", "chapel", "conservatory", "game_room", "library", "attic"]},
-        ],
+        "actions": [],
         "source_pages": [21, 92],
     },
 }
