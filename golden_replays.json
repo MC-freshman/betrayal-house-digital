@@ -414,7 +414,7 @@
       "players": 3,
       "completed": true,
       "stalled_no_room_cards": false,
-      "hash": "652eccdcd75466975082f40e9dccdecbdde1162a5ed087f36a2892ad65b29110",
+      "hash": "6da31ddd3536e7d988442e4c6282a2abe456f2e37c7f288e9f3299c3b0b2e3c4",
       "turns": 37,
       "phase": "GAME_OVER",
       "winner": "traitor",
@@ -425,6 +425,23 @@
       "monsters": 2,
       "key": "seed113-3p-haunt14",
       "forced_haunt": 14
+    },
+    {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "e0ca40676bd0b51ce7ee9cf7cd90291f5d87cbacf6df089c0bdfe22c96c861ed",
+      "turns": 33,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "巨龙把最后的探险者也吞进了腹中。",
+      "haunt": 15,
+      "haunt_name": "此处有龙",
+      "rooms": 26,
+      "monsters": 1,
+      "key": "seed113-3p-haunt15",
+      "forced_haunt": 15
     },
     {
       "seed": 131,

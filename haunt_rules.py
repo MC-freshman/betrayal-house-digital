@@ -672,6 +672,48 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [25, 96],
     },
+    15: {
+        # 校准记录（2026-09-02，对照英雄手册 p26 / 叛徒手册 p97）：
+        #   机制落在 DragonSiegeMode：
+        #   · 巨龙（beast 模板承载，3/8/6）开局在门厅；伤害容量=玩家数；
+        #     韧性：每次被击败实扣伤害 -2；免疫速度攻击，持戒指者理智
+        #     攻击可伤它（attack_attr_override 复用剧本 11 钩子）
+        #   · 每回合两次攻击：火息（同房+门相邻房间的所有探险者含叛徒，
+        #     速度检定 4+ 免疫，失败同房 4 骰/相邻 2 骰物理伤害，弃一件
+        #     物品减 2 点——bot 自动弃）与咬（力量对决，同房）
+        #   · 装备三件套（地下室）：古董护甲（墓穴/地下湖，穿上整回合，
+        #     非火焰物理 -5，移动 -1，不可被偷）、盾（深坑/地窖，携带者
+        #     免火，移动 -1，同房英雄也免火息）、矛（项目无此卡，改为
+        #     令牌放剩余地下室房间；对龙攻击/防御 +4）
+        #   简化：穿甲/脱甲的"交给他人"未建模；护甲与盔甲卡不可同穿未拦。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "dragon_siege",
+        "traitor_rule": "revealer",
+        "hero_goal": "在地下室找到古董护甲、盾与矛，把巨龙的伤害攒满玩家人数并斩杀它。",
+        "traitor_goal": "驱使巨龙烧死咬死所有英雄。",
+        "suggested_monsters": ["beast"],
+        "required_cards": ["omen_ring"],
+        "key_rooms": ["entrance_hall", "catacombs", "underground_lake", "chasm", "crypt"],
+        "tokens": ["dragon", "antique_armor", "shield", "spear"],
+        "setup": {
+            "tracks": {
+                "dragon_damage": {"label": "巨龙受到的伤害", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"worn_by": None, "armor_room": None, "shield_room": None, "spear_room": None},
+        },
+        "monsters": [
+            {"template_id": "beast", "name": "巨龙", "spawn": "deferred", "speed": 3, "might": 8, "sanity": 6, "immune_to": ["speed"]},
+        ],
+        "actions": [
+            {"id": "don_armor", "side": "heroes", "label": "穿上古董护甲", "detail": "花整回穿上（本回合不能移动）：非火焰物理伤害 -5，移动 -1（p26）。"},
+            {"id": "take_shield", "side": "heroes", "label": "拿起盾", "detail": "携带者免疫火与热，移动 -1；同房英雄也免疫龙焰（p26）。"},
+            {"id": "take_spear", "side": "heroes", "label": "拿起矛", "detail": "对巨龙攻击/防御骰 +4（p26）。"},
+        ],
+        "win_conditions": [],
+        "source_pages": [26, 97],
+    },
 }
 
 
@@ -832,7 +874,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    15: dict(mode="dragon_siege", traitor_rule="revealer", hero_goal="击败龙。", traitor_goal="让龙造成足够破坏并杀死所有英雄。", rooms=("entrance_hall", "chasm", "vault", "catacombs", "underground_lake"), monsters=("giant",), tokens=("dragon", "ancient_armor", "shield", "fire"), hero_task="准备屠龙并造成伤害", traitor_task="指挥龙喷火", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="在龙所在房间完成屠龙行动；长矛、盾牌和古董盔甲可提供帮助。", traitor_detail="推进龙的破坏轨道，代表一次喷火或撕咬。", monster_count=1, engine_note="龙使用巨人模板；火焰免疫和双重攻击待独立组件完成后再细化。"),
     16: dict(mode="phantom_bomb", traitor_rule="revealer", hero_goal="击败幻影、救出女孩，并拆除炸弹或及时逃离。", traitor_goal="在倒计时结束前引爆房屋，或杀死所有英雄。", rooms=("catacombs", "crypt", "furnace_room", "basement_landing", "entrance_hall"), monsters=("shadow",), tokens=("phantom", "girl", "bomb", "unique_marker"), hero_task="救出女孩并拆除炸弹", traitor_task="推进爆炸倒计时", hero_stat="knowledge", hero_target=6, hero_progress_target=2, hero_detail="先在地下室击败幻影，再完成拆弹检定。", traitor_detail="推进倒计时；达到目标后房屋爆炸。", monster_count=1, hero_win_target=2, traitor_win_type="track", traitor_progress_target=8),
     17: dict(mode="bug_spray", traitor_rule="revealer", hero_goal="制作杀虫剂并消灭三个虫子。", traitor_goal="破坏四种以上成分，或杀死所有英雄。", rooms=("research_laboratory", "kitchen", "larder", "attic", "garden", "servants_quarters"), monsters=("spider", "giant_spider"), tokens=("ingredient", "bug_spray", "insect"), hero_task="制作并使用杀虫剂", traitor_task="销毁杀虫剂成分", hero_stat="knowledge", hero_target=4, hero_progress_target=3, hero_detail="在实验室或厨房完成制作，再逐个消灭虫子。", traitor_detail="把成分带向危险房间并推进破坏进度。", monster_count="player_count"),
     18: dict(mode="poisonous_plant", traitor_rule="revealer", hero_goal="找到花并削弱、杀死邪恶植物。", traitor_goal="利用孢子杀死所有英雄。", rooms=("conservatory", "garden", "graveyard", "research_laboratory"), monsters=("plant",), tokens=("flower", "spore", "evil_plant"), hero_task="寻找花并削弱植物", traitor_task="扩散孢子", hero_stat="knowledge", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="找到花后在邪恶植物所在房间完成削弱检定。", traitor_detail="扩散孢子，持续给英雄施加威胁。", monster_count=1, hero_win_target="half_players_ceil"),

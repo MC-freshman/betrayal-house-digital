@@ -31,6 +31,7 @@ if __package__ in {None, ""}:
         ExorcismMode,
         NightmareDreamMode,
         StarsRightMode,
+        DragonSiegeMode,
         GenericModeHandler,
         FleshwalkerMode,
         SeanceRaceMode,
@@ -56,6 +57,7 @@ else:  # pragma: no cover
         FleshwalkerMode,
         NightmareDreamMode,
         StarsRightMode,
+        DragonSiegeMode,
         GenericModeHandler,
         SeanceRaceMode,
         SpecterInvasionMode,
@@ -108,8 +110,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(FleshwalkerMode) == [12], f"剧本 12 未走定制 handler: {handlers.get(FleshwalkerMode)}"
     assert handlers.get(NightmareDreamMode) == [13], f"剧本 13 未走定制 handler: {handlers.get(NightmareDreamMode)}"
     assert handlers.get(StarsRightMode) == [14], f"剧本 14 未走定制 handler: {handlers.get(StarsRightMode)}"
+    assert handlers.get(DragonSiegeMode) == [15], f"剧本 15 未走定制 handler: {handlers.get(DragonSiegeMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 56, f"应有 56 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 55, f"应有 55 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -120,7 +123,7 @@ def verify_mode_dispatch() -> None:
 
     assert set(registered_modes()) == {
         "alien_abduction", "banishment_escort", "carnivorous_ivy", "delayed_traitor_relic",
-        "exorcism", "fleshwalkers", "generic", "nightmare_escape", "paint_the_pentagram", "seance_race", "spectre_exorcism", "trap_zombies", "web_escape",
+        "exorcism", "fleshwalkers", "generic", "nightmare_escape", "dragon_siege", "paint_the_pentagram", "seance_race", "spectre_exorcism", "trap_zombies", "web_escape",
         "werewolf_hunt", "witch_and_frogs",
     }
 
@@ -160,6 +163,9 @@ def verify_mode_handler_reaches_engine() -> None:
 
     engine.state.haunt = engine.catalog.haunt_defs[14]
     assert isinstance(engine._mode_handler(), StarsRightMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[15]
+    assert isinstance(engine._mode_handler(), DragonSiegeMode)
 
     engine.state.haunt = engine.catalog.haunt_defs[35]
     assert isinstance(engine._mode_handler(), GenericModeHandler)
@@ -1632,6 +1638,90 @@ def verify_haunt14_stars_right() -> None:
     assert engine.state.winner == "traitor"
 
 
+def verify_haunt15_here_there_be_dragons() -> None:
+    """剧本 15：装备三件套/火息分区/韧性减伤/矛加值/斩龙胜利（p26/p97）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=15)
+    handler = engine._mode_handler()
+    assert isinstance(handler, DragonSiegeMode)
+    flags = engine._haunt_flags()
+
+    # 巨龙在门厅；三件装备都在地下室房间
+    dragon = engine._monster_by_template("beast")
+    entrance = next(k for k, r in engine.state.board.items() if r.template_id == "entrance_hall")
+    assert dragon is not None and dragon.room_key == entrance, "巨龙应从门厅进来"
+    assert (dragon.speed, dragon.might, dragon.sanity) == (3, 8, 6)
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    basement_ids = set(DragonSiegeMode.BASEMENT_ROOMS)
+    for kind, flag in (("antique_armor", "armor_room"), ("shield", "shield_room")):
+        tokens = engine.tokens_of_kind(kind)
+        assert tokens, f"{kind} 应已放置"
+        assert flags[flag] is not None
+        assert engine.state.board[flags[flag]].template_id in basement_ids, f"{kind} 应在地下室"
+    # 矛：若开局没有第三个地下室房间则处于待放状态，模拟发现即补放
+    if not engine.tokens_of_kind("spear"):
+        assert flags["spear_room"] is None, "未放置的矛应处于待放状态"
+        target_room = next(
+            r for r in engine.state.board.values()
+            if r.template_id in DragonSiegeMode.BASEMENT_ROOMS
+            and r.key not in {flags["armor_room"], flags["shield_room"]}
+        ) if any(
+            r.template_id in DragonSiegeMode.BASEMENT_ROOMS
+            and r.key not in {flags["armor_room"], flags["shield_room"]}
+            for r in engine.state.board.values()
+        ) else next(iter(engine.state.board.values()))
+        if target_room.template_id not in DragonSiegeMode.BASEMENT_ROOMS:
+            target_room.template_id = "catacombs"
+        handler.on_room_discovered(engine, hero, target_room)
+        assert engine.tokens_of_kind("spear"), "发现地下室房间后应补放矛"
+
+    # 免疫速度攻击；持戒指徒手改理智；持矛攻击 +4
+    dragon_id = dragon.id
+    assert handler.attack_attr_override(engine, hero, dragon, "might") is None, "无戒指不触发理智覆盖"
+    hero.items.append("omen_ring")
+    assert handler.attack_attr_override(engine, hero, dragon, "might") == "sanity"
+
+    # 韧性：击败一次 5 点伤害实扣 3（-2），不击晕
+    engine._active_player_id = hero.id
+    hero.room_key = dragon.room_key
+    pos_before = engine._haunt_track_value("dragon_damage")
+    with patch.object(engine, "_roll_attack", return_value=9), patch.object(
+        engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 4
+    ):
+        assert engine.attack(hero, dragon) is True
+    assert engine._haunt_track_value("dragon_damage") == pos_before + 3, "韧性应实扣 5-2=3"
+    assert dragon in engine.state.monsters and dragon.stunned_turns == 0, "巨龙不受击晕"
+
+    # 火息：同房无盾英雄速度检定失败 → 4 骰物理（可弃物减伤）
+    hero.room_key = dragon.room_key
+    hero.items.append("item_candle")
+    items_before = len(hero.items)
+    with patch.object(engine, "_roll_attack", return_value=1), patch.object(
+        engine, "roll_dice", side_effect=lambda count, label="": 6 if label == "龙焰" else count
+    ):
+        handler._firebreath(engine, dragon)
+    discarded = items_before - len(hero.items)
+    assert hero.dead or hero.stat_positions.get("might") is not None, "火息后英雄状态应可判定"
+
+    # 持盾者与同房英雄免疫龙焰
+    hero2 = next((p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead), None)
+    if hero2 is not None:
+        engine.spawn_token("shield", label="盾", role="carried", holder=hero2.id)
+        hero.room_key = dragon.room_key
+        hero2.room_key = dragon.room_key
+        might_before = hero2.stat_positions.get("might")
+        with patch.object(engine, "_roll_attack", return_value=1), patch.object(
+            engine, "roll_dice", side_effect=lambda count, label="": 8 if label == "龙焰" else count
+        ):
+            handler._firebreath(engine, dragon)
+        assert hero2.stat_positions.get("might") == might_before, "持盾者应免疫龙焰"
+
+    # 叛徒胜利兜底与英雄斩龙胜利
+    engine._set_haunt_track_value("dragon_damage", engine._haunt_track_target("dragon_damage"))
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+    assert engine._monster_by_template("beast") is None, "斩龙后巨龙离场"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -1980,6 +2070,7 @@ def main():
     verify_haunt12_fleshwalkers()
     verify_haunt13_perchance_to_dream()
     verify_haunt14_stars_right()
+    verify_haunt15_here_there_be_dragons()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

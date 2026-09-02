@@ -1769,7 +1769,7 @@ class GameEngine:
     def _deal_damage(self, player: Player, damage_type: str, amount: int, source: str = "") -> None:
         if amount <= 0 or player.dead:
             return
-        amount = self._adjust_damage_for_haunt(player, amount, source)
+        amount = self._adjust_damage_for_haunt(player, amount, source, damage_type=damage_type)
         if amount <= 0:
             return
         if source:
@@ -2125,6 +2125,8 @@ class GameEngine:
             )
             if override_attr:
                 attack_attr = override_attr
+            # 剧本可给攻击骰加值（剧本 15 p26：持矛对巨龙 +4）。
+            attack_bonus += self._mode_handler().attack_roll_bonus(self, attacker, target)
         # 怪物免疫：immune_to 列出的攻击属性对它无效（p17/p88：外星人免疫
         # 速度攻击如左轮；剧本 1 木乃伊同理；剧本 11 雾中人影免疫力量/速度）。
         if not isinstance(target, Player):
@@ -2892,7 +2894,7 @@ class GameEngine:
             self._log(f"{attacker.name} 用银弹击杀了 {target.name}。")
         return True
 
-    def _adjust_damage_for_haunt(self, player: Player, amount: int, source: str) -> int:
+    def _adjust_damage_for_haunt(self, player: Player, amount: int, source: str, damage_type: str = "physical") -> int:
         if amount <= 0:
             return amount
         if self.state.haunt and self.state.haunt.id == 5 and player.role == "traitor" and source != "银弹":
@@ -2900,7 +2902,13 @@ class GameEngine:
             if reduced != amount:
                 self._log("狼人抗性让伤害减半。")
             return reduced
-        return amount
+        # 剧本可减免伤害（剧本 15 p26：古董护甲对非火焰物理伤害 -5）。
+        reduction = self._mode_handler().physical_damage_reduction(
+            self, player, amount, source, damage_type
+        )
+        if reduction > 0:
+            self._log(f"{player.name} 的护甲挡下了 {min(reduction, amount)} 点伤害。")
+        return max(0, amount - reduction)
 
     def _resolve_haunt_check(self, revealer: Player) -> bool:
         if not self.state.haunt_pending:
