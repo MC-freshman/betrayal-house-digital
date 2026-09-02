@@ -1,0 +1,658 @@
+from __future__ import annotations
+
+from copy import deepcopy
+from typing import Any
+
+
+# 这个文件只存程序和机器人读取的剧本规则摘要，不直接显示给玩家。
+# 玩家可读文本在 haunts_zh.py 和 haunts_zh/*.md；后续润色机翻文本时不需要同步改这里。
+
+HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
+    1: {
+        # 校准记录（2026-08-31，对照英雄手册 p12 / 叛徒手册 p83）：
+        #   已核对无误：木乃伊 Speed 3 / Might 8 / Sanity 5；两步调查均 Knowledge 6+；
+        #               放逐需 2 枚知识检定令牌 + 持书与木乃伊同房间打理智战；
+        #               木乃伊免疫速度攻击（左轮、炸药）。
+        #   本次补齐（全部实现在 haunt_modes.BanishmentEscortMode）：
+        #     · 令牌链路：石棺/木乃伊/女孩三枚令牌放置、女孩卡 set aside 与拾取、
+        #       关键牌不在场时补抽（书归英雄、戒指或圣徽归叛徒）
+        #     · 战斗：造成速度伤害直到对手速度触底（不降到骷髅）后转力量伤害；
+        #       单次 2+ 伤害可改为夺取物品或抢走女孩（人类叛徒弹窗选，机器人自动）
+        #     · 移动：掷出 0 或 1 时经秘密通道直达目标房间
+        #   已知简化：秘密通道对机器人叛徒固定"追向最近英雄"，而非任选房间——
+        #     原文是 "any space"，任意选择对机器人没有意义，且会破坏对局可复现。
+        #     若将来要支持人类叛徒自选，在 on_monster_move 里加 prompter 询问即可。
+        "version": 1,
+        "status": "playable",
+        "mode": "banishment_escort",
+        "traitor_rule": "lowest_sanity",
+        "hero_goal": "完成真名和咒语两步调查后，带着书在木乃伊房间用理智战斗放逐它。",
+        "traitor_goal": "让木乃伊带着女孩和戒指或圣徽回到石棺房，或杀光英雄。",
+        "suggested_monsters": ["mummy"],
+        "required_cards": ["omen_book", "omen_girl", "omen_ring", "omen_holy_symbol"],
+        "key_rooms": ["catacombs", "research_laboratory", "library", "chapel", "entrance_hall"],
+        # 与 BanishmentEscortMode.setup 实际生成的令牌保持一致
+        "tokens": ["sarcophagus", "mummy_marker", "girl", "knowledge_check"],
+        "setup": {
+            "tracks": {
+                "banishment_steps": {"label": "木乃伊真名/咒语", "target": 2, "side": "heroes"},
+            },
+            "flags": {"girl_claimed": False, "mummy_has_girl": False},
+        },
+        "monsters": [
+            {
+                "template_id": "mummy",
+                "name": "木乃伊",
+                "spawn": "haunt_room",
+                "speed": 3,
+                "might": 8,
+                "sanity": 5,
+                "can_carry_items": True,
+                "immune_to": ["speed_attack"],
+            }
+        ],
+        "actions": [
+            {"id": "learn_true_name", "side": "heroes", "stat": "knowledge", "target": 6, "rooms": ["catacombs", "research_laboratory", "library"]},
+            {"id": "learn_spell", "side": "heroes", "stat": "knowledge", "target": 6, "requires": ["omen_book", "banishment_steps>=1"]},
+            {"id": "banish_mummy", "side": "heroes", "attack": "sanity", "requires": ["omen_book", "banishment_steps>=2", "same_room:mummy"]},
+        ],
+        "source_pages": [12, 83],
+    },
+    2: {
+        # 校准记录（2026-09-01，对照英雄手册 p13 / 叛徒手册 p84）：
+        #   已核对无误：检定全部 5+；英雄目标 = 玩家数一半（向下取整）；
+        #               幽灵 Speed 4 / Sanity 6 / 理智攻击；找骨头房间与安葬房间。
+        #   本次补齐（实现在 haunt_modes.SeanceRaceMode）：
+        #     · 竞速规则：叛徒须 1 次知识 + 1 次神志（不能两次同属性），持通灵板任意房间可试；
+        #       英雄限五芒星室、两属性任选
+        #     · 幽灵延迟生成与控制权（英雄先成 → 停在最后一次成功检定的房间）
+        #     · 安葬 5 回合计时器，逾期叛徒夺控、安葬失效
+        #     · 幽灵理智攻击造成精神伤害；可穿墙移动（按曼哈顿距离）
+        #     · 英雄控灵期间幽灵不动不攻击（p13 "It stays there"）
+        #   胜利条件修正：杀叛徒【不】算英雄胜（p84 "If the traitor dies, you
+        #     keep control of the Ghost"）；英雄只能靠安葬或摧毁幽灵取胜，
+        #     由 SeanceRaceMode.check_victory 判定，故这里只声明叛徒条件。
+        #   已知简化：叛徒控灵引发的"房屋坍塌"未实现（需整套房间翻转系统，
+        #     单独立项）；"降灵完成前禁止一切攻击"未实现。
+        "version": 1,
+        "status": "playable",
+        "mode": "seance_race",
+        "traitor_rule": "revealer",
+        "hero_goal": "在五芒星室完成降灵会并安葬骨头，或在叛徒控鬼后用理智攻击摧毁幽灵。",
+        "traitor_goal": "抢先完成降灵会并控制幽灵，之后杀死所有英雄。",
+        "suggested_monsters": [],
+        "required_cards": ["omen_spirit_board", "omen_ring"],
+        "key_rooms": ["pentagram_chamber", "attic", "bedroom", "master_bedroom", "crypt", "graveyard"],
+        "tokens": ["knowledge_check", "sanity_check", "ghost", "corpse"],
+        "setup": {
+            "tracks": {
+                "hero_seance": {"label": "英雄降灵会", "target": "half_players_floor", "side": "heroes"},
+                "traitor_seance": {"label": "叛徒降灵会", "target": 2, "side": "traitor"},
+                "ghost_rest_timer": {"label": "安葬骨头倒计时", "target": 5, "side": "heroes"},
+            },
+            "flags": {
+                "ghost_summoned": False,
+                "ghost_control": None,
+                "bones_found": False,
+                "bones_buried": False,
+                "seance_owner_id": None,
+                "hero_seance_knowledge": 0,
+                "hero_seance_sanity": 0,
+                "traitor_seance_knowledge": 0,
+                "traitor_seance_sanity": 0,
+            },
+        },
+        "monsters": [
+            {"template_id": "ghost", "name": "幽灵", "spawn": "deferred", "speed": 4, "sanity": 6, "attack_attr": "sanity"}
+        ],
+        "actions": [
+            {"id": "seance_check", "side": "both", "stat": ["knowledge", "sanity"], "target": 5, "rooms": ["pentagram_chamber"]},
+            # p13：找骨头/安葬都是"If You Summon the Ghost First"之后的任务，
+            # 必须英雄先完成降灵并持有幽灵控制权。
+            {"id": "find_bones", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["attic", "bedroom", "master_bedroom"], "requires": ["flag:ghost_summoned", "flag:ghost_control=heroes"], "set_flags": {"bones_found": True}},
+            {"id": "bury_bones", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["crypt", "graveyard"], "requires": ["flag:ghost_summoned", "flag:ghost_control=heroes", "flag:bones_found"], "set_flags": {"bones_buried": True}},
+        ],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都被幽灵与叛徒消灭了。"}
+        ],
+        "source_pages": [13, 84],
+    },
+    3: {
+        # 校准记录（2026-09-01，对照英雄手册 p14 / 叛徒手册 p85）：
+        #   已核对无误：女巫 Speed 4 / Might 3 / Sanity 6（门厅）、猫 3/3/2；
+        #               挖根 4+、凡人形态 6+、复原 4+。
+        #   本次补齐（实现在 haunt_modes.WitchAndFrogsMode）：
+        #     · Root 令牌三株（温室/储藏室/厨房，未发现则发现时悄悄补放）
+        #     · 女巫无敌真正生效：引擎此前从不读 invulnerable_until，
+        #       现按 monster_specs 判定，女巫在凡人形态施放前无法被选中/攻击
+        #     · 女巫法术：蛙皮（同房间理智对决变蛙）+ 鸦翼（飞向最近英雄）
+        #     · 青蛙状态机：掉物品/双属性降到最低格（不降骷髅）/禁攻击抽牌探索
+        #     · 猫：首蛙出现后生成于作祟房间，追蛙、力量对决吃掉
+        #   已知简化：龙息未实现（引擎怪物攻击只在同房间触发）；蛙不能被
+        #     拾取携带；人类叛徒施法选目标暂未接 prompter。
+        "version": 1,
+        "status": "playable",
+        "mode": "witch_and_frogs",
+        "traitor_rule": "revealer",
+        "hero_goal": "挖出曼德拉草，带着书在女巫房间施放凡人形态，再攻击杀死女巫。",
+        "traitor_goal": "保护女巫，夺走书，把所有英雄杀死或变成青蛙。",
+        "suggested_monsters": ["witch"],
+        "required_cards": ["omen_book"],
+        "key_rooms": ["entrance_hall", "conservatory", "larder", "kitchen"],
+        "tokens": ["root", "frog", "cat", "witch"],
+        "setup": {
+            "tracks": {
+                "mortal_form": {"label": "凡人形态法术", "target": 1, "side": "heroes"},
+            },
+            "flags": {
+                "root_found": False,
+                "witch_vulnerable": False,
+                "cat_spawned": False,
+                "pending_roots": [],
+            },
+        },
+        "monsters": [
+            {"template_id": "witch", "name": "女巫", "spawn": "room_id", "room_id": "entrance_hall", "speed": 4, "might": 3, "sanity": 6, "invulnerable_until": "witch_vulnerable"},
+            {"template_id": "cat", "name": "猫", "spawn": "deferred", "speed": 3, "might": 3, "sanity": 2},
+        ],
+        "actions": [
+            {"id": "dig_root", "side": "heroes", "stat": "knowledge", "target": 4, "set_flags": {"root_found": True}},
+            {"id": "cast_mortal_form", "side": "heroes", "stat": "knowledge", "target": 6, "requires": ["omen_book", "same_room:witch"], "progress": "mortal_form", "set_flags": {"witch_vulnerable": True}},
+            {"id": "restore_frog", "side": "heroes", "stat": "knowledge", "target": 4, "requires": ["omen_book"]},
+        ],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都被女巫与叛徒消灭了。"}
+        ],
+        "source_pages": [14, 85],
+    },
+    4: {
+        # 校准记录（2026-09-02，对照英雄手册 p15 / 叛徒手册 p86）：
+        #   已核对无误：蜘蛛初始 0/2/5（作祟房）、蛛网 Might 4 防御、
+        #               web_damage 目标 = 玩家数、卵第 9 回合孵化、
+        #               销毁卵 Knowledge 4+（药膏免检定）、开门 6+。
+        #   本次补齐（实现在 haunt_modes.WebEscapeMode）：
+        #     · 被困探险者（作祟揭示者不能移动，蛛网破后解困）
+        #     · 3-4 人局叛徒被蜘蛛吃掉 / 5-6 人局叛徒在场（p86）
+        #     · 蜘蛛按 Turn Traits 逐回合成长（0/2 → 6/8）
+        #     · 孵化倒计时 + 蜘蛛追"非揭示者"
+        #     · 出屋判定：门开后下一回合在门厅逃出（p15 两步流程的简化）
+        #   引擎修复：attack/defense 字段此前被完全忽略（"打蛛网"必成功），
+        #     现在按属性对决固定防御值结算——该修复同样惠及剧本 1/5/6。
+        #   胜利条件修正：杀叛徒不算英雄胜（原数据又是 traitor_dead 坑）。
+        "version": 1,
+        "status": "playable",
+        "mode": "web_escape",
+        "traitor_rule": "highest_might",
+        "hero_goal": "打碎蛛网、摧毁卵，然后打开入口大厅前门并逃出房子。",
+        "traitor_goal": "保护蛛卵直到第 9 回合孵化，或杀光英雄。",
+        "suggested_monsters": ["giant_spider"],
+        "required_cards": ["omen_bite", "item_medical_kit", "item_healing_salve"],
+        "key_rooms": ["entrance_hall"],
+        "tokens": ["web", "might_check", "eggs", "spider_timer"],
+        "setup": {
+            "tracks": {
+                "web_damage": {"label": "蛛网破坏", "target": "player_count", "side": "heroes"},
+                "spider_timer": {"label": "蛛卵孵化倒计时", "target": 9, "side": "traitor"},
+            },
+            "flags": {
+                "revealer_trapped": True,
+                "trapped_id": None,
+                "web_destroyed": False,
+                "eggs_destroyed": False,
+                "front_door_open": False,
+                "escaped": False,
+            },
+        },
+        "monsters": [
+            {"template_id": "giant_spider", "name": "巨型蜘蛛", "spawn": "haunt_room", "speed": 0, "might": 2, "sanity": 5}
+        ],
+        "actions": [
+            # p15：打蛛网必须在蛛网所在房间（作祟揭示的房间）
+            {"id": "attack_web", "side": "heroes", "attack": "might", "defense": 4, "label": "蛛网", "progress": "web_damage", "requires": ["same_room:web"]},
+            {"id": "destroy_eggs_medical_kit", "side": "heroes", "label": "用医疗箱销毁蛛卵", "stat": "knowledge", "target": 4, "requires": ["item_medical_kit", "same_room:revealer"]},
+            {"id": "destroy_eggs_salve", "side": "heroes", "label": "用治疗药膏销毁蛛卵", "requires": ["item_healing_salve", "same_room:revealer"]},
+            {"id": "open_front_door", "side": "heroes", "label": "撬开前门", "stat": ["knowledge", "might"], "target": 6, "rooms": ["entrance_hall"], "set_flags": {"front_door_open": True}},
+        ],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都被巨型蜘蛛杀死了。"}
+        ],
+        "source_pages": [15, 86],
+    },
+    5: {
+        "version": 1,
+        "status": "playable",
+        "mode": "werewolf_hunt",
+        "traitor_rule": "highest_might",
+        "hero_goal": "找到左轮手枪并制作银弹，用银弹射杀所有狼人。",
+        "traitor_goal": "感染英雄，把所有英雄杀死或变成狼人。",
+        "suggested_monsters": ["dog"],
+        "required_cards": ["item_revolver", "omen_dog"],
+        "key_rooms": ["attic", "game_room", "junk_room", "master_bedroom", "vault", "research_laboratory", "furnace_room"],
+        "tokens": ["wolf", "silver_bullets"],
+        "setup": {
+            "tracks": {
+                "silver_bullets": {"label": "银弹制作", "target": 1, "side": "heroes"},
+            },
+            "flags": {"revolver_found": False, "silver_bullets_created": False},
+        },
+        "monsters": [
+            {"template_id": "dog", "name": "狗", "spawn": "haunt_room", "speed": 6, "might": 4, "sanity": 3}
+        ],
+        "actions": [
+            {"id": "find_revolver", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["attic", "game_room", "junk_room", "master_bedroom", "vault"]},
+            {"id": "make_silver_bullets", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["research_laboratory", "furnace_room"]},
+            {"id": "shoot_werewolf", "side": "heroes", "requires": ["item_revolver", "silver_bullets"], "attack": "speed", "kills": "werewolf"},
+        ],
+        "source_pages": [16, 87],
+    },
+    6: {
+        # 校准记录（2026-09-02，对照英雄手册 p17 / 叛徒手册 p88）：
+        #   已核对无误：外星人 Speed 4 / Might 6 / Sanity 6；数量 3-4 人 1 只、
+        #               5-6 人 2 只；破船 Might 5+、目标 = 玩家数。
+        #   本次补齐（实现在 haunt_modes.AlienAbductionMode）：
+        #     · 叛徒开局"等待运输"出局（p88，物品留在原房间）
+        #     · 外星人以理智攻击同房间每个英雄，赢 → 精神控制（无伤）
+        #     · 被控者：禁攻击禁行动，回合开始自动移向飞船，到达后下回合上船出局
+        #     · 解救：引擎攻击被控同伴取胜 → 半伤（向下取整）+ 解控 + 永久免疫
+        #   引擎级新增：immune_to 数据此前从不被读取（与 attack/defense 同类的
+        #     "假数据"），现按攻击属性拦截——外星人免疫速度攻击，剧本 1 木乃伊同步生效。
+        #   移除了 free_controlled_hero 行动：解救本就是普通攻击 + 引擎半伤
+        #     解控逻辑，原数据的 attack 列表 / damage 字段引擎并不支持。
+        #   胜利条件修正：叛徒开局就出局，杀叛徒（本就不在场）更不算英雄胜——
+        #     英雄胜利只认"飞船瘫痪"（第 5 次修 traitor_dead 坑）。
+        "version": 1,
+        "status": "playable",
+        "mode": "alien_abduction",
+        "traitor_rule": "revealer",
+        "hero_goal": "用力量检定破坏宇宙飞船，阻止外星人把英雄带走。",
+        "traitor_goal": "控制英雄并把他们带上飞船，或杀光英雄。",
+        "suggested_monsters": ["alien"],
+        "key_rooms": [],
+        "tokens": ["might_check", "spaceship", "alien", "mind_control"],
+        "setup": {
+            "tracks": {
+                "spaceship_damage": {"label": "宇宙飞船破坏", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {
+                "spaceship_disabled": False,
+                "ship_room": None,
+                "controlled_ids": [],
+                "immune_ids": [],
+            },
+        },
+        "monsters": [
+            {"template_id": "alien", "name": "外星人", "spawn": "haunt_room", "count": {"lte4": 1, "default": 2}, "speed": 4, "might": 6, "sanity": 6, "immune_to": ["speed_attack"]}
+        ],
+        "actions": [
+            {"id": "damage_spaceship", "side": "heroes", "label": "破坏飞船", "stat": "might", "target": 5, "progress": "spaceship_damage"},
+        ],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都被外星人带走或杀死了。"}
+        ],
+        "source_pages": [17, 88],
+    },
+    7: {
+        "version": 1,
+        "status": "playable",
+        "mode": "carnivorous_ivy",
+        "traitor_rule": "revealer",
+        "hero_goal": "带着书在研究实验室或厨房制作植物喷雾，并用它消灭等同玩家数的爬行物。",
+        "traitor_goal": "杀死所有英雄，或毁掉英雄制作出的植物喷雾。",
+        "suggested_monsters": ["creeper_tip"],
+        "required_cards": ["omen_book"],
+        "key_rooms": ["research_laboratory", "kitchen", "chasm", "furnace_room", "underground_lake"],
+        "tokens": ["plant_spray", "root", "tip"],
+        "setup": {
+            "tracks": {
+                "creepers_killed": {"label": "已消灭爬行物", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"plant_spray_created": False, "plant_spray_destroyed": False},
+        },
+        "monsters": [
+            {
+                "template_id": "creeper_tip",
+                "name": "爬行物尖端",
+                "spawn": "room_ids",
+                "count": {"per_player": 2, "max": 10},
+                "room_ids": ["entrance_hall", "balcony", "bedroom", "chapel", "conservatory", "dining_room", "garden", "grand_staircase", "graveyard", "master_bedroom", "patio", "tower"],
+                "speed": 2,
+                "might": 5,
+                "sanity": 3,
+            }
+        ],
+        "actions": [
+            {"id": "make_plant_spray", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["research_laboratory", "kitchen"], "requires": ["omen_book"]},
+            {"id": "spray_creeper", "side": "heroes", "requires": ["plant_spray", "same_room:creeper"]},
+            {"id": "destroy_spray", "side": "traitor", "rooms": ["chasm", "furnace_room", "underground_lake"], "requires": ["plant_spray"]},
+        ],
+        "source_pages": [18, 89],
+    },
+    8: {
+        "version": 1,
+        "status": "playable",
+        "mode": "exorcism",
+        "traitor_rule": "revealer",
+        "hero_goal": "用不同的房间或物品完成等同玩家数的驱魔检定，驱逐女妖。",
+        "traitor_goal": "保护女妖并杀死所有英雄。",
+        "suggested_monsters": ["banshee"],
+        "required_cards": ["omen_spirit_board", "omen_holy_symbol", "omen_book", "omen_crystal_ball"],
+        "key_rooms": ["chapel", "crypt", "pentagram_chamber", "library", "research_laboratory"],
+        "tokens": ["knowledge_check", "sanity_check", "banshee"],
+        "setup": {
+            "tracks": {
+                "exorcism_successes": {"label": "驱魔成功次数", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"used_exorcism_sources": []},
+        },
+        "monsters": [
+            {"template_id": "banshee", "name": "女妖", "spawn": "haunt_room", "speed": 8, "might": 0, "sanity": 0, "attack_attr": "sanity", "invulnerable": True}
+        ],
+        "actions": [
+            {"id": "exorcism_sanity", "side": "heroes", "stat": "sanity", "target": 5, "rooms": ["chapel", "crypt", "pentagram_chamber"], "cards": ["omen_holy_symbol", "omen_spirit_board"]},
+            {"id": "exorcism_knowledge", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["library", "research_laboratory"], "cards": ["omen_book", "omen_crystal_ball"]},
+        ],
+        "source_pages": [19, 90],
+    },
+    9: {
+        "version": 1,
+        "status": "playable",
+        "mode": "delayed_traitor_relic",
+        "traitor_rule": "revealer",
+        "engine_note": "原规则无初始叛徒；当前引擎先用揭示者占位，后续阶段实现被黑暗提琴手腐化后再转叛徒。",
+        "hero_goal": "把圣徽带到五芒星室并完成等同初始玩家数的理智检定，驱逐黑暗提琴手。",
+        "traitor_goal": "夺取并毁掉圣徽，让死亡之舞继续。",
+        "suggested_monsters": [],
+        "required_cards": ["omen_holy_symbol"],
+        "key_rooms": ["pentagram_chamber", "ballroom", "chasm", "furnace_room", "underground_lake"],
+        "tokens": ["sanity_check", "dark_fiddler"],
+        "setup": {
+            "tracks": {
+                "fiddler_banishment": {"label": "驱逐黑暗提琴手", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"delayed_traitor": True, "holy_symbol_destroyed": False},
+        },
+        "actions": [
+            {"id": "resist_music", "side": "heroes", "stat": "sanity", "target": 4, "except_cards": ["omen_holy_symbol"]},
+            {"id": "banish_fiddler", "side": "heroes", "stat": "sanity", "target": 5, "rooms": ["pentagram_chamber"], "requires": ["omen_holy_symbol_in_room"]},
+            {"id": "destroy_holy_symbol", "side": "traitor", "rooms": ["chasm", "furnace_room", "underground_lake"], "requires": ["omen_holy_symbol"]},
+        ],
+        "source_pages": [20, 91],
+    },
+    10: {
+        "version": 1,
+        "status": "playable",
+        "mode": "trap_zombies",
+        "traitor_rule": "revealer",
+        "hero_goal": "把所有僵尸引到特殊房间并困住它们。",
+        "traitor_goal": "操控僵尸和疯子杀死所有英雄。",
+        "suggested_monsters": ["zombie", "madman"],
+        "required_cards": ["omen_madman"],
+        "key_rooms": ["master_bedroom", "chapel", "conservatory", "game_room", "library", "attic"],
+        "tokens": ["zombie", "madman", "damage_track"],
+        "setup": {
+            "tracks": {
+                "zombies_trapped": {"label": "已困住僵尸", "target": "player_count", "side": "heroes"},
+                "madman_damage": {"label": "疯子受到的物理伤害", "target": 5, "side": "heroes"},
+            },
+            "flags": {"traitor_removed_in_original": True, "used_trap_rooms": []},
+        },
+        "monsters": [
+            {"template_id": "zombie", "name": "僵尸", "spawn": "omen_rooms", "count": "player_count", "speed": 2, "might": 6, "sanity": 2, "knowledge": 3},
+            {"template_id": "madman", "name": "疯子", "spawn": "haunt_room", "speed": 3, "might": 5, "sanity": 5, "damage_capacity": 5},
+        ],
+        "actions": [
+            {"id": "trap_zombie", "side": "heroes", "stat": "knowledge", "target": 4, "rooms": ["master_bedroom", "chapel", "conservatory", "game_room", "library", "attic"]},
+        ],
+        "source_pages": [21, 92],
+    },
+}
+
+
+def get_haunt_rule_override(haunt_id: int) -> dict[str, Any]:
+    return deepcopy(HAUNT_RULE_OVERRIDES.get(haunt_id, {}))
+
+
+# ---------------------------------------------------------------------------
+# 11-70 号剧本的结构化规则
+#
+# 这组数据是程序规则层，不是玩家手册的替代品。每个剧本都有自己的
+# mode、目标、关键房间、资源、行动和胜负条件；共享的是引擎执行方式。
+# 原版中的幽灵、蝙蝠、恶魔等组件在当前组件库中没有独立模板时，使用
+# 最接近的现有模板，并在 engine_note 中保留映射说明，避免把缺少组件
+# 误标成“没有规则”。
+
+
+def _scenario_action(
+    action_id: str,
+    side: str,
+    label: str,
+    stat: str | list[str],
+    target: int,
+    rooms: tuple[str, ...],
+    progress: str,
+    detail: str,
+    requires: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    return {
+        "id": action_id,
+        "side": side,
+        "label": label,
+        "detail": detail,
+        "stat": stat,
+        "target": target,
+        "rooms": list(rooms),
+        "progress": progress,
+        "requires": list(requires),
+    }
+
+
+def _make_scenario_rule(
+    haunt_id: int,
+    *,
+    mode: str,
+    traitor_rule: str,
+    hero_goal: str,
+    traitor_goal: str,
+    rooms: tuple[str, ...],
+    monsters: tuple[str, ...],
+    tokens: tuple[str, ...],
+    hero_task: str,
+    traitor_task: str,
+    hero_stat: str | list[str] = "knowledge",
+    traitor_stat: str | list[str] = "might",
+    hero_target: int = 5,
+    traitor_target: int = 5,
+    hero_progress_target: int | str = "player_count",
+    traitor_progress_target: int | str = "player_count",
+    hero_win_type: str = "track",
+    hero_win_target: int | str | None = None,
+    traitor_win_type: str = "all_heroes_dead",
+    required_cards: tuple[str, ...] = (),
+    hero_requires: tuple[str, ...] = (),
+    traitor_requires: tuple[str, ...] = (),
+    monster_count: int | str | dict[str, int] = 1,
+    hero_detail: str = "成功后推进英雄目标轨道。",
+    traitor_detail: str = "成功后推进叛徒目标轨道。",
+    engine_note: str = "使用当前组件库中的近似怪物模板；玩家规则以对应剧本文本为准。",
+) -> dict[str, Any]:
+    hero_win_target = hero_win_target if hero_win_target is not None else hero_progress_target
+    monster_specs = [
+        {
+            "template_id": template_id,
+            "spawn": "haunt_room",
+            "count": monster_count if index == 0 else 1,
+        }
+        for index, template_id in enumerate(monsters)
+    ]
+    rule: dict[str, Any] = {
+        "version": 2,
+        "status": "playable",
+        "mode": mode,
+        "traitor_rule": traitor_rule,
+        "hero_goal": hero_goal,
+        "traitor_goal": traitor_goal,
+        "suggested_monsters": list(monsters),
+        "required_cards": list(required_cards),
+        "key_rooms": list(rooms),
+        "tokens": list(tokens),
+        "setup": {
+            "tracks": {
+                "hero_progress": {
+                    "label": f"英雄：{hero_task}",
+                    "target": hero_progress_target,
+                    "side": "heroes",
+                },
+                "traitor_progress": {
+                    "label": f"叛徒：{traitor_task}",
+                    "target": traitor_progress_target,
+                    "side": "traitor",
+                },
+            },
+            "flags": {
+                "scenario_started": True,
+                "hero_sources_used": [],
+                "traitor_sources_used": [],
+            },
+        },
+        "monsters": monster_specs,
+        "actions": [
+            _scenario_action(
+                f"h{haunt_id}_hero_task",
+                "heroes",
+                hero_task,
+                hero_stat,
+                hero_target,
+                rooms,
+                "hero_progress",
+                hero_detail,
+                hero_requires,
+            ),
+            _scenario_action(
+                f"h{haunt_id}_traitor_task",
+                "traitor",
+                traitor_task,
+                traitor_stat,
+                traitor_target,
+                rooms,
+                "traitor_progress",
+                traitor_detail,
+                traitor_requires,
+            ),
+        ],
+        "win_conditions": [
+            {
+                "winner": "heroes",
+                "type": hero_win_type,
+                "track": "hero_progress" if hero_win_type == "track" else None,
+                "operator": ">=",
+                "target": hero_win_target,
+                "reason": hero_goal,
+            },
+            {
+                "winner": "traitor",
+                "type": traitor_win_type,
+                "track": "traitor_progress" if traitor_win_type == "track" else None,
+                "operator": ">=",
+                "target": traitor_progress_target,
+                "reason": traitor_goal,
+            },
+        ],
+        "source_pages": [11 + haunt_id, 82 + haunt_id],
+        "engine_note": engine_note,
+    }
+    return rule
+
+
+_SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
+    11: dict(mode="spectre_exorcism", traitor_rule="revealer", hero_goal="完成与玩家数相等的驱魔检定并驱逐所有幽灵。", traitor_goal="打开窗户让幽灵进入并杀死所有英雄。", rooms=("chapel", "crypt", "pentagram_chamber", "library", "research_laboratory"), monsters=("ghost", "madman"), tokens=("ghost", "sanity_check", "knowledge_check"), hero_task="进行驱魔", traitor_task="打开窗户召唤幽灵", hero_stat=["sanity", "knowledge"], hero_target=5, hero_detail="在合适房间或携带合适物品时完成一次驱魔。", traitor_detail="叛徒行动代表打开一个出口；每次成功使幽灵威胁推进。", monster_count="player_count"),
+    12: dict(mode="evil_twins", traitor_rule="revealer", hero_goal="消灭所有对应英雄的邪恶双胞胎，并让自己的英雄存活。", traitor_goal="利用邪恶双胞胎杀死所有英雄。", rooms=("entrance_hall", "foyer", "grand_staircase"), monsters=("shadow",), tokens=("evil_twin", "crystal_ball"), hero_task="辨认并击破邪恶双胞胎", traitor_task="驱使双胞胎发动袭击", hero_stat="knowledge", hero_target=5, hero_detail="知识检定成功后压制一个邪恶双胞胎。", traitor_detail="叛徒检定成功后让双胞胎更接近英雄。", monster_count="player_count", engine_note="邪恶双胞胎使用阴影模板，保持不携带物品的特性。"),
+    13: dict(mode="nightmare_escape", traitor_rule="revealer", hero_goal="在噩梦逃出房屋前唤醒卧室中的做梦者。", traitor_goal="让噩梦沿逃生房间逃出，或杀死所有英雄。", rooms=("bedroom", "master_bedroom", "entrance_hall", "garden", "graveyard"), monsters=("shadow",), tokens=("nightmare", "escape", "sanity_check", "might_check"), hero_task="唤醒做梦者", traitor_task="放出噩梦", hero_stat=["sanity", "might"], hero_target=5, hero_detail="携带圣徽在做梦者所在房间完成一次唤醒检定。", traitor_detail="推进噩梦逃生轨道；每次成功代表一个噩梦找到出口。", monster_count="player_count"),
+    14: dict(mode="paint_the_pentagram", traitor_rule="revealer", hero_goal="把所有油漆罐投入五芒星室，亵渎仪式。", traitor_goal="在五芒星室积累祭品并召唤古神。", rooms=("kitchen", "larder", "junk_room", "research_laboratory", "attic", "pentagram_chamber"), monsters=("cultist",), tokens=("paint", "cultist", "sacrifice"), hero_task="收集并倾倒油漆", traitor_task="献祭并召唤古神", hero_stat="knowledge", hero_target=5, hero_detail="在关键房间找到油漆并推进亵渎进度。", traitor_detail="在五芒星室完成一次献祭检定。", monster_count="player_count", hero_requires=(), traitor_requires=()),
+    15: dict(mode="dragon_siege", traitor_rule="revealer", hero_goal="击败龙。", traitor_goal="让龙造成足够破坏并杀死所有英雄。", rooms=("entrance_hall", "chasm", "vault", "catacombs", "underground_lake"), monsters=("giant",), tokens=("dragon", "ancient_armor", "shield", "fire"), hero_task="准备屠龙并造成伤害", traitor_task="指挥龙喷火", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="在龙所在房间完成屠龙行动；长矛、盾牌和古董盔甲可提供帮助。", traitor_detail="推进龙的破坏轨道，代表一次喷火或撕咬。", monster_count=1, engine_note="龙使用巨人模板；火焰免疫和双重攻击待独立组件完成后再细化。"),
+    16: dict(mode="phantom_bomb", traitor_rule="revealer", hero_goal="击败幻影、救出女孩，并拆除炸弹或及时逃离。", traitor_goal="在倒计时结束前引爆房屋，或杀死所有英雄。", rooms=("catacombs", "crypt", "furnace_room", "basement_landing", "entrance_hall"), monsters=("shadow",), tokens=("phantom", "girl", "bomb", "unique_marker"), hero_task="救出女孩并拆除炸弹", traitor_task="推进爆炸倒计时", hero_stat="knowledge", hero_target=6, hero_progress_target=2, hero_detail="先在地下室击败幻影，再完成拆弹检定。", traitor_detail="推进倒计时；达到目标后房屋爆炸。", monster_count=1, hero_win_target=2, traitor_win_type="track", traitor_progress_target=8),
+    17: dict(mode="bug_spray", traitor_rule="revealer", hero_goal="制作杀虫剂并消灭三个虫子。", traitor_goal="破坏四种以上成分，或杀死所有英雄。", rooms=("research_laboratory", "kitchen", "larder", "attic", "garden", "servants_quarters"), monsters=("spider", "giant_spider"), tokens=("ingredient", "bug_spray", "insect"), hero_task="制作并使用杀虫剂", traitor_task="销毁杀虫剂成分", hero_stat="knowledge", hero_target=4, hero_progress_target=3, hero_detail="在实验室或厨房完成制作，再逐个消灭虫子。", traitor_detail="把成分带向危险房间并推进破坏进度。", monster_count="player_count"),
+    18: dict(mode="poisonous_plant", traitor_rule="revealer", hero_goal="找到花并削弱、杀死邪恶植物。", traitor_goal="利用孢子杀死所有英雄。", rooms=("conservatory", "garden", "graveyard", "research_laboratory"), monsters=("plant",), tokens=("flower", "spore", "evil_plant"), hero_task="寻找花并削弱植物", traitor_task="扩散孢子", hero_stat="knowledge", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="找到花后在邪恶植物所在房间完成削弱检定。", traitor_detail="扩散孢子，持续给英雄施加威胁。", monster_count=1, hero_win_target="half_players_ceil"),
+    19: dict(mode="beastmaster", traitor_rule="revealer", hero_goal="用特殊攻击夺走长矛，使兽王恢复正常。", traitor_goal="指挥动物爪牙杀死所有英雄。", rooms=("entrance_hall", "underground_lake", "garden", "graveyard", "patio", "balcony", "tower"), monsters=("beast", "wolf"), tokens=("spear", "animal_minion", "bear", "hawk"), hero_task="夺取兽王长矛", traitor_task="召集动物爪牙", hero_stat=["might", "sanity"], hero_target=5, hero_progress_target=1, hero_detail="与兽王同房间时完成特殊夺取行动，不把兽王杀死。", traitor_detail="推进动物爪牙威胁轨道。", monster_count="player_count", hero_win_target=1),
+    20: dict(mode="ghost_bride", traitor_rule="revealer", hero_goal="找到戒指和真正新郎的尸体，并在小教堂阻止错误婚礼。", traitor_goal="让幽灵新娘在小教堂完成婚礼，或杀死所有英雄。", rooms=("crypt", "graveyard", "chapel", "catacombs", "entrance_hall"), monsters=("ghost",), tokens=("bride", "groom", "ring", "corpse"), hero_task="揭穿并阻止幽灵婚礼", traitor_task="完成幽灵婚礼", hero_stat="knowledge", hero_target=5, hero_progress_target=2, hero_detail="先找齐戒指和尸体，再在小教堂完成阻止仪式。", traitor_detail="在小教堂推动婚礼进度。", monster_count=1, hero_win_target=2, traitor_win_type="track", traitor_progress_target=2),
+    21: dict(mode="zombie_lord", traitor_rule="revealer", hero_goal="摧毁僵尸领主或消灭所有僵尸。", traitor_goal="让僵尸领主和僵尸杀死所有英雄。", rooms=("crypt", "graveyard", "entrance_hall", "underground_lake", "garden", "chapel", "conservatory", "pentagram_chamber"), monsters=("zombie", "giant"), tokens=("zombie_lord", "zombie", "damage"), hero_task="清理僵尸并攻击领主", traitor_task="召集僵尸围攻", hero_stat="might", hero_target=5, hero_detail="在僵尸威胁区域完成清理行动。", traitor_detail="让僵尸推进围攻轨道。", monster_count="player_count"),
+    22: dict(mode="abyss_exorcism", traitor_rule="revealer", hero_goal="完成与玩家数相等的驱魔检定，阻止房屋坍入深渊。", traitor_goal="让房屋不断坍塌并杀死所有英雄。", rooms=("chasm", "chapel", "crypt", "pentagram_chamber", "library", "research_laboratory"), monsters=("shadow",), tokens=("sanity_check", "knowledge_check", "abyss"), hero_task="驱魔稳定房屋", traitor_task="加速深渊坍塌", hero_stat=["sanity", "knowledge"], hero_target=5, hero_detail="在指定房间或使用指定物品完成一次驱魔。", traitor_detail="推进坍塌倒计时。", monster_count=1),
+    23: dict(mode="tentacled_horror", traitor_rule="revealer", hero_goal="摧毁触手生物。", traitor_goal="让触手逐渐增强并杀死所有英雄。", rooms=("furnace_room", "conservatory", "organ_room", "underground_lake", "garden", "chasm"), monsters=("giant",), tokens=("tentacle_root", "tentacle_tip", "time"), hero_task="定位并摧毁触手", traitor_task="增强触手", hero_stat="might", hero_target=6, hero_progress_target=1, hero_detail="在触手所在房间完成一次破坏行动。", traitor_detail="推进触手增长轨道。", monster_count="player_count", hero_win_target=1),
+    24: dict(mode="bat_exodus", traitor_rule="revealer", hero_goal="用风琴赶走蝙蝠并消灭附着的蝙蝠。", traitor_goal="让蝙蝠吸取英雄生命，或杀死所有英雄。", rooms=("organ_room", "entrance_hall", "balcony", "garden", "graveyard", "patio", "tower"), monsters=("spider",), tokens=("bat", "organ", "victim"), hero_task="演奏风琴驱逐蝙蝠", traitor_task="扩散蝙蝠", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在风琴房完成驱逐检定。", traitor_detail="推进蝙蝠侵袭轨道。", monster_count="player_count"),
+    25: dict(mode="voodoo_dolls", traitor_rule="revealer", hero_goal="找到并摧毁所有巫毒娃娃，同时让至少一半英雄存活。", traitor_goal="让娃娃的诅咒杀死英雄。", rooms=("bloody_room", "larder", "crypt", "junk_room", "vault", "attic", "kitchen"), monsters=("cultist",), tokens=("voodoo_doll", "curse", "time"), hero_task="寻找并摧毁巫毒娃娃", traitor_task="加深娃娃诅咒", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在娃娃可能出现的房间完成搜寻和摧毁。", traitor_detail="推进诅咒强度轨道。", monster_count=1),
+    26: dict(mode="rat_ritual", traitor_rule="revealer", hero_goal="消灭房屋内所有老鼠，阻止五芒星室的仪式。", traitor_goal="完成老鼠仪式，或杀死所有英雄。", rooms=("pentagram_chamber", "kitchen", "larder", "junk_room", "crypt"), monsters=("spider",), tokens=("rat", "ritual", "sanity_check"), hero_task="清除老鼠", traitor_task="完成老鼠仪式", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="逐个清除老鼠标记。", traitor_detail="在五芒星室推进仪式轨道。", monster_count="player_count"),
+    27: dict(mode="blob_weakness", traitor_rule="revealer", hero_goal="发现斑点弱点并用正确配方摧毁 Blob。", traitor_goal="让斑点扩散并杀死所有英雄。", rooms=("research_laboratory", "kitchen", "furnace_room", "chasm", "underground_lake"), monsters=("plant",), tokens=("blob", "knowledge_check", "formula"), hero_task="研究斑点弱点", traitor_task="扩散斑点", hero_stat="knowledge", hero_target=3, hero_progress_target=2, hero_detail="在斑点标记相邻房间完成研究，随后完成化学配方。", traitor_detail="推进斑点扩散轨道。", monster_count=1, hero_win_target=2),
+    28: dict(mode="demon_ring", traitor_rule="revealer", hero_goal="携带戒指击败恶魔领主两次。", traitor_goal="让恶魔从地狱之门涌入并杀死所有英雄。", rooms=("chasm", "furnace_room", "underground_lake", "pentagram_chamber", "chapel"), monsters=("giant",), tokens=("demon_lord", "demon", "hell_gate"), hero_task="用戒指放逐恶魔领主", traitor_task="召唤恶魔", hero_stat=["might", "sanity"], hero_target=5, hero_progress_target=2, hero_detail="携带戒指在恶魔领主所在房间完成一次放逐攻击。", traitor_detail="推进地狱之门召唤进度。", monster_count="player_count", hero_win_target=2, hero_requires=("omen_ring",)),
+    29: dict(mode="frankenstein_fire", traitor_rule="revealer", hero_goal="用火焰弱点摧毁弗兰肯斯坦怪物。", traitor_goal="命令怪物杀死所有英雄。", rooms=("furnace_room", "kitchen", "attic", "research_laboratory"), monsters=("giant",), tokens=("torch", "fire", "monster"), hero_task="准备火焰并击破怪物", traitor_task="增强弗兰肯斯坦怪物", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="在火焰相关房间准备武器，再攻击怪物。", traitor_detail="推进怪物力量轨道。", monster_count=1, hero_win_target=1),
+    30: dict(mode="dracula_rising", traitor_rule="revealer", hero_goal="摧毁德古拉伯爵和新娘。", traitor_goal="在阳光削弱吸血鬼前杀死或转化所有英雄。", rooms=("crypt", "graveyard", "bloody_room", "chapel", "balcony", "tower"), monsters=("shadow", "beast"), tokens=("dracula", "bride", "blood", "sun"), hero_task="猎杀德古拉与新娘", traitor_task="汲取鲜血", hero_stat="sanity", hero_target=5, hero_progress_target=2, hero_detail="在吸血鬼所在房间完成两次猎杀行动。", traitor_detail="推进德古拉苏醒与鲜血轨道。", monster_count=2, hero_win_target=2),
+    31: dict(mode="living_house", traitor_rule="revealer", hero_goal="用长矛击败房屋的心脏或大脑。", traitor_goal="让活房屋消化并杀死所有英雄。", rooms=("organ_room", "attic", "dining_room", "kitchen", "larder", "crypt"), monsters=("plant",), tokens=("heart", "brain", "stomach", "antibody"), hero_task="攻击房屋心脏或大脑", traitor_task="消化入侵者", hero_stat="might", hero_target=6, hero_progress_target=2, hero_detail="在风琴房或阁楼完成一次长矛攻击行动。", traitor_detail="推进房屋消化轨道。", monster_count=1, hero_win_target=2),
+    32: dict(mode="lost_dimension", traitor_rule="revealer", hero_goal="让房屋恢复到英雄所在的维度。", traitor_goal="让有毒维度持续伤害英雄，或杀死所有英雄。", rooms=("organ_room", "entrance_hall", "foyer", "grand_staircase", "basement_landing"), monsters=("shadow",), tokens=("dimension", "poison", "anchor"), hero_task="修复维度锚点", traitor_task="维持异维度", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在风琴房或起始房间完成维度修复检定。", traitor_detail="推进异维度污染轨道。", monster_count=1),
+    33: dict(mode="lake_rescue", traitor_rule="revealer", hero_goal="在女孩溺水前从地下湖救出她。", traitor_goal="把女孩喂给湖中生物，或杀死所有英雄。", rooms=("underground_lake", "basement_landing", "crypt", "furnace_room"), monsters=("beast",), tokens=("girl", "lake", "drowning"), hero_task="从地下湖救出女孩", traitor_task="把女孩带向湖中生物", hero_stat="might", hero_target=5, hero_progress_target=1, hero_detail="在地下湖或湖区完成救援行动。", traitor_detail="推进溺水倒计时。", monster_count=1, hero_win_target=1),
+    34: dict(mode="mad_world", traitor_rule="revealer", hero_goal="把疯子锁入保险库，并杀死或锁住叛徒。", traitor_goal="让凯撒和疯子仆从杀死所有英雄。", rooms=("vault", "master_bedroom", "chapel", "conservatory", "game_room", "library", "attic"), monsters=("madman",), tokens=("vault_lock", "madman", "senator"), hero_task="锁住疯子", traitor_task="煽动疯子仆从", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="把疯子引到保险库并完成锁门检定。", traitor_detail="推进疯子仆从的围攻轨道。", monster_count="player_count", hero_win_target=1),
+    35: dict(mode="small_change_escape", traitor_rule="revealer", hero_goal="让至少一半英雄使用玩具飞机从外缘逃脱。", traitor_goal="让猫吃掉所有缩小的英雄。", rooms=("balcony", "garden", "graveyard", "patio", "tower", "entrance_hall", "foyer"), monsters=("cat",), tokens=("toy_plane", "cat", "small_hero"), hero_task="驾驶玩具飞机逃脱", traitor_task="驱使猫捕食", hero_stat="speed", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在有外缘出口的房间完成一次逃脱行动。", traitor_detail="推进猫的捕食轨道。", monster_count="player_count", hero_win_target="half_players_ceil"),
+    36: dict(mode="swamp_escape", traitor_rule="revealer", hero_goal="至少一半原英雄活着逃离房屋，并不能留下其他活着的英雄。", traitor_goal="让房屋沉入沼泽，或杀死所有英雄。", rooms=("attic", "entrance_hall", "foyer", "grand_staircase", "garden", "patio"), monsters=("shadow",), tokens=("rowboat", "swamp", "escape"), hero_task="组织逃离房屋", traitor_task="加速沼泽下沉", hero_stat="might", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在入口大厅准备船并完成一次逃离。", traitor_detail="推进沼泽下沉轨道。", monster_count=1, hero_win_target="half_players_ceil"),
+    37: dict(mode="death_checkmate", traitor_rule="revealer", hero_goal="在死亡的棋局中完成一次胜利检定。", traitor_goal="让死亡在无对手时赢下棋局，或杀死所有英雄。", rooms=("vault", "crypt", "research_laboratory", "operating_laboratory", "game_room"), monsters=("shadow",), tokens=("death", "seal", "chess"), hero_task="在棋局中战胜死亡", traitor_task="逼迫死亡弃局", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="与死亡同房间时完成知识检定；圣印可提供帮助。", traitor_detail="推进死亡的棋局压力。", monster_count=1, hero_win_target=1),
+    38: dict(mode="hellbats_exorcism", traitor_rule="revealer", hero_goal="完成驱魔，把火蝠赶出房屋。", traitor_goal="用火蝠吸取英雄的血，或杀死所有英雄。", rooms=("chapel", "crypt", "pentagram_chamber", "library", "research_laboratory"), monsters=("spider",), tokens=("fire_bat", "exorcism", "blood"), hero_task="驱魔火蝠", traitor_task="喂养火蝠", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target="player_count", hero_detail="在驱魔房间累计成功检定。", traitor_detail="推进火蝠繁殖轨道。", monster_count="half_players_ceil"),
+    39: dict(mode="secret_heir", traitor_rule="revealer", hero_goal="让真正继承人坐上雕像走廊的王座，并持有长矛和戒指。", traitor_goal="杀死秘密继承人，或杀死所有英雄。", rooms=("statuary_corridor", "gallery", "entrance_hall", "foyer"), monsters=("cultist",), tokens=("heir", "assassin", "throne"), hero_task="确认继承人并登上王座", traitor_task="寻找并刺杀继承人", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="在雕像走廊完成继承仪式。", traitor_detail="推进刺客锁定轨道。", monster_count="player_count", hero_win_target=1, required_cards=("omen_spear", "omen_ring"), hero_requires=("omen_spear", "omen_ring")),
+    40: dict(mode="buried_alive", traitor_rule="revealer", hero_goal="在被埋的朋友死亡前挖出他。", traitor_goal="让被埋者窒息，或杀死所有英雄。", rooms=("catacombs", "crypt", "furnace_room", "basement_landing", "junk_room"), monsters=("zombie",), tokens=("buried_friend", "might_check", "time"), hero_task="挖出被埋者", traitor_task="加速窒息倒计时", hero_stat="might", hero_target=5, hero_progress_target=1, hero_detail="在秘密埋葬房间完成力量检定；通灵板可协助定位。", traitor_detail="推进窒息倒计时。", monster_count=1, hero_win_target=1),
+    41: dict(mode="invisible_traitor", traitor_rule="revealer", hero_goal="找到并击败隐形叛徒。", traitor_goal="利用隐形状态杀死所有英雄。", rooms=("entrance_hall", "foyer", "grand_staircase", "library", "chapel"), monsters=("shadow",), tokens=("invisible", "tracking", "blind_fight"), hero_task="追踪隐形叛徒", traitor_task="隐形袭击英雄", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="根据叛徒攻击留下的线索完成追踪检定。", traitor_detail="推进隐形袭击轨道。", monster_count=1, hero_win_target=1),
+    42: dict(mode="hell_gate_hero", traitor_rule="revealer", hero_goal="杀死叛徒并关闭地狱之门。", traitor_goal="通过活人献祭打开地狱之门，或杀死所有英雄。", rooms=("pentagram_chamber", "chasm", "chapel", "crypt", "entrance_hall"), monsters=("giant",), tokens=("statue", "hell_gate", "sacrifice"), hero_task="关闭地狱之门", traitor_task="完成活人献祭", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="在五芒星室或入口大厅完成关闭仪式。", traitor_detail="推进地狱之门开启轨道。", monster_count=1, hero_win_target=1, traitor_win_type="track", traitor_progress_target="player_count"),
+    43: dict(mode="shadow_exorcism", traitor_rule="revealer", hero_goal="完成光之仪式，在英雄影子进入五芒星室前驱逐暗影。", traitor_goal="让影子抵达五芒星室并把英雄变成幽灵。", rooms=("chapel", "library", "pentagram_chamber", "entrance_hall", "grand_staircase"), monsters=("shadow",), tokens=("shadow", "light_ritual", "sanity_check"), hero_task="完成光之仪式", traitor_task="推进影子入侵", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target="player_count", hero_detail="在小教堂或图书馆完成光之仪式。", traitor_detail="推进影子向五芒星室移动的轨道。", monster_count="player_count"),
+    44: dict(mode="supernatural_aging", traitor_rule="revealer", hero_goal="停止超自然衰老过程。", traitor_goal="让所有英雄因衰老失去战斗能力，或杀死所有英雄。", rooms=("library", "chapel", "research_laboratory", "operating_laboratory", "statuary_corridor"), monsters=("shadow",), tokens=("aging", "badge", "sanity_check", "knowledge_check"), hero_task="停止衰老", traitor_task="加速衰老", hero_stat=["knowledge", "sanity"], hero_target=5, hero_progress_target="player_count", hero_detail="在知识或精神检定来源处移除衰老标记。", traitor_detail="推进衰老轨道。", monster_count=1),
+    45: dict(mode="bomb_defusal", traitor_rule="revealer", hero_goal="拆除所有英雄身上的定时炸弹并阻止大炸弹。", traitor_goal="引爆炸弹或杀死所有英雄。", rooms=("entrance_hall", "foyer", "research_laboratory", "furnace_room", "vault"), monsters=("giant",), tokens=("bomb", "big_bomb", "timer"), hero_task="拆除定时炸弹", traitor_task="推进大炸弹倒计时", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在入口大厅或实验室完成一次拆弹行动。", traitor_detail="推进大炸弹倒计时，达到目标即爆炸。", monster_count=1, traitor_win_type="track", traitor_progress_target=5),
+    46: dict(mode="cannibal_feast", traitor_rule="revealer", hero_goal="让所有受害者和英雄逃离，或击败叛徒与食人怪。", traitor_goal="完成盛宴并强化食人怪，或杀死所有英雄。", rooms=("attic", "entrance_hall", "foyer", "grand_staircase", "kitchen", "dining_room"), monsters=("beast",), tokens=("victim", "feast", "cannibal"), hero_task="救出受害者", traitor_task="举行盛宴", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="在阁楼救出受害者并向出口推进。", traitor_detail="推进盛宴轨道，每次代表消耗一名受害者。", monster_count="player_count"),
+    47: dict(mode="worm_ouroboros", traitor_rule="revealer", hero_goal="在衔尾蛇蠕虫完全成长前杀死它。", traitor_goal="让蠕虫完成成长并杀死所有英雄。", rooms=("entrance_hall", "foyer", "grand_staircase", "basement_landing"), monsters=("giant",), tokens=("worm_head", "worm_body", "growth"), hero_task="斩杀衔尾蛇蠕虫", traitor_task="让蠕虫成长", hero_stat="might", hero_target=6, hero_progress_target=1, hero_detail="在蠕虫所在房间完成一次斩杀行动。", traitor_detail="推进蠕虫成长轨道。", monster_count=1, hero_win_target=1, traitor_win_type="track", traitor_progress_target=8),
+    48: dict(mode="cursed_weapon", traitor_rule="revealer", hero_goal="找到被诅咒武器并用它永久杀死猩红杰克。", traitor_goal="让猩红杰克反复复活并杀死所有英雄。", rooms=("entrance_hall", "vault", "attic", "junk_room", "library"), monsters=("shadow",), tokens=("crimson_jack", "cursed_weapon", "weapon_cache"), hero_task="寻找诅咒武器", traitor_task="让猩红杰克复生", hero_stat="knowledge", hero_target=5, hero_progress_target=2, hero_detail="先搜索武器，再在猩红杰克所在房间完成永久击杀。", traitor_detail="推进复生轨道。", monster_count=1, hero_win_target=2),
+    49: dict(mode="astral_spirit", traitor_rule="revealer", hero_goal="摧毁星界之灵并回到自己的肉身。", traitor_goal="占据英雄的肉身，或杀死所有英雄。", rooms=("chapel", "library", "pentagram_chamber", "bedroom", "master_bedroom"), monsters=("shadow",), tokens=("soul", "astral_spirit", "sanity_check", "knowledge_check"), hero_task="摧毁星界之灵", traitor_task="占据肉身", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target="player_count", hero_detail="完成精神或知识检定，逐步削弱星界之灵。", traitor_detail="推进附身轨道。", monster_count="player_count"),
+    50: dict(mode="night_survival", traitor_rule="revealer", hero_goal="活到第十回合黎明，并让至少一名英雄存活。", traitor_goal="在第十回合前杀死所有英雄并继承遗产。", rooms=("entrance_hall", "foyer", "grand_staircase", "library", "chapel", "bedroom"), monsters=("beast", "cultist"), tokens=("servant", "dawn", "legacy"), hero_task="熬过黑夜", traitor_task="推进黑夜杀戮", hero_stat="might", hero_target=4, hero_progress_target=10, hero_win_type="turn_count", hero_win_target=10, hero_detail="存活并结束回合；黎明在第十回合到来。", traitor_detail="推进夜间威胁轨道。", monster_count="player_count"),
+    51: dict(mode="darker_than_night", traitor_rule="revealer", hero_goal="完成驱魔，让房屋摆脱黑暗，或杀死叛徒。", traitor_goal="完成黑暗仪式，让房屋陷入黑暗。", rooms=("chapel", "library", "balcony", "garden", "graveyard", "patio", "tower"), monsters=("shadow",), tokens=("reflection", "darkness", "seal"), hero_task="封锁黑暗", traitor_task="完成黑暗仪式", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target="player_count", hero_detail="在驱魔来源处完成光明检定。", traitor_detail="推进黑暗仪式轨道。", monster_count="player_count", traitor_win_type="track", traitor_progress_target=6),
+    52: dict(mode="ring_exorcism", traitor_rule="revealer", hero_goal="分解戒指并消灭房屋中的恶魔。", traitor_goal="保护戒指的魔法并杀死所有英雄。", rooms=("library", "chapel", "pentagram_chamber", "research_laboratory", "furnace_room"), monsters=("cultist",), tokens=("ring", "magic_dust", "demon", "antimagic"), hero_task="分解魔法戒指", traitor_task="守护戒指魔法", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="携带戒指在实验室、图书馆或小教堂完成分解。", traitor_detail="推进恶魔守护轨道。", monster_count="player_count", hero_win_target=1, required_cards=("omen_ring",), hero_requires=("omen_ring",)),
+    53: dict(mode="toxic_object_escape", traitor_rule="revealer", hero_goal="至少一半英雄逃出前门，或清理死亡物体并保住至少一半英雄。", traitor_goal="阻止前门打开并让毒烟杀死英雄。", rooms=("entrance_hall", "foyer", "grand_staircase", "chapel", "kitchen", "larder"), monsters=("dog",), tokens=("toxic_object", "smoke", "barricade", "strength_check"), hero_task="打开前门并清理死亡物体", traitor_task="扩散毒烟", hero_stat=["might", "knowledge"], hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在入口大厅清除路障，再带英雄逃离。", traitor_detail="推进毒烟扩散轨道。", monster_count=1, hero_win_target="half_players_ceil", engine_note="死亡物体的狗令牌使用狗模板；毒烟的跨房间伤害由房间效果层统一处理。"),
+    54: dict(mode="arkanok_skull", traitor_rule="revealer", hero_goal="把阿卡诺克之颅送回其遗骸所在房间，打破死灵咒语。", traitor_goal="召唤阿卡诺克的幽灵，或杀死所有英雄。", rooms=("chapel", "crypt", "graveyard", "furnace_room", "bloody_room", "charred_room"), monsters=("zombie", "ghost"), tokens=("skull", "arkanok", "zombie", "sanity_check"), hero_task="归还阿卡诺克之颅", traitor_task="召唤阿卡诺克幽灵", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="携带颅骨在遗骸房间完成归还仪式。", traitor_detail="推进死灵召唤轨道。", monster_count="player_count", hero_win_target=1, required_cards=("omen_skull",), hero_requires=("omen_skull",)),
+    55: dict(mode="kings_roads", traitor_rule="revealer", hero_goal="完成祛魅，关闭国王之路。", traitor_goal="让所有英雄被阴影附身或死亡。", rooms=("garden", "graveyard", "patio", "tower", "balcony", "underground_lake", "chapel", "library"), monsters=("shadow",), tokens=("shadow", "kings_road", "sanity_check", "knowledge_check"), hero_task="祛魅国王之路", traitor_task="让阴影附身英雄", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target="player_count", hero_detail="在国王之路入口或仪式房间完成祛魅检定。", traitor_detail="推进附身轨道。", monster_count="player_count"),
+    56: dict(mode="time_sands", traitor_rule="revealer", hero_goal="击败叛徒并夺回时间之沙。", traitor_goal="保持对时间之沙的控制并杀死所有英雄。", rooms=("library", "attic", "entrance_hall", "foyer", "grand_staircase"), monsters=("shadow",), tokens=("time_sand", "memory_ghost", "time"), hero_task="夺回时间之沙", traitor_task="操纵时间", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="完成时间线索检定，最终击败叛徒。", traitor_detail="推进时间失控轨道。", monster_count="player_count", hero_win_target=1, traitor_win_type="track", traitor_progress_target=7),
+    57: dict(mode="portrait_curse", traitor_rule="revealer", hero_goal="重新绘制肖像，打破肖像的保护诅咒。", traitor_goal="保护肖像并摧毁至少三件绘画，或杀死所有英雄。", rooms=("attic", "abandoned_room", "collapsed_room", "patio", "statuary_corridor", "larder", "crypt"), monsters=("shadow",), tokens=("painting", "portrait", "knowledge_check"), hero_task="重绘受诅咒肖像", traitor_task="保护并破坏画作", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="收集颜料，在肖像所在房间完成重绘。", traitor_detail="推进画作破坏轨道。", monster_count=1, hero_requires=()),
+    58: dict(mode="nightfall_twilight", traitor_rule="revealer", hero_goal="摧毁所有噩梦或驱逐全部暮光。", traitor_goal="让暮光和噩梦吞没房屋，或杀死所有英雄。", rooms=("furnace_room", "garden", "graveyard", "patio", "balcony", "tower", "chapel", "library"), monsters=("shadow",), tokens=("nightmare", "torch", "twilight"), hero_task="驱散暮光与噩梦", traitor_task="扩大暮光", hero_stat="sanity", hero_target=5, hero_progress_target="player_count", hero_detail="在光照房间完成驱散行动。", traitor_detail="推进暮光覆盖轨道。", monster_count="player_count", traitor_win_type="track", traitor_progress_target=7),
+    59: dict(mode="badge_curse", traitor_rule="revealer", hero_goal="把徽章挂到雕像上，打破女巫诅咒。", traitor_goal="把徽章从塔楼扔入地下湖摧毁，或杀死所有英雄。", rooms=("tower", "underground_lake", "statuary_corridor", "gallery", "chapel"), monsters=("witch",), tokens=("badge", "statue", "curse"), hero_task="把徽章挂上雕像", traitor_task="摧毁徽章", hero_stat=["knowledge", "might"], hero_target=5, hero_progress_target=1, hero_detail="携带徽章在雕像走廊完成悬挂仪式。", traitor_detail="推进徽章毁坏轨道。", monster_count=1, hero_win_target=1, required_cards=("item_amulet_of_the_ages",), hero_requires=()),
+    60: dict(mode="sphinx_riddle", traitor_rule="revealer", hero_goal="解开古老谜语并阻止邪恶力量释放。", traitor_goal="先解开谜语释放力量，或杀死所有英雄。", rooms=("library", "research_laboratory", "pentagram_chamber", "crypt", "chapel"), monsters=("cultist",), tokens=("sphinx", "riddle", "might_check", "speed_check", "sanity_check"), hero_task="解开古老谜语", traitor_task="解开谜语释放力量", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="在图书馆、实验室或五芒星室完成谜语检定。", traitor_detail="推进谜语倒计时。", monster_count="player_count", hero_win_target=1, traitor_win_type="track", traitor_progress_target=1),
+    61: dict(mode="ghost_warrior", traitor_rule="revealer", hero_goal="让幽灵战士安息。", traitor_goal="说服幽灵战士重新战斗，或杀死所有英雄。", rooms=("gallery", "graveyard", "wine_cellar", "chapel", "crypt"), monsters=("ghost",), tokens=("ghost_warrior", "statue", "sarcophagus", "armor", "shield"), hero_task="安抚幽灵战士", traitor_task="激励幽灵战士", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target=1, hero_detail="在雕像、墓地或石棺相关房间完成安抚。", traitor_detail="推进幽灵战士苏醒轨道。", monster_count="player_count", hero_win_target=1),
+    62: dict(mode="bag_of_tricks", traitor_rule="revealer", hero_goal="利用四件纪念品的力量送走疯子并恢复房屋。", traitor_goal="收集四件纪念品，或杀死所有英雄。", rooms=("bloody_room", "larder", "crypt", "junk_room", "vault", "attic"), monsters=("madman",), tokens=("trinket", "madman", "speed_check", "sanity_check"), hero_task="利用纪念品送走疯子", traitor_task="收集纪念品", hero_stat=["speed", "sanity"], hero_target=4, hero_progress_target=1, hero_detail="在物品房间搜集纪念品并在疯子所在房间使用。", traitor_detail="每次成功搜索获得一件纪念品。", monster_count=1, hero_win_target=1),
+    63: dict(mode="twisting_nether", traitor_rule="revealer", hero_goal="锚定足够多的房间，使房屋回到物质层。", traitor_goal="让房屋溶解进扭曲虚空，或杀死所有英雄。", rooms=("entrance_hall", "foyer", "grand_staircase", "upper_landing", "basement_landing", "chapel", "library"), monsters=("shadow",), tokens=("anchor", "astral_spirit", "void"), hero_task="锚定房间", traitor_task="溶解房间", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在仍有未探索门口的房间完成锚定检定。", traitor_detail="推进虚空溶解轨道。", monster_count="player_count", traitor_win_type="track", traitor_progress_target=7),
+    64: dict(mode="blood_offering", traitor_rule="revealer", hero_goal="救出女孩。", traitor_goal="让女孩被献祭，等待恶魔杀死叛徒和盟友。", rooms=("pentagram_chamber", "chapel", "crypt", "entrance_hall", "kitchen"), monsters=("cultist", "spider"), tokens=("girl", "cultist", "bat", "sacrifice"), hero_task="拯救女孩", traitor_task="完成血祭", hero_stat=["might", "knowledge"], hero_target=5, hero_progress_target=1, hero_detail="在女孩所在房间完成救援行动。", traitor_detail="推进血祭倒计时，达到阈值后恶魔介入。", monster_count="player_count", hero_win_target=1, traitor_win_type="track", traitor_progress_target=7),
+    65: dict(mode="haunt_exorcism", traitor_rule="revealer", hero_goal="驱逐恶作剧者。", traitor_goal="让恶作剧者杀死所有英雄。", rooms=("junk_room", "larder", "attic", "library", "research_laboratory", "operating_laboratory", "chapel"), monsters=("ghost",), tokens=("haunt", "candle", "knowledge_check"), hero_task="驱逐恶作剧者", traitor_task="增强恶作剧者", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target="player_count", hero_detail="在指定房间完成驱魔检定。", traitor_detail="推进恶作剧者强度轨道。", monster_count=1),
+    66: dict(mode="hell_on_earth", traitor_rule="revealer", hero_goal="在封闭房间用圣徽成功攻击并驱逐恶魔领主。", traitor_goal="让恶魔领主和叛徒杀死所有英雄。", rooms=("chapel", "library", "pentagram_chamber", "chasm", "crypt"), monsters=("giant", "cultist"), tokens=("demon_lord", "seal", "sanity_check", "power"), hero_task="为圣徽充能并驱逐恶魔", traitor_task="召集恶魔", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target=8, hero_detail="在小教堂、图书馆或圣徽所在房间完成充能，再进行驱逐。", traitor_detail="推进恶魔召集轨道。", monster_count="player_count", hero_win_target=8, required_cards=("omen_holy_symbol",)),
+    67: dict(mode="storybook_twists", traitor_rule="revealer", hero_goal="完成与英雄人数相等的任务，并活到故事结束。", traitor_goal="让故事到达悲伤结局，或杀死所有英雄。", rooms=("library", "attic", "chapel", "garden", "tower", "pentagram_chamber"), monsters=("spider", "witch", "giant"), tokens=("story", "body", "twist", "witch", "dragon"), hero_task="完成故事任务", traitor_task="推动悲伤结局", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="完成当前章节所需任务；轨道推进由故事回合记录。", traitor_detail="推进故事章节和悲伤结局轨道。", monster_count=1, traitor_win_type="track", traitor_progress_target=7),
+    68: dict(mode="labyrinth_escape", traitor_rule="revealer", hero_goal="收集钥匙、打开入口大厅前门并让至少一半英雄逃离迷宫。", traitor_goal="让迷宫自行封闭，或杀死超过一半英雄。", rooms=("entrance_hall", "catacombs", "mystic_elevator", "foyer", "grand_staircase", "upper_landing"), monsters=("cultist",), tokens=("key", "servant", "maze", "sanity_check"), hero_task="收集钥匙并逃离迷宫", traitor_task="封闭迷宫", hero_stat="knowledge", hero_target=5, hero_progress_target="half_players_floor", hero_detail="在入口大厅完成开门检定，再完成逃离行动。", traitor_detail="推进迷宫封闭轨道。", monster_count="player_count", hero_win_target="half_players_floor", traitor_win_type="track", traitor_progress_target=6),
+    69: dict(mode="wisp_capture", traitor_rule="revealer", hero_goal="累计完成与英雄人数相等的捕捉检定，抓住小精灵。", traitor_goal="让小精灵坚持到逃脱轨道终点，或杀死所有英雄。", rooms=("entrance_hall", "foyer", "grand_staircase", "chapel", "library", "garden", "patio", "tower"), monsters=("ghost",), tokens=("wisp", "spore", "knowledge_check"), hero_task="捕捉小精灵", traitor_task="让小精灵逃走", hero_stat="knowledge", hero_target=4, hero_progress_target="player_count", hero_detail="与小精灵同房间时完成知识检定。", traitor_detail="推进小精灵逃脱轨道。", monster_count=1, traitor_win_type="track", traitor_progress_target=6),
+    70: dict(mode="inhuman_transformation", traitor_rule="revealer", hero_goal="根据叛徒的怪物本性准备正确武器并击败他。", traitor_goal="完成吸血鬼、狼人或祸害蜘蛛的转变，或杀死所有英雄。", rooms=("crypt", "graveyard", "bloody_room", "balcony", "tower", "garden", "patio", "charred_room", "conservatory", "statuary_corridor", "mystic_elevator", "kitchen", "larder", "attic", "junk_room"), monsters=(), tokens=("bite", "holy_water", "silver_bullets", "bug_spray", "strength_check", "knowledge_check", "sanity_check"), hero_task="准备克制武器并阻止转变", traitor_task="完成怪物转变", hero_stat=["knowledge", "sanity"], hero_target=5, hero_progress_target=1, hero_detail="根据剧本提示制作圣水、银弹或杀虫剂，并在叛徒所在房间使用。", traitor_detail="访问转变所需房间并推进转变轨道。", monster_count=0, hero_win_target=1, traitor_win_type="track", traitor_progress_target=5, required_cards=("item_revolver", "item_axe", "item_blood_dagger")),
+}
+
+
+SUPPLEMENTAL_HAUNT_RULES: dict[int, dict[str, Any]] = {
+    haunt_id: _make_scenario_rule(haunt_id, **definition)
+    for haunt_id, definition in _SUPPLEMENTAL_SCENARIOS.items()
+}
+
+
+def get_haunt_rule_override(haunt_id: int) -> dict[str, Any]:
+    """返回隐藏规则表；1-10 使用专属实现，11-70 使用逐号结构化规则。"""
+    rule = HAUNT_RULE_OVERRIDES.get(haunt_id) or SUPPLEMENTAL_HAUNT_RULES.get(haunt_id, {})
+    normalized = deepcopy(rule)
+    if normalized:
+        normalized.setdefault("version", 2)
+        normalized.setdefault("status", "playable")
+        normalized.setdefault(
+            "win_conditions",
+            [
+                {
+                    "winner": "heroes",
+                    "type": "traitor_dead",
+                    "reason": normalized.get("hero_goal", "叛徒已被击败。"),
+                },
+                {
+                    "winner": "traitor",
+                    "type": "all_heroes_dead",
+                    "reason": normalized.get("traitor_goal", "所有英雄都倒下了。"),
+                },
+            ],
+        )
+    return normalized

@@ -12,6 +12,15 @@ try:
         MonsterTemplate,
         RoomTemplate,
     )
+    try:
+        from .haunts_zh import HAUNT_TRANSLATIONS
+    except ImportError:  # pragma: no cover - optional generated data
+        HAUNT_TRANSLATIONS = {}
+    try:
+        from .haunt_rules import get_haunt_rule_override
+    except ImportError:  # pragma: no cover - optional rule data
+        def get_haunt_rule_override(haunt_id: int) -> dict:
+            return {}
 except ImportError:  # pragma: no cover - direct script execution
     from models import (  # type: ignore
         Catalog,
@@ -21,6 +30,15 @@ except ImportError:  # pragma: no cover - direct script execution
         MonsterTemplate,
         RoomTemplate,
     )
+    try:
+        from haunts_zh import HAUNT_TRANSLATIONS  # type: ignore
+    except ImportError:  # pragma: no cover - optional generated data
+        HAUNT_TRANSLATIONS = {}
+    try:
+        from haunt_rules import get_haunt_rule_override  # type: ignore
+    except ImportError:  # pragma: no cover - optional rule data
+        def get_haunt_rule_override(haunt_id: int) -> dict:
+            return {}
 
 
 def character_face(
@@ -34,6 +52,7 @@ def character_face(
     birthday: str,
     aliases: Iterable[str] = (),
     flavor: str = "",
+    stats_tracks: dict[str, list[int]] | None = None,
 ) -> dict:
     return {
         "id": f"{card_id}_{face_index}",
@@ -45,6 +64,7 @@ def character_face(
         "birthday": birthday,
         "stats": dict(stats),
         "stats_max": dict(stats_max),
+        "stats_tracks": dict(stats_tracks) if stats_tracks else {},
         "flavor": flavor,
     }
 
@@ -124,6 +144,7 @@ def haunt_def(
     trigger_hint: str = "",
     suggested_monsters: Iterable[str] = (),
     notes: str = "",
+    rule_data: dict | None = None,
 ) -> dict:
     return {
         "id": haunt_id,
@@ -135,6 +156,7 @@ def haunt_def(
         "trigger_hint": trigger_hint,
         "suggested_monsters": list(suggested_monsters),
         "notes": notes,
+        "rule_data": dict(rule_data or {}),
     }
 
 
@@ -175,6 +197,12 @@ CHARACTER_FACES = [
         stats_max={"speed": 4, "might": 4, "sanity": 6, "knowledge": 5},
         birthday="4/11",
         aliases=("Father Rhinehardt",),
+        stats_tracks={
+            "speed": [2, 3, 3, 4, 5, 6, 7, 7],
+            "might": [1, 2, 2, 4, 4, 5, 5, 7],
+            "sanity": [3, 4, 5, 5, 6, 7, 7, 8],
+            "knowledge": [1, 3, 3, 4, 5, 6, 6, 8],
+        },
     ),
     character_face(
         card_id="card_1",
@@ -185,6 +213,12 @@ CHARACTER_FACES = [
         stats_max={"speed": 3, "might": 4, "sanity": 5, "knowledge": 6},
         birthday="1/8",
         aliases=("Professor Longfellow", "Professor Josiah Longfellow"),
+        stats_tracks={
+            "speed": [2, 2, 4, 4, 5, 5, 6, 6],
+            "might": [1, 2, 3, 4, 5, 5, 6, 6],
+            "sanity": [1, 3, 3, 4, 5, 5, 6, 7],
+            "knowledge": [4, 5, 5, 5, 5, 6, 7, 8],
+        },
     ),
     character_face(
         card_id="card_2",
@@ -195,6 +229,12 @@ CHARACTER_FACES = [
         stats_max={"speed": 4, "might": 4, "sanity": 6, "knowledge": 5},
         birthday="9/30",
         aliases=("Madame Zostra", "Madame Belladina Zostra"),
+        stats_tracks={
+            "speed": [2, 3, 3, 5, 5, 6, 6, 7],
+            "might": [2, 3, 3, 4, 5, 5, 5, 6],
+            "sanity": [4, 4, 4, 5, 6, 7, 8, 8],
+            "knowledge": [1, 3, 4, 4, 4, 5, 6, 6],
+        },
     ),
     character_face(
         card_id="card_2",
@@ -205,6 +245,12 @@ CHARACTER_FACES = [
         stats_max={"speed": 5, "might": 3, "sanity": 5, "knowledge": 6},
         birthday="6/20",
         aliases=("Vivian Lopez", "Vivienne Lopez"),
+        stats_tracks={
+            "speed": [3, 4, 4, 4, 4, 6, 7, 8],
+            "might": [2, 2, 2, 4, 4, 5, 6, 6],
+            "sanity": [4, 4, 4, 5, 6, 7, 8, 8],
+            "knowledge": [4, 5, 5, 5, 5, 6, 6, 7],
+        },
     ),
     character_face(
         card_id="card_3",
@@ -215,6 +261,12 @@ CHARACTER_FACES = [
         stats_max={"speed": 5, "might": 5, "sanity": 4, "knowledge": 4},
         birthday="2/17",
         aliases=("Brandon Jaspers",),
+        stats_tracks={
+            "speed": [3, 4, 4, 4, 5, 6, 7, 8],
+            "might": [2, 3, 3, 4, 5, 6, 6, 7],
+            "sanity": [3, 3, 3, 4, 5, 6, 7, 8],
+            "knowledge": [1, 3, 3, 5, 5, 6, 6, 7],
+        },
     ),
     character_face(
         card_id="card_3",
@@ -225,6 +277,12 @@ CHARACTER_FACES = [
         stats_max={"speed": 6, "might": 4, "sanity": 5, "knowledge": 4},
         birthday="7/4",
         aliases=("Missy Dubourde",),
+        stats_tracks={
+            "speed": [3, 4, 5, 6, 6, 6, 7, 7],
+            "might": [2, 3, 3, 3, 4, 5, 6, 7],
+            "sanity": [1, 2, 3, 4, 5, 5, 6, 7],
+            "knowledge": [2, 3, 4, 4, 5, 6, 6, 6],
+        },
     ),
     character_face(
         card_id="card_4",
@@ -235,6 +293,12 @@ CHARACTER_FACES = [
         stats_max={"speed": 7, "might": 3, "sanity": 5, "knowledge": 4},
         birthday="10/5",
         aliases=("Zoe Ingstrom",),
+        stats_tracks={
+            "speed": [4, 4, 4, 4, 5, 6, 8, 8],
+            "might": [2, 2, 3, 3, 4, 4, 6, 7],
+            "sanity": [3, 4, 5, 5, 6, 6, 7, 8],
+            "knowledge": [1, 2, 3, 4, 4, 5, 5, 5],
+        },
     ),
     character_face(
         card_id="card_4",
@@ -245,6 +309,12 @@ CHARACTER_FACES = [
         stats_max={"speed": 6, "might": 5, "sanity": 4, "knowledge": 3},
         birthday="3/23",
         aliases=("Darrin Williams",),
+        stats_tracks={
+            "speed": [4, 4, 4, 5, 6, 7, 7, 8],
+            "might": [2, 3, 3, 4, 5, 6, 6, 7],
+            "sanity": [1, 2, 3, 4, 5, 5, 5, 7],
+            "knowledge": [2, 3, 3, 4, 5, 5, 5, 7],
+        },
     ),
     character_face(
         card_id="card_5",
@@ -255,6 +325,12 @@ CHARACTER_FACES = [
         stats_max={"speed": 4, "might": 6, "sanity": 4, "knowledge": 3},
         birthday="11/15",
         aliases=("Ox Bellows",),
+        stats_tracks={
+            "speed": [2, 2, 2, 3, 4, 5, 5, 6],
+            "might": [4, 5, 5, 6, 6, 7, 8, 8],
+            "sanity": [2, 2, 3, 4, 5, 5, 6, 7],
+            "knowledge": [2, 2, 3, 3, 5, 5, 6, 6],
+        },
     ),
     character_face(
         card_id="card_5",
@@ -265,6 +341,13 @@ CHARACTER_FACES = [
         stats_max={"speed": 5, "might": 4, "sanity": 5, "knowledge": 5},
         birthday="12/1",
         aliases=("Warren Leung",),
+        # 沃伦属于精神型角色；理智/知识在中后段有明显跳升，并有属性可达 8。
+        stats_tracks={
+            "speed": [2, 3, 4, 4, 5, 5, 6, 7],
+            "might": [1, 2, 3, 3, 4, 4, 5, 6],
+            "sanity": [2, 2, 3, 4, 4, 5, 7, 8],
+            "knowledge": [1, 2, 3, 4, 5, 6, 6, 8],
+        },
     ),
     character_face(
         card_id="card_6",
@@ -275,6 +358,12 @@ CHARACTER_FACES = [
         stats_max={"speed": 4, "might": 3, "sanity": 6, "knowledge": 6},
         birthday="8/29",
         aliases=("Heather Granville",),
+        stats_tracks={
+            "speed": [3, 3, 4, 5, 6, 6, 7, 8],
+            "might": [3, 3, 3, 4, 5, 6, 7, 8],
+            "sanity": [3, 3, 3, 4, 5, 6, 6, 6],
+            "knowledge": [2, 3, 3, 4, 5, 6, 7, 8],
+        },
     ),
     character_face(
         card_id="card_6",
@@ -285,6 +374,12 @@ CHARACTER_FACES = [
         stats_max={"speed": 5, "might": 4, "sanity": 4, "knowledge": 5},
         birthday="5/12",
         aliases=("Jenny LeClerc",),
+        stats_tracks={
+            "speed": [2, 3, 4, 4, 4, 5, 6, 8],
+            "might": [3, 4, 4, 4, 4, 5, 6, 8],
+            "sanity": [1, 1, 2, 4, 4, 4, 5, 6],
+            "knowledge": [2, 3, 3, 4, 4, 5, 6, 8],
+        },
     ),
 ]
 
@@ -678,7 +773,7 @@ EVENT_BASES = [
         source_name="Awful Waffles",
         text="又甜又诡异。",
         tags=("event",),
-        effect_id="event_generic",
+        effect_id="event_awful_waffles",
         keep=False,
     ),
     card_def(
@@ -1184,59 +1279,59 @@ ROOM_BASES = [
 ]
 
 
-EVENT_PLACEHOLDER_SPECS = [
+EVENT_SUPPLEMENTAL_SPECS = [
     ("event_shrieking_wind", "尖啸之风", "Shrieking Wind", "event_lights_out"),
-    ("event_smoke", "烟雾", "Smoke", "event_generic"),
-    ("event_whoops", "糟了", "Whoops", "event_generic"),
+    ("event_smoke", "烟雾", "Smoke", "event_smoke"),
+    ("event_whoops", "糟了", "Whoops", "event_whoops"),
     ("event_drip_drip_drip", "滴答滴答滴答", "Drip Drip Drip", "event_grave_dirt"),
     ("event_possession", "附身", "Possession", "event_bloody_vision"),
-    ("event_disquieting_sounds", "不安之声", "Disquieting Sounds", "event_generic"),
-    ("event_spider", "蜘蛛", "Spider", "event_generic"),
-    ("event_closet_door", "柜门", "Closet Door", "event_generic"),
-    ("event_locked_safe", "上锁保险箱", "Locked Safe", "event_generic"),
+    ("event_disquieting_sounds", "不安之声", "Disquieting Sounds", "event_disquieting_sounds"),
+    ("event_spider", "蜘蛛", "Spider", "event_spider"),
+    ("event_closet_door", "柜门", "Closet Door", "event_closet_door"),
+    ("event_locked_safe", "上锁保险箱", "Locked Safe", "event_locked_safe"),
     ("event_rotten", "腐烂", "Rotten", "event_grave_dirt"),
     ("event_revolving_wall", "旋转墙", "Revolving Wall", "event_secret_passage"),
     ("event_creepy_puppet", "诡异木偶", "Creepy Puppet", "event_bloody_vision"),
     ("event_burning_man", "燃烧人影", "Burning Man", "event_grave_dirt"),
     ("event_image_in_the_mirror_backwards", "镜中倒影（反转）", "Image in the Mirror (Backwards)", "event_bloody_vision"),
     ("event_angry_being", "愤怒的存在", "Angry Being", "event_bloody_vision"),
-    ("event_groundskeeper", "园丁", "Groundskeeper", "event_generic"),
-    ("event_something_slimy", "黏滑之物", "Something Slimy", "event_generic"),
-    ("event_a_moment_of_hope", "希望一瞬", "A Moment of Hope", "event_generic"),
-    ("event_hanged_men", "吊尸", "Hanged Men", "event_generic"),
-    ("event_jonahs_turn", "乔纳的回合", "Jonah's Turn", "event_generic"),
-    ("event_it_is_meant_to_be", "命中注定", "It Is Meant to be", "event_generic"),
-    ("event_something_hidden", "暗藏之物", "Something Hidden", "event_generic"),
+    ("event_groundskeeper", "园丁", "Groundskeeper", "event_groundskeeper"),
+    ("event_something_slimy", "黏滑之物", "Something Slimy", "event_something_slimy"),
+    ("event_a_moment_of_hope", "希望一瞬", "A Moment of Hope", "event_a_moment_of_hope"),
+    ("event_hanged_men", "吊尸", "Hanged Men", "event_hanged_men"),
+    ("event_jonahs_turn", "乔纳的回合", "Jonah's Turn", "event_jonahs_turn"),
+    ("event_it_is_meant_to_be", "命中注定", "It Is Meant to be", "event_it_is_meant_to_be"),
+    ("event_something_hidden", "暗藏之物", "Something Hidden", "event_something_hidden"),
     ("event_debris", "瓦砾", "Debris", "event_lost_one"),
     ("event_funeral", "葬礼", "Funeral", "event_grave_dirt"),
-    ("event_the_voice", "声音", "The Voice", "event_generic"),
+    ("event_the_voice", "声音", "The Voice", "event_the_voice"),
     ("event_the_beckoning", "召唤", "The Beckoning", "event_lost_one"),
     ("event_image_in_the_mirror", "镜中倒影", "Image in the Mirror", "event_bloody_vision"),
     ("event_hideous_shriek", "可怖尖叫", "Hideous Shriek", "event_bloody_vision"),
-    ("event_webs", "蛛网", "Webs", "event_generic"),
-    ("event_night_view", "夜景", "Night View", "event_generic"),
-    ("event_creepy_crawlies", "虫影", "Creepy Crawlies", "event_generic"),
+    ("event_webs", "蛛网", "Webs", "event_webs"),
+    ("event_night_view", "夜景", "Night View", "event_night_view"),
+    ("event_creepy_crawlies", "虫影", "Creepy Crawlies", "event_creepy_crawlies"),
     ("event_footsteps", "脚步声", "Footsteps", "event_lost_one"),
-    ("event_phone_call", "电话", "Phone Call", "event_generic"),
+    ("event_phone_call", "电话", "Phone Call", "event_phone_call"),
     ("event_skeletons", "骸骨", "Skeletons", "event_grave_dirt"),
 ]
 
-ROOM_PLACEHOLDER_SPECS = [
-    ("attic", "阁楼", "Attic", 1, ("south", "east", "west"), "event", "room_placeholder"),
-    ("bathroom", "浴室", "Bathroom", 1, ("north", "south"), "event", "room_placeholder"),
-    ("game_room", "游戏室", "Game Room", 1, ("north", "east", "south"), "item", "room_placeholder"),
-    ("inner_hall", "内庭", "Inner Hall", 0, ("north", "east", "west"), None, "room_placeholder"),
-    ("creaky_hallway", "吱呀走廊", "Creaky Hallway", -1, ("north", "south", "east"), None, "room_placeholder"),
-    ("dusty_hallway", "积尘走廊", "Dusty Hallway", -1, ("east", "west"), None, "room_placeholder"),
-    ("statuary_corridor", "雕像走廊", "Statuary Corridor", -1, ("north", "south", "west"), None, "room_placeholder"),
-    ("crawlspace", "爬行空间", "Crawlspace", -1, ("north", "east"), None, "room_placeholder"),
-    ("storeroom", "储藏室", "Storeroom", 1, ("north", "east"), "item", "room_placeholder"),
-    ("underground_lake", "地下湖", "Underground Lake", -1, ("north", "east", "west"), None, "room_placeholder"),
-    ("wine_cellar", "酒窖", "Wine Cellar", -1, ("south", "east", "west"), "item", "room_placeholder"),
+ROOM_SUPPLEMENTAL_SPECS = [
+    ("attic", "阁楼", "Attic", 1, ("south", "east", "west"), "event", "room_attic", True),
+    ("bathroom", "浴室", "Bathroom", 1, ("north", "south"), "event", "room_bathroom", False),
+    ("game_room", "游戏室", "Game Room", 1, ("north", "east", "south"), "item", "room_game_room", False),
+    ("inner_hall", "内庭", "Inner Hall", 0, ("north", "east", "west"), None, "room_inner_hall", False),
+    ("creaky_hallway", "吱呀走廊", "Creaky Hallway", -1, ("north", "south", "east"), None, "room_creaky_hallway", False),
+    ("dusty_hallway", "积尘走廊", "Dusty Hallway", -1, ("east", "west"), None, "room_dusty_hallway", False),
+    ("statuary_corridor", "雕像走廊", "Statuary Corridor", -1, ("north", "south", "west"), None, "room_statuary_corridor", False),
+    ("crawlspace", "爬行空间", "Crawlspace", -1, ("north", "east"), None, "room_crawlspace", False),
+    ("storeroom", "储藏室", "Storeroom", 1, ("north", "east"), "item", "room_storeroom", False),
+    ("underground_lake", "地下湖", "Underground Lake", -1, ("north", "east", "west"), None, "room_underground_lake", True),
+    ("wine_cellar", "酒窖", "Wine Cellar", -1, ("south", "east", "west"), "item", "room_wine_cellar", False),
 ]
 
 
-def _event_placeholder_text(name: str, effect_id: str) -> str:
+def _event_spec_text(name: str, effect_id: str) -> str:
     if effect_id == "event_bloody_vision":
         return f"{name} 逼得你先稳住心神。"
     if effect_id == "event_grave_dirt":
@@ -1255,17 +1350,41 @@ def _event_placeholder_text(name: str, effect_id: str) -> str:
         return f"{name} 让地下室的空气更压抑。"
     if effect_id in {"event_lost_one", "event_the_walls"}:
         return f"{name} 把你推向屋子的另一头。"
-    return f"{name} 会让这一回合的局势突然变糟。"
+    return {
+        "event_awful_waffles": "吃下这份诡异的食物前，先进行一次力量检定（目标 4）；失败受 1 点物理伤害。",
+        "event_smoke": "烟雾遮住出口：进行速度检定（目标 4），失败则本回合移动停止。",
+        "event_whoops": "脚下一滑：进行速度检定（目标 4），失败受 1 点物理伤害并结束移动。",
+        "event_disquieting_sounds": "不安的声音逼近：进行理智检定（目标 4），失败受 1 点精神伤害。",
+        "event_spider": "一只蜘蛛扑来：进行速度检定（目标 3），失败受 1 点物理伤害。",
+        "event_closet_door": "柜门后藏着东西：进行知识检定（目标 4），成功抽 1 张物品牌，失败受 1 点精神伤害。",
+        "event_locked_safe": "保险箱需要密码：进行知识检定（目标 5），成功抽 1 张物品牌，失败结束移动。",
+        "event_groundskeeper": "园丁留下了可用的补给：进行知识检定（目标 4），成功抽 1 张物品牌。",
+        "event_something_slimy": "黏滑的东西缠住了你：进行力量检定（目标 4），失败失去 1 点速度。",
+        "event_a_moment_of_hope": "短暂的希望稳定了心神：恢复 1 点理智或知识。",
+        "event_hanged_men": "吊影在眼前晃动：进行理智检定（目标 4），失败受 1 点精神伤害并结束移动。",
+        "event_jonahs_turn": "乔纳替你看清了下一步：本回合获得 1 次额外检定重掷。",
+        "event_it_is_meant_to_be": "记住这次结果：下一次检定前可选择使用本次掷骰结果。",
+        "event_something_hidden": "发现隐藏的夹层：进行知识检定（目标 4），成功抽 1 张物品牌。",
+        "event_the_voice": "声音在耳边低语：进行理智检定（目标 4），失败失去 1 点知识并被送回地下室平台。",
+        "event_webs": "蛛网封住了通道：进行力量检定（目标 4），失败本回合移动停止。",
+        "event_night_view": "窗外的景象令人屏息：进行理智检定（目标 4），成功获得 1 点速度，失败受 1 点精神伤害。",
+        "event_creepy_crawlies": "虫子爬过皮肤：进行力量检定（目标 4），失败受 1 点物理伤害并结束移动。",
+        "event_phone_call": "电话突然响起：选择恢复 1 点知识，或立刻抽 1 张事件牌并结束移动。",
+    }.get(effect_id, f"{name} 会让这一回合的局势突然变糟。")
 
 
-def _room_placeholder_text(name: str, symbol: str | None) -> str:
+def _room_spec_text(name: str, symbol: str | None, effect_id: str) -> str:
+    if effect_id == "room_underground_lake":
+        return f"{name} 的水面通向房屋下方；若在上层发现，会塌落到地下室。"
+    if effect_id == "room_attic":
+        return f"{name} 是特殊房间：部分剧本中的失败检定可以留在这里下回合重试。"
     if symbol == "item":
-        return f"{name} 里似乎藏着可翻找的东西。"
+        return f"{name} 里有物品符号，首次发现时抽 1 张物品牌。"
     if symbol == "event":
-        return f"{name} 一进门就能感觉到要抽事件牌。"
+        return f"{name} 有事件符号，首次发现时抽 1 张事件牌。"
     if symbol == "omen":
-        return f"{name} 阴森得像在等某个预兆。"
-    return f"{name} 只是房屋深处的一间普通房间。"
+        return f"{name} 有预兆符号，首次发现时抽 1 张预兆牌。"
+    return f"{name} 没有基础规则中的常规特效；特殊剧本可能会改变它的作用。"
 
 
 def _haunt_profile(name: str) -> tuple[str, str, str, list[str], str]:
@@ -1333,55 +1452,75 @@ def _haunt_profile(name: str) -> tuple[str, str, str, list[str], str]:
 
 HAUNT_NAMES = [
     (1, "The Mummy Walks"),
-    (2, "The Seance"),
-    (3, "Haunt #3"),
+    (2, "The Séance"),
+    (3, "Frog-Leg Stew"),
     (4, "The Web of Destiny"),
     (5, "I Was a Teenage Lycanthrope"),
     (6, "The Floating Eye"),
     (7, "Carnivorous Ivy"),
-    (8, "The Wraiths"),
+    (8, "Wail of the Banshee"),
     (9, "The Dance of Death"),
     (10, "Family Gathering"),
     (11, "Let Them In"),
-    (12, "Fish Out of Water"),
-    (13, "You Wear It Well"),
-    (14, "Stacked Like Cordwood"),
-    (15, "The Walls"),
-    (16, "What the...?"),
-    (17, "The Beast is Loose"),
-    (18, "Tick, Tick, Tick"),
-    (19, "Frozen in Fear"),
-    (20, "Shush"),
-    (21, "The Abyss Gazes Back"),
-    (22, "This House is Haunted"),
-    (23, "The Feast of the Dead"),
-    (24, "The Bogeyman"),
-    (25, "The Sacrifice"),
+    (12, "Fleshwalkers"),
+    (13, "Perchance to Dream"),
+    (14, "The Stars Are Right"),
+    (15, "Here There Be Dragons"),
+    (16, "The Phantom’s Embrace"),
+    (17, "Bugs"),
+    (18, "Offspring"),
+    (19, "The Beastmaster"),
+    (20, "Ghost Bride"),
+    (21, "House of the Living Dead"),
+    (22, "The Abyss Gazes Back"),
+    (23, "Tentacled Horror"),
+    (24, "Fly Away Home"),
+    (25, "Voodoo"),
     (26, "Pay the Piper"),
-    (27, "Comes the Hero"),
-    (28, "Tomb of the Forgotten"),
-    (29, "Again"),
-    (30, "The Stars are Right"),
-    (31, "Skeletal Remains"),
-    (32, "The Crawling Horror"),
-    (33, "The Ring"),
-    (34, "The Ape"),
-    (35, "Death Doth Find Us All"),
-    (36, "The Heir"),
-    (37, "The Rotting Room"),
-    (38, "The Phantom's Embrace"),
-    (39, "Spider"),
-    (40, "The Gathering Storm"),
-    (41, "The Spear"),
-    (42, "The Medallion"),
-    (43, "The Madman"),
-    (44, "The Skull"),
-    (45, "The Dog"),
-    (46, "The Girl"),
-    (47, "The Mask"),
-    (48, "The Spirit Board"),
-    (49, "The Crystal Ball"),
-    (50, "The Book"),
+    (27, "Amok Flesh"),
+    (28, "Ring of King Solomon"),
+    (29, "Frankenstein’s Legacy"),
+    (30, "Tomb of Dracula"),
+    (31, "It’s Alive!"),
+    (32, "Lost"),
+    (33, "Creature from the Lake"),
+    (34, "Mad, Mad World"),
+    (35, "Small Change"),
+    (36, "Better with Friends"),
+    (37, "Checkmate"),
+    (38, "Hellbeasts"),
+    (39, "The Heir"),
+    (40, "Buried Alive"),
+    (41, "Invisible Traitor"),
+    (42, "Comes the Hero"),
+    (43, "A Gathering of Shadows"),
+    (44, "Death Doth Find Us All"),
+    (45, "Tick, Tick, Tick"),
+    (46, "The Feast"),
+    (47, "Worm Ouroboros"),
+    (48, "Stacked Like Cordwood"),
+    (49, "You Wear It Well"),
+    (50, "A Little Night Murder"),
+    (51, "Darker than Night"),
+    (52, "In a Crackling Aura"),
+    (53, "Reeking of Death"),
+    (54, "The Skull of Ar’Kanok"),
+    (55, "The King’s Roads"),
+    (56, "Time Waits for One Man"),
+    (57, "A Friend for the Ages"),
+    (58, "Nightfall"),
+    (59, "For a Thousand Years"),
+    (60, "The Burning Sands"),
+    (61, "Eternal Glory"),
+    (62, "Bag of Tricks"),
+    (63, "The Twisting Nether"),
+    (64, "An Offering of Blood"),
+    (65, "A Breath of Wind"),
+    (66, "Hell on Earth"),
+    (67, "Once Upon a Time"),
+    (68, "The Labyrinth"),
+    (69, "Way of the Wisp"),
+    (70, "With an Inhuman Cry"),
 ]
 
 
@@ -1468,6 +1607,86 @@ MONSTER_BASES = [
         tags=("plant",),
     ),
     monster_def(
+        monster_id="witch",
+        name="女巫",
+        source_name="Witch",
+        speed=4,
+        might=3,
+        sanity=6,
+        text="在凡人形态法术完成前无法被普通攻击杀死。",
+        tags=("caster", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="cat",
+        name="猫",
+        source_name="Cat",
+        speed=3,
+        might=3,
+        sanity=2,
+        text="会追逐被变成青蛙的英雄。",
+        tags=("animal", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="giant_spider",
+        name="巨型蜘蛛",
+        source_name="Giant Spider",
+        speed=0,
+        might=2,
+        sanity=5,
+        text="蛛卵孵化前会守着被困者。",
+        tags=("animal", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="dog",
+        name="狗",
+        source_name="Dog",
+        speed=6,
+        might=4,
+        sanity=3,
+        text="狼人作祟中由叛徒控制。",
+        tags=("animal", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="alien",
+        name="外星人",
+        source_name="Alien",
+        speed=4,
+        might=6,
+        sanity=6,
+        text="会用精神控制把英雄送上宇宙飞船。",
+        tags=("alien", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="creeper_tip",
+        name="爬行物尖端",
+        source_name="Creeper Tip",
+        speed=2,
+        might=5,
+        sanity=3,
+        text="根部固定，尖端会抓走英雄。",
+        tags=("plant", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="banshee",
+        name="女妖",
+        source_name="Banshee",
+        speed=8,
+        might=0,
+        sanity=0,
+        text="不能被普通攻击，只能通过驱魔解决。",
+        tags=("undead", "spectral", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="madman",
+        name="疯子",
+        source_name="Madman",
+        speed=3,
+        might=5,
+        sanity=5,
+        text="家族聚会中承受 5 点物理伤害后才会倒下。",
+        tags=("human", "haunt_specific"),
+    ),
+    monster_def(
         monster_id="giant",
         name="巨人",
         source_name="Giant",
@@ -1479,30 +1698,7 @@ MONSTER_BASES = [
 ]
 
 
-def _placeholder_room_name(floor: int, index: int) -> str:
-    floor_name = { -1: "地下", 0: "一层", 1: "二层" }.get(floor, "未知")
-    return f"未录入房间 {floor_name}-{index:02d}"
-
-
-def _placeholder_room_doors(rng: random.Random) -> tuple[str, ...]:
-    templates = [
-        ("north", "south"),
-        ("east", "west"),
-        ("north", "east"),
-        ("south", "west"),
-        ("north", "east", "west"),
-        ("north", "south", "east"),
-        ("north", "south", "west"),
-        ("east", "south", "west"),
-    ]
-    return rng.choice(templates)
-
-
-def _placeholder_room_symbol(rng: random.Random) -> str | None:
-    return rng.choice([None, None, "event", "item", "omen"])
-
-
-def _make_placeholder_rooms(
+def _make_supplemental_rooms(
     rng: random.Random,
     room_templates: dict[str, dict],
     targets: dict[int, int],
@@ -1515,12 +1711,12 @@ def _make_placeholder_rooms(
             for room_id, room in room_templates.items()
             if room["floor"] == floor and room_id not in excluded_ids
         )
-        candidates = [spec for spec in ROOM_PLACEHOLDER_SPECS if spec[3] == floor]
+        candidates = [spec for spec in ROOM_SUPPLEMENTAL_SPECS if spec[3] == floor]
         index = 1
         while current < target:
             if index - 1 >= len(candidates):
                 break
-            room_id, name, source_name, room_floor, doors, symbol, effect_id = candidates[index - 1]
+            room_id, name, source_name, room_floor, doors, symbol, effect_id, special = candidates[index - 1]
             if room_id in room_templates:
                 index += 1
                 continue
@@ -1533,8 +1729,8 @@ def _make_placeholder_rooms(
                     doors=doors,
                     symbol=symbol,
                     effect_id=effect_id,
-                    text=_room_placeholder_text(name, symbol),
-                    special=False,
+                    text=_room_spec_text(name, symbol, effect_id),
+                    special=special,
                     generated=False,
                 )
             )
@@ -1543,16 +1739,16 @@ def _make_placeholder_rooms(
     return added
 
 
-def _make_placeholder_events(rng: random.Random, count: int) -> list[dict]:
+def _make_supplemental_events(rng: random.Random, count: int) -> list[dict]:
     events: list[dict] = []
-    for card_id, name, source_name, effect_id in EVENT_PLACEHOLDER_SPECS[:count]:
+    for card_id, name, source_name, effect_id in EVENT_SUPPLEMENTAL_SPECS[:count]:
         events.append(
             card_def(
                 card_id=card_id,
                 kind="event",
                 name=name,
                 source_name=source_name,
-                text=_event_placeholder_text(name, effect_id),
+                text=_event_spec_text(name, effect_id),
                 tags=("event",),
                 effect_id=effect_id,
                 keep=False,
@@ -1574,14 +1770,14 @@ def build_catalog(seed: int | None = None) -> Catalog:
         character_cards.setdefault(face["card_id"], []).append(face["id"])
 
     cards: dict[str, Card] = {}
-    for spec in OMEN_CARDS + ITEM_CARDS + EVENT_BASES + _make_placeholder_events(rng, 45 - len(EVENT_BASES)):
+    for spec in OMEN_CARDS + ITEM_CARDS + EVENT_BASES + _make_supplemental_events(rng, 45 - len(EVENT_BASES)):
         cards[spec["id"]] = Card(**spec)
 
     room_template_specs = ROOM_BASES[:]
     room_template_map: dict[str, dict] = {spec["id"]: spec for spec in room_template_specs}
     room_targets = {-1: 12, 0: 20, 1: 12}
     start_ids = {"basement_landing", "entrance_hall", "foyer", "grand_staircase", "upper_landing"}
-    for spec in _make_placeholder_rooms(rng, room_template_map, room_targets, start_ids):
+    for spec in _make_supplemental_rooms(rng, room_template_map, room_targets, start_ids):
         room_template_specs.append(spec)
         room_template_map[spec["id"]] = spec
 
@@ -1596,16 +1792,28 @@ def build_catalog(seed: int | None = None) -> Catalog:
     haunt_defs: dict[int, Haunt] = {}
     for haunt_id, name in HAUNT_NAMES:
         rule, hero_goal, traitor_goal, monsters, notes = _haunt_profile(name)
+        translation = HAUNT_TRANSLATIONS.get(str(haunt_id), HAUNT_TRANSLATIONS.get(haunt_id, {}))
+        rule_data = get_haunt_rule_override(haunt_id)
+        if rule_data:
+            rule = rule_data.get("traitor_rule", rule)
+            hero_goal = rule_data.get("hero_goal", hero_goal)
+            traitor_goal = rule_data.get("traitor_goal", traitor_goal)
+            monsters = list(rule_data.get("suggested_monsters", monsters))
+            notes = rule_data.get("engine_note", notes)
         haunt_defs[haunt_id] = Haunt(
             id=haunt_id,
-            name=name,
+            name=translation.get("title_zh", name),
+            source_name=name,
             traitor_rule=rule,
             hero_goal=hero_goal,
             traitor_goal=traitor_goal,
-            mode="generic",
+            hero_script=translation.get("hero", ""),
+            traitor_script=translation.get("traitor", ""),
+            mode=rule_data.get("mode", "generic"),
             trigger_hint="theme",
             suggested_monsters=monsters,
             notes=notes,
+            rule_data=rule_data,
         )
 
     monsters = {spec["id"]: MonsterTemplate(**spec) for spec in MONSTER_BASES}
