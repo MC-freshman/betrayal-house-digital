@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -25,6 +26,7 @@ if __package__ in {None, ""}:
     from haunt_modes import (  # type: ignore
         AlienAbductionMode,
         BanishmentEscortMode,
+        CarnivorousIvyMode,
         GenericModeHandler,
         SeanceRaceMode,
         WebEscapeMode,
@@ -41,6 +43,7 @@ else:  # pragma: no cover
     from .haunt_modes import (
         AlienAbductionMode,
         BanishmentEscortMode,
+        CarnivorousIvyMode,
         GenericModeHandler,
         SeanceRaceMode,
         WebEscapeMode,
@@ -83,8 +86,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(WitchAndFrogsMode) == [3], f"剧本 3 未走定制 handler: {handlers.get(WitchAndFrogsMode)}"
     assert handlers.get(WebEscapeMode) == [4], f"剧本 4 未走定制 handler: {handlers.get(WebEscapeMode)}"
     assert handlers.get(AlienAbductionMode) == [6], f"剧本 6 未走定制 handler: {handlers.get(AlienAbductionMode)}"
+    assert handlers.get(CarnivorousIvyMode) == [7], f"剧本 7 未走定制 handler: {handlers.get(CarnivorousIvyMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 64, f"应有 64 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 63, f"应有 63 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -93,7 +97,7 @@ def verify_mode_dispatch() -> None:
     # 不存在的 mode 也不能崩
     assert isinstance(get_mode_handler("no_such_mode"), GenericModeHandler)
 
-    assert set(registered_modes()) == {"alien_abduction", "banishment_escort", "generic", "seance_race", "web_escape", "werewolf_hunt", "witch_and_frogs"}
+    assert set(registered_modes()) == {"alien_abduction", "banishment_escort", "carnivorous_ivy", "generic", "seance_race", "web_escape", "werewolf_hunt", "witch_and_frogs"}
 
 
 def verify_mode_handler_reaches_engine() -> None:
@@ -107,6 +111,9 @@ def verify_mode_handler_reaches_engine() -> None:
 
     engine.state.haunt = engine.catalog.haunt_defs[5]
     assert isinstance(engine._mode_handler(), WerewolfHuntMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[7]
+    assert isinstance(engine._mode_handler(), CarnivorousIvyMode)
 
     engine.state.haunt = engine.catalog.haunt_defs[35]
     assert isinstance(engine._mode_handler(), GenericModeHandler)
@@ -213,6 +220,13 @@ def _run_until_haunt(seed: int, players: int, haunt_id: int) -> GameEngine:
         if not controller.take_turn(engine):
             break
     return engine
+
+
+def _set_current(engine: GameEngine, player: Any) -> None:
+    """把某玩家设为当前回合玩家（行动列表有回合归属守卫，测试需要确定性）。"""
+    order = engine.state.turn_order
+    if order:
+        engine.state.turn_index = order.index(player.id)
 
 
 def verify_haunt1_tokens() -> None:
@@ -812,6 +826,206 @@ def verify_bot_quest_goal_rooms() -> None:
     assert controller._haunt_goal_rooms(engine, hero) == set() or True
 
 
+def verify_haunt7_setup_and_vines() -> None:
+    """剧本 7：布藤对数/房间限制/待放计数；根尖端配对；叛徒不能重拾古书（p18/p89）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=7)
+    assert engine.state.haunt is not None and engine.state.haunt.id == 7
+    handler = engine._mode_handler()
+    assert isinstance(handler, CarnivorousIvyMode)
+
+    flags = engine._haunt_flags()
+    players = len(engine.state.players)
+    budget = min(players * 2, 10)  # p89：两倍玩家数（上限 10 对）
+
+    tips = [m for m in engine.state.monsters if m.template_id == "creeper_tip"]
+    roots = engine.tokens_of_kind("root")
+    assert len(tips) == len(roots), "每只尖端必须有一枚配对的根"
+    assert len(tips) <= budget, "爬行藤对数不能超过预算"
+    allowed = set(CarnivorousIvyMode.ROOM_IDS)
+    root_rooms: set[str] = set()
+    for root, tip in zip(roots, tips):
+        assert engine.state.board[root.room_key].template_id in allowed, "根只能扎在爬行房间"
+        assert root.data.get("tip_id") == tip.id, "根与尖端必须配对"
+        assert tip.room_key == root.room_key, "尖端初始应在根部房间"
+        root_rooms.add(root.room_key)
+    assert len(root_rooms) == len(roots), "每间房最多一对爬行藤"
+    assert int(flags.get("ivy_unplaced", 0)) == budget - len(tips), "未入场对应进入待放计数"
+    assert not flags.get("plant_spray_created")
+    assert not engine.tokens_of_kind("plant_spray"), "喷雾开局只是 set aside，未造出"
+
+    # p89：叛徒不能再捡起古书（即使书就在他脚下）
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    room_cards = engine.state.room_items.setdefault(traitor.room_key, [])
+    if "omen_book" not in room_cards:
+        room_cards.append("omen_book")
+    assert engine.pickup_item(traitor, "omen_book") is False, "叛徒重拾古书应被拦"
+    assert "omen_book" not in traitor.items
+    assert "omen_book" in engine.state.room_items.get(traitor.room_key, []), "书应留在房间地上"
+
+    # 新爬行房间被发现时补放待用的一对（每房最多一对）
+    remaining = int(flags.get("ivy_unplaced", 0))
+    if remaining > 0:
+        on_board = {room.template_id for room in engine.state.board.values()}
+        candidate = next(
+            (rid for rid in CarnivorousIvyMode.ROOM_IDS if rid not in on_board), None
+        )
+        if candidate is not None:
+            target = next(
+                r for r in engine.state.board.values()
+                if not engine.tokens_in_room(r.key, "root")
+            )
+            original = target.template_id
+            target.template_id = candidate
+            try:
+                handler.on_room_discovered(engine, traitor, target)
+            finally:
+                target.template_id = original
+            assert len(engine.tokens_of_kind("root")) == len(roots) + 1, "发现待放房间后应补一对"
+            assert int(engine._haunt_flags().get("ivy_unplaced", 0)) == remaining - 1
+
+
+def verify_haunt7_spray_creation_and_kill() -> None:
+    """剧本 7：喷雾制造（知识 5+、仅此一瓶）与喷杀整株爬行藤（p18）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=7)
+    handler = engine._mode_handler()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine, hero)
+    hero.items.append("omen_book")
+
+    room = next(iter(engine.state.board.values()))
+    original = room.template_id
+    room.template_id = "kitchen"  # 厨房是允许制造的两种房间之一
+    try:
+        hero.room_key = room.key
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "make_plant_spray" in ids, "持书在厨房应能制作喷雾"
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, hero, "make_plant_spray", {}) is True
+        assert engine._haunt_flags().get("plant_spray_created") is True
+        assert engine.tokens_held_by(hero.id, "plant_spray"), "成功制作后喷雾应到英雄手上"
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "make_plant_spray" not in ids, "全书只能造这一瓶（造过即不再提供）"
+    finally:
+        room.template_id = original
+
+    # 走进有爬行藤的房间：喷洒自动杀整株（这一株的根、尖端一起消失），
+    # 喷雾不消耗，其余爬行藤不受影响
+    roots_before = engine.tokens_of_kind("root")
+    root = roots_before[0]
+    target_tip = next(m for m in engine.state.monsters if m.id == root.data["tip_id"])
+    tips_before = len([m for m in engine.state.monsters if m.template_id == "creeper_tip"])
+    hero.room_key = root.room_key
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "spray_creeper" in ids, "持喷雾与根同房间应能喷洒"
+    assert handler.perform_action(engine, hero, "spray_creeper", {}) is True
+    assert engine._haunt_track_value("creepers_killed") == 1, "喷杀应推进消灭计数"
+    assert root not in engine.tokens_of_kind("root"), "喷杀应移除这一株的根"
+    assert target_tip not in engine.state.monsters, "喷杀应移除这一株的尖端"
+    assert len(engine.tokens_of_kind("root")) == len(roots_before) - 1, "其余爬行藤不受影响"
+    assert len([m for m in engine.state.monsters if m.template_id == "creeper_tip"]) == tips_before - 1
+    assert engine.tokens_held_by(hero.id, "plant_spray"), "喷雾不应被消耗（还能杀下一株）"
+
+
+def verify_haunt7_grab_release_mulch() -> None:
+    """剧本 7：抓人（不掉血/掉物品）、被击败松手、拖回根部吞噬（p18/p89）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=7)
+    handler = engine._mode_handler()
+    tip = next(m for m in engine.state.monsters if m.template_id == "creeper_tip")
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    hero.room_key = tip.room_key
+    hero.items.append("item_candle")
+
+    # 尖端攻击获胜 → 不掉血，改为抓住；英雄掉光物品（留在房间）
+    with patch.object(engine, "_roll_monster_attack", return_value=10), patch.object(
+        engine, "_roll_attack", return_value=1
+    ):
+        assert handler.on_monster_turn_attack(engine, tip) is True
+    grabbed = engine._haunt_flags()["grabbed"]
+    assert str(hero.id) in grabbed and grabbed[str(hero.id)] == tip.id, "胜出的尖端应抓住英雄"
+    assert not hero.dead, "被抓住不掉血"
+    assert not hero.items, "被抓应掉光物品"
+    assert engine.room_items(tip.room_key), "掉落的物品应留在房间"
+
+    # 被抓者回合开始：钉住不能移动
+    handler.on_turn_start(engine, hero)
+    assert hero.movement_stopped, "被抓的英雄不能移动"
+
+    # 英雄击败尖端（走 on_monster_defeated 返回 False 让引擎默认击晕）→ 松手
+    assert handler.on_monster_defeated(engine, tip, 3) is False
+    assert str(hero.id) not in engine._haunt_flags()["grabbed"], "被击败的尖端应松手"
+    assert hero.movement_stopped is False, "获释后应能继续移动行动"
+
+    # 抓着人的尖端：回合开始时若人质在根部 → 吞噬，藤也离场
+    root = next(
+        r for r in engine.tokens_of_kind("root") if r.data.get("tip_id") == tip.id
+    )
+    grabbed = engine._haunt_flags()["grabbed"]
+    hero.room_key = root.room_key
+    tip.room_key = root.room_key
+    grabbed[str(hero.id)] = tip.id
+    engine._haunt_flags()["grabbed"] = grabbed
+    assert handler.on_monster_turn_start(engine, tip) is True, "根部吞噬应接管本回合"
+    assert hero.dead, "被拖回根部的英雄应被吞噬"
+    assert tip not in engine.state.monsters, "吞噬了英雄的爬行藤应离场"
+    assert not any(t.data.get("tip_id") == tip.id for t in engine.tokens_of_kind("root"))
+
+    # 抓着人的尖端移动：向根部走（代替正常追击），人质随行
+    other = next(
+        (m for m in engine.state.monsters if m.template_id == "creeper_tip" and m is not tip),
+        None,
+    )
+    alive_hero = next(
+        (p for p in engine.state.players if p.role == "hero" and not p.dead), None
+    )
+    if other is not None and alive_hero is not None:
+        other_root = next(
+            (r for r in engine.tokens_of_kind("root") if r.data.get("tip_id") == other.id), None
+        )
+        if other_root is not None and engine._path_length(other.room_key, other_root.room_key) > 0:
+            alive_hero.room_key = other.room_key
+            grabbed[str(alive_hero.id)] = other.id
+            engine._haunt_flags()["grabbed"] = grabbed
+            before = engine._path_length(other.room_key, other_root.room_key)
+            assert handler.on_monster_move(engine, other, 6) is True, "抓着人时应接管移动"
+            after = engine._path_length(other.room_key, other_root.room_key)
+            assert after < before, "拖着人质的藤应向根部靠近"
+            assert alive_hero.room_key == other.room_key, "人质应随尖端移动"
+
+
+def verify_haunt7_elevator_and_destroy() -> None:
+    """剧本 7：尖端堵住神秘电梯（p89）；叛徒毁喷雾即胜（p89）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=7)
+    handler = engine._mode_handler()
+
+    # 神秘电梯：房间里有尖端时电梯停用，英雄不会被传送走
+    tip = next(m for m in engine.state.monsters if m.template_id == "creeper_tip")
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    hero.room_key = tip.room_key
+    elevator_room = engine.state.board[tip.room_key]
+    pos_before = hero.room_key
+    engine._apply_mystic_elevator(hero, elevator_room)
+    assert hero.room_key == pos_before, "尖端在电梯房间时电梯必须停用"
+
+    # 叛徒偷到喷雾后，在深坑/熔炉房/地下湖毁掉它 → 叛徒直接获胜
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    _set_current(engine, traitor)
+    engine.spawn_token("plant_spray", label="植物喷雾", role="carried", holder=traitor.id)
+    room = next(iter(engine.state.board.values()))
+    original = room.template_id
+    room.template_id = "chasm"
+    try:
+        traitor.room_key = room.key
+        ids = {a.id for a in handler.available_actions(engine, traitor)}
+        assert "destroy_spray" in ids, "叛徒持喷雾站在深坑应能毁掉它"
+        assert handler.perform_action(engine, traitor, "destroy_spray", {}) is True
+    finally:
+        room.template_id = original
+    assert engine._haunt_flags().get("plant_spray_destroyed") is True
+    assert not engine.tokens_held_by(traitor.id, "plant_spray"), "喷雾应已被移除"
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "traitor", "喷雾被毁 = 叛徒获胜"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -1146,6 +1360,10 @@ def main():
     verify_haunt6_free_and_immune()
     verify_haunt6_alien_turn_attack()
     verify_haunt6_traitor_away_no_win()
+    verify_haunt7_setup_and_vines()
+    verify_haunt7_spray_creation_and_kill()
+    verify_haunt7_grab_release_mulch()
+    verify_haunt7_elevator_and_destroy()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

@@ -291,6 +291,23 @@
       "forced_haunt": 3
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "b9547ff30156618731caae9747b6fdea4e416d4ed805e07b6bd3837fbce7aab1",
+      "turns": 34,
+      "phase": "GAME_OVER",
+      "winner": "heroes",
+      "winner_reason": "叛徒已经倒下。",
+      "haunt": 7,
+      "haunt_name": "食人常春藤",
+      "rooms": 26,
+      "monsters": 6,
+      "key": "seed113-3p-haunt7",
+      "forced_haunt": 7
+    },
+    {
       "seed": 131,
       "players": 4,
       "completed": true,

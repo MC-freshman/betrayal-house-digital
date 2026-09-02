@@ -1262,6 +1262,10 @@ class GameEngine:
         self._log(f"[规则缺口] {room.name} 的房间效果 {effect} 尚未实现，已跳过。")
 
     def _apply_mystic_elevator(self, player: Player, room: PlacedRoom) -> None:
+        # 剧本 7 叛徒手册 p89：藤蔓尖端进入神秘电梯后，电梯停用直到它离开。
+        if self._mode_handler().mystic_elevator_blocked(self, player):
+            self._log("神秘电梯卡住了——有什么东西盘踞在电梯井里。")
+            return
         if player.role == "traitor":
             choice = self.prompter.choose_from_list(
                 "神秘电梯",
@@ -1791,6 +1795,11 @@ class GameEngine:
         return True
 
     def pickup_item(self, player: Player, card_id: str) -> bool:
+        # 剧本 7 p89：叛徒开局被迫丢下古书后，不能再捡起来。
+        if self._mode_handler().item_pickup_blocked(self, player, card_id):
+            card = self.catalog.cards.get(card_id)
+            self._log(f"{card.name if card else card_id}无法被 {player.name} 捡起。")
+            return False
         room_cards = self.state.room_items.get(player.room_key, [])
         if card_id not in room_cards:
             return False
@@ -3132,10 +3141,14 @@ class GameEngine:
     def _resolve_monster_turns(self) -> None:
         if not self.state.monsters:
             return
-        for monster in self.state.monsters:
+        for monster in list(self.state.monsters):
             if monster.stunned_turns > 0:
                 monster.stunned_turns -= 1
                 self._log(f"{monster.name} 因昏迷跳过一回合。")
+                continue
+            # 剧本可在怪物行动前介入（剧本 7 p89：被拖回根部的英雄被吞噬，
+            # 该爬行物随之离场）。返回 True = 本怪物本回合不再行动。
+            if self._mode_handler().on_monster_turn_start(self, monster):
                 continue
             target = self._find_monster_target(monster)
             if target is None:

@@ -303,8 +303,17 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [17, 88],
     },
     7: {
-        "version": 1,
-        "fidelity": "draft",
+        # 校准记录（2026-09-02，对照英雄手册 p18 / 叛徒手册 p89）：
+        #   机制全部落在 CarnivorousIvyMode（根/尖端配对布藤、抓人、拖回根部
+        #   吞噬、喷雾制造与喷杀、叛徒毁喷雾、电梯堵塞、叛徒弃书）。
+        #   详见 haunt_modes.py 该 handler 的模块注释与已知简化清单。
+        #   数值核对无误：尖端 Speed 2 / Might 5 / Sanity 3（p89 底部）；
+        #   制造喷雾 Knowledge 5+（p18）；爬行藤对数 = 2×玩家数（上限 10）；
+        #   杀满玩家数株即英雄胜；根不移动不可攻击，只有尖端可攻可被攻。
+        #   spawn 用 deferred：布藤时机与"每房最多一对"的规则由 handler
+        #   控制（引擎的 room_ids 生成会在房间不足时错误地落到作祟房间）。
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "carnivorous_ivy",
         "traitor_rule": "revealer",
@@ -323,8 +332,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "monsters": [
             {
                 "template_id": "creeper_tip",
-                "name": "爬行物尖端",
-                "spawn": "room_ids",
+                "name": "爬行藤尖端",
+                "spawn": "deferred",
                 "count": {"per_player": 2, "max": 10},
                 "room_ids": ["entrance_hall", "balcony", "bedroom", "chapel", "conservatory", "dining_room", "garden", "grand_staircase", "graveyard", "master_bedroom", "patio", "tower"],
                 "speed": 2,
@@ -333,9 +342,38 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
             }
         ],
         "actions": [
-            {"id": "make_plant_spray", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["research_laboratory", "kitchen"], "requires": ["omen_book"]},
-            {"id": "spray_creeper", "side": "heroes", "requires": ["plant_spray", "same_room:creeper"]},
-            {"id": "destroy_spray", "side": "traitor", "rooms": ["chasm", "furnace_room", "underground_lake"], "requires": ["plant_spray"]},
+            {
+                "id": "make_plant_spray",
+                "side": "heroes",
+                "label": "制作植物喷雾",
+                "detail": "持书在研究实验室或厨房做知识检定（5+）。全书只能造这一瓶。",
+                "stat": "knowledge",
+                "target": 5,
+                "rooms": ["research_laboratory", "kitchen"],
+                "requires": ["omen_book"],
+                "requires_flags": {"plant_spray_created": False, "plant_spray_destroyed": False},
+                "set_flags": {"plant_spray_created": True},
+            },
+            {
+                "id": "spray_creeper",
+                "side": "heroes",
+                "label": "喷洒植物喷雾",
+                "detail": "自动杀死本房间里的一株爬行藤（根或尖端在场即杀整株，不掷骰）。",
+                "progress": "creepers_killed",
+                "requires_flags": {"plant_spray_destroyed": False},
+            },
+            {
+                "id": "destroy_spray",
+                "side": "traitor",
+                "label": "毁掉植物喷雾",
+                "detail": "把偷来的植物喷雾丢进深坑、熔炉房或地下湖——叛徒直接获胜。",
+                "rooms": ["chasm", "furnace_room", "underground_lake"],
+                "requires_flags": {"plant_spray_destroyed": False},
+                "set_flags": {"plant_spray_destroyed": True},
+            },
+        ],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都被藤蔓吞噬了。"}
         ],
         "source_pages": [18, 89],
     },
