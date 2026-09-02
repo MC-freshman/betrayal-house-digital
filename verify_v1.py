@@ -324,11 +324,14 @@ def verify_generic_haunt_action_and_victory() -> None:
     assert engine.perform_haunt_action(hero, "h16_hero_task")
     assert engine.state.meta["haunt_rule"]["tracks"]["hero_progress"]["value"] == 1
 
-    engine._reset_player_turn_state(hero)
-    for _ in range(3):
+    # 循环次数按该剧本骨架声明的轨道目标值驱动（各号剧本目标不同）
+    track = engine.state.meta["haunt_rule"]["tracks"]["hero_progress"]
+    for _ in range(max(0, track["target"] - track["value"] - 1)):
         assert engine.perform_haunt_action(hero, "h16_hero_task")
         engine._reset_player_turn_state(hero)
-    assert engine.state.meta["haunt_rule"]["tracks"]["hero_progress"]["value"] == 4
+    engine._reset_player_turn_state(hero)
+    assert engine.perform_haunt_action(hero, "h16_hero_task")
+    assert engine.state.meta["haunt_rule"]["tracks"]["hero_progress"]["value"] == track["target"]
     assert engine.state.winner == "heroes"
 
 
