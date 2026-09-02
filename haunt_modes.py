@@ -202,6 +202,10 @@ class GenericModeHandler:
         """物理伤害减免（剧本 15：古董护甲 -5，对火焰无效）。"""
         return 0
 
+    def suppress_room_draw(self, engine: Any, player: Any, room: Any) -> bool:
+        """本次发现房间是否跳过符号抽牌（剧本 16：改为攻击幻影）。"""
+        return False
+
 
 class BanishmentEscortMode(GenericModeHandler):
     """剧本 1 木乃伊苏醒（The Mummy Walks）。
@@ -3151,6 +3155,167 @@ class StarsRightMode(GenericModeHandler):
 
 
 
+class PhantomBombMode(GenericModeHandler):
+    """剧本 16 幻影的怀抱（The Phantom's Embrace）。
+
+    权威原文：英雄手册 p27 / 叛徒手册 p98。
+
+    · 幻影（ghost 模板承载，Speed 0 / Might 6 / Sanity 5）：不攻击只
+      防御（on_monster_turn_attack 拦下引擎默认攻击、on_monster_move
+      令其不移动）。它在下一个被发现的带符号地下室房间出现，同时放下
+      女孩令牌与"到访标记"（p98 distinctive token），并**抑制该次抽牌**
+      ——英雄"代替抽牌"必须攻击幻影（引擎 suppress_room_draw 钩子）。
+    · 战斗（p27/p98）：英雄击败幻影 → 幻影死亡，英雄获女孩令牌，该
+      房间成为"可拆弹房间"；幻影防御成功（英雄攻击落败）→ 英雄照常
+      受反击伤害，幻影带着女孩逃走（两枚令牌移除），下次再出现。
+    · 拆弹（p27）：女孩获救后，在击败幻影的房间做知识 7+（每回合一次）。
+    · 逃脱（p27）：门厅开前门（知识/力量 6+，通用框架取高者）；持女孩
+      的英雄回合开始仍站在门厅即带她逃出——原文为群体逃跑，电子版
+      简化为持女孩者出门（已注明）。
+    · 炸弹（p98）：叛徒回合开始推进计时器并掷等量骰，掷出阈值以上房子
+      爆炸（3 人 8+ / 4 人 7+ / 5 人 6+ / 6 人 5+）。原文"回合结束"用
+      "下一回合开始"近似，时序等价。
+    · 胜负：拆弹或带女孩逃出 → 英雄胜；爆炸或英雄全灭 → 叛徒胜。
+      叛徒阵亡后计时器冻结（怪物代跑惯例下的保守处理，已注明）。
+    · 已知简化：开成功门后"抽事件卡"步骤未建模；地下室全部探索完且
+      幻影仍存活的"叛徒指定房间"分支未建模（幻影出现依赖房间发现）；
+      女孩不可被偷是天然满足（女孩是令牌不是卡）。
+    """
+
+    mode = "phantom_bomb"
+
+    PHANTOM = "ghost"
+    GIRL = "girl"
+    MARK = "phantom_mark"
+    BLOWUP_THRESHOLD = {3: 8, 4: 7, 5: 6, 6: 5}
+
+    # ------------------------------------------------------------- setup
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        # p98：持有女孩卡的探险者失去她（女孩卡与令牌一并 set aside）
+        holder = next((p for p in engine.state.players if "omen_girl" in p.items), None)
+        if holder is not None:
+            holder.items.remove("omen_girl")
+        for deck in engine.state.card_decks.values():
+            if "omen_girl" in deck:
+                deck.remove("omen_girl")
+        for key in list(engine.state.room_items.keys()):
+            if "omen_girl" in engine.state.room_items.get(key, []):
+                engine.state.room_items[key].remove("omen_girl")
+        engine.state.card_discards.setdefault("omen", []).append("omen_girl")
+        engine._log("女孩的尖叫声戛然而止——她被藏进了这栋房子的某处。")
+
+    # ------------------------------------------------------------- 出现
+    def _phantom_in_play(self, engine: Any) -> bool:
+        return any(
+            m.template_id == self.PHANTOM and int(getattr(m, "stunned_turns", 0)) >= 0
+            for m in engine.state.monsters
+        )
+
+    def on_room_discovered(self, engine: Any, player: Any, room: Any) -> None:
+        flags = engine._haunt_flags()
+        if room.floor != -1 or room.symbol not in ("event", "omen"):
+            return
+        if flags.get("girl_rescued") or self._phantom_in_play(engine):
+            return
+        spec = next(
+            (s for s in (engine.state.haunt.rule_data or {}).get("monsters", [])
+             if s.get("template_id") == self.PHANTOM),
+            {},
+        )
+        monster = engine._spawn_single_haunt_monster(spec, room.key)
+        if monster is None:
+            return
+        engine.spawn_token(self.GIRL, label="女孩", role="marker", room_key=room.key)
+        engine.spawn_token(self.MARK, label="到访标记", role="marker", room_key=room.key)
+        engine._log(
+            f"{room.name}里，一个半透明的身影守着昏迷的女孩——他的幻影！先别管抽牌，攻击他！"
+        )
+
+    def suppress_room_draw(self, engine: Any, player: Any, room: Any) -> bool:
+        """p27：幻影出现的房间，本次发现不抽符号牌（改为攻击幻影）。"""
+        return any(m.room_key == room.key for m in engine.state.monsters if m.template_id == self.PHANTOM)
+
+    # ------------------------------------------------------------- 行为
+    def on_monster_move(self, engine: Any, monster: Any, rolled: int) -> bool:
+        if _monster_id(monster) != self.PHANTOM:
+            return False
+        return True  # p98：幻影不移动
+
+    def on_monster_turn_attack(self, engine: Any, monster: Any) -> bool:
+        if _monster_id(monster) != self.PHANTOM:
+            return False
+        return True  # p98：幻影不攻击，只防御
+
+    def on_attack_resolved(self, engine: Any, attacker: Any, target: Any, attacker_won: bool) -> None:
+        """p27：幻影防御成功即带着女孩逃走；被击败则女孩获救。"""
+        if _monster_id(target) != self.PHANTOM:
+            return
+        flags = engine._haunt_flags()
+        phantom_id = getattr(target, "id", None)
+        if attacker_won:
+            flags["girl_rescued"] = True
+            flags["bomb_room"] = target.room_key
+            girl = next(iter(engine.tokens_in_room(target.room_key, self.GIRL)), None)
+            if girl is not None:
+                engine.give_token(girl.uid, attacker.id)
+                flags["girl_holder_id"] = attacker.id
+            engine.state.monsters = [
+                m for m in engine.state.monsters if getattr(m, "id", None) != phantom_id
+            ]
+            engine._log(f"幻影消散了！{attacker.name} 抱起了女孩——房间里传来定时炸弹的滴答声……")
+        else:
+            # 防御成功 → 带女孩逃走（英雄已按常规吃了反击伤害）
+            engine.state.monsters = [
+                m for m in engine.state.monsters if getattr(m, "id", None) != phantom_id
+            ]
+            for t in list(engine.tokens_in_room(target.room_key, self.GIRL)):
+                engine.remove_token(t.uid)
+            engine._log("幻影抱起女孩化作一缕青烟逃走了——下一个带符号的地下室房间还会见到他。")
+
+    def on_enter_room(self, engine: Any, player: Any, room: Any) -> None:
+        """获救的女孩掉在地上时，英雄进房自动抱起。"""
+        flags = engine._haunt_flags()
+        if player.role != "hero" or player.dead or not flags.get("girl_rescued"):
+            return
+        girl = next(iter(engine.tokens_in_room(room.key, self.GIRL)), None)
+        if girl is not None:
+            engine.give_token(girl.uid, player.id)
+            flags["girl_holder_id"] = player.id
+            engine._log(f"{player.name} 抱起了女孩。")
+
+    # ------------------------------------------------------------- 炸弹
+    def on_turn_start(self, engine: Any, player: Any) -> None:
+        flags = engine._haunt_flags()
+        if player.role != "traitor" or player.dead:
+            return
+        # p98：回合结束推进计时器——用"下一回合开始"近似
+        track = int(engine._haunt_track_value("bomb_timer")) + 1
+        engine._set_haunt_track_value("bomb_timer", track)
+        threshold = self.BLOWUP_THRESHOLD.get(len(engine.state.players), 8)
+        roll = engine.roll_dice(track, "炸弹计时")
+        engine._log(f"滴答……计时器走到 {track}，掷出 {roll}（爆炸线 {threshold}+）。")
+        if roll >= threshold:
+            flags["house_blown"] = True
+            engine._set_winner("traitor", "轰！！！房子炸上了天。")
+            engine.check_victory()
+
+    # ------------------------------------------------------------- 胜负
+    def check_victory(self, engine: Any) -> bool:
+        flags = engine._haunt_flags()
+        if flags.get("house_blown"):
+            return True  # winner 已在引信处设定
+        if flags.get("bomb_defused"):
+            engine._set_winner("heroes", "炸弹滴滴答答地哑了火——危机解除。")
+            return True
+        if flags.get("escaped"):
+            engine._set_winner("heroes", "你抱着女孩逃出铁门——身后的宅邸还在滴答作响。")
+            return True
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "没有一个英雄活着听到爆炸……或听到寂静。")
+            return True
+        return True  # 叛徒阵亡后计时器冻结，胜负只认显式条件
+
+
 class DragonSiegeMode(GenericModeHandler):
     """剧本 15 有龙在此（Here There Be Dragons）。
 
@@ -3471,6 +3636,7 @@ for _handler in (
     NightmareDreamMode(),
     StarsRightMode(),
     DragonSiegeMode(),
+    PhantomBombMode(),
 ):
 
     register_mode(_handler)

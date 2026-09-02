@@ -1023,7 +1023,10 @@ class GameEngine:
             # 先弹进入房间的详细说明（符号/效果/描述），再抽卡
             self._notify_room_entry(player, room)
             self._mode_handler().on_room_discovered(self, player, room)
-            if room.symbol:
+            # 剧本可禁止本次的符号抽牌（剧本 16 p27：发现带符号的地下室
+            # 房间时"代替抽牌"必须先攻击幻影）。
+            suppress_draw = self._mode_handler().suppress_room_draw(self, player, room)
+            if room.symbol and not suppress_draw:
                 if room.symbol == "event" and self.state.phase == "HAUNT_PHASE" and player.role == "traitor":
                     if self.prompter.confirm("事件卡", f"{player.name} 进入了带事件符号的房间。要触发事件吗？"):
                         self._draw_symbol_card(player, room.symbol)

@@ -30,6 +30,7 @@ if __package__ in {None, ""}:
         DeathDanceMode,
         ExorcismMode,
         NightmareDreamMode,
+        PhantomBombMode,
         StarsRightMode,
         DragonSiegeMode,
         GenericModeHandler,
@@ -56,6 +57,7 @@ else:  # pragma: no cover
         ExorcismMode,
         FleshwalkerMode,
         NightmareDreamMode,
+        PhantomBombMode,
         StarsRightMode,
         DragonSiegeMode,
         GenericModeHandler,
@@ -111,8 +113,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(NightmareDreamMode) == [13], f"剧本 13 未走定制 handler: {handlers.get(NightmareDreamMode)}"
     assert handlers.get(StarsRightMode) == [14], f"剧本 14 未走定制 handler: {handlers.get(StarsRightMode)}"
     assert handlers.get(DragonSiegeMode) == [15], f"剧本 15 未走定制 handler: {handlers.get(DragonSiegeMode)}"
+    assert handlers.get(PhantomBombMode) == [16], f"剧本 16 未走定制 handler: {handlers.get(PhantomBombMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 55, f"应有 55 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 54, f"应有 54 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -123,8 +126,9 @@ def verify_mode_dispatch() -> None:
 
     assert set(registered_modes()) == {
         "alien_abduction", "banishment_escort", "carnivorous_ivy", "delayed_traitor_relic",
-        "exorcism", "fleshwalkers", "generic", "nightmare_escape", "dragon_siege", "paint_the_pentagram", "seance_race", "spectre_exorcism", "trap_zombies", "web_escape",
-        "werewolf_hunt", "witch_and_frogs",
+        "dragon_siege", "exorcism", "fleshwalkers", "generic", "nightmare_escape",
+        "paint_the_pentagram", "phantom_bomb", "seance_race", "spectre_exorcism",
+        "trap_zombies", "web_escape", "werewolf_hunt", "witch_and_frogs",
     }
 
 
@@ -166,6 +170,9 @@ def verify_mode_handler_reaches_engine() -> None:
 
     engine.state.haunt = engine.catalog.haunt_defs[15]
     assert isinstance(engine._mode_handler(), DragonSiegeMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[16]
+    assert isinstance(engine._mode_handler(), PhantomBombMode)
 
     engine.state.haunt = engine.catalog.haunt_defs[35]
     assert isinstance(engine._mode_handler(), GenericModeHandler)
@@ -1722,6 +1729,80 @@ def verify_haunt15_here_there_be_dragons() -> None:
     assert engine._monster_by_template("beast") is None, "斩龙后巨龙离场"
 
 
+def verify_haunt16_phantoms_embrace() -> None:
+    """剧本 16：女孩 set aside、幻影出现与抽牌抑制、攻防逃走、拆弹/爆炸（p27/p98）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=16)
+    handler = engine._mode_handler()
+    assert isinstance(handler, PhantomBombMode)
+    flags = engine._haunt_flags()
+
+    # 女孩卡被 set aside：牌堆/房间/玩家手上都不应有
+    assert not any("omen_girl" in deck for deck in engine.state.card_decks.values()), "女孩卡应被移出牌堆"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    # 幻影在带符号的地下室房间出现，并抑制该次抽牌
+    room_a = next(r for r in engine.state.board.values() if r.floor == -1)
+    room_a.symbol = "event"
+    handler.on_room_discovered(engine, hero, room_a)
+    phantom = next(m for m in engine.state.monsters if m.template_id == "ghost")
+    assert phantom.room_key == room_a.key, "幻影应出现在发现的地下室房间"
+    assert engine.tokens_in_room(room_a.key, "girl"), "女孩令牌应与幻影同房"
+    assert engine.tokens_in_room(room_a.key, "phantom_mark"), "应放置到访标记"
+    assert handler.suppress_room_draw(engine, hero, room_a) is True, "幻影房间应抑制抽牌"
+    assert handler.on_monster_turn_attack(engine, phantom) is True, "幻影不攻击"
+    assert handler.on_monster_move(engine, phantom, 5) is True, "幻影不移动"
+
+    # 防御成功 → 英雄吃反击伤害，幻影带女孩逃走
+    hero.room_key = room_a.key
+    engine._active_player_id = hero.id
+    with patch.object(engine, "_roll_attack", return_value=1), patch.object(
+        engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 8
+    ):
+        assert engine.attack(hero, phantom) is True
+    assert phantom not in engine.state.monsters, "幻影应带女孩逃走"
+    assert not engine.tokens_of_kind("girl"), "女孩令牌应随幻影离场"
+    assert not flags.get("girl_rescued")
+
+    # 再次出现 → 击败 → 女孩获救，房间成为可拆弹房间
+    room_b = next(r for r in engine.state.board.values() if r.floor == -1 and r.key != room_a.key)
+    room_b.symbol = "omen"
+    handler.on_room_discovered(engine, hero, room_b)
+    phantom2 = next(m for m in engine.state.monsters if m.template_id == "ghost")
+    hero.room_key = room_b.key
+    hero.attack_used = False
+    with patch.object(engine, "_roll_attack", return_value=9), patch.object(
+        engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 1
+    ):
+        assert engine.attack(hero, phantom2) is True
+    assert phantom2 not in engine.state.monsters, "被击败的幻影应死亡"
+    assert flags.get("girl_rescued") is True
+    assert flags.get("bomb_room") == room_b.key
+    assert engine.tokens_held_by(hero.id, "girl"), "击败者应抱起女孩"
+
+    # 拆弹：必须在炸弹房间，知识 7+
+    _set_current(engine, hero)
+    hero.room_key = room_b.key
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "defuse_bomb" in ids, "获救后应能拆弹"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "defuse_bomb", {}) is True
+    assert flags.get("bomb_defused") is True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+    # 炸弹计时：叛徒回合开始推进并掷骰，达阈值即爆炸
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    flags["bomb_defused"] = False
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    engine._set_haunt_track_value("bomb_timer", handler.BLOWUP_THRESHOLD[len(engine.state.players)] - 1)
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 8 if label == "炸弹计时" else count):
+        handler.on_turn_start(engine, traitor)
+    assert flags.get("house_blown") is True
+    assert engine.state.winner == "traitor"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -2071,6 +2152,7 @@ def main():
     verify_haunt13_perchance_to_dream()
     verify_haunt14_stars_right()
     verify_haunt15_here_there_be_dragons()
+    verify_haunt16_phantoms_embrace()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

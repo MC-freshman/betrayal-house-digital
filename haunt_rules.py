@@ -714,6 +714,52 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [26, 97],
     },
+    16: {
+        # 校准记录（2026-09-02，对照英雄手册 p27 / 叛徒手册 p98）：
+        #   机制落在 PhantomBombMode：
+        #   · 幻影（ghost 模板承载，Speed 0 / Might 6 / Sanity 5）不攻击
+        #     只防御；在下一个被发现的带符号地下室房间出现（抑制该次抽牌
+        #     ——引擎 suppress_room_draw 钩子），伴女孩令牌与"到访标记"；
+        #     被击败即死、英雄获女孩；防御成功即带女孩逃走，下次再出现
+        #   · 拆弹：在击败幻影的房间做知识 7+（每回合一次）
+        #   · 逃脱：门厅开前门（知识/力量 6+），持女孩者回合结束仍站门厅
+        #     即带她逃出（原文的群体逃跑简化为持女孩者出门）
+        #   · 炸弹计时：叛徒回合开始推进计时器并掷等量骰，掷出阈值以上
+        #     房子爆炸（3人8+/4人7+/5人6+/6人5+）；"回合结束"用"下一回合
+        #     开始"近似（时序等价，见类注释）
+        #   简化：开成功门后"抽事件卡"步骤未建模；地下室全部探索完且
+        #     幻影仍存活的"叛徒指定房间"分支未建模（出现依赖发现）；叛徒
+        #     阵亡后计时器冻结（引擎怪物代跑惯例下的保守处理）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "phantom_bomb",
+        "traitor_rule": "revealer",
+        "hero_goal": "在地下室击败守着女孩的幻影，再拆掉炸弹或带她从前门逃出。",
+        "traitor_goal": "让房子炸上天，或让梦魇般的幻影耗死所有英雄。",
+        "suggested_monsters": ["ghost"],
+        "required_cards": [],
+        "key_rooms": ["entrance_hall", "catacombs", "crypt", "furnace_room", "basement_landing"],
+        "tokens": ["phantom", "girl", "phantom_mark"],
+        "setup": {
+            "tracks": {
+                "bomb_timer": {"label": "炸弹计时", "target": 20, "side": "traitor"},
+            },
+            "flags": {
+                "girl_rescued": False, "bomb_defused": False, "front_door_open": False,
+                "escaped": False, "bomb_room": None, "girl_holder_id": None,
+            },
+        },
+        "monsters": [
+            {"template_id": "ghost", "name": "幻影", "spawn": "deferred", "speed": 0, "might": 6, "sanity": 5},
+        ],
+        "actions": [
+            {"id": "defuse_bomb", "side": "heroes", "label": "拆除炸弹", "detail": "在击败幻影的房间做知识检定 7+（每回合一次，p27）。", "stat": "knowledge", "target": 7, "requires_flags": {"girl_rescued": True}, "set_flags": {"bomb_defused": True}},
+            {"id": "open_front_door", "side": "heroes", "label": "打开前门", "detail": "门厅里开锁（知识 6+）或破门（力量 6+）；成功后持女孩者可从门厅逃出（p27）。", "stat": ["knowledge", "might"], "target": 6, "rooms": ["entrance_hall"], "requires_flags": {"front_door_open": False}, "set_flags": {"front_door_open": True}},
+        ],
+        "win_conditions": [],
+        "source_pages": [27, 98],
+    },
 }
 
 
@@ -874,7 +920,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    16: dict(mode="phantom_bomb", traitor_rule="revealer", hero_goal="击败幻影、救出女孩，并拆除炸弹或及时逃离。", traitor_goal="在倒计时结束前引爆房屋，或杀死所有英雄。", rooms=("catacombs", "crypt", "furnace_room", "basement_landing", "entrance_hall"), monsters=("shadow",), tokens=("phantom", "girl", "bomb", "unique_marker"), hero_task="救出女孩并拆除炸弹", traitor_task="推进爆炸倒计时", hero_stat="knowledge", hero_target=6, hero_progress_target=2, hero_detail="先在地下室击败幻影，再完成拆弹检定。", traitor_detail="推进倒计时；达到目标后房屋爆炸。", monster_count=1, hero_win_target=2, traitor_win_type="track", traitor_progress_target=8),
     17: dict(mode="bug_spray", traitor_rule="revealer", hero_goal="制作杀虫剂并消灭三个虫子。", traitor_goal="破坏四种以上成分，或杀死所有英雄。", rooms=("research_laboratory", "kitchen", "larder", "attic", "garden", "servants_quarters"), monsters=("spider", "giant_spider"), tokens=("ingredient", "bug_spray", "insect"), hero_task="制作并使用杀虫剂", traitor_task="销毁杀虫剂成分", hero_stat="knowledge", hero_target=4, hero_progress_target=3, hero_detail="在实验室或厨房完成制作，再逐个消灭虫子。", traitor_detail="把成分带向危险房间并推进破坏进度。", monster_count="player_count"),
     18: dict(mode="poisonous_plant", traitor_rule="revealer", hero_goal="找到花并削弱、杀死邪恶植物。", traitor_goal="利用孢子杀死所有英雄。", rooms=("conservatory", "garden", "graveyard", "research_laboratory"), monsters=("plant",), tokens=("flower", "spore", "evil_plant"), hero_task="寻找花并削弱植物", traitor_task="扩散孢子", hero_stat="knowledge", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="找到花后在邪恶植物所在房间完成削弱检定。", traitor_detail="扩散孢子，持续给英雄施加威胁。", monster_count=1, hero_win_target="half_players_ceil"),
     19: dict(mode="beastmaster", traitor_rule="revealer", hero_goal="用特殊攻击夺走长矛，使兽王恢复正常。", traitor_goal="指挥动物爪牙杀死所有英雄。", rooms=("entrance_hall", "underground_lake", "garden", "graveyard", "patio", "balcony", "tower"), monsters=("beast", "wolf"), tokens=("spear", "animal_minion", "bear", "hawk"), hero_task="夺取兽王长矛", traitor_task="召集动物爪牙", hero_stat=["might", "sanity"], hero_target=5, hero_progress_target=1, hero_detail="与兽王同房间时完成特殊夺取行动，不把兽王杀死。", traitor_detail="推进动物爪牙威胁轨道。", monster_count="player_count", hero_win_target=1),
