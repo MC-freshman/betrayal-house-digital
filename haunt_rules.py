@@ -7,6 +7,11 @@ from typing import Any
 # 这个文件只存程序和机器人读取的剧本规则摘要，不直接显示给玩家。
 # 玩家可读文本在 haunts_zh.py 和 haunts_zh/*.md；后续润色机翻文本时不需要同步改这里。
 
+# fidelity 标记剧本的「精修度」，让 rule_data 自己说明状态，
+# 不再依赖交接文档才能判断某个剧本是否已完成严格复刻：
+#   refined  = 已对照 PDF 原文逐字校准，且有专属 mode handler
+#   draft    = 手写规则数据，尚未对照 PDF 校准，无专属 handler
+#   skeleton = _make_scenario_rule 模板生成的骨架（11-70 号默认）
 HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
     1: {
         # 校准记录（2026-08-31，对照英雄手册 p12 / 叛徒手册 p83）：
@@ -22,7 +27,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         #   已知简化：秘密通道对机器人叛徒固定"追向最近英雄"，而非任选房间——
         #     原文是 "any space"，任意选择对机器人没有意义，且会破坏对局可复现。
         #     若将来要支持人类叛徒自选，在 on_monster_move 里加 prompter 询问即可。
-        "version": 1,
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "banishment_escort",
         "traitor_rule": "lowest_sanity",
@@ -74,7 +80,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         #     由 SeanceRaceMode.check_victory 判定，故这里只声明叛徒条件。
         #   已知简化：叛徒控灵引发的"房屋坍塌"未实现（需整套房间翻转系统，
         #     单独立项）；"降灵完成前禁止一切攻击"未实现。
-        "version": 1,
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "seance_race",
         "traitor_rule": "revealer",
@@ -130,7 +137,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         #     · 猫：首蛙出现后生成于作祟房间，追蛙、力量对决吃掉
         #   已知简化：龙息未实现（引擎怪物攻击只在同房间触发）；蛙不能被
         #     拾取携带；人类叛徒施法选目标暂未接 prompter。
-        "version": 1,
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "witch_and_frogs",
         "traitor_rule": "revealer",
@@ -179,7 +187,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         #   引擎修复：attack/defense 字段此前被完全忽略（"打蛛网"必成功），
         #     现在按属性对决固定防御值结算——该修复同样惠及剧本 1/5/6。
         #   胜利条件修正：杀叛徒不算英雄胜（原数据又是 traitor_dead 坑）。
-        "version": 1,
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "web_escape",
         "traitor_rule": "highest_might",
@@ -219,7 +228,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [15, 86],
     },
     5: {
-        "version": 1,
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "werewolf_hunt",
         "traitor_rule": "highest_might",
@@ -260,7 +270,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         #     解控逻辑，原数据的 attack 列表 / damage 字段引擎并不支持。
         #   胜利条件修正：叛徒开局就出局，杀叛徒（本就不在场）更不算英雄胜——
         #     英雄胜利只认"飞船瘫痪"（第 5 次修 traitor_dead 坑）。
-        "version": 1,
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "alien_abduction",
         "traitor_rule": "revealer",
@@ -293,6 +304,7 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
     7: {
         "version": 1,
+        "fidelity": "draft",
         "status": "playable",
         "mode": "carnivorous_ivy",
         "traitor_rule": "revealer",
@@ -329,6 +341,7 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
     8: {
         "version": 1,
+        "fidelity": "draft",
         "status": "playable",
         "mode": "exorcism",
         "traitor_rule": "revealer",
@@ -355,6 +368,7 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
     9: {
         "version": 1,
+        "fidelity": "draft",
         "status": "playable",
         "mode": "delayed_traitor_relic",
         "traitor_rule": "revealer",
@@ -380,6 +394,7 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
     10: {
         "version": 1,
+        "fidelity": "draft",
         "status": "playable",
         "mode": "trap_zombies",
         "traitor_rule": "revealer",
@@ -486,6 +501,7 @@ def _make_scenario_rule(
     ]
     rule: dict[str, Any] = {
         "version": 2,
+        "fidelity": "skeleton",
         "status": "playable",
         "mode": mode,
         "traitor_rule": traitor_rule,
