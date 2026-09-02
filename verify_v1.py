@@ -383,7 +383,7 @@ def verify_haunt1_actions_and_victory() -> None:
     hero = next(player for player in engine.state.players if player.role == "hero")
     engine._resolve_check = lambda player, stat, target, label: True  # type: ignore[method-assign]
     engine._roll_attack = lambda player, attr, bonus=0: 10  # type: ignore[method-assign]
-    engine._roll_monster_attack = lambda monster, attr: 0  # type: ignore[method-assign]
+    engine._roll_monster_attack = lambda monster, attr, reroll_blanks=False: 0  # type: ignore[method-assign]
 
     library_key = _place_test_room(engine, "library")
     hero.room_key = library_key
@@ -439,7 +439,7 @@ def verify_haunt5_infection_conversion() -> None:
     hero = next(player for player in engine.state.players if player.role == "hero")
     dog = next(monster for monster in engine.state.monsters if monster.template_id == "dog")
     dog.room_key = hero.room_key
-    engine._roll_monster_attack = lambda monster, attr: 1  # type: ignore[method-assign]
+    engine._roll_monster_attack = lambda monster, attr, reroll_blanks=False: 1  # type: ignore[method-assign]
     engine._roll_attack = lambda player, attr, bonus=0: 0  # type: ignore[method-assign]
     engine._monster_attack(dog, hero)
     assert hero.id in engine.state.meta["haunt_rule"]["flags"]["infected"]

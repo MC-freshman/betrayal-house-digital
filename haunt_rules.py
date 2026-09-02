@@ -167,6 +167,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
             {"id": "dig_root", "side": "heroes", "stat": "knowledge", "target": 4, "set_flags": {"root_found": True}},
             {"id": "cast_mortal_form", "side": "heroes", "stat": "knowledge", "target": 6, "requires": ["omen_book", "same_room:witch"], "progress": "mortal_form", "set_flags": {"witch_vulnerable": True}},
             {"id": "restore_frog", "side": "heroes", "stat": "knowledge", "target": 4, "requires": ["omen_book"]},
+            {"id": "carry_frog", "side": "heroes", "label": "背起青蛙", "detail": "把同房间一只没被背着的青蛙像物品一样背起来（p14）。"},
+            {"id": "drop_frog", "side": "heroes", "label": "放下青蛙", "detail": "把背着的青蛙放在当前房间（p14）。"},
         ],
         "win_conditions": [
             {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都被女巫与叛徒消灭了。"}

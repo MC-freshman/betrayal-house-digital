@@ -813,6 +813,8 @@ class GameEngine:
         player.steps_remaining = max(0, player.steps_remaining - cost)
         player.moved_this_turn = True
         self._log(f"{player.name} 移动到 {self.state.board[target_key].name}。")
+        # 剧本可跟随移动（剧本 3 p14：背着青蛙走，蛙跟着主人）。
+        self._mode_handler().on_player_moved(self, player)
         self._resolve_room_entry_if_needed(player)
         if option.is_new_room:
             # 探索新房间会结束本回合移动（无论房间是否有特效）
@@ -1370,6 +1372,8 @@ class GameEngine:
             self._log(f"{player.name} 被移动到 {self.state.board[target_key].name}。")
         else:
             self._log(f"{player.name} 移动到 {self.state.board[target_key].name}。")
+        # 剧本可跟随移动（剧本 3 p14：背着青蛙走，蛙跟着主人）。
+        self._mode_handler().on_player_moved(self, player)
         self._resolve_room_entry_if_needed(player)
 
     # ------------------------------------------------------------------
@@ -2077,6 +2081,10 @@ class GameEngine:
         if attacker.frog:
             self._log("青蛙不能攻击。")
             return False
+        # 剧本可禁止攻击（如剧本 2 p13：降灵会完成前谁都不许动手）。
+        if not self._mode_handler().attack_allowed(self, attacker, target):
+            self._log(f"{attacker.name} 此刻不能攻击。")
+            return False
         attacker_room = self.current_room(attacker)
         target_room_key = target.room_key
         if not ranged and attacker_room.key != target_room_key:
@@ -2180,10 +2188,32 @@ class GameEngine:
         dice = max(1, min(8, dice))
         return self.roll_dice(dice, "攻击检定")
 
-    def _roll_monster_attack(self, monster: Monster, attr: str) -> int:
+    def _roll_monster_attack(self, monster: Monster, attr: str, reroll_blanks: bool = False) -> int:
+        """掷怪物攻击骰。
+
+        reroll_blanks（剧本 4 p86：蜘蛛每次攻击可把每个空白骰重掷一次）：
+        先掷 count 枚 0-2 骰，把掷出 0（空白）的骰子各补掷一次再求和。
+        补掷的随机数同样来自引擎 rng，种子回放保持可复现。
+        """
         stat = getattr(monster, attr, 0)
         dice = max(1, min(8, stat))
-        return self.roll_dice(dice, "怪物攻击")
+        try:
+            values = [self.rng.choice((0, 1, 2)) for _ in range(dice)]
+        except Exception:
+            values = []
+        if reroll_blanks:
+            blanks = [i for i, value in enumerate(values) if value == 0]
+            for index in blanks:
+                try:
+                    values[index] = self.rng.choice((0, 1, 2))
+                except Exception:
+                    break
+        total = sum(values)
+        try:
+            self.prompter.show_dice_roll(values, total, "怪物攻击")
+        except Exception:
+            pass
+        return total
 
     def _can_steal(self, target: Player) -> bool:
         for card_id in target.items:
@@ -3184,7 +3214,9 @@ class GameEngine:
         # 它是"代替普通攻击"的主动技能，输赢都要结算，不能等命中判定）。
         if self._mode_handler().on_monster_turn_attack(self, monster):
             return
-        monster_roll = self._roll_monster_attack(monster, "might")
+        # 剧本 4 p86：蜘蛛每次攻击可把每个"空白骰"（掷出 0）重掷一次。
+        reroll_blanks = bool(self._mode_handler().monster_rerolls_blanks(self, monster))
+        monster_roll = self._roll_monster_attack(monster, "might", reroll_blanks=reroll_blanks)
         target_roll = self._roll_attack(target, "might")
         self._log(f"{monster.name} 攻击 {self._player_label(target)}：{monster_roll} 对 {target_roll}。")
         if monster_roll > target_roll:

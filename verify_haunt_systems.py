@@ -1231,6 +1231,105 @@ def verify_haunt10_family_gathering() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt2_no_attack_before_seance() -> None:
+    """剧本 2 p13：降灵会完成（任一方召出幽灵）之前谁都不能攻击。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=2)
+    handler = engine._mode_handler()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+    flags = engine._haunt_flags()
+    assert not flags.get("ghost_summoned"), "测试前提：降灵应尚未完成"
+
+    assert handler.attack_allowed(engine, hero, traitor) is False, "降灵完成前不许攻击"
+    # 引擎攻击入口同样被拦（同房间、可攻击状态下仍拒绝）
+    if traitor is not None and not traitor.dead:
+        hero.room_key = traitor.room_key
+        assert engine.attack(hero, traitor) is False
+        assert not hero.attack_used, "被闸门拦下的攻击不应消耗攻击动作"
+
+    flags["ghost_summoned"] = True
+    assert handler.attack_allowed(engine, hero, traitor) is True, "降灵完成后解禁"
+
+
+def verify_haunt3_witch_breath_and_frog_carry() -> None:
+    """剧本 3：女巫龙息（视野 2 骰不可防御）；蛙可被背起携带（p14/p85）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=3)  # 109/4 人局英雄存活最多
+    handler = engine._mode_handler()
+    witch = engine._monster_by_template("witch")
+    assert witch is not None
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    assert len(heroes) >= 2, "该种子应至少有两名活英雄"
+
+    # 龙息：没有同房目标、视野内有"够远"的英雄 → 原地喷 2 骰物理伤害
+    far_room = max(
+        (k for k in engine.state.board if k != witch.room_key),
+        key=lambda k: engine._path_length(witch.room_key, k),
+    )
+    assert engine._path_length(witch.room_key, far_room) > 3, "需要一名离女巫够远的英雄"
+    for p in heroes:
+        p.room_key = far_room
+        p.items = [card for card in p.items if card != "item_armor"]  # 盔甲会挡物理伤害
+    positions = {p.id: p.stat_positions.get("might") for p in heroes}
+    with patch.object(engine, "_has_line_of_sight", return_value=True), patch.object(
+        engine, "roll_dice", side_effect=lambda count, label="": 5 if label == "龙息" else count
+    ):
+        assert handler.on_monster_move(engine, witch, 3) is True, "女巫移动钩子应接管"
+    victim = heroes[0]
+    assert witch.room_key != far_room, "喷龙息的女巫不应飞向目标"
+    victim_pos = victim.stat_positions.get("might")
+    assert victim.dead or (victim_pos is not None and victim_pos < positions[victim.id]), \
+        "龙息应造成不可防御的物理伤害"
+    if len(heroes) >= 2 and not heroes[1].dead:
+        assert heroes[1].stat_positions.get("might") == positions[heroes[1].id], "龙息只伤一个目标"
+
+    # 背蛙：英雄背起同房间的蛙 → 跟着走 → 放下（用未被龙息波及的英雄）
+    frog_hero = heroes[1]
+    carrier = heroes[2]
+    engine._turn_into_frog(frog_hero)
+    carrier.room_key = frog_hero.room_key
+    assert handler.perform_action(engine, carrier, "carry_frog", {}) is True
+    carried = handler._carried_map(engine)
+    assert str(frog_hero.id) in carried and carried[str(frog_hero.id)] == carrier.id
+
+    dest = next(
+        (k for k, r in engine.state.board.items()
+         if k != carrier.room_key and (r.first_effect_done or r.visit_count > 0)),
+        None,
+    )
+    if dest is None:
+        dest = next(k for k in engine.state.board if k != carrier.room_key)
+    engine._move_to_room(carrier, dest)
+    assert frog_hero.room_key == dest, "背着蛙的英雄移动，蛙应跟着走"
+
+    assert handler.perform_action(engine, carrier, "drop_frog", {}) is True
+    assert str(frog_hero.id) not in handler._carried_map(engine), "放下后解除绑定"
+    assert frog_hero.room_key == carrier.room_key, "放下的蛙留在当前房间"
+
+
+def verify_haunt4_spider_blank_reroll() -> None:
+    """剧本 4 p86：蜘蛛每次攻击把空白骰重掷一次（monster_rerolls_blanks）。"""
+    import random
+
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
+    handler = engine._mode_handler()
+    spider = engine._monster_by_template("giant_spider")
+    assert spider is not None
+    assert handler.monster_rerolls_blanks(engine, spider) is True, "蜘蛛应重掷空白骰"
+    player = next(p for p in engine.state.players)
+    assert handler.monster_rerolls_blanks(engine, player) is False, "其他目标不重掷"
+
+    # 相同随机种子下：重掷后的总和 = 非零骰 + 补掷值 ≥ 原总和（0 骰被重掷）
+    for seed in range(60):
+        engine.rng = random.Random(seed)
+        plain = engine._roll_monster_attack(spider, "might", reroll_blanks=False)
+        engine.rng = random.Random(seed)
+        rerolled = engine._roll_monster_attack(spider, "might", reroll_blanks=True)
+        assert rerolled >= plain, f"种子 {seed}：重掷空白骰后总和不应变小（{rerolled}<{plain}）"
+    # 与未开启重掷路径共存：默认路径行为不变
+    engine.rng = random.Random(7)
+    assert engine._roll_monster_attack(spider, "might") >= 0
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -1555,6 +1654,9 @@ def main():
     verify_haunt3_root_tokens()
     verify_haunt3_traitor_death_no_win()
     verify_haunt3_witch_killed_after_spell()
+    verify_haunt2_no_attack_before_seance()
+    verify_haunt3_witch_breath_and_frog_carry()
+    verify_haunt4_spider_blank_reroll()
     verify_haunt4_setup_and_trapped()
     verify_haunt4_web_and_eggs_flow()
     verify_haunt4_timer_and_growth()

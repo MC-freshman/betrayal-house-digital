@@ -162,6 +162,18 @@ class GenericModeHandler:
         """某张卡是否禁止被该玩家自愿交出（剧本 9：持圣徽者不能转交圣徽）。"""
         return False
 
+    def attack_allowed(self, engine: Any, attacker: Any, target: Any) -> bool:
+        """剧本是否允许这次攻击（剧本 2：降灵完成前谁都不能动手）。"""
+        return True
+
+    def monster_rerolls_blanks(self, engine: Any, monster: Any) -> bool:
+        """怪物攻击时是否把空白骰重掷一次（剧本 4 蜘蛛 p86）。"""
+        return False
+
+    def on_player_moved(self, engine: Any, player: Any) -> None:
+        """玩家移动后回调（剧本 3：背着青蛙走，蛙跟着主人）。"""
+        return None
+
 
 class BanishmentEscortMode(GenericModeHandler):
     """剧本 1 木乃伊苏醒（The Mummy Walks）。
@@ -173,10 +185,13 @@ class BanishmentEscortMode(GenericModeHandler):
         放逐需 2 枚知识检定令牌 + 持书与木乃伊同房间打理智战。
     本次补齐的是此前完全缺失的令牌链路：
         石棺/木乃伊/女孩三个令牌的放置、女孩拾取、关键牌不在场时补抽。
-    仍未实现（需改战斗与移动结算，风险较高，已单独立项）：
+    已实现（on_monster_attack / on_monster_move，见下方方法）：
         木乃伊造成速度伤害直到对手速度触底（但不降到骷髅）后转为力量伤害；
-        单次造成 2+ 伤害时可改为夺取物品或抢走女孩；
-        移动掷出 0 或 1 时可经秘密通道移动到屋内任意位置。
+        单次造成 2+ 伤害时可改为夺取物品或抢走女孩（人类叛徒弹窗选择，
+        机器人固定优先抢女孩）；
+        移动掷出 0 或 1 时可经秘密通道移动到屋内任意位置（机器人固定选
+        "朝最近英雄"；原版由叛徒任选房间——若将来支持人类叛徒自选，在
+        on_monster_move 里加 prompter 询问即可）。
     """
 
     mode = "banishment_escort"
@@ -381,12 +396,19 @@ class SeanceRaceMode(GenericModeHandler):
 
     已实现：竞速（含叛徒 1+1 的属性限制）、幽灵延迟生成与控制权、
     计时器、找骨头/安葬、胜利判定、幽灵理智攻击（精神伤害）、
-    幽灵穿墙移动、英雄控灵期间幽灵不攻击。
+    幽灵穿墙移动、英雄控灵期间幽灵不攻击、
+    "降灵完成前禁止攻击"（p13 "No one can attack until after the séance
+    has been completed"，attack_allowed 钩子）。
     已知简化：叛徒控灵引发"房屋坍塌"未实现（需要房间翻转/相邻性/
-    死亡整套系统，规模较大，单独立项）；"降灵完成前禁止攻击"未实现。
+    死亡整套系统，规模较大，单独立项）。
     """
 
     mode = "seance_race"
+
+    # ------------------------------------------------------------- 攻击闸门
+    def attack_allowed(self, engine: Any, attacker: Any, target: Any) -> bool:
+        """p13：降灵会完成（任一方召出幽灵）之前，谁都不能攻击。"""
+        return bool(engine._haunt_flags().get("ghost_summoned"))
 
     # ------------------------------------------------------------- setup
     def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
@@ -607,16 +629,19 @@ class WitchAndFrogsMode(GenericModeHandler):
     本次补齐：
         · Root 令牌放置（温室/储藏室/厨房，未发现则发现时补放）与挖取/消耗
         · 女巫无敌真正生效（引擎此前从不读 invulnerable_until）
-        · 女巫法术：蛙皮（同房间理智对决变蛙）、鸦翼（飞向最近英雄）
+        · 女巫法术：蛙皮（同房间理智对决变蛙）、鸦翼（飞向最近英雄）、
+          龙息（视野内或同房的英雄，2 骰不可防御物理伤害）
         · 青蛙状态：掉物品、力量/知识降到最低格（不降骷髅），
           不能攻击/抽牌/探索；复原时属性回到角色卡初始值
+        · 蛙可被其他探险者像物品一样背起携带（p14）：背着走、放下、
+          背着时什么都不能做；猫仍会追蛙
         · 猫：第一个蛙出现后生成于作祟房间，追最近的蛙，力量对决吃掉
 
     已知简化：
-        · 龙息（视线内 2 骰物理伤害）未实现——引擎的怪物攻击只在同房间
-          触发，视线攻击需要新的怪物回合结构
-        · 蛙不能被拾取携带（原文可像物品一样被背走）——先让蛙留在房间，
-          救人须到蛙所在房间施法
+        · 背/放蛙在电子版占"剧本行动"（每人每回合一次），原版近似物品
+          动作，行动经济略有出入；蛙被背着期间猫仍可能追上来把它吃掉。
+        · 女巫每回合的法术选择用 bot 固定策略（同房优先蛙皮 → 视野内
+          龙息 → 鸦翼追人），人类叛徒暂无逐回合自选法术的界面。
     """
 
     mode = "witch_and_frogs"
@@ -667,12 +692,25 @@ class WitchAndFrogsMode(GenericModeHandler):
     # ------------------------------------------------------------- 行动
     def available_actions(self, engine: Any, player: Any) -> list[Any]:
         actions = super().available_actions(engine, player)
+        carried = self._carried_map(engine)
         result = []
         for action in actions:
             if action.id == "dig_root" and not engine.tokens_in_room(player.room_key, "root"):
                 continue  # p14：只有在长着曼德拉草的房间才能挖
             if action.id == "cast_mortal_form" and not engine.tokens_held_by(player.id, "root"):
                 continue  # 施法需要曼德拉草
+            if action.id == "carry_frog":
+                frog_here = any(
+                    p.frog and not p.dead and p.id != player.id
+                    and p.room_key == player.room_key
+                    and str(p.id) not in carried
+                    for p in engine.state.players
+                )
+                if player.frog or not frog_here or player.id in carried.values():
+                    continue  # 蛙不能背蛙；房间里要有没人背着的蛙；一次背一只
+            if action.id == "drop_frog":
+                if player.id not in carried.values():
+                    continue
             result.append(action)
         return result
 
@@ -714,7 +752,38 @@ class WitchAndFrogsMode(GenericModeHandler):
             ok = super().perform_action(engine, player, action_id, data)
             if ok:
                 engine._restore_from_frog(frogs[0])
+                self._sync_carried(engine)  # 复原的蛙解除"被背着"绑定
             return ok
+
+        if action_id == "carry_frog":
+            carried = self._carried_map(engine)
+            frog = next(
+                (
+                    p for p in engine.state.players
+                    if p.frog and not p.dead and p.id != player.id
+                    and p.room_key == player.room_key and str(p.id) not in carried
+                ),
+                None,
+            )
+            if frog is None or player.frog or player.id in carried.values():
+                engine._log("这个房间里没有可背起的青蛙。")
+                return False
+            carried[str(frog.id)] = player.id
+            engine._haunt_flags()["frog_carried"] = carried
+            engine._log(f"{player.name} 把青蛙{frog.name}像行李一样背了起来。")
+            return True
+
+        if action_id == "drop_frog":
+            carried = self._carried_map(engine)
+            mine = [fid for fid, cid in carried.items() if cid == player.id]
+            if not mine:
+                engine._log("你没有背着青蛙。")
+                return False
+            carried.pop(mine[0], None)
+            engine._haunt_flags()["frog_carried"] = carried
+            frog = next((p for p in engine.state.players if str(p.id) == mine[0]), None)
+            engine._log(f"{player.name} 把{frog.name if frog else '青蛙'}放了下来。")
+            return True
 
         return super().perform_action(engine, player, action_id, data)
 
@@ -775,6 +844,25 @@ class WitchAndFrogsMode(GenericModeHandler):
         # 同房间有正常英雄：原地留着施蛙皮
         if any(p.room_key == witch.room_key for p in self._attackable_heroes(engine)):
             return True
+        # p85 龙息：视野内（无阻隔直线门道，可跨房间）没有同房目标时，
+        # 对够远的可见英雄喷 2 骰不可防御的物理伤害。太近的英雄（≤3 格）
+        # 不值得喷——女巫更愿意鸦翼贴脸施蛙皮（转化是叛徒的胜路，也让
+        # 英雄有机会反击；实测全距离喷息会把局拖成英雄够不着的僵局）。
+        visible = sorted(
+            [
+                p for p in self._attackable_heroes(engine)
+                if p.room_key != witch.room_key
+                and engine._has_line_of_sight(witch.room_key, p.room_key)
+            ],
+            key=lambda p: (engine._path_length(witch.room_key, p.room_key), p.id),
+        )
+        if visible and engine._path_length(witch.room_key, visible[0].room_key) > 3:
+            victim = visible[0]
+            amount = engine.roll_dice(2, "龙息")
+            engine._log(f"女巫向{victim.name}喷出龙息（2 骰不可防御物理伤害）！")
+            engine._deal_damage(victim, "physical", amount, source="女巫的龙息")
+            engine.check_victory()
+            return True
         # 否则鸦翼：飞向最近的可施法英雄（p85 "Wings of Raven ... any room"）
         targets = sorted(
             self._attackable_heroes(engine),
@@ -787,6 +875,39 @@ class WitchAndFrogsMode(GenericModeHandler):
             witch.room_key = dest
             engine._log(f"女巫振翅飞到了{engine.state.board[dest].name}。")
         return True
+
+    # ------------------------------------------------------------- 背蛙
+    # p14："Another explorer (who isn't a Frog) can pick up and carry a
+    # Frog like an item. Frogs cannot do anything while being carried."
+    # 绑定表 flags["frog_carried"] = {蛙玩家id(str): 背负者id}。
+    # 近似说明：背/放蛙作为"剧本行动"占用本回合一次行动（原版近似物品
+    # 动作，行动经济略有出入，已记录在类注释）。
+    def _carried_map(self, engine: Any) -> dict:
+        return engine._haunt_flags().setdefault("frog_carried", {})
+
+    def _sync_carried(self, engine: Any) -> None:
+        """蛙跟着背负者走；顺带清理失效绑定（背负者死/变蛙/蛙复原）。"""
+        carried = self._carried_map(engine)
+        players = {p.id: p for p in engine.state.players}
+        changed = False
+        for frog_id in list(carried):
+            frog = players.get(int(frog_id))
+            carrier = players.get(int(carried[frog_id]))
+            if (
+                frog is None or carrier is None or carrier.dead or frog.dead
+                or not frog.frog or carrier.frog
+            ):
+                carried.pop(frog_id, None)
+                changed = True
+                continue
+            if frog.room_key != carrier.room_key:
+                frog.room_key = carrier.room_key
+                changed = True
+        if changed:
+            engine._haunt_flags()["frog_carried"] = carried
+
+    def on_player_moved(self, engine: Any, player: Any) -> None:
+        self._sync_carried(engine)
 
     def _cat_move(self, engine: Any, cat: Any) -> bool:
         # p85：猫向最近的青蛙移动；同房间以力量对决，赢则吃掉。
@@ -816,6 +937,7 @@ class WitchAndFrogsMode(GenericModeHandler):
         return True
 
     def on_turn_start(self, engine: Any, player: Any) -> None:
+        self._sync_carried(engine)  # 清理失效的背蛙绑定（背负者死/变蛙等）
         # p85：第一个探险者变蛙时，猫出现在作祟揭示的房间。
         flags = engine._haunt_flags()
         if flags.get("cat_spawned"):
@@ -866,11 +988,17 @@ class WebEscapeMode(GenericModeHandler):
         · 逐回合孵化倒计时，第 9 回合判叛徒胜
         · 胜利条件修正：杀叛徒不算英雄胜（原数据又是 traitor_dead 坑）
 
-    已知简化：蜘蛛"重掷空白骰"未实现（引擎掷骰无重掷概念）；
+    已实现"蜘蛛每次攻击可把每个空白骰（掷出 0）重掷一次"（p86，
+    monster_rerolls_blanks 钩子，bot 恒重掷）。
+    已知简化：
     "抽事件卡并结束回合后下一回合才能出门"简化为开门后下一回合出门。
     """
 
     mode = "web_escape"
+
+    def monster_rerolls_blanks(self, engine: Any, monster: Any) -> bool:
+        """p86：蜘蛛每次攻击，每个掷出 0 的骰子可重掷一次。"""
+        return _monster_id(monster) == "giant_spider"
 
     # p86 Turn Traits 表：回合 → (speed, might)
     SPIDER_GROWTH: tuple[tuple[int, int], ...] = (
