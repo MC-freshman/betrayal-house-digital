@@ -7,6 +7,9 @@ __pycache__/
 .ruff_cache/
 .coverage
 
+# build_exe.py 的中间产物
+build/
+
 saves/
 *.log
 *.tmp
