@@ -760,6 +760,62 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [27, 98],
     },
+    17: {
+        # 校准记录（2026-09-02，对照英雄手册 p28 / 叛徒手册 p99）：
+        #   机制落在 BugSprayMode：
+        #   · 六种配料令牌按序放实验室/储藏室/阁楼/仆人房/厨房/花园
+        #     （未发现则发现时补放）；英雄拾取任意三种带进实验室或厨房
+        #     （不拘谁拿着），知识 4+ 合成杀虫剂（每回合一次；失败保留
+        #     配料下回合再试）
+        #   · 六只虫（Praying Mantis 4/5/4、Centipede 3/3/4、Wasp 5/2/4、
+        #     Spider 3/6/4、Roach 0/5/4、Beetle 3/6/4）全部用 spider 模板
+        #     承载，种类映射存 flags["bug_kind"]（项目无昆虫模板，
+        #     优化方案 engine_note 惯例）；原版 Storeroom 与 Larder 共用
+        #   · 杀虫剂攻击：速度攻击（attack_attr_override）；用杀虫剂
+        #     击败即杀（杀满三只其余逃散）；用杀虫剂落败不受伤
+        #     （attack_loss_damage_disabled）
+        #   · 蛛网：被蜘蛛击败的探险者被缚（四属性各 -2、不低于 1、
+        #     不能移动），同房任意探险者每回合一次力量 5+ 挣脱并恢复
+        #   · 蟑螂：永不离开厨房；离开厨房按 3 格计（movement_cost_floor）
+        #   · 叛徒：拾取/偷取配料（至多 3 枚）或夺杀虫剂（1 件且不带
+        #     配料），在深坑/熔炉房/地下湖销毁；4 枚配料被毁且英雄无
+        #     杀虫剂 → 叛徒胜
+        #   简化：英雄丢下配料未建模（一次性拾取）；人类叛徒的选择
+        #     弹窗留待接 prompter。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "bug_spray",
+        "traitor_rule": "revealer",
+        "hero_goal": "集齐三种配料合成杀虫剂，用速度攻击毒杀三只巨虫。",
+        "traitor_goal": "毁掉四枚配料且英雄没有杀虫剂，或让虫群吃掉所有英雄。",
+        "suggested_monsters": ["spider"],
+        "required_cards": [],
+        "key_rooms": [
+            "research_laboratory", "larder", "attic", "servants_quarters",
+            "kitchen", "garden", "junk_room", "crypt", "chasm",
+            "furnace_room", "underground_lake",
+        ],
+        "tokens": ["ingredient", "bug_spray", "mantis", "centipede", "wasp", "spider_bug", "roach", "beetle"],
+        "setup": {
+            "tracks": {
+                "bugs_killed": {"label": "已被毒杀的巨虫", "target": 3, "side": "heroes"},
+                "ingredients_destroyed": {"label": "被毁配料", "target": 4, "side": "traitor"},
+            },
+            "flags": {"bug_kind": {}, "webbed": [], "spray_destroyed": False},
+        },
+        "monsters": [
+            {"template_id": "spider", "name": "巨虫", "spawn": "deferred", "count": 6},
+        ],
+        "actions": [
+            {"id": "take_ingredient", "side": "any", "label": "拾取配料", "detail": "捡起本房间的一枚配料（叛徒至多背 3 枚，p99）。"},
+            {"id": "make_spray", "side": "heroes", "label": "调配杀虫剂", "detail": "在实验室或厨房集齐三枚配料（不拘谁拿着）后做知识 4+（p28）。", "stat": "knowledge", "target": 4, "rooms": ["research_laboratory", "kitchen"]},
+            {"id": "destroy_ingredient", "side": "traitor", "label": "销毁配料", "detail": "在深坑/熔炉房/地下湖把背着的配料或杀虫剂毁掉（p99）。", "rooms": ["chasm", "furnace_room", "underground_lake"]},
+            {"id": "break_webs", "side": "any", "label": "挣脱蛛网", "detail": "同房有被缚探险者时做力量 5+，解放并恢复其属性（p99）。", "stat": "might", "target": 5},
+        ],
+        "win_conditions": [],
+        "source_pages": [28, 99],
+    },
 }
 
 
@@ -920,7 +976,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    17: dict(mode="bug_spray", traitor_rule="revealer", hero_goal="制作杀虫剂并消灭三个虫子。", traitor_goal="破坏四种以上成分，或杀死所有英雄。", rooms=("research_laboratory", "kitchen", "larder", "attic", "garden", "servants_quarters"), monsters=("spider", "giant_spider"), tokens=("ingredient", "bug_spray", "insect"), hero_task="制作并使用杀虫剂", traitor_task="销毁杀虫剂成分", hero_stat="knowledge", hero_target=4, hero_progress_target=3, hero_detail="在实验室或厨房完成制作，再逐个消灭虫子。", traitor_detail="把成分带向危险房间并推进破坏进度。", monster_count="player_count"),
     18: dict(mode="poisonous_plant", traitor_rule="revealer", hero_goal="找到花并削弱、杀死邪恶植物。", traitor_goal="利用孢子杀死所有英雄。", rooms=("conservatory", "garden", "graveyard", "research_laboratory"), monsters=("plant",), tokens=("flower", "spore", "evil_plant"), hero_task="寻找花并削弱植物", traitor_task="扩散孢子", hero_stat="knowledge", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="找到花后在邪恶植物所在房间完成削弱检定。", traitor_detail="扩散孢子，持续给英雄施加威胁。", monster_count=1, hero_win_target="half_players_ceil"),
     19: dict(mode="beastmaster", traitor_rule="revealer", hero_goal="用特殊攻击夺走长矛，使兽王恢复正常。", traitor_goal="指挥动物爪牙杀死所有英雄。", rooms=("entrance_hall", "underground_lake", "garden", "graveyard", "patio", "balcony", "tower"), monsters=("beast", "wolf"), tokens=("spear", "animal_minion", "bear", "hawk"), hero_task="夺取兽王长矛", traitor_task="召集动物爪牙", hero_stat=["might", "sanity"], hero_target=5, hero_progress_target=1, hero_detail="与兽王同房间时完成特殊夺取行动，不把兽王杀死。", traitor_detail="推进动物爪牙威胁轨道。", monster_count="player_count", hero_win_target=1),
     20: dict(mode="ghost_bride", traitor_rule="revealer", hero_goal="找到戒指和真正新郎的尸体，并在小教堂阻止错误婚礼。", traitor_goal="让幽灵新娘在小教堂完成婚礼，或杀死所有英雄。", rooms=("crypt", "graveyard", "chapel", "catacombs", "entrance_hall"), monsters=("ghost",), tokens=("bride", "groom", "ring", "corpse"), hero_task="揭穿并阻止幽灵婚礼", traitor_task="完成幽灵婚礼", hero_stat="knowledge", hero_target=5, hero_progress_target=2, hero_detail="先找齐戒指和尸体，再在小教堂完成阻止仪式。", traitor_detail="在小教堂推动婚礼进度。", monster_count=1, hero_win_target=2, traitor_win_type="track", traitor_progress_target=2),

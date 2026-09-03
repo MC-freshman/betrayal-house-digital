@@ -30,6 +30,8 @@ if __package__ in {None, ""}:
         DeathDanceMode,
         ExorcismMode,
         NightmareDreamMode,
+        BugSprayMode,
+        BugSprayMode,
         PhantomBombMode,
         StarsRightMode,
         DragonSiegeMode,
@@ -114,8 +116,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(StarsRightMode) == [14], f"剧本 14 未走定制 handler: {handlers.get(StarsRightMode)}"
     assert handlers.get(DragonSiegeMode) == [15], f"剧本 15 未走定制 handler: {handlers.get(DragonSiegeMode)}"
     assert handlers.get(PhantomBombMode) == [16], f"剧本 16 未走定制 handler: {handlers.get(PhantomBombMode)}"
+    assert handlers.get(BugSprayMode) == [17], f"剧本 17 未走定制 handler: {handlers.get(BugSprayMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 54, f"应有 54 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 53, f"应有 53 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -125,10 +128,10 @@ def verify_mode_dispatch() -> None:
     assert isinstance(get_mode_handler("no_such_mode"), GenericModeHandler)
 
     assert set(registered_modes()) == {
-        "alien_abduction", "banishment_escort", "carnivorous_ivy", "delayed_traitor_relic",
-        "dragon_siege", "exorcism", "fleshwalkers", "generic", "nightmare_escape",
-        "paint_the_pentagram", "phantom_bomb", "seance_race", "spectre_exorcism",
-        "trap_zombies", "web_escape", "werewolf_hunt", "witch_and_frogs",
+        "alien_abduction", "banishment_escort", "bug_spray", "carnivorous_ivy",
+        "delayed_traitor_relic", "dragon_siege", "exorcism", "fleshwalkers", "generic",
+        "nightmare_escape", "paint_the_pentagram", "phantom_bomb", "seance_race",
+        "spectre_exorcism", "trap_zombies", "web_escape", "werewolf_hunt", "witch_and_frogs",
     }
 
 
@@ -173,6 +176,9 @@ def verify_mode_handler_reaches_engine() -> None:
 
     engine.state.haunt = engine.catalog.haunt_defs[16]
     assert isinstance(engine._mode_handler(), PhantomBombMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[17]
+    assert isinstance(engine._mode_handler(), BugSprayMode)
 
     engine.state.haunt = engine.catalog.haunt_defs[35]
     assert isinstance(engine._mode_handler(), GenericModeHandler)
@@ -1803,6 +1809,145 @@ def verify_haunt16_phantoms_embrace() -> None:
     assert engine.state.winner == "traitor"
 
 
+def verify_haunt17_bugs() -> None:
+    """剧本 17：配料布点/合成/杀虫剂速度攻击/蛛网禁锢/蟑螂守厨房/叛徒销毁（p28/p99）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=17)
+    handler = engine._mode_handler()
+    assert isinstance(handler, BugSprayMode)
+    flags = engine._haunt_flags()
+
+    # 布点：在场房间有配料与虫；虫的种类映射齐全
+    ingredient_rooms = {t.room_key for t in engine.tokens_of_kind("ingredient")}
+    paint_ids = {rid for rid, _ in BugSprayMode.INGREDIENT_ROOMS}
+    assert all(engine.state.board[k].template_id in paint_ids for k in ingredient_rooms), "配料只能放在六类房间"
+    assert ingredient_rooms, "至少应在已翻出的房间放一枚配料"
+    kinds = set(flags.get("bug_kind", {}).values())
+    assert kinds <= {"mantis", "centipede", "wasp", "spider_bug", "roach", "beetle"}
+    assert "mantis" in kinds, "螳螂应在作祟房间生成"
+    roach = next(
+        (m for m in engine.state.monsters if handler._kind_of(engine, m) == "roach"), None
+    )
+    if roach is None:
+        # 厨房未在翻出的房间里：模拟发现厨房补放蟑螂
+        kitchen = next((r for r in engine.state.board.values() if r.template_id == "kitchen"), None)
+        if kitchen is None:
+            kitchen = next(iter(engine.state.board.values()))
+            kitchen.template_id = "kitchen"
+        spec = {"template_id": "spider", "name": "蟑螂", "speed": 0, "might": 5, "sanity": 4}
+        roach = engine._spawn_single_haunt_monster(spec, kitchen.key)
+        flags["bug_kind"][str(roach.id)] = "roach"
+    assert engine.state.board[roach.room_key].template_id == "kitchen", "蟑螂应在厨房"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # 合成：三枚配料同房 → 知识 4+ → 杀虫剂到手上，配料移出游戏
+    room = hero.room_key
+    # 把所有在地上或别人手里的配料集中到测试房间，凑足三枚
+    pool = handler._room_ingredient_pool(engine, room)
+    for token in list(engine.tokens_of_kind("ingredient")):
+        if len(handler._room_ingredient_pool(engine, room)) >= 3:
+            break
+        if token in pool:
+            continue
+        if token.holder is not None:
+            engine.give_token(token.uid, hero.id)
+        elif token.room_key:
+            engine.place_token(token.uid, room)
+    # 若全屋配料不足三枚（部分还在待放状态），临时补发测试配料
+    while len(handler._room_ingredient_pool(engine, room)) < 3:
+        token = engine.spawn_token("ingredient", label="测试配料", role="marker", room_key=room)
+        token.data["name"] = "测试配料"
+    assert len(handler._room_ingredient_pool(engine, room)) >= 3
+    ingredient_total_before = len(engine.tokens_of_kind("ingredient"))
+    _set_current(engine, hero)
+    room_obj = engine.state.board[room]
+    room_template_before = room_obj.template_id
+    room_obj.template_id = "kitchen"  # 合成必须在实验室/厨房
+    try:
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "make_spray" in ids, "三枚配料同房应能合成"
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, hero, "make_spray", {}) is True
+    finally:
+        room_obj.template_id = room_template_before
+    assert engine.tokens_held_by(hero.id, "bug_spray"), "杀虫剂应到合成者手上"
+    assert len(engine.tokens_of_kind("ingredient")) == ingredient_total_before - 3, "合成应恰好消耗三枚配料"
+
+    # 杀虫剂攻击：对虫改速度攻击；击败即杀并计数；杀满三只其余逃散
+    bug = next(m for m in engine.state.monsters if handler._kind_of(engine, m) != "roach")
+    hero.room_key = bug.room_key
+    engine._active_player_id = hero.id
+    assert handler.attack_attr_override(engine, hero, bug, "might") == "speed"
+    engine.attack(hero, bug)
+    assert bug not in engine.state.monsters, "持杀虫剂击败虫应直接杀死"
+    assert engine._haunt_track_value("bugs_killed") == 1
+    # 用杀虫剂落败不受伤
+    hero.attack_used = False
+    bug2 = next(m for m in engine.state.monsters if handler._kind_of(engine, m) == "beetle" or m is not bug)
+    bug2 = next(m for m in engine.state.monsters if handler._kind_of(engine, m) not in ("roach",))
+    if bug2 is not None:
+        hero.room_key = bug2.room_key
+        might_pos = hero.stat_positions.get("might")
+        with patch.object(engine, "_roll_attack", return_value=1), patch.object(
+            engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 9
+        ):
+            assert engine.attack(hero, bug2) is True
+        assert not hero.dead, "用杀虫剂落败不应致死"
+        assert hero.stat_positions.get("might") == might_pos, "用杀虫剂落败不应受伤（p28）"
+        assert bug2.stunned_turns == 0, "虫赢回合不构成被击败，不应被晕"
+
+    # 蛛网：蜘蛛击败英雄 → 被缚（属性 -2 不低于 1）；挣脱恢复
+    spider = next((m for m in engine.state.monsters if handler._kind_of(engine, m) == "spider_bug"), None)
+    if spider is None:
+        room_s = next((r for r in engine.state.board.values() if r.template_id == "larder"), None)
+        if room_s is not None:
+            spec = {"template_id": "spider", "name": "蜘蛛", "speed": 3, "might": 6, "sanity": 4}
+            spider = engine._spawn_single_haunt_monster(spec, room_s.key)
+            flags["bug_kind"][str(spider.id)] = "spider_bug"
+    if spider is not None:
+        hero2 = next(p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead)
+        hero2.room_key = spider.room_key
+        might_before = hero2.stats["might"]
+        assert handler.on_monster_attack(engine, spider, hero2, 3) is True
+        assert str(hero2.id) in flags.get("webbed", []), "被蜘蛛击败应被缚"
+        assert hero2.stats["might"] >= might_before - 2, "被缚至多 -2"
+        assert hero2.movement_stopped, "被缚者不能移动"
+        # 同房挣脱
+        hero.room_key = hero2.room_key
+        _set_current(engine, hero)
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "break_webs" in ids, "同房有被缚者应能挣脱"
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, hero, "break_webs", {}) is True
+        assert str(hero2.id) not in flags.get("webbed", []), "挣脱后解除"
+        assert not hero2.movement_stopped
+
+    # 蟑螂守厨房：离开厨房按 3 格
+    assert handler.movement_cost_floor(engine, hero, roach.room_key) == 3
+
+    # 叛徒销毁配料：拾取 → 深渊销毁 → 计数；4 枚且无杀虫剂 → 叛徒胜
+    eng_tokens = [t for t in engine.tokens_of_kind("ingredient") if t.room_key]
+    if not eng_tokens:
+        eng_tokens = [engine.spawn_token("ingredient", label="测试配料", role="marker", room_key=traitor.room_key)]
+        eng_tokens[0].data["name"] = "测试配料"
+    traitor.room_key = eng_tokens[0].room_key
+    _set_current(engine, traitor)
+    assert handler.perform_action(engine, traitor, "take_ingredient", {}) is True
+    assert engine.tokens_held_by(traitor.id, "ingredient"), "叛徒应拾到配料"
+    traitor.room_key = next(
+        k for k, r in engine.state.board.items() if r.template_id in ("chasm", "furnace_room", "underground_lake")
+    )
+    ids = {a.id for a in handler.available_actions(engine, traitor)}
+    assert "destroy_ingredient" in ids
+    assert handler.perform_action(engine, traitor, "destroy_ingredient", {}) is True
+    assert engine._haunt_track_value("ingredients_destroyed") == 1
+    # 英雄胜利：毒杀满三只（把剩余计数顶满）
+    engine._set_haunt_track_value("bugs_killed", 3)
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -2153,6 +2298,7 @@ def main():
     verify_haunt14_stars_right()
     verify_haunt15_here_there_be_dragons()
     verify_haunt16_phantoms_embrace()
+    verify_haunt17_bugs()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

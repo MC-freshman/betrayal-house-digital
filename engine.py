@@ -637,7 +637,7 @@ class GameEngine:
             if target_key:
                 target_room = self.state.board[target_key]
                 if OPPOSITE[direction] in target_room.doors:
-                    cost = self._movement_cost(player, room)
+                    cost = self._movement_cost(player, room, from_key=player.room_key)
                     options.append(
                         ExitOption(
                             label=f"向{self._direction_cn(direction)}移动到 {target_room.name}",
@@ -658,7 +658,7 @@ class GameEngine:
                         target_key=target_key or "",
                         target_room_name=None,
                         is_new_room=True,
-                        cost=self._movement_cost(player, room),
+                        cost=self._movement_cost(player, room, from_key=player.room_key),
                     )
                 )
 
@@ -671,7 +671,7 @@ class GameEngine:
             target_key = self._link_target_key(target)
             if target_key is None or target_key in door_reached:
                 continue
-            cost = self._movement_cost(player, room)
+            cost = self._movement_cost(player, room, from_key=player.room_key)
             options.append(
                 ExitOption(
                     label=f"使用{self._special_link_cn(label)}前往 {self.state.board[target_key].name}",
@@ -756,7 +756,7 @@ class GameEngine:
             return False
 
         current_room = self.current_room(player)
-        cost = self._movement_cost(player, current_room)
+        cost = self._movement_cost(player, current_room, from_key=player.room_key)
         if cost > player.steps_remaining:
             if player.steps_remaining <= 0:
                 self._log(f"{player.name} 已没有足够的移动力。")
@@ -823,7 +823,7 @@ class GameEngine:
         self.check_victory()
         return True
 
-    def _movement_cost(self, player: Player, room: PlacedRoom) -> int:
+    def _movement_cost(self, player: Player, room: PlacedRoom, from_key: str | None = None) -> int:
         if self.state.phase != "HAUNT_PHASE":
             return 1
         hostile_count = 0
@@ -834,7 +834,11 @@ class GameEngine:
                 hostile_count += 1
         cost = 1 + hostile_count
         # 剧本可加倍移动费用（剧本 14 p96：背着尸体入房按 2 格计）。
-        cost *= max(1, int(self._mode_handler().movement_cost_multiplier(self, player)))
+        cost *= max(1, int(self._mode_handler().movement_cost_multiplier(self, player, from_key)))
+        # 剧本可抬高移动费用下限（剧本 17 p99：蟑螂在厨房时离开按 3 格计）。
+        floor = int(self._mode_handler().movement_cost_floor(self, player, from_key))
+        if floor > cost:
+            cost = floor
         return cost
 
     def _floor_has_room_capacity(self, floor: int) -> bool:
@@ -2181,6 +2185,8 @@ class GameEngine:
         else:
             if ranged and isinstance(target, Player):
                 self._log(f"{target_name} 反击成功，但远程攻击不会让攻击者受伤。")
+            elif self._mode_handler().attack_loss_damage_disabled(self, attacker, target):
+                self._log(f"{target_name} 反击了，但没能伤到 {attacker.name}。")
             elif isinstance(target, Monster) and self._mode_handler().monster_counterattack_disabled(self, target):
                 self._log(f"{target_name} 反击了，但昏迷中使不上力。")
             else:
