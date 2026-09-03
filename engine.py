@@ -2190,7 +2190,7 @@ class GameEngine:
                         self._resolve_attack_weapon_use(attacker, weapon)
                     attacker.attack_used = True
                     return True
-            self._apply_attack_damage(target, diff, attack_attr)
+            self._apply_attack_damage(target, diff, attack_attr, attacker=attacker, weapon_id=weapon_card_id or "")
             if isinstance(target, Player) and attacker.role == "traitor" and target.role == "hero":
                 self._haunt5_infect(target)
         else:
@@ -2201,7 +2201,7 @@ class GameEngine:
             elif isinstance(target, Monster) and self._mode_handler().monster_counterattack_disabled(self, target):
                 self._log(f"{target_name} 反击了，但昏迷中使不上力。")
             else:
-                self._apply_attack_damage(attacker, diff, attack_attr)
+                self._apply_attack_damage(attacker, diff, attack_attr, attacker=target, weapon_id="")
                 self._log(f"{target_name} 反击成功。")
         if weapon is not None:
             self._resolve_attack_weapon_use(attacker, weapon)
@@ -2278,11 +2278,25 @@ class GameEngine:
                 target.companions.remove(steal_id)
         self._log(f"{attacker.name} 偷走了 {target.name} 的 {self.catalog.cards[steal_id].name}。")
 
-    def _apply_attack_damage(self, target: object, amount: int, attack_attr: str) -> None:
+    def _apply_attack_damage(
+        self,
+        target: object,
+        amount: int,
+        attack_attr: str,
+        attacker: object | None = None,
+        weapon_id: str = "",
+    ) -> None:
         if amount <= 0:
             return
         damage_type = "physical" if attack_attr in PHYSICAL_STATS else "mental"
         if isinstance(target, Monster):
+            # 剧本可按"谁用什么打的"决定这次击败是直接杀死（剧本 21 p32：
+            # 力量武器与炸药能杀死僵尸，其他攻击只能把它打晕）。
+            if self._mode_handler().monster_killed_on_defeat(
+                self, target, attacker, attack_attr, weapon_id
+            ):
+                self._kill_monster(target, killer=attacker)
+                return
             # 默认是击晕一回合，但剧本可以要求"命中即杀死"——
             # 剧本 2 要求摧毁幽灵、剧本 3 施法后任何成功攻击都杀死女巫。
             # 没有这一步，这些剧本的胜利条件永远无法达成。
@@ -2306,6 +2320,13 @@ class GameEngine:
     def _stun_monster(self, monster: Monster, turns: int) -> None:
         monster.stunned_turns += max(1, turns)
         self._log(f"{monster.name} 被击晕了。")
+
+    def _kill_monster(self, monster: Monster, killer: object | None = None) -> None:
+        """把怪物彻底移出对局（区别于 `_stun_monster` 的一回合击晕）。"""
+        monster_id = getattr(monster, "id", None)
+        self.state.monsters = [m for m in self.state.monsters if getattr(m, "id", None) != monster_id]
+        who = getattr(killer, "name", None)
+        self._log(f"{who} 摧毁了 {monster.name}。" if who else f"{monster.name} 被摧毁了。")
 
     def _has_line_of_sight(self, start_key: str, target_key: str) -> bool:
         if start_key == target_key:
@@ -3268,6 +3289,9 @@ class GameEngine:
             getattr(monster, "template_id", ""), {}
         )
         monster_roll += int(specs.get("initiate_bonus", 0) or 0)
+        # 剧本可按被攻击者调整怪物的攻击骰（剧本 21 p32：圣徽持有者让
+        # 僵尸的力量攻击少掷两枚骰，对僵尸领主无效）。
+        monster_roll += self._mode_handler().monster_attack_roll_bonus(self, monster, target)
         target_roll = self._roll_attack(target, "might")
         self._log(f"{monster.name} 攻击 {self._player_label(target)}：{monster_roll} 对 {target_roll}。")
         if monster_roll > target_roll:

@@ -958,6 +958,54 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [31, 102],
     },
+    21: {
+        # 校准记录（2026-09-03，对照英雄手册 p32 / 叛徒手册 p103）：
+        #   原文数值：僵尸 Speed 2 / Might 5 / Sanity 2；僵尸领主 Speed 3 / Might 7 / Sanity 2。
+        #   领主改为"承受 7 点伤害才倒"（用回合/伤害轨记录，伤害不减属性）。
+        #   英雄胜：摧毁领主 或 消灭所有僵尸；叛徒胜：所有英雄死亡。
+        #   本次补齐（全部实现在 haunt_modes.ZombieLordMode）：
+        #     · 免疫左轮（p32 "immune to the Revolver"）——顺带修好 content.py 里
+        #       左轮缺少 speed 标签导致剧本 1/6 的 immune_to: ["speed"] 静默失效
+        #     · 力量武器与炸药命中即杀死，徒手/其他属性只击晕（p32）
+        #     · 圣徽：对持有者发动力量攻击的僵尸少掷两枚骰，领主不受影响（p32）
+        #     · 只有持徽章者能伤到领主，且他不需要武器（p32）
+        #     · 僵尸按 p103 的房间顺序布点（房不够则叠放，再给每间有僵尸的房补一只）
+        #     · 叛徒开局即死并被领主令牌顶替；英雄被杀后转化为新僵尸
+        #   已知简化（详见 handler 文档字符串）：转化后的僵尸由引擎/bot 代跑，
+        #     不由原玩家操控；"抽物品时三选一放底"未建模。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "zombie_lord",
+        "traitor_rule": "revealer",
+        "hero_goal": "摧毁僵尸领主，或把所有僵尸（包括被转化的同伴）全部消灭。",
+        "traitor_goal": "僵尸群杀死所有英雄。",
+        "suggested_monsters": ["zombie", "zombie_lord"],
+        "required_cards": ["omen_medallion", "omen_holy_symbol"],
+        "key_rooms": [],
+        # 僵尸与领主都由怪物承载、领主伤害走轨道，本剧本没有需要 Token 对象的东西
+        "tokens": [],
+        "setup": {
+            "tracks": {
+                "lord_damage": {"label": "僵尸领主受到的伤害", "target": 7, "side": "heroes"},
+            },
+            "flags": {
+                "zombies_placed": 0,
+                "converted_ids": [],
+            },
+        },
+        "monsters": [
+            # spawn=deferred：布点由 handler 按 p103 的房间顺序自己算
+            {"template_id": "zombie", "name": "僵尸", "spawn": "deferred",
+             "speed": 2, "might": 5, "sanity": 2, "immune_to": ["speed"]},
+            {"template_id": "zombie_lord", "name": "僵尸领主", "spawn": "haunt_room",
+             "speed": 3, "might": 7, "sanity": 2, "damage_capacity": 7},
+        ],
+        # 英雄的目标就是战斗与找徽章，没有需要点击的剧本行动（同 10 号惯例）
+        "actions": [],
+        "win_conditions": [],
+        "source_pages": [32, 103],
+    },
 }
 
 
@@ -1118,7 +1166,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    21: dict(mode="zombie_lord", traitor_rule="revealer", hero_goal="摧毁僵尸领主或消灭所有僵尸。", traitor_goal="让僵尸领主和僵尸杀死所有英雄。", rooms=("crypt", "graveyard", "entrance_hall", "underground_lake", "garden", "chapel", "conservatory", "pentagram_chamber"), monsters=("zombie", "giant"), tokens=("zombie_lord", "zombie", "damage"), hero_task="清理僵尸并攻击领主", traitor_task="召集僵尸围攻", hero_stat="might", hero_target=5, hero_detail="在僵尸威胁区域完成清理行动。", traitor_detail="让僵尸推进围攻轨道。", monster_count="player_count"),
     22: dict(mode="abyss_exorcism", traitor_rule="revealer", hero_goal="完成与玩家数相等的驱魔检定，阻止房屋坍入深渊。", traitor_goal="让房屋不断坍塌并杀死所有英雄。", rooms=("chasm", "chapel", "crypt", "pentagram_chamber", "library", "research_laboratory"), monsters=("shadow",), tokens=("sanity_check", "knowledge_check", "abyss"), hero_task="驱魔稳定房屋", traitor_task="加速深渊坍塌", hero_stat=["sanity", "knowledge"], hero_target=5, hero_detail="在指定房间或使用指定物品完成一次驱魔。", traitor_detail="推进坍塌倒计时。", monster_count=1),
     23: dict(mode="tentacled_horror", traitor_rule="revealer", hero_goal="摧毁触手生物。", traitor_goal="让触手逐渐增强并杀死所有英雄。", rooms=("furnace_room", "conservatory", "organ_room", "underground_lake", "garden", "chasm"), monsters=("giant",), tokens=("tentacle_root", "tentacle_tip", "time"), hero_task="定位并摧毁触手", traitor_task="增强触手", hero_stat="might", hero_target=6, hero_progress_target=1, hero_detail="在触手所在房间完成一次破坏行动。", traitor_detail="推进触手增长轨道。", monster_count="player_count", hero_win_target=1),
     24: dict(mode="bat_exodus", traitor_rule="revealer", hero_goal="用风琴赶走蝙蝠并消灭附着的蝙蝠。", traitor_goal="让蝙蝠吸取英雄生命，或杀死所有英雄。", rooms=("organ_room", "entrance_hall", "balcony", "garden", "graveyard", "patio", "tower"), monsters=("spider",), tokens=("bat", "organ", "victim"), hero_task="演奏风琴驱逐蝙蝠", traitor_task="扩散蝙蝠", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在风琴房完成驱逐检定。", traitor_detail="推进蝙蝠侵袭轨道。", monster_count="player_count"),

@@ -34,6 +34,7 @@ if __package__ in {None, ""}:
         BeastmasterMode,
         BeastmasterMode,
         GhostBrideMode,
+        ZombieLordMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -124,8 +125,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(OffspringMode) == [18], f"剧本 18 未走定制 handler: {handlers.get(OffspringMode)}"
     assert handlers.get(BeastmasterMode) == [19], f"剧本 19 未走定制 handler: {handlers.get(BeastmasterMode)}"
     assert handlers.get(GhostBrideMode) == [20], f"剧本 20 未走定制 handler: {handlers.get(GhostBrideMode)}"
+    assert handlers.get(ZombieLordMode) == [21], f"剧本 21 未走定制 handler: {handlers.get(ZombieLordMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 50, f"应有 50 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 49, f"应有 49 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -139,7 +141,7 @@ def verify_mode_dispatch() -> None:
         "delayed_traitor_relic", "dragon_siege", "exorcism", "fleshwalkers", "generic",
         "nightmare_escape", "paint_the_pentagram", "phantom_bomb",
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
-        "web_escape", "werewolf_hunt", "witch_and_frogs",
+        "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord",
     }
 
 
@@ -2184,6 +2186,114 @@ def verify_haunt20_ghost_bride() -> None:
     assert engine.state.winner == "traitor", "婚礼第 3 回合应完成"
 
 
+def verify_haunt21_zombie_lord() -> None:
+    """剧本 21：布点顺序/左轮免疫/力量武器击杀/徽章闸门/圣徽减骰/死亡转化（p32/p103）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=21)
+    handler = engine._mode_handler()
+    assert isinstance(handler, ZombieLordMode)
+    flags = engine._haunt_flags()
+    assert engine.state.phase == "HAUNT_PHASE", "该种子应能跑到作祟阶段"
+
+    # p103：叛徒开局即死并掉落物品，人物由僵尸领主令牌顶替
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    assert traitor.dead is True, "p103：叛徒开局就被拖进墙里"
+    assert not traitor.items, "叛徒应掉落所有物品"
+    lord = engine._monster_by_template("zombie_lord")
+    assert lord is not None, "僵尸领主应在场"
+    assert lord.room_key == traitor.room_key, "领主应顶替叛徒所在房间"
+
+    # p103 布点：玩家数枚按房间顺序放（房不够则叠放），再给每间有僵尸的房补一只
+    zombies = [m for m in engine.state.monsters if m.template_id == "zombie"]
+    revealed_templates = {r.template_id for r in engine.state.board.values() if r.revealed}
+    listed = set(handler.PLACE_ORDER) & revealed_templates
+    buckets = len(listed) or 1
+    assert len(zombies) == 4 + min(4, buckets), f"僵尸数应为玩家数 + 已布点房间数，实际 {len(zombies)}"
+    assert flags["zombies_placed"] == len(zombies)
+    for monster in zombies:
+        room = engine.state.board[monster.room_key]
+        assert room.revealed, "僵尸只应布在已发现的房间里"
+        if listed:
+            assert room.template_id in listed, "僵尸应落在 p103 顺序表里的房间"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+    zombie_a, zombie_b = zombies[0], zombies[1]
+    hero.room_key = zombie_a.room_key
+
+    def _attack(winner: int, loser: int):
+        return (
+            patch.object(engine, "_roll_attack", side_effect=lambda player, attr, bonus=0: winner),
+            patch.object(engine, "_roll_monster_attack", return_value=loser),
+        )
+
+    # p32：僵尸免疫左轮（速度攻击）
+    hero.items.append("item_revolver")
+    engine._reset_player_turn_state(hero)
+    roll_a, roll_b = _attack(9, 0)
+    with roll_a, roll_b:
+        assert engine.attack(hero, zombie_a, "item_revolver") is False, "僵尸免疫左轮"
+    assert zombie_a in engine.state.monsters
+
+    # p32：力量武器命中即杀死
+    hero.items.append("item_axe")
+    engine._reset_player_turn_state(hero)
+    roll_a, roll_b = _attack(9, 0)
+    with roll_a, roll_b:
+        assert engine.attack(hero, zombie_a, "item_axe") is True
+    assert zombie_a not in engine.state.monsters, "力量武器应直接杀死僵尸"
+
+    # p32：徒手力量攻击不算武器，只能打晕
+    hero.room_key = zombie_b.room_key
+    engine._reset_player_turn_state(hero)
+    roll_a, roll_b = _attack(9, 0)
+    with roll_a, roll_b:
+        assert engine.attack(hero, zombie_b) is True
+    assert zombie_b in engine.state.monsters and zombie_b.stunned_turns >= 1, "徒手只应击晕"
+
+    # 老坑：叛徒开局已死，不能因此判英雄胜
+    engine.state.winner = None
+    assert handler.check_victory(engine) is True and engine.state.winner is None, "应吸收引擎的叛徒死亡兜底"
+
+    # p32：圣徽持有者让僵尸的力量攻击少掷两枚骰，对领主无效
+    holder = next(p for p in engine.state.players if p.role == "hero" and not p.dead and p is not hero)
+    holder.items.append("omen_holy_symbol")
+    assert handler.monster_attack_roll_bonus(engine, zombie_b, holder) == -2
+    assert handler.monster_attack_roll_bonus(engine, lord, holder) == 0
+    assert handler.monster_attack_roll_bonus(engine, zombie_b, hero) == 0
+
+    # p32/p103：英雄被杀后在原地变成新僵尸
+    before = len([m for m in engine.state.monsters if m.template_id == "zombie"])
+    victim = next(p for p in engine.state.players if p.role == "hero" and not p.dead and p is not hero and p is not holder)
+    victim.stats["might"] = 0
+    engine._check_player_death(victim)
+    assert victim.dead
+    after = len([m for m in engine.state.monsters if m.template_id == "zombie"])
+    assert after == before + 1, "死去的英雄应转化为一只新僵尸"
+    assert victim.id in flags["converted_ids"]
+    assert engine.state.winner != "heroes", "转化出的僵尸仍在场，不应判英雄清空僵尸"
+
+    # p32：只有持徽章者能伤到领主；领主吃 7 点伤害而不吃击晕（p103）
+    hero.items = []
+    engine._reset_player_turn_state(hero)
+    hero.room_key = lord.room_key
+    assert engine.attack(hero, lord) is False, "无徽章者伤不到僵尸领主"
+    hero.items.append("omen_medallion")
+    engine._reset_player_turn_state(hero)
+    roll_a, roll_b = _attack(3, 2)
+    with roll_a, roll_b:
+        assert engine.attack(hero, lord) is True
+    assert engine._haunt_track_value("lord_damage") == 1, "领主应累计 1 点伤害"
+    assert lord in engine.state.monsters and lord.stunned_turns == 0, "领主不应被击晕"
+    engine._set_haunt_track_value("lord_damage", 6)
+    engine._reset_player_turn_state(hero)
+    roll_a, roll_b = _attack(3, 2)
+    with roll_a, roll_b:
+        assert engine.attack(hero, lord) is True
+    assert lord not in engine.state.monsters, "累计 7 点伤害领主应倒下"
+    assert engine.state.winner == "heroes", "摧毁领主即英雄胜（p32）"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -2538,6 +2648,7 @@ def main():
     verify_haunt18_offspring()
     verify_haunt19_beastmaster()
     verify_haunt20_ghost_bride()
+    verify_haunt21_zombie_lord()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()
