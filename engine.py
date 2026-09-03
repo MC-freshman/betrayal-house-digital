@@ -2125,14 +2125,13 @@ class GameEngine:
                 attack_attr = "speed"
         else:
             attack_bonus = self._attack_bonus_from_inventory(attacker, None)
-        # 剧本可覆盖徒手攻击的属性（剧本 11 p22/p93：持戒指者对雾中人影
-        # 的徒手攻击改为理智攻击）。
+        # 剧本可覆盖攻击属性（剧本 11 雾中人影 / 剧本 19 持戒理智攻击驯兽师）。
+        override_attr = self._mode_handler().attack_attr_override(
+            self, attacker, target, attack_attr
+        )
+        if override_attr:
+            attack_attr = override_attr
         if not isinstance(target, Player):
-            override_attr = self._mode_handler().attack_attr_override(
-                self, attacker, target, attack_attr
-            )
-            if override_attr:
-                attack_attr = override_attr
             # 剧本可给攻击骰加值（剧本 15 p26：持矛对巨龙 +4）。
             attack_bonus += self._mode_handler().attack_roll_bonus(self, attacker, target)
         # 怪物免疫：immune_to 列出的攻击属性对它无效（p17/p88：外星人免疫
@@ -2168,6 +2167,17 @@ class GameEngine:
         attacker_wins = attacker_roll > target_roll
         if attacker_wins:
             if self._haunt5_try_silver_bullet_kill(attacker, target, weapon):
+                if weapon is not None:
+                    self._resolve_attack_weapon_use(attacker, weapon)
+                attacker.attack_used = True
+                self.check_victory()
+                return True
+            # 剧本可定义特殊偷取（剧本 19 p30：>2 点伤害改为偷走长矛，
+            # 让驯兽师恢复神智——英雄的胜利条件）。
+            if (
+                isinstance(target, Player) and not ranged and diff > 2
+                and self._mode_handler().special_steal(self, attacker, target, diff, attack_attr)
+            ):
                 if weapon is not None:
                     self._resolve_attack_weapon_use(attacker, weapon)
                 attacker.attack_used = True
@@ -3252,6 +3262,12 @@ class GameEngine:
         # 剧本 4 p86：蜘蛛每次攻击可把每个"空白骰"（掷出 0）重掷一次。
         reroll_blanks = bool(self._mode_handler().monster_rerolls_blanks(self, monster))
         monster_roll = self._roll_monster_attack(monster, "might", reroll_blanks=reroll_blanks)
+        # 剧本可给主动攻击的怪物加值（剧本 19 p101：熊 +2 / 鳄鱼 +1，
+        # 被攻击时不加）。数据声明在 monster_specs 的 initiate_bonus。
+        specs = self._haunt_rule_state().get("monster_specs", {}).get(
+            getattr(monster, "template_id", ""), {}
+        )
+        monster_roll += int(specs.get("initiate_bonus", 0) or 0)
         target_roll = self._roll_attack(target, "might")
         self._log(f"{monster.name} 攻击 {self._player_label(target)}：{monster_roll} 对 {target_roll}。")
         if monster_roll > target_roll:

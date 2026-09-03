@@ -860,6 +860,50 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [29, 100],
     },
+    19: {
+        # 校准记录（2026-09-02，对照英雄手册 p30 / 叛徒手册 p101）：
+        #   机制落在 BeastmasterMode：
+        #   · 叛徒即驯兽师，持长矛（项目无矛卡，用令牌承载——与剧本 15
+        #     同一处理）；五只动物随从按 p101 顺序布点（熊在任一其他
+        #     探险者所在房间；狼进门厅，6 人局两只；鳄鱼进地下湖或地下室
+        #     门厅；鼬进花园/墓地/阳台否则叛徒房间；鹰进阳台/塔楼/朝外窗
+        #     房间，都没有则不出现）
+        #   · 英雄胜：用力量攻击或持戒理智攻击对驯兽师造成 >2 点伤害并
+        #     偷走长矛（引擎新钩子 special_steal；attack_attr_override
+        #     扩展到玩家目标以支持持戒理智攻击）——驯兽师恢复神智
+        #   · 杀死驯兽师 = 英雄失败（check_victory 显式判叛徒胜）
+        #   · 动物随从被击败即杀死（非击晕）；熊主动攻击 +2、鳄鱼 +1
+        #     （引擎读取 monster_specs 的 initiate_bonus，被攻击不加）
+        #   简化：驯兽师开局的一次传送未实现（可选能力，bot 放弃）；
+        #     长矛被偷后随从是否溃散原文未述，不影响胜负判定。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "beastmaster",
+        "traitor_rule": "revealer",
+        "hero_goal": "击败驯兽师并偷走长矛让他恢复神智——记住，杀了他你就输了。",
+        "traitor_goal": "让动物随从吃掉所有英雄。",
+        "suggested_monsters": ["beast", "wolf", "giant", "cat"],
+        "required_cards": ["omen_ring"],
+        "key_rooms": ["entrance_hall", "underground_lake", "basement_landing", "garden", "graveyard", "patio", "balcony", "tower"],
+        "tokens": ["spear", "bear", "wolf", "crocodile", "weasel", "hawk"],
+        "setup": {
+            "tracks": {
+                "minions_slain": {"label": "已斩杀的随从", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"spear_stolen": False, "beast_kind": {}},
+        },
+        "monsters": [
+            {"template_id": "beast", "name": "熊", "spawn": "deferred", "speed": 3, "might": 5, "sanity": 4, "initiate_bonus": 2},
+            {"template_id": "wolf", "name": "狼", "spawn": "deferred", "speed": 4, "might": 5, "sanity": 4},
+            {"template_id": "giant", "name": "鳄鱼", "spawn": "deferred", "speed": 2, "might": 5, "sanity": 4, "initiate_bonus": 1},
+            {"template_id": "cat", "name": "鼬", "spawn": "deferred", "speed": 5, "might": 2, "sanity": 6},
+            {"template_id": "cat", "name": "鹰", "spawn": "deferred", "speed": 5, "might": 3, "sanity": 5},
+        ],
+        "actions": [],
+        "win_conditions": [],
+        "source_pages": [30, 101],
+    },
 }
 
 
@@ -1020,7 +1064,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    19: dict(mode="beastmaster", traitor_rule="revealer", hero_goal="用特殊攻击夺走长矛，使兽王恢复正常。", traitor_goal="指挥动物爪牙杀死所有英雄。", rooms=("entrance_hall", "underground_lake", "garden", "graveyard", "patio", "balcony", "tower"), monsters=("beast", "wolf"), tokens=("spear", "animal_minion", "bear", "hawk"), hero_task="夺取兽王长矛", traitor_task="召集动物爪牙", hero_stat=["might", "sanity"], hero_target=5, hero_progress_target=1, hero_detail="与兽王同房间时完成特殊夺取行动，不把兽王杀死。", traitor_detail="推进动物爪牙威胁轨道。", monster_count="player_count", hero_win_target=1),
     20: dict(mode="ghost_bride", traitor_rule="revealer", hero_goal="找到戒指和真正新郎的尸体，并在小教堂阻止错误婚礼。", traitor_goal="让幽灵新娘在小教堂完成婚礼，或杀死所有英雄。", rooms=("crypt", "graveyard", "chapel", "catacombs", "entrance_hall"), monsters=("ghost",), tokens=("bride", "groom", "ring", "corpse"), hero_task="揭穿并阻止幽灵婚礼", traitor_task="完成幽灵婚礼", hero_stat="knowledge", hero_target=5, hero_progress_target=2, hero_detail="先找齐戒指和尸体，再在小教堂完成阻止仪式。", traitor_detail="在小教堂推动婚礼进度。", monster_count=1, hero_win_target=2, traitor_win_type="track", traitor_progress_target=2),
     21: dict(mode="zombie_lord", traitor_rule="revealer", hero_goal="摧毁僵尸领主或消灭所有僵尸。", traitor_goal="让僵尸领主和僵尸杀死所有英雄。", rooms=("crypt", "graveyard", "entrance_hall", "underground_lake", "garden", "chapel", "conservatory", "pentagram_chamber"), monsters=("zombie", "giant"), tokens=("zombie_lord", "zombie", "damage"), hero_task="清理僵尸并攻击领主", traitor_task="召集僵尸围攻", hero_stat="might", hero_target=5, hero_detail="在僵尸威胁区域完成清理行动。", traitor_detail="让僵尸推进围攻轨道。", monster_count="player_count"),
     22: dict(mode="abyss_exorcism", traitor_rule="revealer", hero_goal="完成与玩家数相等的驱魔检定，阻止房屋坍入深渊。", traitor_goal="让房屋不断坍塌并杀死所有英雄。", rooms=("chasm", "chapel", "crypt", "pentagram_chamber", "library", "research_laboratory"), monsters=("shadow",), tokens=("sanity_check", "knowledge_check", "abyss"), hero_task="驱魔稳定房屋", traitor_task="加速深渊坍塌", hero_stat=["sanity", "knowledge"], hero_target=5, hero_detail="在指定房间或使用指定物品完成一次驱魔。", traitor_detail="推进坍塌倒计时。", monster_count=1),

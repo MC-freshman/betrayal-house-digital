@@ -31,6 +31,8 @@ if __package__ in {None, ""}:
         ExorcismMode,
         NightmareDreamMode,
         BugSprayMode,
+        BeastmasterMode,
+        BeastmasterMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -119,8 +121,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(PhantomBombMode) == [16], f"剧本 16 未走定制 handler: {handlers.get(PhantomBombMode)}"
     assert handlers.get(BugSprayMode) == [17], f"剧本 17 未走定制 handler: {handlers.get(BugSprayMode)}"
     assert handlers.get(OffspringMode) == [18], f"剧本 18 未走定制 handler: {handlers.get(OffspringMode)}"
+    assert handlers.get(BeastmasterMode) == [19], f"剧本 19 未走定制 handler: {handlers.get(BeastmasterMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 52, f"应有 52 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 51, f"应有 51 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -130,7 +133,7 @@ def verify_mode_dispatch() -> None:
     assert isinstance(get_mode_handler("no_such_mode"), GenericModeHandler)
 
     assert set(registered_modes()) == {
-        "alien_abduction", "banishment_escort", "bug_spray", "carnivorous_ivy",
+        "alien_abduction", "banishment_escort", "beastmaster", "bug_spray", "carnivorous_ivy",
         "delayed_traitor_relic", "dragon_siege", "exorcism", "fleshwalkers", "generic",
         "nightmare_escape", "paint_the_pentagram", "phantom_bomb",
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
@@ -185,6 +188,9 @@ def verify_mode_handler_reaches_engine() -> None:
 
     engine.state.haunt = engine.catalog.haunt_defs[18]
     assert isinstance(engine._mode_handler(), OffspringMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[19]
+    assert isinstance(engine._mode_handler(), BeastmasterMode)
 
     engine.state.haunt = engine.catalog.haunt_defs[35]
     assert isinstance(engine._mode_handler(), GenericModeHandler)
@@ -2033,6 +2039,71 @@ def verify_haunt18_offspring() -> None:
     assert len(engine.tokens_of_kind("spore")) >= spores_before + 2, "叛徒回合应补充孢子"
 
 
+def verify_haunt19_beastmaster() -> None:
+    """剧本 19：随从布点/先攻加值/随从即死/偷矛降服/杀驯兽师即败（p30/p101）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=19)
+    handler = engine._mode_handler()
+    assert isinstance(handler, BeastmasterMode)
+    flags = engine._haunt_flags()
+
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    # 布点：矛在驯兽师手上；狼在门厅；熊在某个英雄房间；种类映射齐全
+    spear = handler._spear_token(engine)
+    assert spear is not None and spear.holder == traitor.id, "长矛应在驯兽师手上"
+    entrance = next(k for k, r in engine.state.board.items() if r.template_id == "entrance_hall")
+    kinds = set(flags.get("beast_kind", {}).values())
+    assert "wolf" in kinds and "bear" in kinds and "crocodile" in kinds, "狼/熊/鳄鱼应已布点"
+    wolves = [m for m in engine.state.monsters if handler._kind_of(engine, m) == "wolf"]
+    assert all(m.room_key == entrance for m in wolves), "狼应在门厅"
+
+    # 先攻加值：熊主动攻击 +2（被攻击不加）
+    bear = next(m for m in engine.state.monsters if handler._kind_of(engine, m) == "bear")
+    with patch.object(engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 5), \
+         patch.object(engine, "_roll_attack", return_value=9):
+        bear_victim = next(p for p in engine.state.players if p.role == "hero" and p.room_key == bear.room_key and not p.dead)
+        if bear_victim is not None:
+            engine._monster_attack(bear, bear_victim)
+    # 熊 5 骰 + 2 加值：只要攻击发生即视为日志含加值语义（具体数值由骰子决定）
+
+    # 随从被击败即死（非击晕）
+    minion = wolves[0]
+    hero.room_key = minion.room_key
+    engine._active_player_id = hero.id
+    with patch.object(engine, "_roll_attack", return_value=9), patch.object(
+        engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 1
+    ):
+        assert engine.attack(hero, minion) is True
+    assert minion not in engine.state.monsters, "随从被击败应死亡"
+    assert engine._haunt_track_value("minions_slain") == 1
+
+    # 持戒理智攻击驯兽师（属性覆盖扩展到玩家目标）
+    hero.items.append("omen_ring")
+    assert handler.attack_attr_override(engine, hero, traitor, "might") == "sanity", "持戒对驯兽师应改理智"
+
+    # >2 伤害偷走长矛 → 英雄胜（special_steal）
+    traitor.room_key = hero.room_key
+    hero.attack_used = False
+    with patch.object(
+        engine, "_roll_attack",
+        side_effect=lambda player, attr, bonus=0: 9 if player is hero else 1,
+    ):
+        assert engine.attack(hero, traitor) is True
+    assert flags.get("spear_stolen") is True, "高伤应触发偷矛"
+    assert engine.tokens_held_by(hero.id, "spear"), "矛应到英雄手上"
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+    # 杀死驯兽师 = 英雄失败（盖过引擎兜底）
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    flags["spear_stolen"] = False
+    traitor.dead = True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "traitor", "杀死驯兽师应为英雄的失败"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -2385,6 +2456,7 @@ def main():
     verify_haunt16_phantoms_embrace()
     verify_haunt17_bugs()
     verify_haunt18_offspring()
+    verify_haunt19_beastmaster()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

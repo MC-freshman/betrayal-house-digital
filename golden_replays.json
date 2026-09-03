@@ -495,6 +495,23 @@
       "forced_haunt": 18
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "0f8e44a2aa07bd80eea90b9bd5b8f87ff7b20abe385d46fdb3509c431078880a",
+      "turns": 32,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "野兽们的嚎叫吞没了最后的探险者。",
+      "haunt": 19,
+      "haunt_name": "驭兽者",
+      "rooms": 26,
+      "monsters": 3,
+      "key": "seed113-3p-haunt19",
+      "forced_haunt": 19
+    },
+    {
       "seed": 131,
       "players": 4,
       "completed": true,
