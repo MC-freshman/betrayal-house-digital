@@ -819,8 +819,10 @@ class GameEngine:
         # 剧本可跟随移动（剧本 3 p14：背着青蛙走，蛙跟着主人）。
         self._mode_handler().on_player_moved(self, player)
         self._resolve_room_entry_if_needed(player)
-        if option.is_new_room:
-            # 探索新房间会结束本回合移动（无论房间是否有特效）
+        if option.is_new_room and not self._mode_handler().explore_stop_suspended(self, player):
+            # 探索新房间会结束本回合移动（无论房间是否有特效）。
+            # 例外：剧本 25 p36 明文解除"进带符号的新房间必须停"的限制，
+            # 可以连续探索，只在结束移动的房间有符号时才抽牌。
             player.movement_stopped = True
             player.steps_remaining = 0
         self.check_victory()
@@ -1100,7 +1102,10 @@ class GameEngine:
         if parts:
             self.prompter.notify(f"进入房间：{room.name}", "\n".join(parts))
 
-    def _draw_symbol_card(self, player: Player, symbol: str) -> None:
+    def _draw_symbol_card(self, player: Player, symbol: str, stop_movement: bool = True) -> None:
+        """抽一张符号牌。stop_movement=False 用于剧本 25 p36 的延迟抽牌：
+        正常的符号抽牌发生在"进房必须停"之后；但延迟抽牌（结束移动时补抽、
+        搜寻前补抽）不该打断玩家本回合的移动。"""
         kind_map = {"omen": "omen", "item": "item", "event": "event"}
         kind = kind_map.get(symbol)
         if kind is None:
@@ -1114,8 +1119,9 @@ class GameEngine:
             self._draw_item(player)
         elif kind == "event":
             self._draw_event(player)
-        player.movement_stopped = True
-        player.steps_remaining = 0
+        if stop_movement:
+            player.movement_stopped = True
+            player.steps_remaining = 0
 
     def _draw_omen(self, player: Player) -> None:
         card_id = self._draw_card_id("omen")

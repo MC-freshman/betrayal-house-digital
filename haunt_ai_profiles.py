@@ -277,6 +277,19 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["escape"]},
     },
+    25: {
+        "hero": {
+            # p36 没有禁止攻击叛徒；叛徒本剧本会主动杀人凑"过半死亡"，
+            # 英雄 bot 不还手就是白挨砍（实测六个种子只赢一局的主因）。
+            "attack_traitor_players": True,
+            "victory_focus": "搜寻并销毁自己的巫毒娃娃，必要时反击叛徒",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "在娃娃诅咒起效前把英雄杀到过半",
+        },
+        "scenario": {"special_rules": ["hidden_dolls", "turn_damage_track"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",

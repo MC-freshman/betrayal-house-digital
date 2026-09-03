@@ -38,6 +38,7 @@ if __package__ in {None, ""}:
         AbyssExorcismMode,
         TentacledHorrorMode,
         BatSwarmMode,
+        VoodooMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -132,8 +133,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(AbyssExorcismMode) == [22], f"剧本 22 未走定制 handler: {handlers.get(AbyssExorcismMode)}"
     assert handlers.get(TentacledHorrorMode) == [23], f"剧本 23 未走定制 handler: {handlers.get(TentacledHorrorMode)}"
     assert handlers.get(BatSwarmMode) == [24], f"剧本 24 未走定制 handler: {handlers.get(BatSwarmMode)}"
+    assert handlers.get(VoodooMode) == [25], f"剧本 25 未走定制 handler: {handlers.get(VoodooMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 46, f"应有 46 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 45, f"应有 45 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -148,7 +150,7 @@ def verify_mode_dispatch() -> None:
         "nightmare_escape", "paint_the_pentagram", "phantom_bomb",
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
-        "tentacled_horror", "bat_exodus",
+        "tentacled_horror", "bat_exodus", "voodoo_dolls",
     }
 
 
@@ -2759,6 +2761,228 @@ def verify_haunt24_bat_swarm() -> None:
     assert engine.state.winner == "heroes", "封门后杀光贴附蝙蝠即英雄胜（p35）"
 
 
+def _haunt25_effect_doll(kind: str, hero_id: int) -> dict:
+    """构造一个合成娃娃，供 _apply_effect 的定点测试使用（不动 setup 的真娃娃）。"""
+    return {"kind": kind, "hero_id": hero_id, "room_template": "kitchen",
+            "destroyed": False, "found": False}
+
+
+def verify_haunt25_voodoo() -> None:
+    """剧本 25：娃娃分配/搜寻与销毁/五种效果/时钟推进/胜负与叛徒死亡兜底（p36/p107）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=25)
+    handler = engine._mode_handler()
+    assert isinstance(handler, VoodooMode)
+    flags = engine._haunt_flags()
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    hero_a, hero_b, hero_c = heroes
+    assert traitor.dead is False, "p107：叛徒（揭示者）仍在场"
+    engine.state.turn_order = [hero_a.id]
+    engine.state.turn_index = 0
+
+    # ---- 开局：每英雄一只娃娃，类型按序；「恰有一间已发现」必须选已发现那间
+    dolls = flags["dolls"]
+    assert [d["kind"] for d in dolls] == ["wax", "china", "stone"], "娃娃类型按 p107 列表顺序分配"
+    for d in dolls:
+        cands = VoodooMode.CANDIDATES[d["kind"]]
+        assert d["room_template"] in cands
+        discovered = [t for t in cands if handler._is_discovered(engine, t)]
+        if len(discovered) == 1:
+            assert d["room_template"] == discovered[0], "恰有一间已发现时必须选它（p107）"
+
+    # ---- 时钟归属：英雄回合结束不推进；叛徒回合结束推进（p107）
+    assert engine._haunt_track_value("turn_damage") == 0
+    with patch.object(engine, "roll_dice", return_value=8):
+        handler.on_turn_end(engine, hero_a)
+    assert engine._haunt_track_value("turn_damage") == 0, "英雄回合结束不该推进轨道"
+    with patch.object(engine, "roll_dice", return_value=8):
+        handler.on_turn_end(engine, traitor)
+    assert engine._haunt_track_value("turn_damage") == 1, "p107：叛徒回合结束把轨道推进到 1"
+
+    # ---- 老坑吸收：叛徒死亡 ≠ 英雄胜，时钟由本轮最后一名存活玩家代推
+    saved_traitor_dead = traitor.dead
+    traitor.dead = True
+    with patch.object(engine, "roll_dice", return_value=8):
+        handler.on_turn_end(engine, hero_a)
+    assert engine._haunt_track_value("turn_damage") == 2, "叛徒出局后时钟由最后存活玩家代推"
+    assert engine.state.winner is None, "叛徒死亡不等于英雄胜（老坑 15 号吸收者）"
+    traitor.dead = saved_traitor_dead
+    engine._set_haunt_track_value("turn_damage", 1)
+
+    # ---- 搜寻：知识 2+ 成功后如实回答；空房结果全桌公开
+    own_a = next(d for d in dolls if d["hero_id"] == hero_a.id)
+    taken = {d["room_template"] for d in dolls}
+    board_templates = {r.template_id for r in engine.state.board.values()}
+    empty_template = next(
+        t for t in ("entrance_hall", "kitchen", "chapel", "grand_staircase")
+        if t not in taken and t in board_templates
+    )
+    empty_key = next(k for k, r in engine.state.board.items() if r.template_id == empty_template)
+    hero_a.room_key = empty_key
+    hero_a.control = "human"  # bot 在非候选房不搜（门控下面单独测）
+    engine._reset_player_turn_state(hero_a)
+    assert "search_doll" in {a.id for a in handler.available_actions(engine, hero_a)}
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero_a, "search_doll", {}) is True
+    assert empty_template in flags["cleared_rooms"], "空房搜寻结果应全桌公开"
+    assert handler.available_actions(engine, hero_a) == [], "已知没娃娃的房间不再提供搜寻"
+
+    # bot 门控：不在自己娃娃的候选房里，bot 搜不了
+    hero_a.control = "bot"
+    engine._reset_player_turn_state(hero_a)
+    assert handler.available_actions(engine, hero_a) == [], "bot 只在自己娃娃的候选房里搜寻"
+
+    # bot 门控：进了候选房（含已公开位置）就可以搜；搜到自己的娃娃当场销毁
+    chosen = own_a["room_template"]
+    room_key = next((k for k, r in engine.state.board.items() if r.template_id == chosen), None)
+    if room_key is None:
+        placed = engine._place_room(engine.catalog.room_templates[chosen], 40, 40, 0)
+        placed.revealed = True
+        room_key = placed.key
+    hero_a.room_key = room_key
+    engine._reset_player_turn_state(hero_a)
+    assert "search_doll" in {a.id for a in handler.available_actions(engine, hero_a)}
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero_a, "search_doll", {}) is True
+    assert own_a["destroyed"] is True, "p36：搜到自己的娃娃当场自动销毁"
+
+    # ---- 效果（p107）。合成娃娃定点触发，不动 setup 的真娃娃
+    # 蜡：bot 必须避开"轨道最底格、掉 1 即死"的属性（实测 157 种子的教训）
+    track_sp = engine._stat_track(hero_b, "speed")
+    hero_b.stat_positions["speed"] = 0
+    hero_b.stats["speed"] = track_sp[0]
+    track_mi = engine._stat_track(hero_b, "might")
+    hero_b.stat_positions["might"] = min(3, len(track_mi) - 1)
+    hero_b.stats["might"] = track_mi[hero_b.stat_positions["might"]]
+    speed_before = hero_b.stats["speed"]
+    might_pos = hero_b.stat_positions["might"]
+    handler._apply_effect(engine, hero_b, _haunt25_effect_doll("wax", hero_b.id), 1)
+    assert hero_b.stats["speed"] == speed_before, "掉血不能选轨道最底格的属性"
+    assert hero_b.stat_positions["might"] == might_pos - 1, "应掉安全且数值较高的力量"
+
+    # 瓷：掷 4 骰 < 回合数 → 当场死亡 + 娃娃销毁（含引擎死亡钩子销毁真娃娃）
+    doll_china = _haunt25_effect_doll("china", hero_b.id)
+    with patch.object(engine, "roll_dice", return_value=0):
+        handler._apply_effect(engine, hero_b, doll_china, 1)
+    assert hero_b.dead is True, "瓷娃娃掷输应当场杀死英雄"
+    assert doll_china["destroyed"] is True
+    assert next(d for d in dolls if d["hero_id"] == hero_b.id)["destroyed"] is True, "p36：英雄死亡其娃娃同时销毁"
+
+    # 石：掷输 → 每项属性各掉 1 格
+    for stat in ("might", "speed", "sanity", "knowledge"):
+        track = engine._stat_track(hero_a, stat)
+        hero_a.stat_positions[stat] = min(3, len(track) - 1)
+        hero_a.stats[stat] = track[hero_a.stat_positions[stat]]
+    pos_before = {s: hero_a.stat_positions[s] for s in ("might", "speed", "sanity", "knowledge")}
+    with patch.object(engine, "roll_dice", return_value=0):
+        handler._apply_effect(engine, hero_a, _haunt25_effect_doll("stone", hero_a.id), 1)
+    for stat in ("might", "speed", "sanity", "knowledge"):
+        assert hero_a.stat_positions[stat] == pos_before[stat] - 1, f"石娃娃应让 {stat} 各掉 1 格"
+    assert hero_a.dead is False
+
+    # 玻璃：自选掉 1 点理智或知识（恰好一项）
+    s_pos = hero_a.stat_positions["sanity"]
+    k_pos = hero_a.stat_positions["knowledge"]
+    handler._apply_effect(engine, hero_a, _haunt25_effect_doll("glass", hero_a.id), 1)
+    lost_sanity = hero_a.stat_positions["sanity"] == s_pos - 1
+    lost_knowledge = hero_a.stat_positions["knowledge"] == k_pos - 1
+    assert lost_sanity ^ lost_knowledge, "玻璃娃娃应恰好掉 1 点理智或知识"
+
+    # 布：掷输 → 2 点物理伤害（全落到速度，分摊策略由引擎决定，总格数为 2）
+    hero_a.ignore_first_physical_damage = False
+    if "item_armor" in hero_a.items:
+        hero_a.items.remove("item_armor")  # 排除盔甲挡伤的通用分支，专注本剧本规则
+    sp0, mi0 = hero_a.stat_positions["speed"], hero_a.stat_positions["might"]
+    with patch.object(engine, "roll_dice", return_value=0):
+        handler._apply_effect(engine, hero_a, _haunt25_effect_doll("rag", hero_a.id), 1)
+    drop = (sp0 - hero_a.stat_positions["speed"]) + (mi0 - hero_a.stat_positions["might"])
+    assert drop == 2, "布娃娃掷输应受 2 点物理伤害"
+    assert hero_a.dead is False
+
+    # ---- 英雄胜：所有娃娃销毁 且 存活英雄 ≥ 一半（向上取整）
+    hero_c_doll = next(d for d in dolls if d["hero_id"] == hero_c.id)
+    handler._destroy_doll(engine, hero_c_doll, reason="测试：销毁第三只娃娃。")
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes", "p36：销毁全部娃娃且过半存活 → 英雄胜"
+
+    # ---- 叛徒胜：过半英雄死亡（严格大于一半；3 英雄局死 1 个还不够）
+    engine2 = _run_until_haunt(seed=109, players=4, haunt_id=25)
+    handler2 = engine2._mode_handler()
+    heroes2 = [p for p in engine2.state.players if p.role == "hero"]
+    heroes2[0].dead = True
+    assert handler2.check_victory(engine2) is True and engine2.state.winner is None, "死不过半不判叛徒胜（需严格大于一半）"
+    heroes2[1].dead = True
+    assert handler2.check_victory(engine2) is True
+    assert engine2.state.winner == "traitor", "p107：过半英雄死亡 → 叛徒胜"
+
+
+def verify_haunt25_deferred_draw() -> None:
+    """剧本 25 探索解禁：探索新房间不再强制停，抽牌推迟到「结束移动的房间」（p36）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=25)
+    handler = engine._mode_handler()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    # 探索阶段就倒下的英雄：开局即触发 p36 死亡联动，其娃娃直接是销毁态
+    for doll in engine._haunt_flags()["dolls"]:
+        owner = next(p for p in engine.state.players if p.id == doll["hero_id"])
+        assert doll["destroyed"] == owner.dead, "英雄死亡 ↔ 娃娃销毁（含作祟前已死者）"
+    assert handler.explore_stop_suspended(engine, hero) is True
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+
+    # 实际走一步探索：强制抽到厨房（物品符号房），移动不应被强制打断
+    frontier = "0:0:0"
+    hero.room_key = frontier
+    option = next(o for o in engine.available_move_options(hero) if o.is_new_room)
+    hero.steps_remaining = 5
+    kitchen = engine.catalog.room_templates["kitchen"]
+    real_draw = engine._draw_room_template
+    used = {"kitchen": False}
+
+    def fake_draw(floor: int):
+        if floor == 0 and not used["kitchen"]:
+            used["kitchen"] = True
+            return kitchen
+        return real_draw(floor)
+
+    with patch.object(engine, "_draw_room_template", side_effect=fake_draw):
+        assert engine.move_player(hero, option) is True
+    new_room = engine.current_room(hero)
+    assert new_room.template_id == "kitchen", "应抽到被强制指定的厨房"
+    assert new_room.revealed is True
+    assert hero.movement_stopped is False, "p36：探索新房间不再强制停下"
+    assert hero.steps_remaining == 4, "探索只扣移动费用，步数不清零"
+    pending = engine._haunt_flags()["pending_draws"]
+    assert str(new_room.key) in pending, "符号房间的抽牌应被延迟记录"
+    with patch.object(engine, "_draw_symbol_card", wraps=engine._draw_symbol_card) as draw:
+        handler.on_turn_end(engine, hero)
+    assert draw.called, "结束移动停在新发现的符号房间 → 补抽一张"
+    assert draw.call_args.kwargs.get("stop_movement") is False, "延迟抽牌不打断移动"
+    assert str(new_room.key) not in pending
+
+    # 路过不停：新符号房发现后没停在里面 → 回合结束不补抽且作废
+    kitchen2 = engine._place_room(kitchen, 40, 40, 0)
+    hero.room_key = kitchen2.key
+    engine._resolve_room_entry_if_needed(hero)
+    assert str(kitchen2.key) in engine._haunt_flags()["pending_draws"]
+    hero.room_key = frontier  # 没停在里面
+    with patch.object(engine, "_draw_symbol_card") as draw2:
+        handler.on_turn_end(engine, hero)
+    assert not draw2.called, "没停在里面的新发现符号房不补抽（p36 只认结束移动的房间）"
+    assert str(kitchen2.key) not in engine._haunt_flags()["pending_draws"], "作废的延迟抽牌应清掉"
+
+    # 在新发现的符号房间里搜寻 → 立即抽一张（p36）
+    kitchen3 = engine._place_room(kitchen, 41, 40, 0)
+    kitchen3.revealed = False
+    hero.room_key = kitchen3.key
+    engine._resolve_room_entry_if_needed(hero)
+    engine._reset_player_turn_state(hero)
+    hero.control = "human"  # 厨房不是 bot 候选房，转人类视角触发搜寻
+    with patch.object(engine, "_resolve_check", return_value=True):
+        with patch.object(engine, "_draw_symbol_card", wraps=engine._draw_symbol_card) as draw3:
+            assert handler.perform_action(engine, hero, "search_doll", {}) is True
+    assert draw3.called, "p36：在新发现的符号房间里搜寻要先抽一张符号牌"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -3117,6 +3341,8 @@ def main():
     verify_haunt22_abyss_exorcism()
     verify_haunt23_tentacled_horror()
     verify_haunt24_bat_swarm()
+    verify_haunt25_voodoo()
+    verify_haunt25_deferred_draw()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

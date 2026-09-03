@@ -1184,6 +1184,67 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [35, 106],
     },
+    25: {
+        # 校准记录（2026-09-03，对照英雄手册 p36 / 叛徒手册 p107）：
+        #   骨架原本只给了 cultist 怪与抽象进度轨道，与原版"巫毒娃娃"机制无关。
+        #   核心机制：叛徒给每个英雄选一个娃娃（5 种，各绑定两个候选房间），
+        #     在 p107 列出的两个候选房间里二选一放置；「恰有一间已发现」时必须
+        #     选已发现的那间，两间都发现或都没发现时任选（bot 取列表第一间）。
+        #     每个英雄会被宣读自己娃娃的描述引文（= 知道自己的娃娃类型与两个
+        #     候选房间）。娃娃与房间模板绑定，候选房未上桌也算合法放置。
+        #   探索规则变更（p36）：本剧本解除"进入带符号的新房间必须停"的限制——
+        #     可以连续探索任意多新房间，只在"结束移动的房间"有符号时才抽牌；
+        #     在当回合新发现的符号房间里搜寻娃娃也要抽一张符号牌。
+        #     （引擎 hook：explore_stop_suspended + suppress_room_draw 延迟抽牌。）
+        #   搜寻（p36）：知识 2+，每回合一次；成功后询问叛徒该房间是否有娃娃
+        #     （电子版直接按盘面如实回答）。搜到的娃娃若属于自己→当场自动销毁；
+        #     若属于别人→只公开位置（只有主人能安全销毁自己的娃娃）。
+        #     搜寻落空（如实说"没有"）的结果对全桌公开（桌游里答案是口头的）。
+        #   英雄死亡 → 该英雄的娃娃同时被销毁（p36）。
+        #   时钟（p107）：叛徒回合结束时把回合/伤害轨道推进到下一数字（从 1 起），
+        #     届时每个未销毁的娃娃影响其主人一次。叛徒死亡后按本仓库惯例改由
+        #     "本轮最后一名存活玩家"的回合结束推进（原文未覆盖叛徒死亡）。
+        #   效果（p107，回合数 = 轨道数字）：
+        #     蜡娃娃  英雄自选失去 1 点力量或速度（bot 掉数值较高的一项，平手掉力量）；
+        #     瓷娃娃  掷 4 枚骰，结果 < 回合数 → 娃娃坠落摔碎，英雄当场死亡；
+        #     石娃娃  英雄做力量掷骰，结果 < 回合数 → 每项属性各失去 1 点；
+        #     玻璃娃娃 英雄自选失去 1 点理智或知识（bot 同蜡娃娃策略）；
+        #     布娃娃  英雄做知识掷骰，结果 < 回合数 → 受 2 点物理伤害。
+        #   胜负（p36/p107）：英雄胜 = 销毁所有娃娃且存活英雄 ≥ 原英雄数的一半
+        #     （向上取整）；叛徒胜 = 开局英雄过半死亡（严格大于一半）。两者互斥。
+        #     叛徒死亡不等于英雄胜（覆盖引擎兜底；娃娃时钟继续走）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "voodoo_dolls",
+        "traitor_rule": "revealer",
+        "hero_goal": "循着线索找到每个巫毒娃娃的房间，销毁所有娃娃，并保证至少一半英雄活着。",
+        "traitor_goal": "让娃娃的诅咒随着时间流逝杀死过半英雄。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {
+                # 回合/伤害轨道：p107 的 Turn/Damage Track，从 0 起每叛徒回合 +1
+                "turn_damage": {"label": "回合/伤害轨道", "target": 0, "side": "traitor"},
+            },
+            "flags": {
+                "dolls": [],
+                "cleared_rooms": [],
+            },
+        },
+        "monsters": [],
+        "actions": [
+            {"id": "search_doll", "side": "heroes", "label": "搜寻巫毒娃娃",
+             "detail": "知识 2+（p36），每回合一次。成功后按盘面如实告知本房间有无娃娃；"
+                       "搜到自己房间里的娃娃当场销毁，搜到别人的只公开位置。"
+                       "在当回合新发现的符号房间里搜寻，须先抽一张符号牌。",
+             "stat": "knowledge", "target": 2},
+        ],
+        "win_conditions": [],
+        "source_pages": [36, 107],
+    },
 }
 
 
@@ -1344,7 +1405,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    25: dict(mode="voodoo_dolls", traitor_rule="revealer", hero_goal="找到并摧毁所有巫毒娃娃，同时让至少一半英雄存活。", traitor_goal="让娃娃的诅咒杀死英雄。", rooms=("bloody_room", "larder", "crypt", "junk_room", "vault", "attic", "kitchen"), monsters=("cultist",), tokens=("voodoo_doll", "curse", "time"), hero_task="寻找并摧毁巫毒娃娃", traitor_task="加深娃娃诅咒", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在娃娃可能出现的房间完成搜寻和摧毁。", traitor_detail="推进诅咒强度轨道。", monster_count=1),
     26: dict(mode="rat_ritual", traitor_rule="revealer", hero_goal="消灭房屋内所有老鼠，阻止五芒星室的仪式。", traitor_goal="完成老鼠仪式，或杀死所有英雄。", rooms=("pentagram_chamber", "kitchen", "larder", "junk_room", "crypt"), monsters=("spider",), tokens=("rat", "ritual", "sanity_check"), hero_task="清除老鼠", traitor_task="完成老鼠仪式", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="逐个清除老鼠标记。", traitor_detail="在五芒星室推进仪式轨道。", monster_count="player_count"),
     27: dict(mode="blob_weakness", traitor_rule="revealer", hero_goal="发现斑点弱点并用正确配方摧毁 Blob。", traitor_goal="让斑点扩散并杀死所有英雄。", rooms=("research_laboratory", "kitchen", "furnace_room", "chasm", "underground_lake"), monsters=("plant",), tokens=("blob", "knowledge_check", "formula"), hero_task="研究斑点弱点", traitor_task="扩散斑点", hero_stat="knowledge", hero_target=3, hero_progress_target=2, hero_detail="在斑点标记相邻房间完成研究，随后完成化学配方。", traitor_detail="推进斑点扩散轨道。", monster_count=1, hero_win_target=2),
     28: dict(mode="demon_ring", traitor_rule="revealer", hero_goal="携带戒指击败恶魔领主两次。", traitor_goal="让恶魔从地狱之门涌入并杀死所有英雄。", rooms=("chasm", "furnace_room", "underground_lake", "pentagram_chamber", "chapel"), monsters=("giant",), tokens=("demon_lord", "demon", "hell_gate"), hero_task="用戒指放逐恶魔领主", traitor_task="召唤恶魔", hero_stat=["might", "sanity"], hero_target=5, hero_progress_target=2, hero_detail="携带戒指在恶魔领主所在房间完成一次放逐攻击。", traitor_detail="推进地狱之门召唤进度。", monster_count="player_count", hero_win_target=2, hero_requires=("omen_ring",)),

@@ -460,6 +460,16 @@ class BotController:
         flags = engine._haunt_flags()
         goals: set[str] = set()
 
+        # 0) 剧本可提供定制目标（剧本 25：每个英雄找"自己娃娃"的候选房间，
+        #    静态 rule_data 表达不了按玩家区分的目标）。duck-typed 探测，
+        #    未实现该方法的 handler 保持原行为。
+        handler = engine._mode_handler()
+        custom_goals = getattr(handler, "bot_goal_rooms", None)
+        if callable(custom_goals):
+            provided = custom_goals(engine, player) or []
+            if provided:
+                goals.update(provided)
+
         # 1) 有房间要求的剧本行动：挖曼德拉草要去温室/储藏室/厨房，
         #    降灵会要去五芒星室……
         for action in rule.get("actions", []):
