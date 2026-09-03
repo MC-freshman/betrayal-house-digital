@@ -33,6 +33,7 @@ if __package__ in {None, ""}:
         BugSprayMode,
         BeastmasterMode,
         BeastmasterMode,
+        GhostBrideMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -122,8 +123,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(BugSprayMode) == [17], f"剧本 17 未走定制 handler: {handlers.get(BugSprayMode)}"
     assert handlers.get(OffspringMode) == [18], f"剧本 18 未走定制 handler: {handlers.get(OffspringMode)}"
     assert handlers.get(BeastmasterMode) == [19], f"剧本 19 未走定制 handler: {handlers.get(BeastmasterMode)}"
+    assert handlers.get(GhostBrideMode) == [20], f"剧本 20 未走定制 handler: {handlers.get(GhostBrideMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 51, f"应有 51 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 50, f"应有 50 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -133,7 +135,7 @@ def verify_mode_dispatch() -> None:
     assert isinstance(get_mode_handler("no_such_mode"), GenericModeHandler)
 
     assert set(registered_modes()) == {
-        "alien_abduction", "banishment_escort", "beastmaster", "bug_spray", "carnivorous_ivy",
+        "alien_abduction", "banishment_escort", "beastmaster", "bug_spray", "carnivorous_ivy", "ghost_bride",
         "delayed_traitor_relic", "dragon_siege", "exorcism", "fleshwalkers", "generic",
         "nightmare_escape", "paint_the_pentagram", "phantom_bomb",
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
@@ -191,6 +193,9 @@ def verify_mode_handler_reaches_engine() -> None:
 
     engine.state.haunt = engine.catalog.haunt_defs[19]
     assert isinstance(engine._mode_handler(), BeastmasterMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[20]
+    assert isinstance(engine._mode_handler(), GhostBrideMode)
 
     engine.state.haunt = engine.catalog.haunt_defs[35]
     assert isinstance(engine._mode_handler(), GenericModeHandler)
@@ -2104,6 +2109,81 @@ def verify_haunt19_beastmaster() -> None:
     assert engine.state.winner == "traitor", "杀死驯兽师应为英雄的失败"
 
 
+def verify_haunt20_ghost_bride() -> None:
+    """剧本 20：四步链/起尸背尸/教堂安息/新娘杀新郎与婚礼计时（p31/p102）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=20)
+    handler = engine._mode_handler()
+    assert isinstance(handler, GhostBrideMode)
+    flags = engine._haunt_flags()
+
+    # 布点：教堂与地窖在场；尸体在地窖；新娘在叛徒房间且不可被攻击
+    board_ids = {r.template_id for r in engine.state.board.values()}
+    assert "chapel" in board_ids and "crypt" in board_ids, "教堂与地窖应被强制入场"
+    corpse = engine.tokens_of_kind("corpse")
+    assert corpse and engine.state.board[corpse[0].room_key].template_id == "crypt", "尸体应在地窖"
+    bride = engine._monster_by_template("ghost")
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    assert bride is not None and bride.room_key == traitor.room_key, "新娘应在叛徒房间"
+    assert engine._monster_invulnerable(bride), "新娘不可被任何手段伤害"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    assert flags.get("groom_id") == hero.id or flags.get("groom_id") is not None, "应选定新郎"
+
+    # 第 1 步：持书翻日记（绕开房间要求）
+    hero.items.append("omen_book")
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "learn_name_book" in ids, "持书应能翻日记"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "learn_name_book", {}) is True
+    assert flags.get("groom_name_known") is True
+
+    # 第 2 步：地窖定位
+    crypt_key = next(k for k, r in engine.state.board.items() if r.template_id == "crypt")
+    hero.room_key = crypt_key
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "locate_body" in ids
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "locate_body", {}) is True
+
+    # 第 3 步：起尸 → 尸体自动背上，入房按 2 格
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "disinter_body" in ids
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "disinter_body", {}) is True
+    assert engine.tokens_held_by(hero.id, "corpse"), "起尸后应自动背上"
+    assert handler.movement_cost_multiplier(engine, hero) == 2, "背尸入房按 2 格计"
+
+    # 第 4 步：尸体 + 戒指进教堂 → 新娘安息（英雄胜）
+    hero.items.append("omen_ring")
+    chapel = flags["chapel_room"]
+    engine._move_to_room(hero, chapel)
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+
+    # 新娘杀新郎：伤害转力量流失；新郎死亡掉戒指；婚礼计时第 3 回合叛徒胜
+    groom = handler._groom(engine)
+    groom.room_key = bride.room_key
+    might_before = groom.stats["might"]
+    with patch.object(engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 9), \
+         patch.object(engine, "_roll_attack", return_value=1):
+        assert handler.on_monster_turn_attack(engine, bride) is True
+    assert groom.stats["might"] < might_before or groom.dead, "对新郎的伤害应转为力量流失"
+    while not groom.dead:
+        groom.stat_positions["might"] = max(0, groom.stat_positions.get("might", 0) - 1)
+        groom.stats["might"] = max(0, groom.stats["might"] - 1)
+        engine._check_player_death(groom)
+    assert groom.dead and "omen_ring" not in groom.items, "新郎死亡应掉落戒指"
+    engine.state.monsters = [m for m in engine.state.monsters if m.room_key != chapel or m is not bride]
+    handler.on_monster_move(engine, bride, 4)  # 新郎已死：新娘进教堂开婚
+    assert flags.get("wedding_started") is True
+    engine._set_haunt_track_value("wedding_timer", 2)
+    handler.on_turn_start(engine, traitor)
+    assert engine.state.winner == "traitor", "婚礼第 3 回合应完成"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -2457,6 +2537,7 @@ def main():
     verify_haunt17_bugs()
     verify_haunt18_offspring()
     verify_haunt19_beastmaster()
+    verify_haunt20_ghost_bride()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

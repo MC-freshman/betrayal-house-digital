@@ -904,6 +904,60 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [30, 101],
     },
+    20: {
+        # 校准记录（2026-09-02，对照英雄手册 p31 / 叛徒手册 p102）：
+        #   机制落在 GhostBrideMode：
+        #   · 教堂与地窖强制入场（p102）；新郎尸体令牌开局放地窖
+        #   · 英雄四步（每步每回合一次，顺序由 requires_flags 串起）：
+        #     ①知识5+（卧室/餐厅/图书馆或持书）得知新郎姓名 →
+        #     ②知识4+（地窖）定位尸体 → ③力量4+（地窖）起尸（尸体令牌
+        #     自动背上）→ ④背尸进教堂（入房按 2 格，可转交）+ 戒指进教堂
+        #     → 新娘安息（英雄胜）
+        #   · 新娘（ghost 模板承载）不可被任何手段伤害/击晕（p102，
+        #     invulnerable，含戒指理智攻击——叛徒手册为准）；3-4 人局
+        #     4/6，5-6 人局 5/7（handler 生成时按人数调整）
+        #   · 新郎人选：优先持戒指的英雄，若其为女性则最年长男性；
+        #     无男性英雄的 NPC 新郎分支未建模（本项目无性别数据，
+        #     退化为任选一名英雄，已注明）
+        #   · 新娘攻击：对非新郎正常精神伤害；对新郎转为力量流失
+        #     （1-2→-1 / 3-4→-2 / 5+→-3），新郎力量耗尽死亡（掉戒指）
+        #   · 婚礼：新郎死后新娘由 bot 移进教堂即开婚，叛徒回合推进
+        #     计时，第 3 回合婚礼完成 → 叛徒胜
+        #   简化：新娘穿墙移动近似为正常寻路；"新郎亡魂受叛徒控制"
+        #     抽象为死亡离场；NPC 新郎分支未建模。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "ghost_bride",
+        "traitor_rule": "revealer",
+        "hero_goal": "查明新郎姓名，从地窖起出尸体，把尸体和戒指带进教堂让新娘安息。",
+        "traitor_goal": "让幽灵新娘杀死选定的新郎并把婚礼办完。",
+        "suggested_monsters": ["ghost"],
+        "required_cards": ["omen_ring"],
+        "key_rooms": ["chapel", "crypt", "bedroom", "dining_room", "library"],
+        "tokens": ["bride", "corpse"],
+        "setup": {
+            "tracks": {
+                "wedding_timer": {"label": "婚礼计时", "target": 3, "side": "traitor"},
+            },
+            "flags": {
+                "groom_name_known": False, "body_located": False, "body_disintered": False,
+                "groom_id": None, "groom_dead": False, "wedding_started": False,
+                "bride_room": None,
+            },
+        },
+        "monsters": [
+            {"template_id": "ghost", "name": "幽灵新娘", "spawn": "deferred", "speed": 4, "might": 0, "sanity": 6, "invulnerable": True},
+        ],
+        "actions": [
+            {"id": "learn_name", "side": "heroes", "label": "查明新郎姓名", "detail": "在卧室/餐厅/图书馆做知识 5+，或持书检定（p31 第 1 步）。", "stat": "knowledge", "target": 5, "rooms": ["bedroom", "dining_room", "library"], "requires": [], "requires_flags": {"groom_name_known": False}, "set_flags": {"groom_name_known": True}},
+            {"id": "learn_name_book", "side": "heroes", "label": "翻阅她的日记", "detail": "持古书做知识 5+，查明新郎姓名（p31 第 1 步）。", "stat": "knowledge", "target": 5, "requires": ["omen_book"], "requires_flags": {"groom_name_known": False}, "set_flags": {"groom_name_known": True}},
+            {"id": "locate_body", "side": "heroes", "label": "定位尸体", "detail": "在地窖做知识 4+，找到真正新郎的埋骨处（p31 第 2 步）。", "stat": "knowledge", "target": 4, "rooms": ["crypt"], "requires_flags": {"groom_name_known": True, "body_located": False}, "set_flags": {"body_located": True}},
+            {"id": "disinter_body", "side": "heroes", "label": "起出尸体", "detail": "在地窖做力量 4+，起出新郎的尸体并背上（p31 第 3 步）。", "stat": "might", "target": 4, "rooms": ["crypt"], "requires_flags": {"body_located": True, "body_disintered": False}, "set_flags": {"body_disintered": True}},
+        ],
+        "win_conditions": [],
+        "source_pages": [31, 102],
+    },
 }
 
 
@@ -1064,7 +1118,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    20: dict(mode="ghost_bride", traitor_rule="revealer", hero_goal="找到戒指和真正新郎的尸体，并在小教堂阻止错误婚礼。", traitor_goal="让幽灵新娘在小教堂完成婚礼，或杀死所有英雄。", rooms=("crypt", "graveyard", "chapel", "catacombs", "entrance_hall"), monsters=("ghost",), tokens=("bride", "groom", "ring", "corpse"), hero_task="揭穿并阻止幽灵婚礼", traitor_task="完成幽灵婚礼", hero_stat="knowledge", hero_target=5, hero_progress_target=2, hero_detail="先找齐戒指和尸体，再在小教堂完成阻止仪式。", traitor_detail="在小教堂推动婚礼进度。", monster_count=1, hero_win_target=2, traitor_win_type="track", traitor_progress_target=2),
     21: dict(mode="zombie_lord", traitor_rule="revealer", hero_goal="摧毁僵尸领主或消灭所有僵尸。", traitor_goal="让僵尸领主和僵尸杀死所有英雄。", rooms=("crypt", "graveyard", "entrance_hall", "underground_lake", "garden", "chapel", "conservatory", "pentagram_chamber"), monsters=("zombie", "giant"), tokens=("zombie_lord", "zombie", "damage"), hero_task="清理僵尸并攻击领主", traitor_task="召集僵尸围攻", hero_stat="might", hero_target=5, hero_detail="在僵尸威胁区域完成清理行动。", traitor_detail="让僵尸推进围攻轨道。", monster_count="player_count"),
     22: dict(mode="abyss_exorcism", traitor_rule="revealer", hero_goal="完成与玩家数相等的驱魔检定，阻止房屋坍入深渊。", traitor_goal="让房屋不断坍塌并杀死所有英雄。", rooms=("chasm", "chapel", "crypt", "pentagram_chamber", "library", "research_laboratory"), monsters=("shadow",), tokens=("sanity_check", "knowledge_check", "abyss"), hero_task="驱魔稳定房屋", traitor_task="加速深渊坍塌", hero_stat=["sanity", "knowledge"], hero_target=5, hero_detail="在指定房间或使用指定物品完成一次驱魔。", traitor_detail="推进坍塌倒计时。", monster_count=1),
     23: dict(mode="tentacled_horror", traitor_rule="revealer", hero_goal="摧毁触手生物。", traitor_goal="让触手逐渐增强并杀死所有英雄。", rooms=("furnace_room", "conservatory", "organ_room", "underground_lake", "garden", "chasm"), monsters=("giant",), tokens=("tentacle_root", "tentacle_tip", "time"), hero_task="定位并摧毁触手", traitor_task="增强触手", hero_stat="might", hero_target=6, hero_progress_target=1, hero_detail="在触手所在房间完成一次破坏行动。", traitor_detail="推进触手增长轨道。", monster_count="player_count", hero_win_target=1),
