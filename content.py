@@ -1608,6 +1608,16 @@ MONSTER_BASES = [
         tags=("animal",),
     ),
     monster_def(
+        monster_id="bat",
+        name="蝙蝠",
+        source_name="Bat",
+        speed=5,
+        might=2,
+        sanity=1,
+        text="不正面攻击，而是贴到人身上吸血。",
+        tags=("animal", "haunt_specific"),
+    ),
+    monster_def(
         monster_id="plant",
         name="邪恶植物",
         source_name="Evil Plant",

@@ -37,6 +37,7 @@ if __package__ in {None, ""}:
         ZombieLordMode,
         AbyssExorcismMode,
         TentacledHorrorMode,
+        BatSwarmMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -130,8 +131,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ZombieLordMode) == [21], f"剧本 21 未走定制 handler: {handlers.get(ZombieLordMode)}"
     assert handlers.get(AbyssExorcismMode) == [22], f"剧本 22 未走定制 handler: {handlers.get(AbyssExorcismMode)}"
     assert handlers.get(TentacledHorrorMode) == [23], f"剧本 23 未走定制 handler: {handlers.get(TentacledHorrorMode)}"
+    assert handlers.get(BatSwarmMode) == [24], f"剧本 24 未走定制 handler: {handlers.get(BatSwarmMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 47, f"应有 47 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 46, f"应有 46 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -146,7 +148,7 @@ def verify_mode_dispatch() -> None:
         "nightmare_escape", "paint_the_pentagram", "phantom_bomb",
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
-        "tentacled_horror",
+        "tentacled_horror", "bat_exodus",
     }
 
 
@@ -2600,6 +2602,127 @@ def verify_haunt23_tentacled_horror() -> None:
     assert engine.state.winner == "heroes", "摧毁头颅即英雄胜（p34）"
 
 
+def verify_haunt24_bat_swarm() -> None:
+    """剧本 24：开局布点/每轮入室与 24 上限/贴附吸血/盔甲与减速/风琴三步（p35/p106）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=24)
+    handler = engine._mode_handler()
+    assert isinstance(handler, BatSwarmMode)
+    flags = engine._haunt_flags()
+    for person in engine.state.players:
+        if person.role == "hero" and person.dead:
+            person.dead = False
+            for stat in ("speed", "might", "sanity", "knowledge"):
+                person.stats[stat] = 4
+
+    # p35：风琴房必须在场；p106：开局蝙蝠只在 塔楼/阁楼 与 裂隙/地下墓穴，且为 3 的倍数
+    assert any(room.template_id == "organ_room" for room in engine.state.board.values()), "风琴房应被强制入场"
+    start_rooms = {"tower", "attic", "chasm", "catacombs"}
+    bats = handler._bats(engine)
+    assert len(bats) % 3 == 0 and len(bats) <= 6, f"开局蝙蝠应是 3 的倍数且不超过 6，实际 {len(bats)}"
+    for bat in bats:
+        assert engine.state.board[bat.room_key].template_id in start_rooms, "开局蝙蝠只能落在 p106 的两组房间"
+    assert next(p for p in engine.state.players if p.role == "traitor").dead is True, "叛徒开局即死"
+
+    # p106：每个怪物回合按玩家数掷骰入室，一个怪物回合只放一批，场内封顶 24
+    with patch.object(engine, "roll_dice", return_value=4):
+        assert handler._enter_bats_this_round(engine) is None
+        after_first = len(handler._bats(engine))
+        assert after_first == len(bats) + 4, "应放入 4 只（掷骰结果）"
+        handler._enter_bats_this_round(engine)
+        assert len(handler._bats(engine)) == after_first, "同一轮不该再放第二批"
+    engine._haunt_flags()["bats_sealed"] = True
+    sealed_count = len(handler._bats(engine))
+    with patch.object(engine, "roll_dice", return_value=4):
+        engine.state.turn_count += 5
+        handler._enter_bats_this_round(engine)
+    assert len(handler._bats(engine)) == sealed_count, "封住入口后不该再有蝙蝠入室"
+    engine._haunt_flags()["bats_sealed"] = False
+    while len(handler._bats(engine)) < handler.BAT_CAP:
+        engine.state.turn_count += 1
+        with patch.object(engine, "roll_dice", return_value=8):
+            handler._enter_bats_this_round(engine)
+    assert len(handler._bats(engine)) == handler.BAT_CAP, "场内蝙蝠应封顶 24 只"
+
+    # p106：贴脸的蝙蝠掷 1 枚骰，掷出 2 就贴上去
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    bat = next(b for b in handler._bats(engine) if handler._host_of(engine, b) is None)
+    bat.room_key = hero.room_key
+    with patch.object(engine, "roll_dice", return_value=2):
+        assert handler.on_monster_turn_start(engine, bat) is True
+    assert str(bat.id) in handler._attached_ids(engine, hero), "掷出 2 应贴附"
+    moved_room = hero.room_key
+    hero.room_key = next(k for k in engine.state.board if k != moved_room)
+    handler.on_player_moved(engine, hero)
+    assert bat.room_key == hero.room_key, "贴附的蝙蝠应跟着宿主走"
+
+    # p35/p106：宿主回合开始按贴附数各受 1 点物理伤害，并每只少走 1 格
+    # （p35 的"盔甲少受 1 点"由引擎既有盔甲效果承担，本剧本不叠加减免）
+    other = next(p for p in engine.state.players if p.role == "hero" and not p.dead and p is not hero)
+    for _ in range(2):
+        free = next(b for b in handler._bats(engine) if handler._host_of(engine, b) is None)
+        free.room_key = other.room_key
+        with patch.object(engine, "roll_dice", return_value=2):
+            handler.on_monster_turn_start(engine, free)
+    assert len(handler._attached_ids(engine, other)) == 2
+    other.steps_remaining = 6
+    with patch.object(engine, "_deal_damage") as dealt:
+        handler.on_turn_start(engine, other)
+    dealt.assert_called_once_with(other, "physical", 2, source=handler.DAMAGE_SOURCE)
+    assert other.steps_remaining == 4, "每只贴附蝙蝠让宿主少走 1 格"
+    other.steps_remaining = 1
+    with patch.object(engine, "_deal_damage"):
+        handler.on_turn_start(engine, other)
+    assert other.steps_remaining == 1, "至少保留 1 格移动"
+    # 宿主被咬死 → 蝙蝠脱离尸体，可以重新去找别人
+    other.stats["speed"] = 0
+    engine._check_player_death(other)
+    with patch.object(engine, "_deal_damage"):
+        handler.on_turn_start(engine, other)
+    assert not handler._attached_ids(engine, other), "宿主死亡后蝙蝠应松开"
+
+    # p35：力量攻击击败蝙蝠 = 杀死；其他属性只击晕
+    target_bat = next(iter(handler._bats(engine)), None)
+    assert handler.monster_killed_on_defeat(engine, target_bat, hero, "speed", "item_axe") is False
+    assert handler.monster_killed_on_defeat(engine, target_bat, hero, "might", "item_axe") is True
+
+    # 老坑：叛徒开局已死，场上还有蝙蝠时不能判英雄胜
+    assert handler.check_victory(engine) is True and engine.state.winner is None
+
+    # p35 三步：先在风琴房力量 5+ 启动管风琴，再知识 6+ 奏音封门并赶走未贴附的蝙蝠
+    organ_key = next(k for k, room in engine.state.board.items() if room.template_id == "organ_room")
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+    hero.room_key = organ_key
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "start_organ" in ids and "drive_away_bats" not in ids, "没启动管风琴就不能奏音"
+    engine._reset_player_turn_state(hero)
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "start_organ", {}) is True
+    assert flags["organ_started"] is True
+    engine._reset_player_turn_state(hero)
+    attached_before = {pid: list(ids_) for pid, ids_ in handler._attached_map(engine).items() if ids_}
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "drive_away_bats" in ids
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "drive_away_bats", {}) is True
+    assert flags["bats_sealed"] is True
+    assert all(
+        handler._host_of(engine, bat) is not None for bat in handler._bats(engine)
+    ), "奏音后只应留下贴附在人身上的蝙蝠"
+    for pid, ids_ in attached_before.items():
+        assert handler._attached_map(engine).get(pid) == ids_, "贴附的蝙蝠不该被赶走"
+
+    # 杀死最后一只贴附蝙蝠 → 英雄胜
+    for pid in list(handler._attached_map(engine)):
+        for bat_id in list(handler._attached_map(engine)[pid]):
+            bat = next((m for m in engine.state.monsters if str(m.id) == str(bat_id)), None)
+            if bat is not None:
+                assert handler.monster_killed_on_defeat(engine, bat, hero, "might", "item_axe") is True
+                engine._kill_monster(bat, killer=hero)
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes", "封门后杀光贴附蝙蝠即英雄胜（p35）"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -2957,6 +3080,7 @@ def main():
     verify_haunt21_zombie_lord()
     verify_haunt22_abyss_exorcism()
     verify_haunt23_tentacled_horror()
+    verify_haunt24_bat_swarm()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

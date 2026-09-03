@@ -1124,6 +1124,66 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [34, 105],
     },
+    24: {
+        # 校准记录（2026-09-03，对照英雄手册 p35 / 叛徒手册 p106）：
+        #   骨架原本用 spider 模板冒充蝙蝠，且没有"贴附吸血"这条核心机制。
+        #   数值：蝙蝠 Speed 5 / Might 2 / Sanity 1（p106 页脚）。
+        #   开局（p35/p106）：叛徒已死并移出对局；风琴房不在场就从牌堆找出来放上；
+        #     取 24 枚蝙蝠令牌，塔楼或阁楼放 3 只、裂隙或地下墓穴放 3 只
+        #     （两者都没发现就少放，p106 明文"the haunt begins with fewer Bats"）。
+        #   入室（p106）：每个怪物回合掷「玩家数」枚骰，得到当回合进入的蝙蝠数；
+        #     入口 = 塔楼/裂隙/温室/门厅/花园/墓地/露台/阳台（有朝外窗的房间），
+        #     每个入口一次只进一只，蝙蝠多于入口才由叛徒选重复入口；
+        #     进入算移动 1 格；场内蝙蝠总数封顶 24。
+        #   攻击（p106）：蝙蝠不做普通攻击——每只贴脸掷 1 枚骰，掷出 2 就贴到该
+        #     探险者身上；贴附后不再移动/攻击，宿主每回合开始按贴附数各受 1 点
+        #     物理伤害（持盔甲少受 1 点），且每只贴附蝙蝠让宿主少走 1 格（至少 1 格）。
+        #   英雄胜（p35 三步，每步每回合只能试一次）：① 风琴房力量 5+ 启动管风琴
+        #     → ② 风琴房知识 6+ 奏出驱蝠之音，赶走所有未贴附的蝙蝠并封住入口
+        #     → ③ 杀死仍贴在人身上的蝙蝠。力量攻击击败蝙蝠 = 杀死而非击晕。
+        #   叛徒胜：所有英雄死亡。音乐爱好分支（知识 5+ 代替 6+）未建模——
+        #     本仓库角色数据里没有爱好字段。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "bat_exodus",
+        "traitor_rule": "revealer",
+        "hero_goal": "在风琴房启动管风琴并奏出驱蝠之音封住入口，再杀死所有贴在人身上的蝙蝠。",
+        "traitor_goal": "让蝙蝠群把每位探险者的血吸干。",
+        "suggested_monsters": ["bat"],
+        "required_cards": ["item_armor"],
+        "key_rooms": ["organ_room"],
+        "tokens": ["bat"],
+        "setup": {
+            "tracks": {
+                "bats_released": {"label": "已入室的蝙蝠", "target": 24, "side": "traitor"},
+            },
+            "flags": {
+                "organ_started": False,
+                "bats_sealed": False,
+                "attached": {},
+                "last_entry_turn": -1,
+            },
+        },
+        "monsters": [
+            # spawn=deferred：开局布点与后续入室都由 handler 按 p106 规则处理
+            {"template_id": "bat", "name": "蝙蝠", "spawn": "deferred",
+             "speed": 5, "might": 2, "sanity": 1},
+        ],
+        "actions": [
+            {"id": "start_organ", "side": "heroes", "label": "启动管风琴",
+             "detail": "在风琴房做力量 5+ 启动管风琴（p35 第 1 步）。",
+             "stat": "might", "target": 5, "rooms": ["organ_room"],
+             "requires_flags": {"organ_started": False},
+             "set_flags": {"organ_started": True}},
+            {"id": "drive_away_bats", "side": "heroes", "label": "奏出驱蝠之音",
+             "detail": "管风琴已启动后，在风琴房做知识 6+ 赶走所有未贴附的蝙蝠并封住入口（p35 第 2 步）。",
+             "stat": "knowledge", "target": 6, "rooms": ["organ_room"],
+             "requires_flags": {"organ_started": True, "bats_sealed": False}},
+        ],
+        "win_conditions": [],
+        "source_pages": [35, 106],
+    },
 }
 
 
@@ -1284,7 +1344,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    24: dict(mode="bat_exodus", traitor_rule="revealer", hero_goal="用风琴赶走蝙蝠并消灭附着的蝙蝠。", traitor_goal="让蝙蝠吸取英雄生命，或杀死所有英雄。", rooms=("organ_room", "entrance_hall", "balcony", "garden", "graveyard", "patio", "tower"), monsters=("spider",), tokens=("bat", "organ", "victim"), hero_task="演奏风琴驱逐蝙蝠", traitor_task="扩散蝙蝠", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在风琴房完成驱逐检定。", traitor_detail="推进蝙蝠侵袭轨道。", monster_count="player_count"),
     25: dict(mode="voodoo_dolls", traitor_rule="revealer", hero_goal="找到并摧毁所有巫毒娃娃，同时让至少一半英雄存活。", traitor_goal="让娃娃的诅咒杀死英雄。", rooms=("bloody_room", "larder", "crypt", "junk_room", "vault", "attic", "kitchen"), monsters=("cultist",), tokens=("voodoo_doll", "curse", "time"), hero_task="寻找并摧毁巫毒娃娃", traitor_task="加深娃娃诅咒", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在娃娃可能出现的房间完成搜寻和摧毁。", traitor_detail="推进诅咒强度轨道。", monster_count=1),
     26: dict(mode="rat_ritual", traitor_rule="revealer", hero_goal="消灭房屋内所有老鼠，阻止五芒星室的仪式。", traitor_goal="完成老鼠仪式，或杀死所有英雄。", rooms=("pentagram_chamber", "kitchen", "larder", "junk_room", "crypt"), monsters=("spider",), tokens=("rat", "ritual", "sanity_check"), hero_task="清除老鼠", traitor_task="完成老鼠仪式", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="逐个清除老鼠标记。", traitor_detail="在五芒星室推进仪式轨道。", monster_count="player_count"),
     27: dict(mode="blob_weakness", traitor_rule="revealer", hero_goal="发现斑点弱点并用正确配方摧毁 Blob。", traitor_goal="让斑点扩散并杀死所有英雄。", rooms=("research_laboratory", "kitchen", "furnace_room", "chasm", "underground_lake"), monsters=("plant",), tokens=("blob", "knowledge_check", "formula"), hero_task="研究斑点弱点", traitor_task="扩散斑点", hero_stat="knowledge", hero_target=3, hero_progress_target=2, hero_detail="在斑点标记相邻房间完成研究，随后完成化学配方。", traitor_detail="推进斑点扩散轨道。", monster_count=1, hero_win_target=2),
