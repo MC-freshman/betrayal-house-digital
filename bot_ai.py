@@ -161,6 +161,15 @@ class BotController:
             options = engine.available_move_options(player)
             if not options:
                 break
+            if (
+                engine.state.phase == "HAUNT_PHASE"
+                and engine._haunt_action_used(player)
+                and self._pending_haunt_action_here(engine, player)
+            ):
+                # 已经在这间房做完一步、下一步还在这间房：原地等下回合。
+                # 24 号实测——英雄启动管风琴后立刻被战斗牵走，知识 6+ 的第二步
+                # 永远没人做，驱魔三步链断在中间。
+                break
             ranked = self._rank_move_options(engine, player, options)
             if not ranked:
                 break
@@ -234,6 +243,24 @@ class BotController:
 
     def _monster_in_room(self, engine: GameEngine, player: Player) -> bool:
         return any(monster.room_key == player.room_key and monster.stunned_turns <= 0 for monster in engine.state.monsters)
+
+    def _pending_haunt_action_here(self, engine: GameEngine, player: Player) -> bool:
+        """本房间是否还有一次"这回合已用完、下回合还能做"的剧本行动。
+
+        引擎的可用行动列表会因为"本回合已用过剧本行动"直接返回空，
+        所以这里临时清掉标记问一次，看完再还原。
+        """
+        used = engine._haunt_rule_state().setdefault("actions_used", {})
+        key = str(player.id)
+        saved = used.get(key)
+        used[key] = False
+        try:
+            return bool(engine.available_haunt_actions(player))
+        finally:
+            if saved is None:
+                used.pop(key, None)
+            else:
+                used[key] = saved
 
     def _try_haunt_action(self, engine: GameEngine, player: Player) -> bool:
         actions = engine.available_haunt_actions(player)

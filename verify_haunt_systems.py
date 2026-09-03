@@ -895,6 +895,42 @@ def verify_ensure_room_in_play() -> None:
     assert engine._ensure_room_in_play("no_such_room") is None
 
 
+def verify_bot_holds_position_for_next_step() -> None:
+    """bot 走完一步剧本行动后，若下一步还在同一房间，必须原地等下回合。
+
+    剧本 24 实测：英雄启动管风琴后立刻被战斗牵走，知识 6+ 的第二步永远没人做，
+    三步链断在中间，全 bot 局必败。
+    """
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=24)
+    handler = engine._mode_handler()
+    controller = BotController()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    organ_key = next(k for k, room in engine.state.board.items() if room.template_id == "organ_room")
+    hero.room_key = organ_key
+    _set_current(engine, hero)
+
+    # 先把第一步做掉，制造"本回合已用行动 + 本房还有一次待办"的局面
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert engine.perform_haunt_action(hero, "start_organ") is True
+    assert engine._haunt_action_used(hero) is True
+    assert controller._pending_haunt_action_here(engine, hero) is True, "风琴房里还等着奏音"
+    # 探测不得泄漏"本回合已用"标记，否则 bot 会在同一回合连做两次行动
+    assert engine._haunt_action_used(hero) is True, "探测后必须还原行动标记"
+
+    hero.steps_remaining = 5
+    hero.movement_stopped = False
+    before_room = hero.room_key
+    controller._run_turn(engine, hero)
+    assert hero.room_key == before_room, "同一房还有下一步时不该走开"
+
+    # 没有待办时照常机动
+    engine._haunt_flags()["bats_sealed"] = True
+    hero.steps_remaining = 5
+    assert controller._pending_haunt_action_here(engine, hero) is False, "封门后风琴房不再有行动"
+    controller._run_turn(engine, hero)
+    assert hero.room_key != before_room, "没有待办时应当继续移动"
+
+
 def verify_collapse_subsystem() -> None:
     """引擎能力：房屋坍塌（翻面 / 邻格扩散 / 速度逃生 / 连通图排除）。
 
@@ -3086,6 +3122,7 @@ def main():
     verify_ensure_room_in_play()
     verify_collapse_subsystem()
     verify_bot_quest_goal_rooms()
+    verify_bot_holds_position_for_next_step()
     print("verify_haunt_systems: ok")
 
 
