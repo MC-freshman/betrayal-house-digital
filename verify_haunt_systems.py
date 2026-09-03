@@ -36,6 +36,7 @@ if __package__ in {None, ""}:
         GhostBrideMode,
         ZombieLordMode,
         AbyssExorcismMode,
+        TentacledHorrorMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -128,8 +129,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(GhostBrideMode) == [20], f"剧本 20 未走定制 handler: {handlers.get(GhostBrideMode)}"
     assert handlers.get(ZombieLordMode) == [21], f"剧本 21 未走定制 handler: {handlers.get(ZombieLordMode)}"
     assert handlers.get(AbyssExorcismMode) == [22], f"剧本 22 未走定制 handler: {handlers.get(AbyssExorcismMode)}"
+    assert handlers.get(TentacledHorrorMode) == [23], f"剧本 23 未走定制 handler: {handlers.get(TentacledHorrorMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 48, f"应有 48 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 47, f"应有 47 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -144,6 +146,7 @@ def verify_mode_dispatch() -> None:
         "nightmare_escape", "paint_the_pentagram", "phantom_bomb",
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
+        "tentacled_horror",
     }
 
 
@@ -2473,6 +2476,130 @@ def verify_haunt22_abyss_exorcism() -> None:
     assert handler.check_victory(engine) is True and engine.state.winner == "traitor"
 
 
+def verify_haunt23_tentacled_horror() -> None:
+    """剧本 23：配对布点/成长表/拖 1 格/挣脱对决/水晶球定位/一击摧毁头颅（p34/p105）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=23)
+    handler = engine._mode_handler()
+    assert isinstance(handler, TentacledHorrorMode)
+    flags = engine._haunt_flags()
+
+    # 该种子开局可能已有英雄死在探险阶段，复活到足够人数再测
+    for person in engine.state.players:
+        if person.role == "hero" and person.dead:
+            person.dead = False
+            for stat in ("speed", "might", "sanity", "knowledge"):
+                person.stats[stat] = 3
+
+    # p105：叛徒开局即死；根/尖端对数 = 玩家数，每对同房，且只落在指定六房
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    assert traitor.dead is True, "p105：叛徒开局就被拖进墙里"
+    tips = [m for m in engine.state.monsters if m.template_id == "creeper_tip"]
+    roots = engine.tokens_of_kind("root")
+    assert len(tips) == len(roots) == flags["pairs_placed"] == 4, "对数应等于玩家数"
+    allowed = {key for key, room in engine.state.board.items() if room.template_id in handler.ROOM_IDS}
+    for tip in tips:
+        root = handler._root_for_tip(engine, tip)
+        assert root is not None and root.room_key == tip.room_key, "根与尖端必须同房入场"
+        assert tip.room_key in allowed, "触手只能落在 p105 指定的六间房里"
+    assert (tips[0].speed, tips[0].might, tips[0].sanity) == (2, 3, 6), "第 0 回合尖端 2/3/6"
+
+    # p105 成长表：8+ 回合长到 4/8/8
+    engine._set_haunt_track_value("tentacle_turn", 8)
+    handler.on_monster_turn_start(engine, tips[0])
+    assert (tips[0].speed, tips[0].might, tips[0].sanity) == (4, 8, 8), "8+ 回合尖端应为 4/8/8"
+    engine._set_haunt_track_value("tentacle_turn", 0)
+    assert handler._growth_stats(3) == (3, 5, 7) and handler._growth_stats(5) == (3, 7, 7)
+
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    assert len(heroes) >= 3, "本用例需要至少三名存活英雄"
+    hero_a, hero_b, hero_c = heroes[0], heroes[1], heroes[2]
+
+    # p105：抓着人的尖端每回合只朝配对的根挪 1 格
+    tip = tips[1]
+    root = handler._root_for_tip(engine, tip)
+    far = next(
+        (
+            key for key in sorted(engine.state.board)
+            if key != root.room_key and len(engine._shortest_path(key, root.room_key)) >= 2
+        ),
+        "",
+    )
+    assert far, "应能找到离根两步远的位置"
+    tip.room_key = far
+    hero_a.room_key = far
+    flags["grabbed"] = {str(hero_a.id): tip.id}
+    handler.on_monster_move(engine, tip, 4)
+    assert hero_a.room_key == tip.room_key, "人质必须跟着尖端走"
+    assert len(engine._shortest_path(tip.room_key, root.room_key)) == len(engine._shortest_path(far, root.room_key)) - 1, "只应挪一格"
+
+    # p34：挣脱成功 → 获释 + 本回合每间房按 2 格，回合结束即解除
+    def _duel(winner_roll: int, loser_roll: int):
+        return (
+            patch.object(engine, "_roll_attack", side_effect=lambda player, attr, bonus=0: winner_roll),
+            patch.object(engine, "_roll_monster_attack", return_value=loser_roll),
+        )
+
+    roll_a, roll_b = _duel(9, 1)
+    with roll_a, roll_b:
+        handler.on_turn_start(engine, hero_a)
+    assert str(hero_a.id) not in flags["grabbed"], "打赢开局对决应获释"
+    assert not hero_a.movement_stopped and hero_a.room_key == tip.room_key, "获释后就该留在原地"
+    assert handler.movement_cost_multiplier(engine, hero_a) == 2, "挣脱后本回合每间房算 2 格"
+    handler.on_turn_end(engine, hero_a)
+    assert handler.movement_cost_multiplier(engine, hero_a) == 1, "减速只持续到本回合结束"
+
+    # p34：挣脱失败 → 不掉血但仍被缠住，本回合结束
+    tip2 = tips[2]
+    hero_b.room_key = tip2.room_key
+    flags["grabbed"][str(hero_b.id)] = tip2.id
+    before_stats = dict(hero_b.stats)
+    roll_a, roll_b = _duel(1, 9)
+    with roll_a, roll_b:
+        handler.on_turn_start(engine, hero_b)
+    assert str(hero_b.id) in flags["grabbed"] and hero_b.movement_stopped and hero_b.attack_used
+    assert hero_b.stats == before_stats and not hero_b.dead, "挣脱失败不掉血（p34）"
+
+    # p105：尖端被击败 → 松手 + 缩回配对的根 + 昏迷
+    tip3 = tips[3]
+    root3 = handler._root_for_tip(engine, tip3)
+    hero_c.room_key = tip3.room_key
+    flags["grabbed"][str(hero_c.id)] = tip3.id
+    assert handler.on_monster_defeated(engine, tip3, 2) is False
+    assert str(hero_c.id) not in flags["grabbed"] and tip3.room_key == root3.room_key, "尖端应缩回根部"
+
+    # p34：水晶球定位头颅——知识 4+ 成功后掷 4 骰查表，球随即碎裂
+    engine.state.turn_order = [hero_a.id]
+    engine.state.turn_index = 0
+    hero_a.items.append("omen_crystal_ball")
+    engine._reset_player_turn_state(hero_a)
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero_a, "gaze_crystal_ball", {}) is True
+    assert "omen_crystal_ball" not in hero_a.items, "球用完即碎（p34）"
+    assert flags["head_found"] is True and flags["head_room"] in engine.state.board
+    assert engine.state.board[flags["head_room"]].template_id in handler.HEAD_TABLE, "头位必须落在 p34 查表结果里"
+
+    # 老坑：叛徒开局已死，不能因此判英雄胜
+    assert handler.check_victory(engine) is True and engine.state.winner is None
+
+    # p34：走进头位房间，用炸药或长矛一击摧毁，不需要掷骰
+    wrong = next(p for p in engine.state.players if p.role == "hero" and not p.dead and p is not hero_a)
+    wrong.room_key = next(k for k in engine.state.board if k != flags["head_room"])
+    wrong.items.append("item_dynamite")
+    engine.state.turn_order = [wrong.id]
+    engine.state.turn_index = 0
+    assert "destroy_head" not in {a.id for a in handler.available_actions(engine, wrong)}, "不在头位房就不能动手"
+    hero_a.room_key = flags["head_room"]
+    hero_a.items.append("item_dynamite")
+    engine.state.turn_order = [hero_a.id]
+    engine.state.turn_index = 0
+    engine._reset_player_turn_state(hero_a)
+    assert "destroy_head" in {a.id for a in handler.available_actions(engine, hero_a)}
+    assert handler.perform_action(engine, hero_a, "destroy_head", {}) is True
+    assert flags["creature_destroyed"] is True
+    assert not engine.state.monsters and not engine.tokens_of_kind("root"), "怪物与所有触手应一起离场"
+    assert engine.state.winner == "heroes", "摧毁头颅即英雄胜（p34）"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -2829,6 +2956,7 @@ def main():
     verify_haunt20_ghost_bride()
     verify_haunt21_zombie_lord()
     verify_haunt22_abyss_exorcism()
+    verify_haunt23_tentacled_horror()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

@@ -1061,6 +1061,69 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [33, 104],
     },
+    23: {
+        # 校准记录（2026-09-03，对照英雄手册 p34 / 叛徒手册 p105）：
+        #   骨架原本只丢了一只 giant 当怪物，与原版"根+尖端成对"的触手机制无关。
+        #   尖端初始 Speed 2 / Might 3 / Sanity 6（p105 成长表第 0 回合），
+        #   之后按回合成长：1-2 → 2/4/7，3-4 → 3/5/7，5-7 → 3/7/7，8+ → 4/8/8。
+        #   根与尖端对数 = 玩家数，只能放在 熔炉房/温室/风琴房/地下湖/花园/裂隙
+        #     （在场不够就从房间牌堆找出补齐，"You cannot save any tentacles for later"）；
+        #     每扎一个根，同房间放一只尖端。根不能移动、不能攻击、也不能被攻击。
+        #   头颅：持水晶球者做知识 4+ 凝视成功 → 掷 4 骰定头位
+        #     （0 储藏室 / 1 厨房 / 2 风琴房 / 3 裂隙 / 4-5 地下湖 / 6 温室 / 7 地窖 / 8 熔炉房），
+        #     球随即碎裂（弃掉）；该房未发现就从牌堆找出来交给叛徒接上合法楼层
+        #     （地下湖必须放地下室）。
+        #   杀头：走进头颅房间，用炸药或长矛攻击——不需要掷骰，自动杀死怪物，
+        #     且不受炸药反噬伤害（p34）。
+        #   被抓：尖端力量攻击击败英雄时不造成伤害，改为抓住并让其掉落所有物品；
+        #     被抓者下个回合开始必须攻击它，打赢则获释但本回合之后每间房按 2 格计，
+        #     打输或平手不掉血但本回合结束；抓着人的尖端不能攻击、每回合向配对的
+        #     根移动 1 格；被抓者若在新回合开始时与根同房即被吞噬，该触手整株离场。
+        #   尖端被任何攻击击败 → 放回配对的根所在房间并翻成昏迷面。
+        #   铃铛对被抓者无效、灵应板对尖端无效（物品交互边界，未接）。
+        #   叛徒开局即死并移出对局；英雄胜 = 摧毁头颅，叛徒胜 = 英雄全灭。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "tentacled_horror",
+        "traitor_rule": "revealer",
+        "hero_goal": "用水晶球找到触手怪的头颅，再带着炸药或长矛进房一击必杀。",
+        "traitor_goal": "让触手把所有英雄拖回根部吃掉，或杀光他们。",
+        "suggested_monsters": ["creeper_tip"],
+        "required_cards": ["omen_crystal_ball", "item_dynamite", "omen_spear"],
+        "key_rooms": ["furnace_room", "conservatory", "organ_room", "underground_lake", "garden", "chasm"],
+        "tokens": ["root", "tip"],
+        "setup": {
+            "tracks": {
+                "tentacle_turn": {"label": "触手成长回合", "target": 8, "side": "traitor"},
+            },
+            "flags": {
+                "grabbed": {},
+                "pairs_placed": 0,
+                "head_found": False,
+                "head_room": None,
+                "creature_destroyed": False,
+                "escaped_ids": [],
+            },
+        },
+        "monsters": [
+            # spawn=deferred：根与尖端成对入场，由 handler 按 p105 的房间表布置
+            {"template_id": "creeper_tip", "name": "触手尖端", "spawn": "deferred",
+             "speed": 2, "might": 3, "sanity": 6},
+        ],
+        "actions": [
+            {"id": "gaze_crystal_ball", "side": "heroes", "label": "凝视水晶球找头位",
+             "detail": "持水晶球做知识 4+（p34）。成功后掷 4 骰定位头颅，球随即碎裂。",
+             "stat": "knowledge", "target": 4, "requires": ["omen_crystal_ball"],
+             "requires_flags": {"head_found": False}},
+            {"id": "destroy_head", "side": "heroes", "label": "用炸药或长矛摧毁头颅",
+             "detail": "走进头颅所在房间，持炸药或长矛攻击——不掷骰，自动杀死怪物（p34）。",
+             "stat": "knowledge", "target": 0,
+             "requires_flags": {"head_found": True, "creature_destroyed": False}},
+        ],
+        "win_conditions": [],
+        "source_pages": [34, 105],
+    },
 }
 
 
@@ -1221,7 +1284,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    23: dict(mode="tentacled_horror", traitor_rule="revealer", hero_goal="摧毁触手生物。", traitor_goal="让触手逐渐增强并杀死所有英雄。", rooms=("furnace_room", "conservatory", "organ_room", "underground_lake", "garden", "chasm"), monsters=("giant",), tokens=("tentacle_root", "tentacle_tip", "time"), hero_task="定位并摧毁触手", traitor_task="增强触手", hero_stat="might", hero_target=6, hero_progress_target=1, hero_detail="在触手所在房间完成一次破坏行动。", traitor_detail="推进触手增长轨道。", monster_count="player_count", hero_win_target=1),
     24: dict(mode="bat_exodus", traitor_rule="revealer", hero_goal="用风琴赶走蝙蝠并消灭附着的蝙蝠。", traitor_goal="让蝙蝠吸取英雄生命，或杀死所有英雄。", rooms=("organ_room", "entrance_hall", "balcony", "garden", "graveyard", "patio", "tower"), monsters=("spider",), tokens=("bat", "organ", "victim"), hero_task="演奏风琴驱逐蝙蝠", traitor_task="扩散蝙蝠", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在风琴房完成驱逐检定。", traitor_detail="推进蝙蝠侵袭轨道。", monster_count="player_count"),
     25: dict(mode="voodoo_dolls", traitor_rule="revealer", hero_goal="找到并摧毁所有巫毒娃娃，同时让至少一半英雄存活。", traitor_goal="让娃娃的诅咒杀死英雄。", rooms=("bloody_room", "larder", "crypt", "junk_room", "vault", "attic", "kitchen"), monsters=("cultist",), tokens=("voodoo_doll", "curse", "time"), hero_task="寻找并摧毁巫毒娃娃", traitor_task="加深娃娃诅咒", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在娃娃可能出现的房间完成搜寻和摧毁。", traitor_detail="推进诅咒强度轨道。", monster_count=1),
     26: dict(mode="rat_ritual", traitor_rule="revealer", hero_goal="消灭房屋内所有老鼠，阻止五芒星室的仪式。", traitor_goal="完成老鼠仪式，或杀死所有英雄。", rooms=("pentagram_chamber", "kitchen", "larder", "junk_room", "crypt"), monsters=("spider",), tokens=("rat", "ritual", "sanity_check"), hero_task="清除老鼠", traitor_task="完成老鼠仪式", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="逐个清除老鼠标记。", traitor_detail="在五芒星室推进仪式轨道。", monster_count="player_count"),

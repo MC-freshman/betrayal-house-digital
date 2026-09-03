@@ -563,6 +563,23 @@
       "forced_haunt": 22
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "d0b46665ef5f40f894fcefbe8e2d0dfbb9d8cd19be5250d6b1656a43757b0dd0",
+      "turns": 31,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "最后一名探险者也成了某条触手的食物。",
+      "haunt": 23,
+      "haunt_name": "触手恐怖",
+      "rooms": 26,
+      "monsters": 3,
+      "key": "seed113-3p-haunt23",
+      "forced_haunt": 23
+    },
+    {
       "seed": 131,
       "players": 4,
       "completed": true,
