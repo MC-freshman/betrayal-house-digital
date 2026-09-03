@@ -39,6 +39,7 @@ if __package__ in {None, ""}:
         TentacledHorrorMode,
         BatSwarmMode,
         VoodooMode,
+        RatRitualMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -134,8 +135,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(TentacledHorrorMode) == [23], f"剧本 23 未走定制 handler: {handlers.get(TentacledHorrorMode)}"
     assert handlers.get(BatSwarmMode) == [24], f"剧本 24 未走定制 handler: {handlers.get(BatSwarmMode)}"
     assert handlers.get(VoodooMode) == [25], f"剧本 25 未走定制 handler: {handlers.get(VoodooMode)}"
+    assert handlers.get(RatRitualMode) == [26], f"剧本 26 未走定制 handler: {handlers.get(RatRitualMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 45, f"应有 45 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 44, f"应有 44 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -150,7 +152,7 @@ def verify_mode_dispatch() -> None:
         "nightmare_escape", "paint_the_pentagram", "phantom_bomb",
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
-        "tentacled_horror", "bat_exodus", "voodoo_dolls",
+        "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual",
     }
 
 
@@ -2983,6 +2985,190 @@ def verify_haunt25_deferred_draw() -> None:
     assert draw3.called, "p36：在新发现的符号房间里搜寻要先抽一张符号牌"
 
 
+def verify_haunt26_rat_ritual() -> None:
+    """剧本 26：鼠人强化/老鼠布点/合力攻击与失败不受伤/击败即死/
+    五芒星室封锁与叛徒免伤/仪式与老鼠回流/四条胜负路径（p37/p108）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=26)
+    handler = engine._mode_handler()
+    assert isinstance(handler, RatRitualMode)
+    flags = engine._haunt_flags()
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    hero = heroes[0]
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+
+    # ---- 开局：鼠人强化——每项属性至少初始值+1（封顶轨道顶格）
+    face = engine.catalog.characters.get(traitor.character_id)
+    for stat in ("might", "speed", "sanity", "knowledge"):
+        start = face.stats.get(stat)
+        track = engine._stat_track(traitor, stat)
+        cap = track[-1] if track else 99
+        assert traitor.stats[stat] >= min(start + 1, cap), f"鼠人 {stat} 应 ≥ 初始+1（p108）"
+
+    # ---- 五芒星室清场（p37）：没有活人留在里面
+    penta = handler._pentagram_key(engine)
+    assert penta, "五芒星室应在场"
+    assert all(p.dead or p.room_key != penta for p in engine.state.players), "p37：五芒星室里的探险者应被挪去邻格"
+
+    # ---- 老鼠布点：玩家数×2，全在有符号的房间，不在五芒星室
+    rats = handler._rats(engine)
+    assert len(rats) == 2 * len(engine.state.players), "p108：老鼠 = 玩家数 × 2"
+    assert all(engine.state.board[m.room_key].symbol in ("event", "item", "omen") for m in rats)
+    assert all(m.room_key != penta for m in rats)
+
+    # ---- 进入封锁：英雄进不了五芒星室，叛徒可以
+    assert handler.room_entry_blocked(engine, hero, engine.state.board[penta]) is True
+    assert handler.room_entry_blocked(engine, traitor, engine.state.board[penta]) is False
+
+    # ---- 合力攻击：成功造成伤害；力量相加封顶 8 骰
+    if "item_armor" in hero.items:
+        hero.items.remove("item_armor")
+    hero.ignore_first_physical_damage = False
+    for stat in ("might", "speed", "sanity", "knowledge"):
+        track = engine._stat_track(hero, stat)
+        hero.stat_positions[stat] = min(4, len(track) - 1)
+        hero.stats[stat] = track[hero.stat_positions[stat]]
+    rat_a, rat_b, rat_c = rats[0], rats[1], rats[2]
+    rat_a.room_key = rat_b.room_key = hero.room_key
+    speed_pos0 = hero.stat_positions["speed"]
+    with patch.object(engine, "roll_dice", return_value=3), patch.object(engine, "_roll_attack", return_value=0):
+        assert handler.on_monster_turn_start(engine, rat_a) is True
+    assert hero.stat_positions["speed"] == speed_pos0 - 3, "合力攻击成功应造成差额物理伤害"
+    assert rat_a in engine.state.monsters and rat_a.stunned_turns == 0
+    # 失败不受伤（p108）
+    with patch.object(engine, "roll_dice", return_value=0), patch.object(engine, "_roll_attack", return_value=8):
+        assert handler.on_monster_turn_start(engine, rat_a) is True
+    assert rat_a in engine.state.monsters and rat_a.stunned_turns == 0, "合力攻击失败不受伤"
+    assert rat_b in engine.state.monsters and rat_b.stunned_turns == 0
+    # 骰数 = 力量相加（3 只 = 6 骰），封顶 8
+    rat_c.room_key = hero.room_key
+    counts: list[int] = []
+
+    def fake_roll(count: int, label: str = "") -> int:
+        counts.append(count)
+        return 0
+
+    with patch.object(engine, "roll_dice", side_effect=fake_roll), patch.object(engine, "_roll_attack", return_value=8):
+        handler.on_monster_turn_start(engine, rat_a)
+    assert counts == [6], f"3 只老鼠应掷力量相加的 6 骰，实际 {counts}"
+
+    # ---- 被击败即死（不会昏迷）
+    assert handler.monster_killed_on_defeat(engine, rat_a, hero, "might", "") is True
+    engine._kill_monster(rat_a, killer=hero)
+    assert rat_a not in engine.state.monsters
+
+    # ---- 仪式：进室置旗；叛徒在室内免伤；成功 +1 轨道
+    engine.state.turn_order = [traitor.id]
+    engine.state.turn_index = 0
+    traitor.room_key = penta
+    handler.on_enter_room(engine, traitor, engine.state.board[penta])
+    assert flags["traitor_reached"] is True
+    assert handler.attack_allowed(engine, hero, traitor) is False, "p37/p108：五芒星室里的叛徒不受攻击"
+    engine._reset_player_turn_state(traitor)
+    assert "perform_ritual" in {a.id for a in engine.available_haunt_actions(traitor)}
+    # 击败即死环节已杀一只：场上 7 只、池 8 → 仪式成功应回流一只到邻格
+    rats_in_play = len(handler._rats(engine))
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert engine.perform_haunt_action(traitor, "perform_ritual") is True
+    assert engine._haunt_track_value("ritual_rolls") == 1
+    assert len(handler._rats(engine)) == rats_in_play + 1, "p108：仪式成功应回流一只可用老鼠"
+    new_rat = handler._rats(engine)[-1]
+    assert new_rat.room_key in engine._grid_neighbors(penta), "回流老鼠应落在五芒星室邻格（不需要门）"
+    # 池满（8 只都在场）后再仪式 → 不回流
+    engine._reset_player_turn_state(traitor)
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert engine.perform_haunt_action(traitor, "perform_ritual") is True
+    assert engine._haunt_track_value("ritual_rolls") == 2
+    assert len(handler._rats(engine)) == rats_in_play + 1, "池满时仪式不应回流"
+
+    # ---- 胜负路径
+    # ① 杀光所有老鼠 → 英雄胜（p37）
+    engine2 = _run_until_haunt(seed=109, players=4, haunt_id=26)
+    h2 = engine2._mode_handler()
+    for m in list(h2._rats(engine2)):
+        engine2._kill_monster(m, killer=None)
+    assert h2.check_victory(engine2) is True
+    assert engine2.state.winner == "heroes"
+    # ② 叛徒进五芒星室之前被杀 → 英雄胜（p37）
+    engine3 = _run_until_haunt(seed=109, players=4, haunt_id=26)
+    h3 = engine3._mode_handler()
+    t3 = next(p for p in engine3.state.players if p.role == "traitor")
+    assert engine3._haunt_flags().get("traitor_reached") is False
+    t3.dead = True
+    assert h3.check_victory(engine3) is True
+    assert engine3.state.winner == "heroes", "p37：叛徒进室前被杀 → 英雄胜"
+    # ③ 叛徒已进室后被杀（防御路径）→ 不判英雄胜，老坑吸收
+    engine4 = _run_until_haunt(seed=109, players=4, haunt_id=26)
+    h4 = engine4._mode_handler()
+    t4 = next(p for p in engine4.state.players if p.role == "traitor")
+    engine4._haunt_flags()["traitor_reached"] = True
+    t4.dead = True
+    assert h4.check_victory(engine4) is True and engine4.state.winner is None
+    # ④ 仪式完成（4 人局需 5 次）→ 叛徒胜
+    engine5 = _run_until_haunt(seed=109, players=4, haunt_id=26)
+    h5 = engine5._mode_handler()
+    engine5._set_haunt_track_value("ritual_rolls", 5)
+    assert h5.check_victory(engine5) is True
+    assert engine5.state.winner == "traitor", "p108：仪式完成 → 叛徒胜"
+    # ⑤ 英雄全灭 → 叛徒胜（p108）
+    engine6 = _run_until_haunt(seed=109, players=4, haunt_id=26)
+    h6 = engine6._mode_handler()
+    for p in engine6.state.players:
+        if p.role == "hero":
+            p.dead = True
+    assert h6.check_victory(engine6) is True
+    assert engine6.state.winner == "traitor"
+
+
+def verify_haunt26_pentagram_block() -> None:
+    """剧本 26：英雄的移动选项过滤五芒星室；探索抽到五芒星室直接弃掉换一张（p37/p108）。"""
+    engine = _run_until_haunt(seed=157, players=4, haunt_id=26)
+    handler = engine._mode_handler()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    penta = handler._pentagram_key(engine)
+    assert penta, "测试需要五芒星室在场"
+
+    # 门连通的邻室：英雄站在那里时，移动选项里不应出现五芒星室
+    checked = 0
+    for key in engine._door_neighbors(penta):
+        if key == penta or engine._is_collapsed(key):
+            continue
+        hero.room_key = key
+        options = engine.available_move_options(hero)
+        assert all(o.target_key != penta for o in options), "p37：英雄的移动选项应过滤五芒星室"
+        checked += 1
+    assert checked > 0, "测试需要至少一间与五芒星室门连通的房间"
+
+    # 探索抽牌：抽到五芒星室模板 → 弃掉换一张，不重复上桌、英雄不进去
+    frontier = None
+    option = None
+    for key in list(engine.state.board):
+        if engine.state.board[key].floor != 0:
+            continue
+        hero.room_key = key
+        new_opts = [o for o in engine.available_move_options(hero) if o.is_new_room]
+        if new_opts:
+            frontier, option = key, new_opts[0]
+            break
+    assert frontier is not None, "测试需要地面层探索前沿"
+    hero.steps_remaining = 5
+    penta_template = engine.catalog.room_templates["pentagram_chamber"]
+    real_draw = engine._draw_room_template
+    used = {"penta": False}
+
+    def fake_draw(floor: int):
+        if floor == 0 and not used["penta"]:
+            used["penta"] = True
+            return penta_template
+        return real_draw(floor)
+
+    with patch.object(engine, "_draw_room_template", side_effect=fake_draw):
+        assert engine.move_player(hero, option) is True
+    assert sum(1 for r in engine.state.board.values() if r.template_id == "pentagram_chamber") == 1, "抽到的五芒星室应被弃掉，不重复上桌"
+    assert engine.current_room(hero).template_id != "pentagram_chamber", "英雄不能进五芒星室"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -3343,6 +3529,8 @@ def main():
     verify_haunt24_bat_swarm()
     verify_haunt25_voodoo()
     verify_haunt25_deferred_draw()
+    verify_haunt26_rat_ritual()
+    verify_haunt26_pentagram_block()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

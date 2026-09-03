@@ -290,6 +290,19 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["hidden_dolls", "turn_damage_track"]},
     },
+    26: {
+        "hero": {
+            # p37：英雄胜利路径之一是"在叛徒进五芒星室前杀死他"；
+            # 且老鼠会主动围攻，英雄必须反击。
+            "attack_traitor_players": True,
+            "victory_focus": "优先杀老鼠阻断仪式，遇到未进五芒星室的叛徒就围攻",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "尽快赶到五芒星室完成仪式，途中顺手杀人",
+        },
+        "scenario": {"special_rules": ["rat_swarm", "ritual"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",

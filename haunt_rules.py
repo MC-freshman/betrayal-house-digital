@@ -1245,6 +1245,67 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [36, 107],
     },
+    26: {
+        # 校准记录（2026-09-03，对照英雄手册 p37 / 叛徒手册 p108）：
+        #   骨架原本用 spider 冒充老鼠 + 抽象进度轨道，与原版"鼠人仪式"无关。
+        #   数值：老鼠 Speed 3 / Might 2 / Sanity 1（p108 页脚，新增 rat 模板）。
+        #   开局（p37/p108）：叛徒（鼠人）仍在场；属性若低于初始值先恢复到
+        #     初始值，然后每项属性 +1。在布置老鼠之前，先把身处五芒星室的
+        #     探险者挪去一间邻格房间（不需要有门相连）。
+        #   老鼠（p108）：数量 = 玩家数 × 2，放入有符号（事件/物品/预兆）的
+        #     未被占据房间各一只；老鼠多于房间则叠放，少于则由叛徒任选
+        #     （bot 按房间 key 序轮转，确定性）。另备 5 枚理智检定标记。
+        #   老鼠规则（p108）：被击败即死亡（不会昏迷）；同房间多只老鼠可以
+        #     合力攻击——力量相加对单一目标（最多 8 骰），合力攻击失败不受伤；
+        #     单只攻击落败在引擎里按击晕表示（引擎不追踪怪物伤害，
+        #     近似处理，见 handler 已知简化）。
+        #   五芒星室（p37/p108）：叛徒在内时不受其他探险者任何影响；英雄与
+        #     老鼠都不能进入（老鼠寻路绕开，英雄的移动选项与探索抽牌都会
+        #     跳过它——探索抽到的五芒星室直接进弃牌堆换一张）。
+        #   仪式（p108）：叛徒走到五芒星室，理智 3+ 每成功一次放 1 枚理智
+        #     检定标记，并把一只"可用的"老鼠放到五芒星室邻格（不需要门；
+        #     可用 = 初始 2×N 池里不在场的老鼠，即被杀死的会回流）。
+        #     完成所需次数：3-4 人 5 次，5-6 人 4 次。
+        #   胜负（p37/p108）：英雄胜 = 杀光所有老鼠，或在叛徒抵达五芒星室
+        #     之前杀死叛徒；叛徒胜 = 完成仪式或杀死所有英雄。
+        #     叛徒死亡≠英雄胜——必须是他还没进五芒星室时被杀（老坑 16 号吸收者）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "rat_ritual",
+        "traitor_rule": "revealer",
+        "hero_goal": "在鼠群的围攻下杀光屋里的每只老鼠；若叛徒还没进五芒星室，也可以直接杀了他。",
+        "traitor_goal": "在五芒星室里完成邪恶的鼠类仪式，或杀光所有英雄。",
+        "suggested_monsters": ["rat"],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {
+                "ritual_rolls": {"label": "仪式理智检定", "target": 5, "side": "traitor"},
+            },
+            "flags": {
+                "traitor_reached": False,
+                "rats_placed": False,
+                "rat_pool": 0,
+            },
+        },
+        "monsters": [
+            # spawn=deferred：开局布点与仪式回流都由 handler 按 p108 规则处理
+            {"template_id": "rat", "name": "老鼠", "spawn": "deferred",
+             "speed": 3, "might": 2, "sanity": 1},
+        ],
+        "actions": [
+            {"id": "perform_ritual", "side": "traitor", "label": "进行鼠类仪式",
+             "detail": "在五芒星室做理智 3+（p108）。成功放 1 枚理智检定标记，"
+                       "并把一只可用的老鼠放到五芒星室邻格（不需要门）。"
+                       "3-4 人需 5 次，5-6 人需 4 次。",
+             "stat": "sanity", "target": 3, "rooms": ["pentagram_chamber"],
+             "progress": "ritual_rolls"},
+        ],
+        "win_conditions": [],
+        "source_pages": [37, 108],
+    },
 }
 
 
@@ -1405,7 +1466,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    26: dict(mode="rat_ritual", traitor_rule="revealer", hero_goal="消灭房屋内所有老鼠，阻止五芒星室的仪式。", traitor_goal="完成老鼠仪式，或杀死所有英雄。", rooms=("pentagram_chamber", "kitchen", "larder", "junk_room", "crypt"), monsters=("spider",), tokens=("rat", "ritual", "sanity_check"), hero_task="清除老鼠", traitor_task="完成老鼠仪式", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="逐个清除老鼠标记。", traitor_detail="在五芒星室推进仪式轨道。", monster_count="player_count"),
     27: dict(mode="blob_weakness", traitor_rule="revealer", hero_goal="发现斑点弱点并用正确配方摧毁 Blob。", traitor_goal="让斑点扩散并杀死所有英雄。", rooms=("research_laboratory", "kitchen", "furnace_room", "chasm", "underground_lake"), monsters=("plant",), tokens=("blob", "knowledge_check", "formula"), hero_task="研究斑点弱点", traitor_task="扩散斑点", hero_stat="knowledge", hero_target=3, hero_progress_target=2, hero_detail="在斑点标记相邻房间完成研究，随后完成化学配方。", traitor_detail="推进斑点扩散轨道。", monster_count=1, hero_win_target=2),
     28: dict(mode="demon_ring", traitor_rule="revealer", hero_goal="携带戒指击败恶魔领主两次。", traitor_goal="让恶魔从地狱之门涌入并杀死所有英雄。", rooms=("chasm", "furnace_room", "underground_lake", "pentagram_chamber", "chapel"), monsters=("giant",), tokens=("demon_lord", "demon", "hell_gate"), hero_task="用戒指放逐恶魔领主", traitor_task="召唤恶魔", hero_stat=["might", "sanity"], hero_target=5, hero_progress_target=2, hero_detail="携带戒指在恶魔领主所在房间完成一次放逐攻击。", traitor_detail="推进地狱之门召唤进度。", monster_count="player_count", hero_win_target=2, hero_requires=("omen_ring",)),
     29: dict(mode="frankenstein_fire", traitor_rule="revealer", hero_goal="用火焰弱点摧毁弗兰肯斯坦怪物。", traitor_goal="命令怪物杀死所有英雄。", rooms=("furnace_room", "kitchen", "attic", "research_laboratory"), monsters=("giant",), tokens=("torch", "fire", "monster"), hero_task="准备火焰并击破怪物", traitor_task="增强弗兰肯斯坦怪物", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="在火焰相关房间准备武器，再攻击怪物。", traitor_detail="推进怪物力量轨道。", monster_count=1, hero_win_target=1),

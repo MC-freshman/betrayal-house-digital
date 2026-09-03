@@ -1618,6 +1618,16 @@ MONSTER_BASES = [
         tags=("animal", "haunt_specific"),
     ),
     monster_def(
+        monster_id="rat",
+        name="老鼠",
+        source_name="Rat",
+        speed=3,
+        might=2,
+        sanity=1,
+        text="成群出没，同房间的老鼠会合力扑击；受到任何伤害即死。",
+        tags=("animal", "haunt_specific"),
+    ),
+    monster_def(
         monster_id="plant",
         name="邪恶植物",
         source_name="Evil Plant",

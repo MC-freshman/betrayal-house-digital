@@ -639,7 +639,11 @@ class GameEngine:
             target_key = self.state.pos_index.get(target_pos)
             if target_key:
                 target_room = self.state.board[target_key]
-                if not target_room.data.get(self.COLLAPSE_KEY) and OPPOSITE[direction] in target_room.doors:
+                if (
+                    not target_room.data.get(self.COLLAPSE_KEY)
+                    and OPPOSITE[direction] in target_room.doors
+                    and not self._mode_handler().room_entry_blocked(self, player, target_room)
+                ):
                     cost = self._movement_cost(player, room, from_key=player.room_key)
                     options.append(
                         ExitOption(
@@ -672,7 +676,12 @@ class GameEngine:
             if label in DIRECTIONS:  # 方位型链接已被门覆盖，忽略，避免"使用west"这类无意义选项
                 continue
             target_key = self._link_target_key(target)
-            if target_key is None or target_key in door_reached or self._is_collapsed(target_key):
+            if (
+                target_key is None
+                or target_key in door_reached
+                or self._is_collapsed(target_key)
+                or self._mode_handler().room_entry_blocked(self, player, self.state.board[target_key])
+            ):
                 continue
             cost = self._movement_cost(player, room, from_key=player.room_key)
             options.append(
@@ -781,6 +790,12 @@ class GameEngine:
                 if template is None:
                     self._log("这一层已经没有可用的新房间了。")
                     return False
+                if self._mode_handler().room_entry_blocked(self, player, template):
+                    # 剧本可禁止探索特定房间（剧本 26 p37/p108：英雄进不了
+                    # 五芒星室——抽到它就弃掉换一张，而不是把它放上桌再进去）。
+                    self.state.room_discard.append(template.id)
+                    self._log(f"{self._player_label(player)}抽到了{template.name}，但那里进不去，换一张再试。")
+                    continue
                 placements = self._compute_explore_placements(template, option.direction, target_pos)
                 if not placements:
                     self.state.room_discard.append(template.id)
