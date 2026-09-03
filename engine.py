@@ -518,6 +518,9 @@ class GameEngine:
             return
 
         if self.state.phase == "HAUNT_PHASE":
+            # 剧本可在"玩家回合结束"时介入（剧本 22 p104：每回合结束都要让
+            # 房屋塌掉一部分）。必须在怪物回合之前跑，否则深渊扩散会慢一轮。
+            self._mode_handler().on_turn_end(self, player)
             traitor_alive = any(
                 p.role == "traitor" and not p.dead for p in self.state.players
             )
@@ -636,7 +639,7 @@ class GameEngine:
             target_key = self.state.pos_index.get(target_pos)
             if target_key:
                 target_room = self.state.board[target_key]
-                if OPPOSITE[direction] in target_room.doors:
+                if not target_room.data.get(self.COLLAPSE_KEY) and OPPOSITE[direction] in target_room.doors:
                     cost = self._movement_cost(player, room, from_key=player.room_key)
                     options.append(
                         ExitOption(
@@ -669,7 +672,7 @@ class GameEngine:
             if label in DIRECTIONS:  # 方位型链接已被门覆盖，忽略，避免"使用west"这类无意义选项
                 continue
             target_key = self._link_target_key(target)
-            if target_key is None or target_key in door_reached:
+            if target_key is None or target_key in door_reached or self._is_collapsed(target_key):
                 continue
             cost = self._movement_cost(player, room, from_key=player.room_key)
             options.append(
@@ -3308,14 +3311,158 @@ class GameEngine:
             self._log("平手。")
 
     # ------------------------------------------------------------------
+    # 房屋坍塌 / 深渊（剧本 22 p33/p104；剧本 2 的"房屋坍塌"待补复用同一套）
+    # ------------------------------------------------------------------
+    COLLAPSE_KEY = "abyss_collapsed"
+
+    def _is_collapsed(self, room_key: str) -> bool:
+        room = self.state.board.get(room_key)
+        return bool(room is not None and room.data.get(self.COLLAPSE_KEY))
+
+    def _collapsed_rooms(self) -> list[PlacedRoom]:
+        return [room for room in self.state.board.values() if room.data.get(self.COLLAPSE_KEY)]
+
+    def _grid_neighbors(self, room_key: str) -> list[str]:
+        """同楼层正交相邻的房间（不要求有门、不含斜角）。
+
+        p104：深渊沿邻格扩散，"The rooms do not need to have a connecting
+        door. Diagonal is not considered adjacent"。
+        """
+        room = self.state.board.get(room_key)
+        if room is None:
+            return []
+        keys = []
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            key = self.state.pos_index.get((room.floor, room.x + dx, room.y + dy))
+            if key:
+                keys.append(key)
+        return sorted(keys)
+
+    def _door_neighbors(self, room_key: str) -> list[str]:
+        """有门双向连通的相邻房间（逃生跳落点用，p104 "with a connecting door"）。"""
+        room = self.state.board.get(room_key)
+        if room is None:
+            return []
+        keys = []
+        for direction in room.doors:
+            if direction not in DIRECTION_DELTAS:
+                continue
+            dx, dy = DIRECTION_DELTAS[direction]
+            target_key = self.state.pos_index.get((room.floor, room.x + dx, room.y + dy))
+            if not target_key:
+                continue
+            target = self.state.board[target_key]
+            if OPPOSITE[direction] in target.doors:
+                keys.append(target_key)
+        return sorted(keys)
+
+    def _collapse_room(self, room_key: str, cause: str = "深渊", consumes_monsters: bool = True) -> bool:
+        """翻掉一块房间牌（牌面朝下 = 塌进深渊），并结算房里的人与怪物。
+
+        `consumes_monsters=False` 供"幽灵能穿过坍塌房间"这类剧本自行保留怪物。
+        """
+        room = self.state.board.get(room_key)
+        if room is None or room.data.get(self.COLLAPSE_KEY):
+            return False
+        room.data[self.COLLAPSE_KEY] = True
+        room.revealed = False  # 牌翻回背面：与实体桌游"把板块翻过来"一致
+        self._log(f"{room.name} 塌进了{cause}。")
+        for player in [p for p in self.state.players if not p.dead and p.room_key == room_key]:
+            self._escape_abyss(player, room)
+        if consumes_monsters:
+            for monster in [m for m in self.state.monsters if m.room_key == room_key]:
+                self._kill_monster(monster)
+                self._log(f"{monster.name} 随地板一起坠了下去。")
+        self.check_victory()
+        return True
+
+    def _escape_abyss(self, player: Player, room: PlacedRoom) -> None:
+        """p104：被吞房间里的探险者做速度 4+；成功则跳进相邻、有门连通、
+        已发现且没塌的房间，失败或无处可跳即坠入深渊死亡。"""
+        escaped_key = ""
+        if self._resolve_check(player, "speed", 4, "逃离深渊"):
+            escaped_key = next(
+                (
+                    key for key in self._door_neighbors(room.key)
+                    if key != room.key and not self._is_collapsed(key) and self.state.board[key].revealed
+                ),
+                "",
+            )
+        if escaped_key:
+            self._move_to_room(player, escaped_key, via_effect=True)
+            self._log(f"{self._player_label(player)} 在地板塌掉的瞬间跳进了 {self.state.board[escaped_key].name}。")
+            return
+        self._log(f"{self._player_label(player)} 随着塌落的地板坠入了深渊。")
+        for stat in STAT_NAMES:
+            player.stats[stat] = 0
+        self._check_player_death(player)
+
+    def _abyss_candidates(self, origin_keys: set[str], floor: int) -> list[str]:
+        """指定楼层里"与深渊邻接、还没塌、已放上桌"的房间（按坐标定序，保证种子可复现）。"""
+        candidates = []
+        for key in self._all_room_keys():
+            if self._is_collapsed(key):
+                continue
+            room = self.state.board[key]
+            if room.floor != floor:
+                continue
+            if not any(key in self._grid_neighbors(origin) for origin in origin_keys):
+                continue
+            candidates.append(key)
+        return sorted(candidates, key=lambda key: (self.state.board[key].y, self.state.board[key].x))
+
+    def _all_room_keys(self) -> list[str]:
+        return sorted(self.state.board)
+
+    def _collapse_adjacent_rooms(self, count: int, cause: str = "深渊") -> int:
+        """按 p104 的扩散规则翻掉 count 间房：只能从已有深渊的邻格里选；
+        整层塌完就升到上一层，从"无人且有空门"的房间开始。返回实际翻掉数。"""
+        collapsed = 0
+        origins = {room.key for room in self._collapsed_rooms()}
+        if not origins:
+            return 0
+        while collapsed < count:
+            floor = min({self.state.board[key].floor for key in origins})
+            picked = ""
+            for candidate_floor in range(floor, 2):
+                options = self._abyss_candidates(origins, candidate_floor)
+                if candidate_floor > floor:
+                    # 整层已塌完：上一层里挑一间无人、且留着未探索门口的房间
+                    options = [
+                        key for key in options
+                        if not any(p.room_key == key and not p.dead for p in self.state.players)
+                        and any(
+                            self.state.pos_index.get(
+                                (self.state.board[key].floor,
+                                 self.state.board[key].x + DIRECTION_DELTAS[d][0],
+                                 self.state.board[key].y + DIRECTION_DELTAS[d][1])
+                            ) is None
+                            for d in self.state.board[key].doors if d in DIRECTION_DELTAS
+                        )
+                    ]
+                if options:
+                    picked = options[0]
+                    break
+            if not picked:
+                break
+            if self._collapse_room(picked, cause=cause):
+                collapsed += 1
+                origins.add(picked)
+        return collapsed
+
+    # ------------------------------------------------------------------
     # Graph/path helpers
     # ------------------------------------------------------------------
     def _build_graph(self) -> dict[str, set[str]]:
         # 邻接表必须是有序结构。若用 set，BFS 遍历顺序会随 PYTHONHASHSEED
         # 变化，导致同一种子在不同进程得到不同的最短路径——种子回放、
         # 存档复现、联机重放都会失效。这里用 dict 做有序去重，再输出排序列表。
-        adjacency: dict[str, dict[str, None]] = {key: {} for key in self.state.board}
+        adjacency: dict[str, dict[str, None]] = {
+            key: {} for key, room in self.state.board.items() if not room.data.get(self.COLLAPSE_KEY)
+        }
         for room in self.state.board.values():
+            if room.data.get(self.COLLAPSE_KEY):
+                continue  # 塌进深渊的板块既不是节点也不是通路
             for direction in room.doors:
                 if direction not in DIRECTION_DELTAS:
                     continue
@@ -3325,12 +3472,14 @@ class GameEngine:
                 if not target_key:
                     continue
                 target = self.state.board[target_key]
+                if target.data.get(self.COLLAPSE_KEY):
+                    continue
                 if OPPOSITE[direction] in target.doors:
                     adjacency[room.key][target_key] = None
                     adjacency[target_key][room.key] = None
             for link_value in room.links.values():
                 target_key = self._link_target_key(link_value)
-                if target_key:
+                if target_key and not self.state.board[target_key].data.get(self.COLLAPSE_KEY):
                     adjacency[room.key][target_key] = None
                     adjacency[target_key][room.key] = None
         return {key: sorted(neighbors) for key, neighbors in adjacency.items()}

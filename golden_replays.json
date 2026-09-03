@@ -546,6 +546,23 @@
       "forced_haunt": 21
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "12e2b6c3f4c7d3227bb89cd3c9acd34bc691486b5b043467c29956512883e47a",
+      "turns": 46,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "地板整片垮落，最后几个灵魂一起坠进了火湖。",
+      "haunt": 22,
+      "haunt_name": "深渊回望",
+      "rooms": 26,
+      "monsters": 0,
+      "key": "seed113-3p-haunt22",
+      "forced_haunt": 22
+    },
+    {
       "seed": 131,
       "players": 4,
       "completed": true,

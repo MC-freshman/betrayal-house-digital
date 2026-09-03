@@ -35,6 +35,7 @@ if __package__ in {None, ""}:
         BeastmasterMode,
         GhostBrideMode,
         ZombieLordMode,
+        AbyssExorcismMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -126,8 +127,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(BeastmasterMode) == [19], f"剧本 19 未走定制 handler: {handlers.get(BeastmasterMode)}"
     assert handlers.get(GhostBrideMode) == [20], f"剧本 20 未走定制 handler: {handlers.get(GhostBrideMode)}"
     assert handlers.get(ZombieLordMode) == [21], f"剧本 21 未走定制 handler: {handlers.get(ZombieLordMode)}"
+    assert handlers.get(AbyssExorcismMode) == [22], f"剧本 22 未走定制 handler: {handlers.get(AbyssExorcismMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 49, f"应有 49 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 48, f"应有 48 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -141,7 +143,7 @@ def verify_mode_dispatch() -> None:
         "delayed_traitor_relic", "dragon_siege", "exorcism", "fleshwalkers", "generic",
         "nightmare_escape", "paint_the_pentagram", "phantom_bomb",
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
-        "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord",
+        "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
     }
 
 
@@ -886,6 +888,76 @@ def verify_ensure_room_in_play() -> None:
 
     # 不存在的模板不应崩溃
     assert engine._ensure_room_in_play("no_such_room") is None
+
+
+def verify_collapse_subsystem() -> None:
+    """引擎能力：房屋坍塌（翻面 / 邻格扩散 / 速度逃生 / 连通图排除）。
+
+    剧本 22 p104 与剧本 2 的"房屋坍塌"共用这一套；先于剧本单独钉住。
+    """
+    engine = _new_engine(seed=131, players=4)
+    foyer, hall, stairs = "0:1:0", "0:0:0", "0:2:0"
+    for key in (foyer, hall, stairs):
+        engine.state.board[key].revealed = True
+
+    # 邻接：同层正交才算，斜角不算（p104 "Diagonal is not considered adjacent"）
+    assert hall in engine._grid_neighbors(foyer) and stairs in engine._grid_neighbors(foyer)
+    ground_template = next(
+        t for t in engine.catalog.room_templates.values()
+        if t.floor == 0 and t.id not in {r.template_id for r in engine.state.board.values()}
+    )
+    diagonal = engine._place_room(ground_template, 2, 1, 0)
+    assert diagonal.key not in engine._grid_neighbors(foyer), "斜对角不应算相邻"
+    assert engine._grid_neighbors("1:2:0") == [], "不同楼层不应算相邻"
+
+    # 翻面：标记坍塌 + 牌面朝下，重复调用幂等
+    assert engine._collapse_room(hall) is True
+    assert engine.state.board[hall].data["abyss_collapsed"] is True
+    assert engine.state.board[hall].revealed is False, "坍塌应把板块翻回背面"
+    assert engine._is_collapsed(hall) and engine._collapsed_rooms()
+    assert engine._collapse_room(hall) is False, "重复坍塌应返回 False"
+
+    # 连通图与移动选项都不该再有这块房
+    graph = engine._build_graph()
+    assert hall not in graph, "坍塌房间不应作为图节点存在"
+    assert hall not in graph.get(foyer, []), "坍塌房间不应作为邻边存在"
+    walker = engine.state.players[0]
+    walker.room_key = foyer
+    walker.movement_stopped = False
+    assert hall not in {option.target_key for option in engine.available_move_options(walker)}, "不能走进坍塌的房间"
+
+    # p104：速度检定失败 → 随地板坠入深渊死亡
+    victim = engine.state.players[1]
+    victim.room_key = stairs
+    with patch.object(engine, "_resolve_check", return_value=False):
+        engine._collapse_room(stairs)
+    assert victim.dead, "逃离深渊失败应死亡"
+
+    # p104：检定成功 → 跳进相邻、有门连通、已发现且没塌的房间
+    # （用干净棋盘：上面的 hall/stairs 已经塌掉，原引擎里已无处可跳）
+    jumper_engine = _new_engine(seed=131, players=4)
+    jumper_engine.state.board[foyer].revealed = True
+    jumper_engine.state.board[hall].revealed = True
+    survivor = jumper_engine.state.players[2]
+    survivor.room_key = foyer
+    with patch.object(jumper_engine, "_resolve_check", return_value=True):
+        jumper_engine._collapse_room(foyer)
+    assert not survivor.dead and survivor.room_key != foyer, "应跳进相邻房间"
+    assert survivor.room_key == hall, "跳落点必须是相邻、有门连通且没塌的房间"
+
+    # 扩散只能沿已有深渊的邻格生长
+    before = {room.key for room in engine._collapsed_rooms()}
+    assert engine._collapse_adjacent_rooms(0) == 0
+    grown = engine._collapse_adjacent_rooms(2)
+    assert grown == 2, "应能沿邻格连续塌掉两间"
+    for room in engine._collapsed_rooms():
+        if room.key in before:
+            continue
+        assert any(other in before for other in engine._grid_neighbors(room.key)), f"{room.template_id} 不该凭空坍塌"
+
+    # 还没有深渊时不能凭空开洞
+    fresh = _new_engine(seed=131, players=4)
+    assert fresh._collapse_adjacent_rooms(3) == 0, "没有深渊起点就不该塌房"
 
 
 def verify_bot_quest_goal_rooms() -> None:
@@ -2294,6 +2366,113 @@ def verify_haunt21_zombie_lord() -> None:
     assert engine.state.winner == "heroes", "摧毁领主即英雄胜（p32）"
 
 
+def verify_haunt22_abyss_exorcism() -> None:
+    """剧本 22：深渊起点/首回合只开洞/邻格扩散/一次性驱魔来源/圣徽拖延（p33/p104）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=22)
+    handler = engine._mode_handler()
+    assert isinstance(handler, AbyssExorcismMode)
+    flags = engine._haunt_flags()
+
+    # 该种子在探险阶段就死了一名英雄（bot 实测），复活一名才够跑"两名英雄"的分支断言
+    for person in engine.state.players:
+        if person.role == "hero" and person.dead:
+            person.dead = False
+            for stat in ("speed", "might", "sanity", "knowledge"):
+                person.stats[stat] = 3
+
+    # p104：深渊从地下室开洞——已发现、无人占用
+    start = flags["abyss_room"]
+    assert start and engine.state.board[start].floor == -1, "深渊应从地下室开洞"
+    assert engine.state.board[start].revealed, "起点必须是已发现的房间"
+    assert not any(p.room_key == start and not p.dead for p in engine.state.players), "起点必须无人"
+    assert not engine._collapsed_rooms(), "作祟刚开局不该已经塌房"
+
+    # 把活人挪到远离深渊的格子上：否则扩散会随机吞掉测试用的英雄
+    def _park_safely() -> str:
+        abyss = {start} | {room.key for room in engine._collapsed_rooms()}
+        danger = {key for origin in abyss for key in engine._grid_neighbors(origin)}
+        safe = next(
+            (
+                key for key in sorted(engine.state.board)
+                if key not in danger and key not in abyss and engine.state.board[key].revealed
+            ),
+            "",
+        )
+        assert safe, "应还有远离深渊的已发现房间"
+        for person in engine.state.players:
+            if not person.dead:
+                person.room_key = safe
+        return safe
+
+    # 叛徒第 1 回合结束：只开洞 + 推进回合轨，不按速率塌房（p104 "starting on Turn 2"）
+    _park_safely()
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    handler.on_turn_end(engine, traitor)
+    assert {room.key for room in engine._collapsed_rooms()} == {start}, "第 1 回合只该塌起点房"
+    assert engine._haunt_track_value("abyss_turn") == 1
+
+    # 第 2 回合：每位玩家塌 1 间，且只能沿正交邻格扩散
+    _park_safely()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    handler.on_turn_end(engine, hero)
+    grown = [room.key for room in engine._collapsed_rooms() if room.key != start]
+    assert len(grown) == 1, f"第 2 回合每人应塌 1 间，实际 {len(grown)}"
+    assert grown[0] in engine._grid_neighbors(start), "深渊只能沿正交邻格扩散"
+
+    # p33：驱魔来源一次性；22 号用戒指替换 8 号的灵应板
+    assert "omen_spirit_board" not in handler.ALL_SOURCES and "omen_ring" in handler.ALL_SOURCES
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+    hero.items.append("omen_ring")
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "omen_ring", {}) is True
+    assert engine._haunt_track_value("exorcism_successes") == 1
+    assert "omen_ring" in flags["used_exorcism_sources"]
+    engine._reset_player_turn_state(hero)
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "omen_ring", {}) is False, "同一来源只能成功用一次"
+
+    # p33：圣徽拖延——必须站在深渊邻格，献出后弃卡并暂停坍塌
+    holder = next(p for p in engine.state.players if p.role == "hero" and not p.dead and p is not hero)
+    holder.items.append("omen_holy_symbol")
+    far = next(p for p in engine.state.players if p.role == "hero" and not p.dead and p is not holder)
+    far.items.append("omen_holy_symbol")
+    edge_key = next((k for k in engine._grid_neighbors(start) if not engine._is_collapsed(k)), "")
+    assert edge_key, "深渊应还有未塌的邻格"
+    holder.room_key = edge_key
+    far.room_key = next(k for k, room in engine.state.board.items() if k not in engine._grid_neighbors(start))
+    engine.state.turn_order = [holder.id]
+    engine.state.turn_index = 0
+    assert "sacrifice_holy_symbol" in {a.id for a in handler.available_actions(engine, holder)}
+    engine.state.turn_order = [far.id]
+    engine.state.turn_index = 0
+    assert "sacrifice_holy_symbol" not in {a.id for a in handler.available_actions(engine, far)}, "不挨着深渊就不能献圣徽"
+
+    engine.state.turn_order = [holder.id]
+    engine.state.turn_index = 0
+    collapsed_before = len(engine._collapsed_rooms())
+    assert handler.perform_action(engine, holder, "sacrifice_holy_symbol", {}) is True
+    assert "omen_holy_symbol" not in holder.items, "圣徽应被弃掉"
+    assert flags["abyss_paused_until"] == engine._haunt_track_value("abyss_turn") + 1
+    handler.on_turn_end(engine, holder)
+    assert len(engine._collapsed_rooms()) == collapsed_before, "拖延期间房屋不该继续坍塌"
+    assert engine._haunt_track_value("abyss_turn") == 1, "拖延不停住深渊的时钟（p33）"
+
+    # 胜负：驱魔满员 → 英雄胜；英雄全灭 → 叛徒胜；叛徒死亡不白送英雄胜
+    engine._set_haunt_track_value("exorcism_successes", engine._haunt_track_target("exorcism_successes"))
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    engine._set_haunt_track_value("exorcism_successes", 0)
+    traitor.dead = True
+    assert handler.check_victory(engine) is True and engine.state.winner is None, "应吸收叛徒死亡兜底"
+    for player in engine.state.players:
+        if player.role == "hero":
+            player.dead = True
+    assert handler.check_victory(engine) is True and engine.state.winner == "traitor"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -2649,9 +2828,11 @@ def main():
     verify_haunt19_beastmaster()
     verify_haunt20_ghost_bride()
     verify_haunt21_zombie_lord()
+    verify_haunt22_abyss_exorcism()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()
+    verify_collapse_subsystem()
     verify_bot_quest_goal_rooms()
     print("verify_haunt_systems: ok")
 
