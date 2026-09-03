@@ -303,6 +303,18 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["rat_swarm", "ritual"]},
     },
+    27: {
+        "hero": {
+            # p109：叛徒会杀人或抢配料；英雄 bot 需要反击。
+            "attack_traitor_players": True,
+            "victory_focus": "贴着 Blob 检定弱点，再搜配料投掷，别走进有 Blob 的房间",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "阻止英雄检定与投掷，把人赶进 Blob",
+        },
+        "scenario": {"special_rules": ["growing_blob", "blobperson"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",

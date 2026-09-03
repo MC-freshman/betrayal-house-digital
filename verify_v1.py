@@ -308,21 +308,22 @@ def verify_supplemental_rooms_and_events() -> None:
 
 
 def verify_generic_haunt_action_and_victory() -> None:
-    # 用仍是模板骨架的 27 号剧本验证通用行动/轨道胜负
-    # （1-26 号已精修，见 verify_haunt_systems 的对应用例）
+    # 用仍是模板骨架的 28 号剧本验证通用行动/轨道胜负
+    # （1-27 号已精修，见 verify_haunt_systems 的对应用例）
     engine = GameEngine(seed=43)
     engine.start_new_game(_configs(4, "normal"))
-    _trigger_specific_haunt(engine, 27)
+    _trigger_specific_haunt(engine, 28)
     hero = next(player for player in engine.state.players if player.role == "hero")
-    # 27 号骨架声明的房间列表里没有教堂，改用它在场的厨房
-    room_key = _place_test_room(engine, "kitchen", 21, 0)
+    # 28 号骨架的 h28_hero_task 要求持戒指；房间列表里没有教堂，改用熔炉房
+    hero.items.append("omen_ring")
+    room_key = _place_test_room(engine, "furnace_room", 21, 0)
     hero.room_key = room_key
     engine.state.turn_order = [hero.id]
     engine.state.turn_index = 0
     engine._resolve_check = lambda player, stat, target, label: True  # type: ignore[method-assign]
     actions = engine.available_haunt_actions(hero)
-    assert any(action.id == "h27_hero_task" for action in actions)
-    assert engine.perform_haunt_action(hero, "h27_hero_task")
+    assert any(action.id == "h28_hero_task" for action in actions)
+    assert engine.perform_haunt_action(hero, "h28_hero_task")
     assert engine.state.meta["haunt_rule"]["tracks"]["hero_progress"]["value"] == 1
 
     # 循环次数按该剧本骨架声明的轨道目标值驱动（各号剧本目标不同）；
@@ -330,7 +331,7 @@ def verify_generic_haunt_action_and_victory() -> None:
     track = engine.state.meta["haunt_rule"]["tracks"]["hero_progress"]
     while track["value"] < track["target"] and engine.state.phase == "HAUNT_PHASE":
         engine._reset_player_turn_state(hero)
-        assert engine.perform_haunt_action(hero, "h27_hero_task")
+        assert engine.perform_haunt_action(hero, "h28_hero_task")
     assert track["value"] == track["target"]
     assert engine.state.winner == "heroes"
 

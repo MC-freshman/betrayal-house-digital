@@ -1306,6 +1306,86 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [37, 108],
     },
+    27: {
+        # 校准记录（2026-09-04，对照英雄手册 p38 / 叛徒手册 p109）：
+        #   骨架原本用 plant 冒充怪物 + 抽象进度轨道，与原版"Blob 侵蚀"无关。
+        #   Blob 不是怪物——是单团不断扩张的肉体，用房间集合（flags["blob_rooms"]）
+        #     表示，令牌只是实体桌游的计数手段（≥20 枚），引擎不设上限。
+        #   开局（p38/p109）：叛徒仍在场；持水晶球者弃掉它，Blob 从水晶球所在
+        #     房间开始生长（没人持球时按叛徒所在房起算——校准回退，原文默认
+        #     作祟由水晶球触发）。
+        #   扩张（p109）：第一个怪物回合吞没起源房 + 门邻房；之后每个怪物回合
+        #     沿门与楼梯/特殊链接扩散一圈（原文"用尽所有移动方式"；本仓库
+        #     煤导槽/画廊/坍塌房无链接数据，慢速链接规则无法表达——校准简化，
+        #     只按门与既有 links 扩散）。扩张完掷 1 骰，掷出 2 就再扩一圈，
+        #     直到不是 2。
+        #   转化（p109）：任何人在有 Blob 的房间里（含叛徒）立刻变成
+        #     Blobperson——弃掉所有物品与预兆，速度 2，不能攻击/被攻击/抽牌/
+        #     用神秘电梯/发现新房间，为叛徒而战。Blobperson 所占房间在怪物
+        #     回合开始时种下新 Blob，与主体门连通后才从那里继续扩张
+        #     （flags["blob_seeded"]，逐回合检查连通提升）。
+        #   英雄流程（p38，每步每回合一次，全部知识 3+）：
+        #     ① 检查弱点：站在与 Blob 房间门相连的邻室，成功 ×玩家数 → 弱点找到
+        #        （知识检定令牌用完即重置，flags["weakness_found"] 置真）；
+        #     ② 搜配料：弱点找到后，在 阁楼/温室/熔炉房/花园/图书馆/研究实验室/
+        #        杂物间/厨房/储藏室/保险库/酒窖 检定；成功在身上放 1 份配料
+        #        （每英雄分开计数），该房放理智标记且不可再搜（本仓库无独立
+        #        Storeroom 模板，larder 兼任；保险库不建模"打开"状态）；
+        #     ③ 投掷：在与 Blob 房间门相连的邻室用 1 格移动投出自己身上 1 份
+        #        配料；投满玩家数份 → Blob 毁灭，英雄胜。
+        #   胜负（p38/p109）：英雄胜 = 销毁 Blob；叛徒胜 = 所有英雄死亡或
+        #     变成 Blobperson。叛徒死亡后 Blob 照常扩张（时钟改由本轮最后一名
+        #     存活玩家代推），老坑 17 号吸收者。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "blob_weakness",
+        "traitor_rule": "revealer",
+        "hero_goal": "检查出 Blob 的弱点，找齐化学配料投进去，在所有人被同化之前毁掉它。",
+        "traitor_goal": "让 Blob 吞没整栋房子——所有英雄死亡或变成 Blobperson。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {
+                "knowledge_rolls": {"label": "弱点知识检定", "target": "player_count", "side": "heroes"},
+                "blob_ingredients": {"label": "已投入的配料", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {
+                "weakness_found": False,
+                "blob_origin": None,
+                "blob_rooms": [],
+                "blob_seeded": [],
+                "blob_grew_once": False,
+                "blobperson_ids": [],
+                "ingredients": {},
+                "searched_rooms": [],
+            },
+        },
+        "monsters": [],
+        "actions": [
+            {"id": "examine_blob", "side": "heroes", "label": "检查 Blob 找弱点",
+             "detail": "站在与 Blob 房间门相连的邻室做知识 3+（p38）。累计成功玩家数次"
+                       "即找到弱点；每回合一次。",
+             "stat": "knowledge", "target": 3, "progress": "knowledge_rolls",
+             "requires_flags": {"weakness_found": False}},
+            {"id": "search_ingredient", "side": "heroes", "label": "搜寻化学配料",
+             "detail": "弱点找到后，在 阁楼/温室/熔炉房/花园/图书馆/研究实验室/杂物间/"
+                       "厨房/储藏室/保险库/酒窖 做知识 3+（p38）。成功得 1 份配料，"
+                       "该房放理智标记且不可再搜；每回合一次。",
+             "stat": "knowledge", "target": 3, "rooms": ["attic", "conservatory", "furnace_room",
+                       "garden", "library", "research_laboratory", "junk_room", "kitchen",
+                       "larder", "vault", "wine_cellar"],
+             "requires_flags": {"weakness_found": True}},
+            {"id": "throw_ingredient", "side": "heroes", "label": "把配料投进 Blob",
+             "detail": "在与 Blob 房间门相连的邻室，用 1 格移动投出自己身上的 1 份配料"
+                       "（p38）。投满玩家数份 → Blob 销毁，英雄胜。每回合一次。",
+             "stat": "knowledge", "target": 0},
+        ],
+        "win_conditions": [],
+        "source_pages": [38, 109],
+    },
 }
 
 
@@ -1466,7 +1546,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    27: dict(mode="blob_weakness", traitor_rule="revealer", hero_goal="发现斑点弱点并用正确配方摧毁 Blob。", traitor_goal="让斑点扩散并杀死所有英雄。", rooms=("research_laboratory", "kitchen", "furnace_room", "chasm", "underground_lake"), monsters=("plant",), tokens=("blob", "knowledge_check", "formula"), hero_task="研究斑点弱点", traitor_task="扩散斑点", hero_stat="knowledge", hero_target=3, hero_progress_target=2, hero_detail="在斑点标记相邻房间完成研究，随后完成化学配方。", traitor_detail="推进斑点扩散轨道。", monster_count=1, hero_win_target=2),
     28: dict(mode="demon_ring", traitor_rule="revealer", hero_goal="携带戒指击败恶魔领主两次。", traitor_goal="让恶魔从地狱之门涌入并杀死所有英雄。", rooms=("chasm", "furnace_room", "underground_lake", "pentagram_chamber", "chapel"), monsters=("giant",), tokens=("demon_lord", "demon", "hell_gate"), hero_task="用戒指放逐恶魔领主", traitor_task="召唤恶魔", hero_stat=["might", "sanity"], hero_target=5, hero_progress_target=2, hero_detail="携带戒指在恶魔领主所在房间完成一次放逐攻击。", traitor_detail="推进地狱之门召唤进度。", monster_count="player_count", hero_win_target=2, hero_requires=("omen_ring",)),
     29: dict(mode="frankenstein_fire", traitor_rule="revealer", hero_goal="用火焰弱点摧毁弗兰肯斯坦怪物。", traitor_goal="命令怪物杀死所有英雄。", rooms=("furnace_room", "kitchen", "attic", "research_laboratory"), monsters=("giant",), tokens=("torch", "fire", "monster"), hero_task="准备火焰并击破怪物", traitor_task="增强弗兰肯斯坦怪物", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="在火焰相关房间准备武器，再攻击怪物。", traitor_detail="推进怪物力量轨道。", monster_count=1, hero_win_target=1),
     30: dict(mode="dracula_rising", traitor_rule="revealer", hero_goal="摧毁德古拉伯爵和新娘。", traitor_goal="在阳光削弱吸血鬼前杀死或转化所有英雄。", rooms=("crypt", "graveyard", "bloody_room", "chapel", "balcony", "tower"), monsters=("shadow", "beast"), tokens=("dracula", "bride", "blood", "sun"), hero_task="猎杀德古拉与新娘", traitor_task="汲取鲜血", hero_stat="sanity", hero_target=5, hero_progress_target=2, hero_detail="在吸血鬼所在房间完成两次猎杀行动。", traitor_detail="推进德古拉苏醒与鲜血轨道。", monster_count=2, hero_win_target=2),

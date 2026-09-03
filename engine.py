@@ -782,6 +782,11 @@ class GameEngine:
                 self._log("青蛙不能发现新房间。")
                 player.movement_stopped = True
                 return False
+            if not self._mode_handler().can_discover_rooms(self, player):
+                # 剧本可禁止发现新房间（剧本 27 p109：Blobperson 不能发现房间）。
+                self._log(f"{self._player_label(player)} 无法发现新房间。")
+                player.movement_stopped = True
+                return False
             dx, dy = DIRECTION_DELTAS[option.direction]
             target_pos = (current_room.floor, current_room.x + dx, current_room.y + dy)
             new_room = None

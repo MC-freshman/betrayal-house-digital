@@ -40,6 +40,7 @@ if __package__ in {None, ""}:
         BatSwarmMode,
         VoodooMode,
         RatRitualMode,
+        AmokFleshMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -136,8 +137,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(BatSwarmMode) == [24], f"剧本 24 未走定制 handler: {handlers.get(BatSwarmMode)}"
     assert handlers.get(VoodooMode) == [25], f"剧本 25 未走定制 handler: {handlers.get(VoodooMode)}"
     assert handlers.get(RatRitualMode) == [26], f"剧本 26 未走定制 handler: {handlers.get(RatRitualMode)}"
+    assert handlers.get(AmokFleshMode) == [27], f"剧本 27 未走定制 handler: {handlers.get(AmokFleshMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 44, f"应有 44 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 43, f"应有 43 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -152,7 +154,7 @@ def verify_mode_dispatch() -> None:
         "nightmare_escape", "paint_the_pentagram", "phantom_bomb",
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
-        "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual",
+        "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
     }
 
 
@@ -3169,6 +3171,158 @@ def verify_haunt26_pentagram_block() -> None:
     assert engine.current_room(hero).template_id != "pentagram_chamber", "英雄不能进五芒星室"
 
 
+def _haunt27_frontier(engine, handler, player):
+    """把 player 放到"与 Blob 房间门相连的邻室"，返回该房间 key。"""
+    flags = engine._haunt_flags()
+    blob = set(flags.get("blob_rooms", [])) | set(flags.get("blob_seeded", []))
+    for key in sorted(blob):
+        for nxt in sorted(engine._door_neighbors(key)):
+            if nxt not in blob and nxt in engine.state.board:
+                player.room_key = nxt
+                return nxt
+    raise AssertionError("测试需要 Blob 的门外邻室")
+
+
+def verify_haunt27_amok_flesh() -> None:
+    """剧本 27：Blob 扩张与掷 2 追加/弱点检定/配料搜寻与投掷/Blobperson
+    转化与限制/胜负与叛徒死亡后代推时钟（p38/p109）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=27)
+    handler = engine._mode_handler()
+    assert isinstance(handler, AmokFleshMode)
+    flags = engine._haunt_flags()
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    hero = heroes[0]
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+    needed = len(engine.state.players)
+
+    # ---- 开局：水晶球被弃、起源房已定、Blob 尚未扩张
+    assert flags.get("blob_origin"), "p38/p109：应确定 Blob 起源房"
+    assert flags.get("blob_rooms") == [] and flags.get("blob_grew_once") is False
+
+    # ---- 第一个怪物回合：吞没起源房 + 门邻房；掷非 2 不追加
+    with patch.object(engine, "roll_dice", return_value=1):
+        handler.on_turn_end(engine, traitor)
+    blob = flags["blob_rooms"]
+    assert flags["blob_grew_once"] is True
+    assert flags["blob_origin"] in blob, "起源房应被吞没"
+    assert all(n in blob for n in engine._door_neighbors(flags["blob_origin"])), "门邻房应被吞没"
+    assert all(
+        handler._is_blobperson(engine, p) or p.room_key not in set(blob)
+        for p in engine.state.players if not p.dead
+    ), "p109：只有身处 Blob 房间的人被同化"
+
+    # ---- 掷出 2 追加扩张
+    rooms_before = len(flags["blob_rooms"])
+    with patch.object(engine, "roll_dice", side_effect=[2, 0]):
+        handler.on_turn_end(engine, traitor)
+    assert len(flags["blob_rooms"]) > rooms_before, "p109：掷出 2 应再扩一圈"
+
+    # ---- examine_blob：不邻 Blob 不可用；邻室检定累计玩家数次 → 弱点找到
+    hero.room_key = next(k for k in engine.state.board if k not in set(blob) | set(flags["blob_seeded"]))
+    engine._reset_player_turn_state(hero)
+    assert "examine_blob" not in {a.id for a in handler.available_actions(engine, hero)}, "不邻 Blob 不能检查"
+    frontier = _haunt27_frontier(engine, handler, hero)
+    engine._reset_player_turn_state(hero)
+    assert "examine_blob" in {a.id for a in handler.available_actions(engine, hero)}
+    with patch.object(engine, "_resolve_check", return_value=True):
+        for i in range(needed):
+            assert engine.perform_haunt_action(hero, "examine_blob") is True
+            engine._reset_player_turn_state(hero)
+    assert flags["weakness_found"] is True, "p38：累计玩家数次成功 → 弱点找到"
+    assert engine._haunt_track_value("knowledge_rolls") == 0, "弱点找到后检定令牌重置"
+    assert "examine_blob" not in {a.id for a in handler.available_actions(engine, hero)}, "弱点找到后不能再检查"
+
+    # ---- search_ingredient：厨房搜出配料；同房不可再搜
+    kitchen_key = next(
+        (k for k, r in engine.state.board.items() if r.template_id == "kitchen"),
+        None,
+    )
+    if kitchen_key is None:
+        kitchen = engine._place_room(engine.catalog.room_templates["kitchen"], 40, 40, 0)
+        kitchen.revealed = True
+        kitchen_key = kitchen.key
+    hero.room_key = kitchen_key
+    engine._reset_player_turn_state(hero)
+    assert "search_ingredient" in {a.id for a in handler.available_actions(engine, hero)}
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert engine.perform_haunt_action(hero, "search_ingredient") is True
+    assert flags["ingredients"].get(str(hero.id), 0) == 1
+    assert kitchen_key in flags["searched_rooms"], "p38：搜过的房放理智标记，不可再搜"
+    assert "search_ingredient" not in {a.id for a in handler.available_actions(engine, hero)}
+
+    # ---- throw_ingredient：邻室投掷花 1 格移动；投满 → 英雄胜
+    _haunt27_frontier(engine, handler, hero)
+    engine._reset_player_turn_state(hero)
+    steps0 = 5
+    hero.steps_remaining = steps0
+    assert "throw_ingredient" in {a.id for a in handler.available_actions(engine, hero)}
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert engine.perform_haunt_action(hero, "throw_ingredient") is True
+    assert hero.steps_remaining == steps0 - 1, "p38：投掷用 1 格移动"
+    assert engine._haunt_track_value("blob_ingredients") == 1
+    assert flags["ingredients"][str(hero.id)] == 0
+
+    # ---- Blobperson：走进 Blob 房间即被同化，限制全套生效
+    hero.items.append("item_candle")  # 转化时应被弃掉
+    blob_key = sorted(set(flags["blob_rooms"]))[0]
+    hero.room_key = blob_key
+    handler.on_enter_room(engine, hero, engine.state.board[blob_key])
+    assert handler._is_blobperson(engine, hero), "p109：身处 Blob 房间立刻变成 Blobperson"
+    assert "item_candle" not in hero.items, "p109：Blobperson 弃掉所有物品与预兆"
+    assert handler.attack_allowed(engine, hero, traitor) is False, "Blobperson 不能攻击"
+    assert handler.attack_allowed(engine, traitor, hero) is False, "Blobperson 不能被攻击"
+    assert handler.can_discover_rooms(engine, hero) is False
+    assert handler.mystic_elevator_blocked(engine, hero) is True
+    assert handler.suppress_room_draw(engine, hero, engine.current_room(hero)) is True
+    hero.steps_remaining = 9
+    handler.on_turn_start(engine, hero)
+    assert hero.steps_remaining == 2, "p109：Blobperson Speed 2"
+    assert handler.available_actions(engine, hero) == [], "Blobperson 不能执行剧本行动"
+
+    # ---- 叛徒胜：所有英雄死亡或 Blobperson（engine1：hero 已同化，其余死亡）
+    for p in heroes:
+        if p.id != hero.id:
+            p.dead = True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "traitor", "p109：所有英雄死亡或 Blobperson → 叛徒胜"
+
+    # ---- 英雄胜：投满配料销毁 Blob
+    engine2 = _run_until_haunt(seed=109, players=4, haunt_id=27)
+    h2 = engine2._mode_handler()
+    flags2 = engine2._haunt_flags()
+    t2 = next(p for p in engine2.state.players if p.role == "traitor")
+    with patch.object(engine2, "roll_dice", return_value=1):
+        h2.on_turn_end(engine2, t2)  # 先让 Blob 落地，才有"门外邻室"可投掷
+    flags2["weakness_found"] = True
+    hero2 = next(p for p in engine2.state.players if p.role == "hero" and not p.dead)
+    flags2["ingredients"][str(hero2.id)] = 1
+    engine2._set_haunt_track_value("blob_ingredients", needed - 1)
+    engine2.state.turn_order = [hero2.id]
+    engine2.state.turn_index = 0
+    _haunt27_frontier(engine2, h2, hero2)
+    engine2._reset_player_turn_state(hero2)
+    with patch.object(engine2, "_resolve_check", return_value=True):
+        assert engine2.perform_haunt_action(hero2, "throw_ingredient") is True
+    assert h2.check_victory(engine2) is True
+    assert engine2.state.winner == "heroes", "p38：投满配料 → Blob 销毁，英雄胜"
+
+    # ---- 叛徒死亡：扩张时钟改由本轮最后一名存活玩家代推（老坑 17 号吸收者）
+    engine3 = _run_until_haunt(seed=109, players=4, haunt_id=27)
+    h3 = engine3._mode_handler()
+    t3 = next(p for p in engine3.state.players if p.role == "traitor")
+    hero3 = next(p for p in engine3.state.players if p.role == "hero" and not p.dead)
+    engine3.state.turn_order = [hero3.id]
+    engine3.state.turn_index = 0
+    t3.dead = True
+    assert engine3._haunt_flags().get("blob_rooms") == []
+    with patch.object(engine3, "roll_dice", return_value=1):
+        h3.on_turn_end(engine3, hero3)
+    assert engine3._haunt_flags().get("blob_rooms"), "叛徒出局后 Blob 应照常扩张"
+    assert engine3.state.winner is None, "叛徒死亡 ≠ 英雄胜"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -3531,6 +3685,7 @@ def main():
     verify_haunt25_deferred_draw()
     verify_haunt26_rat_ritual()
     verify_haunt26_pentagram_block()
+    verify_haunt27_amok_flesh()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()
