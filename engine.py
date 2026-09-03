@@ -1653,21 +1653,22 @@ class GameEngine:
             return roll >= target
         return False
 
-    def _apply_damage_amounts(self, player: Player, physical: int = 0, mental: int = 0) -> None:
+    def _apply_damage_amounts(self, player: Player, physical: int = 0, mental: int = 0, source: str = "") -> None:
         if physical:
-            self._split_and_apply(player, "physical", physical)
+            self._split_and_apply(player, "physical", physical, source=source)
         if mental:
-            self._split_and_apply(player, "mental", mental)
+            self._split_and_apply(player, "mental", mental, source=source)
         self._check_player_death(player)
 
-    def _split_and_apply(self, player: Player, damage_type: str, amount: int) -> None:
+    def _split_and_apply(self, player: Player, damage_type: str, amount: int, source: str = "") -> None:
         if amount <= 0 or player.dead:
             return
         if damage_type == "physical" and player.ignore_first_physical_damage:
             player.ignore_first_physical_damage = False
             self._log(f"{player.name} 用护甲挡下了这次物理伤害。")
             return
-        if damage_type == "physical" and self._has_card(player, "item_armor"):
+        if damage_type == "physical" and source != "孢子" and self._has_card(player, "item_armor"):
+            # 剧本 18 p29：盔甲不防孢子伤害。
             if self.prompter.confirm("盔甲", f"{player.name} 要用盔甲挡下这次物理伤害吗？"):
                 self._discard_card_from_player(player, "item_armor", return_to_room=False)
                 self._log(f"{player.name} 的盔甲挡下了物理伤害。")
@@ -1781,7 +1782,7 @@ class GameEngine:
             return
         if source:
             self._log(f"{source} 让 {player.name} 受到 {amount} 点{ '物理' if damage_type == 'physical' else '精神' }伤害。")
-        self._apply_damage_amounts(player, physical=amount if damage_type == "physical" else 0, mental=amount if damage_type == "mental" else 0)
+        self._apply_damage_amounts(player, physical=amount if damage_type == "physical" else 0, mental=amount if damage_type == "mental" else 0, source=source)
 
     # ------------------------------------------------------------------
     # Inventory management

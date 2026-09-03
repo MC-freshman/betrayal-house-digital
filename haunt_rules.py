@@ -816,6 +816,50 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [28, 99],
     },
+    18: {
+        # 校准记录（2026-09-02，对照英雄手册 p29 / 叛徒手册 p100）：
+        #   机制落在 OffspringMode：
+        #   · 花朵：在温室/花园/墓地做知识 5+ 发现（花 token 挂到发现者
+        #     身上，不可被偷——令牌天然满足）；带进毒藤房间后，房内每个
+        #     英雄知识 5+ 削弱，3-4 人局 2 次成功 / 5-6 人局 3 次杀死毒藤
+        #   · 孢子：毒藤房间开局有玩家数枚；叛徒每回合按其他人数加 2-3 枚
+        #     （当回合即可移动，bot 每枚每回合向最近英雄爬 1 格）
+        #   · 孢子伤害：回合开始处于或移动经过带孢子的房间，各 1 骰物理
+        #     （多枚不叠加；盔甲不防——引擎按 source="孢子" 豁免）
+        #   · 屏息：在无孢子房间可屏息移动（格数=力量），下一回合不能移动
+        #     （可行动），再下回合恢复；屏息回合结束身处孢子房则 1 骰
+        #   简化：屏息以剧本行动近似"回合开始可选"；孢子不使用电梯未
+        #     过滤（bot 沿最短路爬行，电梯链极少成为通路）；毒藤本体
+        #     不可被攻击（p29 孢子不可攻击，藤由削弱检定杀死）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "poisonous_plant",
+        "traitor_rule": "revealer",
+        "hero_goal": "找到花朵带进毒藤房间，用知识削弱并杀死毒藤，躲开孢子。",
+        "traitor_goal": "让毒藤的孢子铺满房子，杀死所有英雄。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": ["conservatory", "garden", "graveyard", "chasm", "furnace_room", "underground_lake"],
+        "tokens": ["evil_plant", "spore", "flower", "knowledge_check"],
+        "setup": {
+            "tracks": {
+                "weaken_count": {"label": "对毒藤的削弱", "target": 3, "side": "heroes"},
+            },
+            "flags": {
+                "flower_found": False, "weaken_count": 0, "plant_room": None,
+                "plant_killed": False, "breath_active": {}, "catching_breath": [],
+            },
+        },
+        "monsters": [],
+        "actions": [
+            {"id": "find_flower", "side": "heroes", "label": "寻找花朵", "detail": "在温室/花园/墓地做知识 5+，找到能杀死毒藤的花（p29）。", "stat": "knowledge", "target": 5, "rooms": ["conservatory", "garden", "graveyard"], "requires_flags": {"flower_found": False}, "set_flags": {"flower_found": True}},
+            {"id": "weaken_plant", "side": "heroes", "label": "削弱毒藤", "detail": "花朵在本房间时做知识 5+；成功次数足够即杀死毒藤（p29）。", "stat": "knowledge", "target": 5, "progress": "weaken_count", "requires_flags": {"flower_found": True}},
+            {"id": "hold_breath", "side": "heroes", "label": "屏住呼吸", "detail": "在无孢子房间屏息移动（格数=力量）；下一回合不能移动（p29）。"},
+        ],
+        "win_conditions": [],
+        "source_pages": [29, 100],
+    },
 }
 
 
@@ -976,7 +1020,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    18: dict(mode="poisonous_plant", traitor_rule="revealer", hero_goal="找到花并削弱、杀死邪恶植物。", traitor_goal="利用孢子杀死所有英雄。", rooms=("conservatory", "garden", "graveyard", "research_laboratory"), monsters=("plant",), tokens=("flower", "spore", "evil_plant"), hero_task="寻找花并削弱植物", traitor_task="扩散孢子", hero_stat="knowledge", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="找到花后在邪恶植物所在房间完成削弱检定。", traitor_detail="扩散孢子，持续给英雄施加威胁。", monster_count=1, hero_win_target="half_players_ceil"),
     19: dict(mode="beastmaster", traitor_rule="revealer", hero_goal="用特殊攻击夺走长矛，使兽王恢复正常。", traitor_goal="指挥动物爪牙杀死所有英雄。", rooms=("entrance_hall", "underground_lake", "garden", "graveyard", "patio", "balcony", "tower"), monsters=("beast", "wolf"), tokens=("spear", "animal_minion", "bear", "hawk"), hero_task="夺取兽王长矛", traitor_task="召集动物爪牙", hero_stat=["might", "sanity"], hero_target=5, hero_progress_target=1, hero_detail="与兽王同房间时完成特殊夺取行动，不把兽王杀死。", traitor_detail="推进动物爪牙威胁轨道。", monster_count="player_count", hero_win_target=1),
     20: dict(mode="ghost_bride", traitor_rule="revealer", hero_goal="找到戒指和真正新郎的尸体，并在小教堂阻止错误婚礼。", traitor_goal="让幽灵新娘在小教堂完成婚礼，或杀死所有英雄。", rooms=("crypt", "graveyard", "chapel", "catacombs", "entrance_hall"), monsters=("ghost",), tokens=("bride", "groom", "ring", "corpse"), hero_task="揭穿并阻止幽灵婚礼", traitor_task="完成幽灵婚礼", hero_stat="knowledge", hero_target=5, hero_progress_target=2, hero_detail="先找齐戒指和尸体，再在小教堂完成阻止仪式。", traitor_detail="在小教堂推动婚礼进度。", monster_count=1, hero_win_target=2, traitor_win_type="track", traitor_progress_target=2),
     21: dict(mode="zombie_lord", traitor_rule="revealer", hero_goal="摧毁僵尸领主或消灭所有僵尸。", traitor_goal="让僵尸领主和僵尸杀死所有英雄。", rooms=("crypt", "graveyard", "entrance_hall", "underground_lake", "garden", "chapel", "conservatory", "pentagram_chamber"), monsters=("zombie", "giant"), tokens=("zombie_lord", "zombie", "damage"), hero_task="清理僵尸并攻击领主", traitor_task="召集僵尸围攻", hero_stat="might", hero_target=5, hero_detail="在僵尸威胁区域完成清理行动。", traitor_detail="让僵尸推进围攻轨道。", monster_count="player_count"),

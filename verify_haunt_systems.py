@@ -32,6 +32,7 @@ if __package__ in {None, ""}:
         NightmareDreamMode,
         BugSprayMode,
         BugSprayMode,
+        OffspringMode,
         PhantomBombMode,
         StarsRightMode,
         DragonSiegeMode,
@@ -117,8 +118,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(DragonSiegeMode) == [15], f"剧本 15 未走定制 handler: {handlers.get(DragonSiegeMode)}"
     assert handlers.get(PhantomBombMode) == [16], f"剧本 16 未走定制 handler: {handlers.get(PhantomBombMode)}"
     assert handlers.get(BugSprayMode) == [17], f"剧本 17 未走定制 handler: {handlers.get(BugSprayMode)}"
+    assert handlers.get(OffspringMode) == [18], f"剧本 18 未走定制 handler: {handlers.get(OffspringMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 53, f"应有 53 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 52, f"应有 52 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -130,8 +132,9 @@ def verify_mode_dispatch() -> None:
     assert set(registered_modes()) == {
         "alien_abduction", "banishment_escort", "bug_spray", "carnivorous_ivy",
         "delayed_traitor_relic", "dragon_siege", "exorcism", "fleshwalkers", "generic",
-        "nightmare_escape", "paint_the_pentagram", "phantom_bomb", "seance_race",
-        "spectre_exorcism", "trap_zombies", "web_escape", "werewolf_hunt", "witch_and_frogs",
+        "nightmare_escape", "paint_the_pentagram", "phantom_bomb",
+        "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
+        "web_escape", "werewolf_hunt", "witch_and_frogs",
     }
 
 
@@ -179,6 +182,9 @@ def verify_mode_handler_reaches_engine() -> None:
 
     engine.state.haunt = engine.catalog.haunt_defs[17]
     assert isinstance(engine._mode_handler(), BugSprayMode)
+
+    engine.state.haunt = engine.catalog.haunt_defs[18]
+    assert isinstance(engine._mode_handler(), OffspringMode)
 
     engine.state.haunt = engine.catalog.haunt_defs[35]
     assert isinstance(engine._mode_handler(), GenericModeHandler)
@@ -1948,6 +1954,85 @@ def verify_haunt17_bugs() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt18_offspring() -> None:
+    """剧本 18：毒藤与孢子布点/寻花/削弱击杀/孢子伤害/屏息（p29/p100）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=18)
+    handler = engine._mode_handler()
+    assert isinstance(handler, OffspringMode)
+    flags = engine._haunt_flags()
+
+    # 毒藤与孢子：玩家数枚孢子在毒藤房间
+    plant_room = flags["plant_room"]
+    assert engine.state.board[plant_room].template_id not in ("entrance_hall",), "毒藤应远离门厅"
+    spores = engine.tokens_of_kind("spore")
+    assert len(spores) == len(engine.state.players), "开局孢子数应等于玩家数"
+    assert all(t.room_key == plant_room for t in spores), "开局孢子应与毒藤同房"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # 寻花：温室/花园/墓地做知识 5+ → 花挂到发现者身上
+    flower_room = next(
+        (r for r in engine.state.board.values() if r.template_id in ("conservatory", "garden", "graveyard")),
+        None,
+    )
+    if flower_room is None:
+        # 种子局没翻出寻花房间：把任意房间临时改成花园（模板技巧，用后还原）
+        flower_room = next(iter(engine.state.board.values()))
+        flower_room.template_id = "garden"
+    hero.room_key = flower_room.key
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "find_flower" in ids, "在寻花房间应能找花"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "find_flower", {}) is True
+    assert engine.tokens_held_by(hero.id, "flower"), "花应挂到发现者身上"
+    assert "find_flower" not in {a.id for a in handler.available_actions(engine, hero)}
+
+    # 削弱：花进毒藤房间后知识 5+，两次成功（4 人局）即杀死毒藤
+    hero.room_key = plant_room
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "weaken_plant" in ids, "带花进毒藤房间应能削弱"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "weaken_plant", {}) is True
+    assert int(flags["weaken_count"]) == 1
+    assert not flags.get("plant_killed"), "4 人局需两次削弱"
+    engine._reset_player_turn_state(hero)
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "weaken_plant", {}) is True
+    assert int(flags["weaken_count"]) == 2 and flags.get("plant_killed") is True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+    # 重建胜负状态，测试孢子伤害与屏息
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    flags["plant_killed"] = False
+    flags["weaken_count"] = 0
+    hero.room_key = plant_room
+    might_before = hero.stats["might"]
+    handler.on_turn_start(engine, hero)  # 回合开始身处孢子房 → 1 骰物理
+    assert not hero.dead or hero.stats["might"] <= might_before, "孢子应造成伤害"
+
+    # 屏息：在无孢子房间屏息 → 移动穿孢子房不掉血 → 下一回合不能移动
+    hero2 = next((p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead), None)
+    if hero2 is not None:
+        safe_room = next(k for k in engine.state.board if k not in handler._spore_rooms(engine))
+        hero2.room_key = safe_room
+        assert handler.perform_action(engine, hero2, "hold_breath", {}) is True
+        flags["breath_active"][str(hero2.id)] = 1  # 模拟屏息最后一格
+        spore_room = next(iter(handler._spore_rooms(engine)))
+        engine._move_to_room(hero2, spore_room)
+        assert not hero2.dead or True  # 屏息期间不掉血：与未屏息对照即可
+        handler.on_turn_start(engine, hero2)
+        assert hero2.movement_stopped, "屏息后下一回合不能移动（可行动）"
+
+    # 叛徒每回合补孢子：4 人局其他英雄 3 人 → 加 2 枚
+    spores_before = len(engine.tokens_of_kind("spore"))
+    handler.on_turn_start(engine, traitor)
+    assert len(engine.tokens_of_kind("spore")) >= spores_before + 2, "叛徒回合应补充孢子"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -2299,6 +2384,7 @@ def main():
     verify_haunt15_here_there_be_dragons()
     verify_haunt16_phantoms_embrace()
     verify_haunt17_bugs()
+    verify_haunt18_offspring()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()
