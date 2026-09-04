@@ -790,7 +790,15 @@ class GameEngine:
             dx, dy = DIRECTION_DELTAS[option.direction]
             target_pos = (current_room.floor, current_room.x + dx, current_room.y + dy)
             new_room = None
+            # 尝试上限：牌不够放时弃牌堆会被循环补进牌堆，下面这个 while
+            # 必须有界，否则"该位置放不进任何房间牌"会变成无限循环
+            # （种子 109,4 的 28 号局实测触发）。
+            draw_budget = len(self.state.room_deck) + len(self.state.room_discard) + 1
             while True:
+                if draw_budget <= 0:
+                    self._log("这一层的房间牌都放不进这个方向，只好作罢。")
+                    return False
+                draw_budget -= 1
                 template = self._draw_room_template(current_room.floor)
                 if template is None:
                     self._log("这一层已经没有可用的新房间了。")

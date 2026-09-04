@@ -1386,6 +1386,70 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [38, 109],
     },
+    28: {
+        # 校准记录（2026-09-04，对照英雄手册 p39 / 叛徒手册 p110）：
+        #   骨架原本只有 giant 冒充怪 + 抽象"两次放逐"轨道，与原版无关。
+        #   数值（p110 页脚）：恶魔一至五 速/力/智 = 2/5/5、3/4/4、4/3/3、
+        #     5/2/2、6/1/1；恶魔领主 1/7/7。地狱门房放 领主 + 数量=英雄数的
+        #     恶魔（按恶魔一、二…顺序）。
+        #   地狱门（p110）：无人的事件符号房间，距最近探险者 ≥4 格；没有就
+        #     选最远的（bot 按 (距离, key) 定序取最大）。
+        #   戒指（p39）：作祟由所罗门戒指触发，揭示者（=叛徒）开局持有
+        #     omen_ring。英雄胜利 = 持戒指击败恶魔领主两次（每次攻击可选
+        #     力量或理智）；理智攻击对领主 +2；第一次击败击晕，第二次摧毁；
+        #     领主攻击戒指持有人落败也算一次击败。
+        #   策反（p39）：持戒指对普通恶魔的理智攻击成功 → 该恶魔被策反，
+        #     由戒指持有人（电子版在其回合开始自动）移动并攻击其他恶魔或
+        #     叛徒；戒指转给其他英雄则控制权随之转移；戒指被丢/被叛徒或
+        #     恶魔拿走 → 恶魔恢复不受控。不持戒指击败恶魔 = 照常击晕。
+        #   抢戒指（p110）：恶魔（含领主）击败戒指持有人且赢 2+ → 改为抢走
+        #     戒指（不掉血）；恶魔不能使用/交易/丢掉戒指；击败该恶魔的
+        #     探险者可取回戒指。
+        #   限制（p110）：左轮等速度攻击对恶魔领主无效（monster_specs
+        #     immune_to=["speed"]，复用引擎既有免疫）。
+        #   胜负（p39/p110）：英雄胜 = 领主被戒指摧毁；叛徒胜 = 英雄全灭。
+        #     叛徒死亡后恶魔照常追杀（怪物回合由本轮最后存活玩家代跑，
+        #     老坑 18 号吸收者）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "demon_ring",
+        "traitor_rule": "revealer",
+        "hero_goal": "从叛徒手里拿到所罗门戒指，用它击败恶魔领主两次（理智攻击 +2）。",
+        "traitor_goal": "让恶魔杀光所有英雄。",
+        "suggested_monsters": ["demon_lord", "demon_1", "demon_2", "demon_3", "demon_4", "demon_5"],
+        "required_cards": ["omen_ring"],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {
+                "lord_defeats": {"label": "领主击败进度", "target": 2, "side": "heroes"},
+            },
+            "flags": {
+                "portal_room": None,
+                "lord_destroyed": False,
+                "controlled_demons": [],
+            },
+        },
+        "monsters": [
+            # spawn=deferred：地狱门房由 handler 按 p110 规则选定并统一入场
+            {"template_id": "demon_lord", "name": "恶魔领主", "spawn": "deferred",
+             "speed": 1, "might": 7, "sanity": 7, "immune_to": ["speed"]},
+            {"template_id": "demon_1", "name": "恶魔一", "spawn": "deferred",
+             "speed": 2, "might": 5, "sanity": 5},
+            {"template_id": "demon_2", "name": "恶魔二", "spawn": "deferred",
+             "speed": 3, "might": 4, "sanity": 4},
+            {"template_id": "demon_3", "name": "恶魔三", "spawn": "deferred",
+             "speed": 4, "might": 3, "sanity": 3},
+            {"template_id": "demon_4", "name": "恶魔四", "spawn": "deferred",
+             "speed": 5, "might": 2, "sanity": 2},
+            {"template_id": "demon_5", "name": "恶魔五", "spawn": "deferred",
+             "speed": 6, "might": 1, "sanity": 1},
+        ],
+        "actions": [],
+        "win_conditions": [],
+        "source_pages": [39, 110],
+    },
 }
 
 
@@ -1546,7 +1610,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    28: dict(mode="demon_ring", traitor_rule="revealer", hero_goal="携带戒指击败恶魔领主两次。", traitor_goal="让恶魔从地狱之门涌入并杀死所有英雄。", rooms=("chasm", "furnace_room", "underground_lake", "pentagram_chamber", "chapel"), monsters=("giant",), tokens=("demon_lord", "demon", "hell_gate"), hero_task="用戒指放逐恶魔领主", traitor_task="召唤恶魔", hero_stat=["might", "sanity"], hero_target=5, hero_progress_target=2, hero_detail="携带戒指在恶魔领主所在房间完成一次放逐攻击。", traitor_detail="推进地狱之门召唤进度。", monster_count="player_count", hero_win_target=2, hero_requires=("omen_ring",)),
     29: dict(mode="frankenstein_fire", traitor_rule="revealer", hero_goal="用火焰弱点摧毁弗兰肯斯坦怪物。", traitor_goal="命令怪物杀死所有英雄。", rooms=("furnace_room", "kitchen", "attic", "research_laboratory"), monsters=("giant",), tokens=("torch", "fire", "monster"), hero_task="准备火焰并击破怪物", traitor_task="增强弗兰肯斯坦怪物", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="在火焰相关房间准备武器，再攻击怪物。", traitor_detail="推进怪物力量轨道。", monster_count=1, hero_win_target=1),
     30: dict(mode="dracula_rising", traitor_rule="revealer", hero_goal="摧毁德古拉伯爵和新娘。", traitor_goal="在阳光削弱吸血鬼前杀死或转化所有英雄。", rooms=("crypt", "graveyard", "bloody_room", "chapel", "balcony", "tower"), monsters=("shadow", "beast"), tokens=("dracula", "bride", "blood", "sun"), hero_task="猎杀德古拉与新娘", traitor_task="汲取鲜血", hero_stat="sanity", hero_target=5, hero_progress_target=2, hero_detail="在吸血鬼所在房间完成两次猎杀行动。", traitor_detail="推进德古拉苏醒与鲜血轨道。", monster_count=2, hero_win_target=2),
     31: dict(mode="living_house", traitor_rule="revealer", hero_goal="用长矛击败房屋的心脏或大脑。", traitor_goal="让活房屋消化并杀死所有英雄。", rooms=("organ_room", "attic", "dining_room", "kitchen", "larder", "crypt"), monsters=("plant",), tokens=("heart", "brain", "stomach", "antibody"), hero_task="攻击房屋心脏或大脑", traitor_task="消化入侵者", hero_stat="might", hero_target=6, hero_progress_target=2, hero_detail="在风琴房或阁楼完成一次长矛攻击行动。", traitor_detail="推进房屋消化轨道。", monster_count=1, hero_win_target=2),

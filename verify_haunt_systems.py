@@ -41,6 +41,7 @@ if __package__ in {None, ""}:
         VoodooMode,
         RatRitualMode,
         AmokFleshMode,
+        DemonRingMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -138,8 +139,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(VoodooMode) == [25], f"剧本 25 未走定制 handler: {handlers.get(VoodooMode)}"
     assert handlers.get(RatRitualMode) == [26], f"剧本 26 未走定制 handler: {handlers.get(RatRitualMode)}"
     assert handlers.get(AmokFleshMode) == [27], f"剧本 27 未走定制 handler: {handlers.get(AmokFleshMode)}"
+    assert handlers.get(DemonRingMode) == [28], f"剧本 28 未走定制 handler: {handlers.get(DemonRingMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 43, f"应有 43 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 42, f"应有 42 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -155,6 +157,7 @@ def verify_mode_dispatch() -> None:
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
+        "demon_ring",
     }
 
 
@@ -3323,6 +3326,120 @@ def verify_haunt27_amok_flesh() -> None:
     assert engine3.state.winner is None, "叛徒死亡 ≠ 英雄胜"
 
 
+def verify_haunt28_demon_ring() -> None:
+    """剧本 28：地狱门选址与恶魔入场/速度免疫/理智 +2/两败领主/策反与
+    受控代跑/抢戒指与取回/胜负（p39/p110）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=28)
+    handler = engine._mode_handler()
+    assert isinstance(handler, DemonRingMode)
+    flags = engine._haunt_flags()
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    hero = heroes[0]
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+
+    # ---- 开局：地狱门 + 领主 + 英雄数只恶魔（真实触发时戒指在叛徒手里）
+    portal = flags.get("portal_room")
+    assert portal and portal in engine.state.board, "p110：地狱门房应已选定"
+    assert engine.state.board[portal].symbol == "event"
+    lord = next(m for m in engine.state.monsters if m.template_id == "demon_lord")
+    demons = [m for m in engine.state.monsters if m.template_id in DemonRingMode.DEMON_TEMPLATES]
+    assert len(demons) == 2, "p110：恶魔数量 = 英雄数（2 英雄局 = 2 只）"
+    assert all(m.room_key == portal for m in [lord, *demons]), "恶魔应都在地狱门房"
+    # 恶魔数值按 p110 页脚
+    by_id = {m.template_id: m for m in engine.state.monsters}
+    assert (by_id["demon_lord"].speed, by_id["demon_lord"].might) == (1, 7)
+    assert (by_id["demon_1"].speed, by_id["demon_1"].might, by_id["demon_1"].sanity) == (2, 5, 5)
+    # 速度攻击免疫走 monster_specs（p110：左轮等速度攻击打不中领主）
+    specs = engine._haunt_rule_state().get("monster_specs", {})
+    assert "speed" in specs["demon_lord"].get("immune_to", [])
+
+    # 真实触发时揭示者持有戒指；强制触发的测试局手动补上并模拟流转
+    traitor.items.append("omen_ring")
+
+    # ---- 理智 +2（p39）：持戒指对领主的理智攻击 +2，力量攻击不加
+    traitor.items.remove("omen_ring")
+    hero.items.append("omen_ring")
+    handler.attack_attr_override(engine, hero, lord, "sanity")
+    assert handler.attack_roll_bonus(engine, hero, lord) == 2
+    handler.attack_attr_override(engine, hero, lord, "might")
+    assert handler.attack_roll_bonus(engine, hero, lord) == 0
+    hero.items.remove("omen_ring")
+    traitor.items.append("omen_ring")
+
+    # ---- 抢戒指（p110）：恶魔赢戒指持有人 2+ → 抢走不掉血
+    assert handler.on_monster_attack(engine, demons[0], traitor, 3) is True
+    assert "omen_ring" not in traitor.items and "omen_ring" in demons[0].items
+    assert handler.on_monster_attack(engine, demons[0], traitor, 1) is False, "赢不足 2 不抢"
+
+    # ---- 取回（p110）：击败带戒指恶魔 → 立刻拿回；普通恶魔不持戒指击败 = 击晕
+    assert handler.monster_killed_on_defeat(engine, demons[0], hero, "might", "") is False
+    assert "omen_ring" in hero.items and "omen_ring" not in demons[0].items
+
+    # ---- 策反（p39）：持戒指理智攻击成功 → 恶魔受控、不被击晕
+    with patch.object(engine, "_resolve_check", return_value=True):
+        pass  # 攻击流程由引擎走；这里直接按引擎调用顺序打两个钩子
+    assert handler.monster_killed_on_defeat(engine, demons[1], hero, "sanity", "") is False
+    assert handler.on_monster_defeated(engine, demons[1], 1) is True
+    assert demons[1].id in flags["controlled_demons"], "p39：理智攻击策反恶魔"
+    assert handler.on_monster_turn_start(engine, demons[1]) is True, "受控恶魔不再敌对行动"
+
+    # ---- 两败领主（p39）：持戒指击败两次；第一次击晕，第二次摧毁
+    hero_room_before = hero.room_key
+    assert handler.monster_killed_on_defeat(engine, lord, hero, "sanity", "") is False
+    assert engine._haunt_track_value("lord_defeats") == 1
+    assert handler.monster_killed_on_defeat(engine, lord, hero, "sanity", "") is True
+    assert engine._haunt_track_value("lord_defeats") == 2 and flags["lord_destroyed"] is True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes", "p39：领主被戒指摧毁 → 英雄胜"
+
+    # ---- 领主攻击戒指持有人落败也算一次击败（p39）
+    engine2 = _run_until_haunt(seed=113, players=3, haunt_id=28)
+    h2 = engine2._mode_handler()
+    t2 = next(p for p in engine2.state.players if p.role == "traitor")
+    hero2 = next(p for p in engine2.state.players if p.role == "hero" and not p.dead)
+    lord2 = next(m for m in engine2.state.monsters if m.template_id == "demon_lord")
+    hero2.items.append("omen_ring")  # 领主的目标是最近英雄——戒指要在持有人（英雄）身上
+    lord2.room_key = hero2.room_key
+    with patch.object(engine2, "_roll_monster_attack", return_value=0), patch.object(
+        engine2, "_roll_attack", return_value=4
+    ):
+        assert h2.on_monster_turn_start(engine2, lord2) is True
+    assert engine2._haunt_track_value("lord_defeats") == 1, "p39：领主攻戒指持有人落败也计数"
+    assert lord2.stunned_turns > 0, "领主落败照常被击晕"
+
+    # ---- 受控恶魔代跑：戒指持有人回合开始，受控恶魔追击叛徒
+    engine3 = _run_until_haunt(seed=113, players=3, haunt_id=28)
+    h3 = engine3._mode_handler()
+    t3 = next(p for p in engine3.state.players if p.role == "traitor")
+    hero3 = next(p for p in engine3.state.players if p.role == "hero" and not p.dead)
+    demon3 = next(m for m in engine3.state.monsters if m.template_id == "demon_1")
+    t3.items.append("omen_ring")
+    hero3.items.append("omen_ring")  # 修正：真实流程是英雄持戒
+    t3.items.remove("omen_ring")
+    engine3._haunt_flags()["controlled_demons"].append(demon3.id)
+    demon3.room_key = hero3.room_key  # 从英雄身边出发
+    engine3.state.turn_order = [hero3.id]
+    engine3.state.turn_index = 0
+    engine3._reset_player_turn_state(hero3)
+    h3.on_turn_start(engine3, hero3)
+    assert demon3.room_key != hero3.room_key or demon3.stunned_turns > 0, "受控恶魔应向叛徒移动/攻击"
+
+    # ---- 叛徒胜与叛徒死亡兜底（老坑 18 号吸收者）
+    engine4 = _run_until_haunt(seed=113, players=3, haunt_id=28)
+    h4 = engine4._mode_handler()
+    for p in engine4.state.players:
+        if p.role == "hero":
+            p.dead = True
+    assert h4.check_victory(engine4) is True
+    assert engine4.state.winner == "traitor", "p110：英雄全灭 → 叛徒胜"
+    engine5 = _run_until_haunt(seed=113, players=3, haunt_id=28)
+    h5 = engine5._mode_handler()
+    next(p for p in engine5.state.players if p.role == "traitor").dead = True
+    assert h5.check_victory(engine5) is True and engine5.state.winner is None, "叛徒死亡 ≠ 英雄胜"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -3686,6 +3803,7 @@ def main():
     verify_haunt26_rat_ritual()
     verify_haunt26_pentagram_block()
     verify_haunt27_amok_flesh()
+    verify_haunt28_demon_ring()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

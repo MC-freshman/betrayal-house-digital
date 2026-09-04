@@ -315,6 +315,18 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["growing_blob", "blobperson"]},
     },
+    28: {
+        "hero": {
+            # p39：戒指开局在叛徒手里，英雄必须围攻抢戒指才能开展胜利流程。
+            "attack_traitor_players": True,
+            "victory_focus": "先抢戒指，再持戒指两次击败恶魔领主",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "与恶魔夹击英雄，别让他们拿到戒指",
+        },
+        "scenario": {"special_rules": ["hellgate", "ring_control"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",
