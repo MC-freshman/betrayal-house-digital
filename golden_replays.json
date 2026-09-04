@@ -935,6 +935,40 @@
       "monsters": 15,
       "key": "seed109-4p-haunt38",
       "forced_haunt": 38
+    },
+    {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "d6c45152cfc0b39f0f7870a3c7f43bb68a8cf271835e5e09c87e510bf5aba944",
+      "turns": 31,
+      "phase": "GAME_OVER",
+      "winner": "heroes",
+      "winner_reason": "长矛杀死了活房子的心脏/大脑——这座房子终于死了。",
+      "haunt": 31,
+      "haunt_name": "它活了！",
+      "rooms": 26,
+      "monsters": 2,
+      "key": "seed113-3p-haunt31",
+      "forced_haunt": 31
+    },
+    {
+      "seed": 109,
+      "players": 4,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "68f2681a9542d4c6bcb9b82f1a179d355fed313cd93c32001a8f60e9c8845075",
+      "turns": 18,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "所有英雄都被活房子消化了。",
+      "haunt": 31,
+      "haunt_name": "它活了！",
+      "rooms": 15,
+      "monsters": 5,
+      "key": "seed109-4p-haunt31",
+      "forced_haunt": 31
     }
   ]
 }

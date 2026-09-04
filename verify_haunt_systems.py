@@ -45,6 +45,7 @@ if __package__ in {None, ""}:
         DemonRingMode,
         FrankensteinMode,
         DraculaRisingMode,
+        LivingHouseMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -146,8 +147,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(DemonRingMode) == [28], f"剧本 28 未走定制 handler: {handlers.get(DemonRingMode)}"
     assert handlers.get(FrankensteinMode) == [29], f"剧本 29 未走定制 handler: {handlers.get(FrankensteinMode)}"
     assert handlers.get(DraculaRisingMode) == [30], f"剧本 30 未走定制 handler: {handlers.get(DraculaRisingMode)}"
+    assert handlers.get(LivingHouseMode) == [31], f"剧本 31 未走定制 handler: {handlers.get(LivingHouseMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 39, f"应有 39 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 38, f"应有 38 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -164,6 +166,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
+        "living_house",
     }
 
 
@@ -4191,6 +4194,399 @@ def verify_dead_player_turn_skipped() -> None:
     assert engine.current_player is not traitor, "轮转应已推进到下一个活人"
 
 
+def verify_haunt31_organ_rooms() -> None:
+    """剧本 31 六器官房：胃/肺/牙/腺体在“进入房间/开始回合”查表结算（p42/p113）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=31)
+    handler = engine._mode_handler()
+    assert isinstance(handler, LivingHouseMode)
+
+    # 复活并稳住英雄（setup 胃检定/探险可能打死人），保证有活英雄跑各分支
+    for person in engine.state.players:
+        if person.role == "hero":
+            person.dead = False
+            for stat in ("speed", "might", "sanity", "knowledge"):
+                person.stats[stat] = 4
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+
+    # ---- 胃：Sanity 掷骰 5+ 无事；2-4 → 1 精神伤；0/1 → 2 精神伤 + 停止移动
+    stomach_room = engine._ensure_room_in_play("dining_room")
+    assert stomach_room, "需要一间胃房间在场"
+    hero.room_key = stomach_room
+    stomach_obj = engine.state.board[stomach_room]
+    for roll, expect_dmg, expect_stop in ((5, None, False), (3, 1, False), (0, 2, True), (1, 2, True)):
+        hero.movement_stopped = False
+        with patch.object(engine, "_roll_attack", return_value=roll), \
+                patch.object(engine, "_deal_damage") as dealt:
+            handler.on_enter_room(engine, hero, stomach_obj)
+        if expect_dmg is None:
+            dealt.assert_not_called()
+        else:
+            dealt.assert_called_once_with(hero, "mental", expect_dmg, source="胃消化")
+        assert hero.movement_stopped == expect_stop, f"胃掷出 {roll} 的停移动标记应为 {expect_stop}"
+
+    # ---- 器官只影响英雄：叛徒进胃房间不触发
+    if traitor is not None and not traitor.dead:
+        traitor.room_key = stomach_room
+        with patch.object(engine, "_roll_attack", return_value=0), \
+                patch.object(engine, "_deal_damage") as dealt_t:
+            handler.on_enter_room(engine, traitor, stomach_obj)
+        dealt_t.assert_not_called()
+
+    # ---- 牙：Speed 掷骰 4+ 无事；1-3 → 1 物理；0 → 2 物理
+    teeth_room = engine._ensure_room_in_play("balcony")
+    assert teeth_room, "需要一间牙房间在场"
+    hero.room_key = teeth_room
+    teeth_obj = engine.state.board[teeth_room]
+    for roll, expect_dmg in ((4, None), (2, 1), (0, 2)):
+        with patch.object(engine, "_roll_attack", return_value=roll), \
+                patch.object(engine, "_deal_damage") as dealt:
+            handler.on_enter_room(engine, hero, teeth_obj)
+        if expect_dmg is None:
+            dealt.assert_not_called()
+        else:
+            dealt.assert_called_once_with(hero, "physical", expect_dmg, source="巨牙")
+
+    # ---- 腺体：掷两骰（和 0-4）五档全测，防五向映射写反
+    #   4→四属性各 +1；3→-2速度；2→-2力量；1→-2理智；0→-2知识
+    glands_room = engine._ensure_room_in_play("research_laboratory")
+    assert glands_room, "需要一间腺体房间在场"
+    hero.room_key = glands_room
+    glands_obj = engine.state.board[glands_room]
+    gland_expect = {4: ("gain", None), 3: ("loss", "speed"), 2: ("loss", "might"),
+                    1: ("loss", "sanity"), 0: ("loss", "knowledge")}
+    for roll in (4, 3, 2, 1, 0):
+        with patch.object(engine, "roll_dice", return_value=roll), \
+                patch.object(engine, "_increase_stat") as inc, \
+                patch.object(engine, "_apply_stat_loss") as loss, \
+                patch.object(engine, "_check_player_death"):
+            handler.on_enter_room(engine, hero, glands_obj)
+        kind, stat = gland_expect[roll]
+        if kind == "gain":
+            assert inc.call_count == 4, f"腺体掷出 {roll} 应全属性 +1（四次 _increase_stat）"
+            assert {c.args[1] for c in inc.call_args_list} == {"speed", "might", "sanity", "knowledge"}
+            assert all(c.args[2] == 1 for c in inc.call_args_list), "全属性 +1 每次增量应为 1"
+            loss.assert_not_called()
+        else:
+            loss.assert_called_once_with(hero, stat, 2)
+            inc.assert_not_called()
+
+    # ---- 肺：温室内失败 → 死亡 + 掉落物品
+    conserv = engine._ensure_room_in_play("conservatory")
+    assert conserv, "温室需在场"
+    hero.dead = False
+    hero.room_key = conserv
+    conserv_obj = engine.state.board[conserv]
+    with patch.object(engine, "_resolve_check", return_value=False), \
+            patch.object(engine, "_drop_inventory_on_death") as drop, \
+            patch.object(engine, "check_victory"):
+        handler.on_enter_room(engine, hero, conserv_obj)
+    assert hero.dead is True, "温室内肺检定失败应被杀死"
+    drop.assert_called_once_with(hero)
+
+    # ---- 肺：相邻房失败 → 移入温室再掷一次（第二次通过则存活）
+    hero.dead = False
+    other_room = next((k for k in sorted(engine.state.board) if k != conserv), conserv)
+    hero.room_key = other_room
+    with patch.object(engine, "_resolve_check", side_effect=[False, True]):
+        handler._apply_lungs(engine, hero, in_conservatory=False)
+    assert hero.room_key == conserv, "相邻房肺失败应被移入温室"
+    assert hero.dead is False, "第二次通过应存活"
+    # 相邻房两次都失败 → 死亡
+    hero.dead = False
+    hero.room_key = other_room
+    with patch.object(engine, "_resolve_check", side_effect=[False, False]), \
+            patch.object(engine, "_drop_inventory_on_death"), \
+            patch.object(engine, "check_victory"):
+        handler._apply_lungs(engine, hero, in_conservatory=False)
+    assert hero.dead is True, "相邻房两次肺检定都失败应被杀死"
+
+    # ---- 肺门相邻路由：经 on_enter_room 驱动，覆盖 _apply_organ_effect 的 _door_adjacent 分支
+    hero.dead = False
+    conserv_obj = engine.state.board[conserv]
+    organ_ids = (set(handler.STOMACH_ROOMS) | set(handler.TEETH_ROOMS)
+                 | set(handler.GLANDS_ROOMS) | {handler.CONSERVATORY})
+    neutral = [t for t in engine.catalog.room_templates.values()
+               if t.floor == conserv_obj.floor and t.id not in organ_ids]
+    assert len(neutral) >= 2, "需要两间中性房模板做肺相邻/不相邻路由"
+    # ① 与温室门对接的相邻房 → 进入触发肺检定
+    adj_delta = next(
+        ((dx, dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+         if (conserv_obj.floor, conserv_obj.x + dx, conserv_obj.y + dy) not in engine.state.pos_index),
+        None,
+    )
+    assert adj_delta is not None, "温室需至少一个空的网格相邻位来构造门对接房"
+    adj_room = engine._place_room(neutral[0], conserv_obj.x + adj_delta[0], conserv_obj.y + adj_delta[1], 0)
+    dx, dy = adj_delta
+    cdir, pdir = {(1, 0): ("east", "west"), (-1, 0): ("west", "east"),
+                  (0, 1): ("south", "north"), (0, -1): ("north", "south")}[(dx, dy)]
+    conserv_obj.doors = tuple(set(conserv_obj.doors) | {cdir})
+    adj_room.doors = tuple(set(adj_room.doors) | {pdir})
+    assert handler._door_adjacent(engine, adj_room.key, conserv), "构造的相邻房应与温室门对接"
+    hero.room_key = adj_room.key
+    with patch.object(engine, "_resolve_check", return_value=True) as rc_adj, \
+            patch.object(engine, "_roll_attack", return_value=6), \
+            patch.object(engine, "_deal_damage"):
+        handler.on_enter_room(engine, hero, adj_room)
+    assert rc_adj.called, "进入与温室门相邻的房间应触发肺检定"
+    # ② 不与温室门相邻的中性房 → 不触发肺
+    far_room = engine._place_room(neutral[1], conserv_obj.x + 9, conserv_obj.y + 9, 0)
+    far_room.doors = ()
+    assert not handler._door_adjacent(engine, far_room.key, conserv), "远房不应与温室门相邻"
+    hero.room_key = far_room.key
+    hero.dead = False
+    with patch.object(engine, "_resolve_check") as rc_far, \
+            patch.object(engine, "_roll_attack", return_value=6), \
+            patch.object(engine, "_deal_damage"):
+        handler.on_enter_room(engine, hero, far_room)
+    rc_far.assert_not_called()
+
+    # ---- on_turn_start 也路由到器官效果（开始回合触发）
+    hero.dead = False
+    hero.room_key = stomach_room
+    with patch.object(engine, "_roll_attack", return_value=0), \
+            patch.object(engine, "_deal_damage") as dealt:
+        handler.on_turn_start(engine, hero)
+    dealt.assert_called_once_with(hero, "mental", 2, source="胃消化")
+
+    # ---- setup 时当前在胃房间的英雄立即掷一次胃检定
+    hero.dead = False
+    hero.room_key = stomach_room
+    with patch.object(LivingHouseMode, "_apply_stomach") as spy_stomach:
+        handler.setup(engine, engine.state.haunt, stomach_room)
+    assert any(call.args[1] is hero for call in spy_stomach.call_args_list), \
+        "setup 应对当前处于胃房间的英雄立即掷一次胃检定"
+
+
+def verify_haunt31_heart_brain_spear() -> None:
+    """剧本 31 心脏/大脑/长矛/抗体：setup 布点、攻击闸门、防御不造伤、长矛击杀即英雄胜、
+    攻击失败抗体回流、叛徒销毁长矛即胜、杀叛徒但房子存活→无 winner（吸收兜底）（p42/p113）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=31)
+    handler = engine._mode_handler()
+    assert isinstance(handler, LivingHouseMode)
+    flags = engine._haunt_flags()
+
+    for person in engine.state.players:
+        if person.role == "hero":
+            person.dead = False
+            for stat in ("speed", "might", "sanity", "knowledge"):
+                person.stats[stat] = 4
+    heroes = [p for p in engine.state.players if p.role == "hero"]
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    assert heroes and traitor is not None
+    hero = heroes[0]
+
+    # ---- setup 布点：心脏(organ_room, might7) / 大脑(attic, might6) / 抗体数=英雄数 / 某英雄持矛
+    heart = engine._monster_by_template("heart")
+    brain = engine._monster_by_template("brain")
+    assert heart is not None and brain is not None, "setup 应生成心脏与大脑"
+    assert heart.might == 7 and brain.might == 6, "心脏防御 Might 7、大脑防御 Might 6"
+    organ_key = handler._room_key_by_template(engine, "organ_room")
+    attic_key = handler._room_key_by_template(engine, "attic")
+    assert heart.room_key == organ_key and brain.room_key == attic_key, "心脏在管风琴室、大脑在阁楼"
+    antibodies = [m for m in engine.state.monsters if m.template_id == "antibody"]
+    assert len(antibodies) == len(heroes), f"抗体数应=英雄数 {len(heroes)}，实际 {len(antibodies)}"
+    allowed = {k for k in (handler._room_key_by_template(engine, t) for t in handler.ANTIBODY_ROOMS) if k}
+    assert all(a.room_key in allowed for a in antibodies), "抗体应分布在 6 指定房中在场者"
+    assert (antibodies[0].speed, antibodies[0].might, antibodies[0].sanity) == (3, 5, 3), \
+        "抗体数值应为 Speed3/Might5/Sanity3（注意是 Sanity 不是 Knowledge）"
+    spear_holder = next((p for p in engine.state.players if "omen_spear" in p.items), None)
+    assert spear_holder is not None and spear_holder.role == "hero", "setup 应把长矛授予一名英雄"
+
+    # ---- attack_allowed：无矛攻心脏→False；持矛→True；攻大脑 Sanity<4→False 且 attack_used=True
+    if "omen_spear" in hero.items:
+        hero.items.remove("omen_spear")
+    hero.room_key = heart.room_key
+    assert handler.attack_allowed(engine, hero, heart) is False, "无长矛不能攻击心脏"
+    hero.items.append("omen_spear")
+    assert handler.attack_allowed(engine, hero, heart) is True, "持长矛可攻击心脏"
+    hero.attack_used = False
+    hero.movement_stopped = False
+    hero.steps_remaining = 5
+    with patch.object(engine, "_resolve_check", return_value=False):
+        assert handler.attack_allowed(engine, hero, brain) is False, "大脑 Sanity 失败不能攻击"
+    assert hero.attack_used is True, "大脑 Sanity 失败应结束回合（attack_used=True）"
+    assert hero.movement_stopped is True, "大脑 Sanity 失败应停止移动（p113 turn ends without attacking）"
+    assert hero.steps_remaining == 0, "大脑 Sanity 失败应清空剩余移动力，防白嫖离开阁楼"
+    hero.attack_used = False
+    hero.movement_stopped = False
+    hero.steps_remaining = 5
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.attack_allowed(engine, hero, brain) is True, "大脑 Sanity 通过可攻击"
+    assert hero.attack_used is False
+    assert hero.movement_stopped is False, "大脑 Sanity 通过不应停移动"
+
+    # ---- 防御不造伤 + 心脏/大脑永不行动
+    assert handler.monster_counterattack_disabled(engine, heart) is True
+    assert handler.monster_counterattack_disabled(engine, brain) is True
+    assert handler.on_monster_turn_start(engine, heart) is True
+    assert handler.on_monster_turn_start(engine, brain) is True
+
+    # ---- 持长矛击败心脏（weapon_id=omen_spear）→ house_killed → 英雄胜
+    assert handler.monster_killed_on_defeat(engine, heart, hero, "might", "omen_spear") is True
+    assert flags["house_killed"] is True
+    assert engine._haunt_track_value("house_slain") == 1
+    assert handler.check_victory(engine) is True and engine.state.winner == "heroes"
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    flags["house_killed"] = False
+    engine._set_haunt_track_value("house_slain", 0)
+
+    # ---- 持矛英雄但本次攻击 weapon_id 非长矛（空手）击败心脏 → 只击晕，不杀房
+    #   印证“须被长矛击败才杀死房子”；heart 此时仍存活
+    assert handler.monster_killed_on_defeat(engine, heart, hero, "might", "") is False
+    assert flags["house_killed"] is False, "非长矛击败心脏只击晕，不应置 house_killed"
+
+    # ---- 攻击心脏失败 → 回流一只抗体到管风琴室
+    antibodies = [m for m in engine.state.monsters if m.template_id == "antibody"]
+    before_in_organ = len([a for a in antibodies if a.room_key == organ_key])
+    hero.room_key = organ_key
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+    engine._reset_player_turn_state(hero)
+    with patch.object(engine, "_roll_attack", return_value=1), \
+            patch.object(engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 9):
+        assert engine.attack(hero, heart, "omen_spear") is True
+    after = [m for m in engine.state.monsters if m.template_id == "antibody" and m.room_key == organ_key]
+    assert len(after) == before_in_organ + 1, "攻击心脏失败应回流一只抗体到管风琴室"
+    assert heart in engine.state.monsters, "攻击失败心脏不应被杀死"
+
+    # ---- 叛徒在深渊销毁长矛 → spear_destroyed → 叛徒胜
+    chasm = (engine._ensure_room_in_play("chasm")
+             or handler._room_key_by_template(engine, "furnace_room")
+             or handler._room_key_by_template(engine, "underground_lake"))
+    assert chasm, "需要深渊/熔炉房/地下湖之一在场"
+    for p in engine.state.players:
+        if "omen_spear" in p.items:
+            p.items.remove("omen_spear")
+    traitor.items.append("omen_spear")
+    traitor.room_key = chasm
+    engine.state.turn_order = [traitor.id]
+    engine.state.turn_index = 0
+    engine._reset_player_turn_state(traitor)
+    assert handler.perform_action(engine, traitor, "throw_spear", {}) is True
+    assert flags["spear_destroyed"] is True
+    assert "omen_spear" not in traitor.items, "长矛应被销毁移除"
+    assert handler.check_victory(engine) is True and engine.state.winner == "traitor"
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    flags["spear_destroyed"] = False
+
+    # ---- 杀死叛徒但心脏/大脑存活 → 无 winner（吸收引擎兜底）
+    traitor.dead = True
+    assert handler.check_victory(engine) is True and engine.state.winner is None, \
+        "杀叛徒≠英雄胜（房子仍活，抗体仍由 bot 驱动）"
+    traitor.dead = False
+
+    # ---- 英雄全灭 → 叛徒胜（p113：让活房子消化杀死所有英雄）
+    saved_dead = {p.id: p.dead for p in engine.state.players}
+    for p in engine.state.players:
+        if p.role == "hero":
+            p.dead = True
+    traitor.dead = False
+    flags["house_killed"] = False
+    flags["spear_destroyed"] = False
+    engine.state.winner = None
+    assert handler.check_victory(engine) is True and engine.state.winner == "traitor", \
+        "所有英雄死亡应判叛徒胜"
+    for p in engine.state.players:
+        p.dead = saved_dead[p.id]
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+
+    # ---- 完整攻击流：持矛英雄击败心脏 → 心脏离场 + 英雄胜
+    for p in engine.state.players:
+        if "omen_spear" in p.items:
+            p.items.remove("omen_spear")
+    hero.items.append("omen_spear")
+    hero.room_key = heart.room_key
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+    engine._reset_player_turn_state(hero)
+    with patch.object(engine, "_roll_attack", return_value=9), \
+            patch.object(engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 1):
+        assert engine.attack(hero, heart, "omen_spear") is True
+    assert heart not in engine.state.monsters, "持矛击败心脏应杀死它"
+    assert flags["house_killed"] is True
+    assert engine.state.winner == "heroes"
+
+    # ---- 大脑击杀胜利路径（p42：“kill the Heart or the Brain”，一次即胜）
+    flags["house_killed"] = False
+    engine._set_haunt_track_value("house_slain", 0)
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    brain = engine._monster_by_template("brain")
+    assert brain is not None, "大脑应仍存活（此前只用 attack_allowed 探针，未真正击败）"
+    for p in engine.state.players:
+        if "omen_spear" in p.items:
+            p.items.remove("omen_spear")
+    hero.dead = False
+    hero.items.append("omen_spear")
+    hero.room_key = brain.room_key
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+    engine._reset_player_turn_state(hero)
+    with patch.object(engine, "_resolve_check", return_value=True), \
+            patch.object(engine, "_roll_attack", return_value=9), \
+            patch.object(engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 1):
+        assert engine.attack(hero, brain, "omen_spear") is True
+    assert brain not in engine.state.monsters, "持矛击败大脑应杀死它"
+    assert flags["house_killed"] is True
+    assert engine._haunt_track_value("house_slain") == 1
+    assert engine.state.winner == "heroes", "击败大脑同样判英雄胜"
+
+
+def verify_haunt31_antibody_wall_move() -> None:
+    """剧本 31 抗体穿墙移动（on_monster_move/_wall_graph/_bfs_dist/_wall_step_destination）：
+    ① 无连通门、仅同楼层网格相邻 → 抗体穿墙移近最近英雄（证明忽略门约束）；
+    ② rolled=0 → 不动；③ 非抗体怪物（心脏）→ 钩子返回 False 交回引擎、不外溢。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=31)
+    handler = engine._mode_handler()
+    assert isinstance(handler, LivingHouseMode)
+
+    # 只留一名活英雄，保证 _find_monster_target 目标确定
+    heroes = [p for p in engine.state.players if p.role == "hero"]
+    assert heroes, "需要至少一名英雄"
+    for p in engine.state.players:
+        if p.role == "hero":
+            p.dead = True
+    hero = heroes[0]
+    hero.dead = False
+
+    # 构造两间同楼层网格相邻、但清空门/链接（门图不连通）的房间：
+    # 只有穿墙图（_wall_graph 的网格相邻）才连得起来，以此证明移动忽略门约束。
+    template = next(t for t in engine.catalog.room_templates.values() if t.floor == 0)
+    room_a = engine._place_room(template, 40, 40, 0)
+    room_b = engine._place_room(template, 41, 40, 0)  # A 东侧、网格相邻
+    for room in (room_a, room_b):
+        room.doors = ()
+        room.links = {}
+    assert room_b.key in engine._grid_neighbors(room_a.key), "两房应同楼层网格相邻"
+    assert engine._path_length(room_a.key, room_b.key) >= 9999, "清空门/链接后门图应不可达"
+
+    # 在 A 放一只抗体、英雄置于 B
+    antibody = engine._spawn_single_haunt_monster(handler._spec(engine, "antibody", "抗体"), room_a.key)
+    assert antibody is not None and antibody.template_id == "antibody"
+    hero.room_key = room_b.key
+
+    # ① 给足步数：抗体穿墙抵达英雄所在房（忽略门约束）
+    assert handler.on_monster_move(engine, antibody, 3) is True
+    assert antibody.room_key == room_b.key, "抗体应穿墙移动到最近英雄所在房间"
+
+    # ② rolled=0：原地不动
+    antibody.room_key = room_a.key
+    assert handler.on_monster_move(engine, antibody, 0) is True
+    assert antibody.room_key == room_a.key, "掷 0 步抗体不应移动"
+
+    # ③ 非抗体怪物（心脏）：钩子返回 False，交回引擎常规移动、不改房间
+    heart = engine._monster_by_template("heart") or engine._spawn_single_haunt_monster(
+        handler._spec(engine, "heart", "心脏"), room_a.key
+    )
+    heart.room_key = room_a.key
+    assert handler.on_monster_move(engine, heart, 3) is False, "心脏不是抗体，on_monster_move 应交回引擎"
+    assert heart.room_key == room_a.key, "返回 False 时钩子不应改动怪物房间"
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -4257,6 +4653,9 @@ def main():
     verify_haunt28_demon_ring()
     verify_haunt29_frankenstein()
     verify_haunt30_dracula()
+    verify_haunt31_organ_rooms()
+    verify_haunt31_heart_brain_spear()
+    verify_haunt31_antibody_wall_move()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

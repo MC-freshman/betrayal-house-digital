@@ -1639,6 +1639,53 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [49, 120],
     },
+    31: {
+        # 校准记录（对照英雄手册 p42 / 叛徒手册 p113）：机制落在 haunt_modes.LivingHouseMode。
+        #   六器官房（胃/肺/牙/腺体）在英雄“进入房间”或“开始回合”时查表结算；setup 时当前
+        #   处于胃房间的英雄按 turn_order 立即各掷一次胃检定。
+        #   心脏（organ_room，防御 Might 7）/大脑（attic，防御 Might 6，攻击前须先 Sanity 4+）
+        #   建模为怪物：仅持 omen_spear 者可攻击，防御时不造成伤害，被长矛击败即“杀死房子”（英雄胜）；
+        #   攻击心脏/大脑失败时，立即从屋内别处取一只抗体回流到该房。心脏/大脑永不移动/攻击。
+        #   抗体（Speed 3 / Might 5 / Sanity 3，数量 = 英雄数）可穿墙移动。
+        #   叛徒存活（traitor_rule=revealer），偷走长矛后在 chasm/furnace_room/underground_lake
+        #   花一整回合扔掉即销毁长矛并获胜；无回合时钟/轨道。
+        #   长矛来源原文未述——setup 授予 turn_order 中第一名英雄（解释性决策，见 handler docstring）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "living_house",
+        "traitor_rule": "revealer",
+        "hero_goal": "用长矛击败房屋的心脏（管风琴室）或大脑（阁楼），杀死这座活房子。",
+        "traitor_goal": "让活房子消化杀死所有英雄，或夺走长矛并把它投入深渊/熔炉房/地下湖销毁。",
+        "suggested_monsters": [],
+        "required_cards": ["omen_spear"],
+        "key_rooms": ["organ_room", "attic", "dining_room", "kitchen", "larder", "wine_cellar",
+                       "conservatory", "balcony", "entrance_hall", "research_laboratory",
+                       "operating_laboratory", "furnace_room", "underground_lake", "library", "chasm"],
+        "tokens": ["heart", "brain", "stomach", "lungs", "teeth", "glands", "antibody"],
+        "setup": {
+            "tracks": {
+                # 无自然回合时钟；house_slain 仅作“是否已用长矛杀死房子”的单格 UI 标记（0/1）。
+                "house_slain": {"label": "杀死活房子", "target": 1, "side": "heroes"},
+            },
+            "flags": {"house_killed": False, "spear_destroyed": False},
+        },
+        "monsters": [
+            # spawn=deferred：心脏/大脑/抗体的布点全部由 handler 在 setup 手动生成。
+            {"template_id": "heart", "name": "心脏", "spawn": "deferred", "speed": 0, "might": 7, "sanity": 0, "controller": "traitor"},
+            {"template_id": "brain", "name": "大脑", "spawn": "deferred", "speed": 0, "might": 6, "sanity": 0, "controller": "traitor"},
+            {"template_id": "antibody", "name": "抗体", "spawn": "deferred", "speed": 3, "might": 5, "sanity": 3, "controller": "traitor"},
+        ],
+        # 英雄攻击心脏/大脑不设 rule_data action（它们是怪物，走引擎标准 attack 流，
+        # 闸门由 handler 的 attack_allowed 施加）。只留叛徒的销毁长矛行动。
+        "actions": [
+            {"id": "throw_spear", "side": "traitor", "label": "把长矛投入深渊",
+             "detail": "在深渊/熔炉房/地下湖花一整回合，把偷来的长矛销毁——叛徒直接获胜。",
+             "rooms": ["chasm", "furnace_room", "underground_lake"], "requires": ["omen_spear"]},
+        ],
+        "win_conditions": [],
+        "source_pages": [42, 113],
+    },
 }
 
 
@@ -1799,7 +1846,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    31: dict(mode="living_house", traitor_rule="revealer", hero_goal="用长矛击败房屋的心脏或大脑。", traitor_goal="让活房屋消化并杀死所有英雄。", rooms=("organ_room", "attic", "dining_room", "kitchen", "larder", "crypt"), monsters=("plant",), tokens=("heart", "brain", "stomach", "antibody"), hero_task="攻击房屋心脏或大脑", traitor_task="消化入侵者", hero_stat="might", hero_target=6, hero_progress_target=2, hero_detail="在风琴房或阁楼完成一次长矛攻击行动。", traitor_detail="推进房屋消化轨道。", monster_count=1, hero_win_target=2),
     32: dict(mode="lost_dimension", traitor_rule="revealer", hero_goal="让房屋恢复到英雄所在的维度。", traitor_goal="让有毒维度持续伤害英雄，或杀死所有英雄。", rooms=("organ_room", "entrance_hall", "foyer", "grand_staircase", "basement_landing"), monsters=("shadow",), tokens=("dimension", "poison", "anchor"), hero_task="修复维度锚点", traitor_task="维持异维度", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在风琴房或起始房间完成维度修复检定。", traitor_detail="推进异维度污染轨道。", monster_count=1),
     33: dict(mode="lake_rescue", traitor_rule="revealer", hero_goal="在女孩溺水前从地下湖救出她。", traitor_goal="把女孩喂给湖中生物，或杀死所有英雄。", rooms=("underground_lake", "basement_landing", "crypt", "furnace_room"), monsters=("beast",), tokens=("girl", "lake", "drowning"), hero_task="从地下湖救出女孩", traitor_task="把女孩带向湖中生物", hero_stat="might", hero_target=5, hero_progress_target=1, hero_detail="在地下湖或湖区完成救援行动。", traitor_detail="推进溺水倒计时。", monster_count=1, hero_win_target=1),
     34: dict(mode="mad_world", traitor_rule="revealer", hero_goal="把疯子锁入保险库，并杀死或锁住叛徒。", traitor_goal="让凯撒和疯子仆从杀死所有英雄。", rooms=("vault", "master_bedroom", "chapel", "conservatory", "game_room", "library", "attic"), monsters=("madman",), tokens=("vault_lock", "madman", "senator"), hero_task="锁住疯子", traitor_task="煽动疯子仆从", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="把疯子引到保险库并完成锁门检定。", traitor_detail="推进疯子仆从的围攻轨道。", monster_count="player_count", hero_win_target=1),

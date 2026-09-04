@@ -1822,6 +1822,34 @@ MONSTER_BASES = [
         text="移动慢，但碰撞很疼。",
         tags=("beast",),
     ),
+    monster_def(
+        monster_id="antibody",
+        name="抗体",
+        source_name="Antibody",
+        speed=3,
+        might=5,
+        sanity=3,
+        text="活房子派来清除入侵者的免疫细胞；可穿墙移动，护住心脏与大脑。",
+        tags=("haunt_specific",),
+    ),
+    monster_def(
+        monster_id="heart",
+        name="心脏",
+        source_name="Heart",
+        speed=0,
+        might=7,
+        text="活房子的心脏；以力量 7 防御但不造成伤害，只有长矛能杀死它。",
+        tags=("haunt_specific",),
+    ),
+    monster_def(
+        monster_id="brain",
+        name="大脑",
+        source_name="Brain",
+        speed=0,
+        might=6,
+        text="活房子的大脑；以力量 6 防御但不造成伤害，攻击它须先通过理智检定。",
+        tags=("haunt_specific",),
+    ),
 ]
 
 

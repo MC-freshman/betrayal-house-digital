@@ -42,6 +42,12 @@ else:
     from .net.serialize import state_to_dict, state_to_view_dict
 
 
+# 通用行动/轨道胜负回归样本：须为 fidelity=skeleton、hero_progress target>=2、
+# 无 required_cards/无 action requires、且不在当前精修批次队列内的剧本；
+# 精修到该号时必须同步把此常量搬迁到另一个仍满足条件的骨架剧本。
+_GENERIC_SAMPLE_HAUNT = 48
+
+
 def _configs(count: int = 4, bot_difficulty: str = "hard") -> list[dict]:
     probe = GameEngine(seed=7)
     faces = list(probe.catalog.characters)
@@ -308,30 +314,37 @@ def verify_supplemental_rooms_and_events() -> None:
 
 
 def verify_generic_haunt_action_and_victory() -> None:
-    # 用仍是模板骨架的 31 号剧本验证通用行动/轨道胜负
-    # （1-30 号已精修，见 verify_haunt_systems 的对应用例）
+    # 用仍是模板骨架的 _GENERIC_SAMPLE_HAUNT 号剧本验证通用行动/轨道胜负
+    # （它是全库唯一验证“骨架剧本通用行动 + 轨道多次累加至 target 触发胜利”的回归网；
+    #   已精修剧本见 verify_haunt_systems 的对应专属用例）
+    sample = _GENERIC_SAMPLE_HAUNT
+    hero_task = f"h{sample}_hero_task"
     engine = GameEngine(seed=43)
     engine.start_new_game(_configs(4, "normal"))
-    _trigger_specific_haunt(engine, 31)
+    _trigger_specific_haunt(engine, sample)
     hero = next(player for player in engine.state.players if player.role == "hero")
-    # 31 号骨架声明的房间列表里有厨房，继续用它做落房
-    room_key = _place_test_room(engine, "kitchen", 21, 0)
+    # 该骨架剧本声明的房间列表里有保险库，用它做落房
+    room_key = _place_test_room(engine, "vault", 21, 0)
     hero.room_key = room_key
     engine.state.turn_order = [hero.id]
     engine.state.turn_index = 0
     engine._resolve_check = lambda player, stat, target, label: True  # type: ignore[method-assign]
     actions = engine.available_haunt_actions(hero)
-    assert any(action.id == "h31_hero_task" for action in actions)
-    assert engine.perform_haunt_action(hero, "h31_hero_task")
+    assert any(action.id == hero_task for action in actions)
+    assert engine.perform_haunt_action(hero, hero_task)
     assert engine.state.meta["haunt_rule"]["tracks"]["hero_progress"]["value"] == 1
 
-    # 循环次数按该剧本骨架声明的轨道目标值驱动（各号剧本目标不同）；
+    # 循环次数按该剧本骨架声明的轨道目标值驱动（sample=48 时 target=2，多回合累加）；
     # 目标为 1 的剧本在首次行动时即获胜，循环自然跳过
     track = engine.state.meta["haunt_rule"]["tracks"]["hero_progress"]
+    loops = 0
     while track["value"] < track["target"] and engine.state.phase == "HAUNT_PHASE":
         engine._reset_player_turn_state(hero)
-        assert engine.perform_haunt_action(hero, "h31_hero_task")
+        assert engine.perform_haunt_action(hero, hero_task)
+        loops += 1
     assert track["value"] == track["target"]
+    assert track["target"] >= 2, "样本剧本 hero_progress target 须>=2，否则多步累加循环成为死代码"
+    assert loops >= 1, "多步累加循环应至少执行一次（验证同一通用行动跨回合重复推进轨道）"
     assert engine.state.winner == "heroes"
 
 
