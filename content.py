@@ -1703,6 +1703,15 @@ MONSTER_BASES = [
         tags=("plant",),
     ),
     monster_def(
+        monster_id="frankenstein",
+        name="弗兰肯斯坦的怪物",
+        source_name="Frankenstein's Monster",
+        speed=3,
+        might=8,
+        text="全速扑向最近的英雄，攻击掷骰 +2；免疫速度攻击，弱点只有火与坠落。",
+        tags=("undead", "haunt_specific"),
+    ),
+    monster_def(
         monster_id="witch",
         name="女巫",
         source_name="Witch",

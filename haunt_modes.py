@@ -6739,6 +6739,215 @@ class DemonRingMode(GenericModeHandler):
         return True  # 吸收引擎「叛徒死亡→英雄胜」兜底：叛徒死后恶魔照常追杀
 
 
+class FrankensteinMode(GenericModeHandler):
+    """剧本 29 弗兰肯斯坦的遗产（Frankenstein's Legacy）。
+
+    权威原文：英雄手册 p40 / 叛徒手册 p111。
+
+    已按原文实现：
+        · 数值（p111 页脚，新增 frankenstein 模板）：Speed 3 / Might 8
+          （原文未列神智，按无神智处理）。
+        · 开局（p111）：怪物放在研究实验室或手术室；两间都不在场就从房间
+          牌堆补一间（引擎 `_ensure_room_in_play` 按模板自身楼层放置；
+          原文的"放上层"校准为按模板楼层，见已知简化）。另备 5 枚火把令牌。
+        · 怪物行为（p111）：全速扑向最近的可攻击英雄（引擎默认）；
+          攻击掷骰 +2（走 `monster_attack_roll_bonus`，仅在它主动攻击时加，
+          防守不加）；免疫速度攻击（monster_specs `immune_to=["speed"]`，
+          覆盖左轮等标了 speed 标签的武器）；赢 2+ 时可抢走并销毁英雄的
+          火把而不掉血（`on_monster_attack`）。
+        · 火刑（p40）：在 烧焦的房间/熔炉房/五芒星室/厨房 点燃火把
+          （每名探险者同时只带 1 支，火把总数不限）；在怪物所在房或门相连
+          的邻室做速度攻击投掷——赢则怪物吃 1 次火把命中且英雄失去火把
+          （**不击晕**，引擎默认"击败=击晕"在这里不适用，故由 handler
+          自己结算），输则只是失去火把、英雄不受伤。命中次数 = 玩家数时
+          怪物死亡（轨道 torch_hits，target = player_count）。
+        · 推落（p40）：怪物在塔楼/深渊时，同房间力量 6+ 把它推落摔死。
+        · 胜负（p40/p111）：英雄胜 = 怪物死亡（火把命中达标或推落成功）；
+          叛徒胜 = 英雄全灭。叛徒死亡后怪物照常追杀（怪物回合由本轮最后
+          存活玩家代跑，老坑 19 号吸收者）。
+
+    已知简化：
+        · 原文"两间实验室都不在场时把该房放在上层"——本引擎
+          `_ensure_room_in_play` 按模板自身楼层放置（研究实验室在地面层、
+          手术室在二层），未强制上层。
+        · 原文的 5 枚火把令牌是实体配件上限，且明说"找火把没有次数限制"，
+          引擎按无限火把池处理，只保留"每名探险者同时只能带 1 支"。
+        · 本仓库的炸药卡没有 speed 标签（按力量武器建模），因此怪物对
+          炸药不免疫——给炸药补 speed 标签会波及全局对局基准，未改。
+        · 怪物被英雄普通击败时仍按引擎默认"击晕一回合"处理
+          （原文只强调火把命中不击晕）。
+    """
+
+    mode = "frankenstein_fire"
+
+    MONSTER = "frankenstein"
+    TORCH = "torch"
+    TORCH_ROOMS = ("charred_room", "furnace_room", "pentagram_chamber", "kitchen")
+    PUSH_ROOMS = ("tower", "chasm")
+
+    # ------------------------------------------------------------- setup
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        flags = engine._haunt_flags()
+        flags.setdefault("monster_destroyed", False)
+        lab_key = next(
+            iter(
+                sorted(
+                    key
+                    for key, room in engine.state.board.items()
+                    if room.template_id in ("research_laboratory", "operating_laboratory")
+                )
+            ),
+            "",
+        )
+        if not lab_key:
+            # p111：两间都不在场就从房间牌堆里找出来
+            lab_key = (
+                engine._ensure_room_in_play("research_laboratory", room_key)
+                or engine._ensure_room_in_play("operating_laboratory", room_key)
+                or ""
+            )
+        if not lab_key:
+            engine._log("实验室既不在场也补不进来——怪物没能站起来。")
+            return
+        engine._spawn_single_haunt_monster(self._spec(engine), lab_key)
+        engine._log("实验室里传来缝合线崩裂的声音——它站起来了。")
+
+    def _spec(self, engine: Any) -> dict:
+        specs = engine._haunt_rule_state().get("monster_specs", {})
+        return dict(specs.get(self.MONSTER) or {"template_id": self.MONSTER, "name": "弗兰肯斯坦的怪物"})
+
+    # ----------------------------------------------------------- 状态查询
+    def _monster(self, engine: Any) -> Any | None:
+        return next((m for m in engine.state.monsters if _monster_id(m) == self.MONSTER), None)
+
+    def _torches(self, engine: Any, player: Any) -> list[Any]:
+        return engine.tokens_held_by(player.id, self.TORCH)
+
+    def _near_monster(self, engine: Any, player: Any, monster: Any) -> bool:
+        """p40：怪物所在房，或与它有门相连的邻室。"""
+        if monster.room_key == player.room_key:
+            return True
+        return player.room_key in set(engine._door_neighbors(monster.room_key))
+
+    def _needed(self, engine: Any) -> int:
+        return len(engine.state.players)
+
+    # ------------------------------------------------------------- 行动
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        actions = super().available_actions(engine, player)
+        if not actions:
+            return actions
+        monster = self._monster(engine)
+        holding = bool(self._torches(engine, player))
+        result = []
+        for action in actions:
+            if action.id == "light_torch" and holding:
+                continue  # p40：每名探险者同时只能带 1 支火把
+            if action.id == "throw_torch":
+                if not holding or monster is None or not self._near_monster(engine, player, monster):
+                    continue
+            if action.id == "push_monster":
+                if monster is None or monster.room_key != player.room_key:
+                    continue
+            result.append(action)
+        return result
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        if action_id == "light_torch":
+            return self._light_torch(engine, player)
+        if action_id == "throw_torch":
+            return self._throw_torch(engine, player)
+        if action_id == "push_monster":
+            return self._push_monster(engine, player)
+        return super().perform_action(engine, player, action_id, data)
+
+    def _light_torch(self, engine: Any, player: Any) -> bool:
+        engine.spawn_token(self.TORCH, label="火把", role="carried", holder=player.id)
+        engine._log(f"{player.name} 就地引燃了一支火把。")
+        return True
+
+    def _throw_torch(self, engine: Any, player: Any) -> bool:
+        monster = self._monster(engine)
+        torches = self._torches(engine, player)
+        if monster is None or not torches:
+            return False
+        torch = torches[0]
+        attack_roll = engine._roll_attack(player, "speed")
+        defense = engine._roll_monster_attack(monster, "speed")
+        engine._log(f"{player.name} 把火把掷向{monster.name}：{attack_roll} 对 {defense}。")
+        engine.remove_token(torch.uid)  # 无论胜负，火把都消耗掉（p40）
+        if attack_roll > defense:
+            hits = engine._advance_haunt_track("torch_hits", 1)
+            needed = self._needed(engine)
+            engine._log(f"火把在怪物身上炸开一片火光（{hits}/{needed}）——它没有被击晕。")
+            if hits >= needed:
+                self._destroy_monster(engine, player)
+        else:
+            engine._log(f"{player.name} 投偏了，火把落地熄灭——人没受伤，只丢了火把（p40）。")
+        return True
+
+    def _push_monster(self, engine: Any, player: Any) -> bool:
+        monster = self._monster(engine)
+        if monster is None or monster.room_key != player.room_key:
+            return False
+        if not engine._resolve_check(player, "might", 6, "把怪物推下去"):
+            engine._log(f"{player.name} 用尽力气也没能推动它。")
+            return True
+        engine._log(f"{player.name} 狠狠一推——{monster.name} 坠了下去（p40）。")
+        self._destroy_monster(engine, player)
+        return True
+
+    def _destroy_monster(self, engine: Any, killer: Any) -> None:
+        monster = self._monster(engine)
+        if monster is None:
+            return
+        engine._haunt_flags()["monster_destroyed"] = True
+        engine._kill_monster(monster, killer=killer)
+        engine.check_victory()
+
+    # ------------------------------------------------------- 怪物战斗特性
+    def monster_attack_roll_bonus(self, engine: Any, monster: Any, target: Any) -> int:
+        # p111：怪物攻击掷骰 +2（防守时不加——引擎只在这条主动攻击路径调用）
+        return 2 if _monster_id(monster) == self.MONSTER else 0
+
+    def on_monster_attack(self, engine: Any, monster: Any, target: Any, amount: int) -> bool:
+        # p111：赢 2+ 时可抢走并销毁火把而不掉血
+        if _monster_id(monster) != self.MONSTER:
+            return False
+        torches = engine.tokens_held_by(getattr(target, "id", -1), self.TORCH)
+        if amount > 2 and torches:
+            for token in torches:
+                engine.remove_token(token.uid)
+            engine._log(f"{monster.name} 一把夺过{getattr(target, 'name', '探险者')}的火把捏灭了它（p111）。")
+            return True  # 伤害已由剧本结算（抢火把，不掉血）
+        return False
+
+    # ------------------------------------------------------------ bot
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        if player.role != "hero" or player.dead:
+            return []
+        if self._torches(engine, player):
+            return []  # 已有火把：走默认追怪逻辑，够得着就投
+        return [
+            "__room__" + key
+            for key, room in engine.state.board.items()
+            if room.template_id in self.TORCH_ROOMS
+        ]
+
+    # ------------------------------------------------------------- 胜负
+    def check_victory(self, engine: Any) -> bool:
+        # p40 英雄胜：怪物死亡（火把命中达标或推落坠亡）
+        if engine._haunt_flags().get("monster_destroyed"):
+            engine._set_winner("heroes", "怪物终于不动了——弗兰肯斯坦的秘密随它一起烧成灰烬。")
+            return True
+        # p111 叛徒胜：英雄全灭
+        heroes = [p for p in engine.state.players if p.role == "hero"]
+        if heroes and all(p.dead for p in heroes):
+            engine._set_winner("traitor", "缝合的怪物踩着英雄们的尸体，等待下一个命令。")
+            return True
+        return True  # 吸收引擎「叛徒死亡→英雄胜」兜底：叛徒死后怪物照常追杀
+
+
 
 for _handler in (
     GenericModeHandler(),
@@ -6770,6 +6979,7 @@ for _handler in (
     RatRitualMode(),
     AmokFleshMode(),
     DemonRingMode(),
+    FrankensteinMode(),
 ):
 
     register_mode(_handler)

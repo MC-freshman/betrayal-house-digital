@@ -42,6 +42,7 @@ if __package__ in {None, ""}:
         RatRitualMode,
         AmokFleshMode,
         DemonRingMode,
+        FrankensteinMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -140,8 +141,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(RatRitualMode) == [26], f"剧本 26 未走定制 handler: {handlers.get(RatRitualMode)}"
     assert handlers.get(AmokFleshMode) == [27], f"剧本 27 未走定制 handler: {handlers.get(AmokFleshMode)}"
     assert handlers.get(DemonRingMode) == [28], f"剧本 28 未走定制 handler: {handlers.get(DemonRingMode)}"
+    assert handlers.get(FrankensteinMode) == [29], f"剧本 29 未走定制 handler: {handlers.get(FrankensteinMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 42, f"应有 42 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 41, f"应有 41 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -157,7 +159,7 @@ def verify_mode_dispatch() -> None:
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
-        "demon_ring",
+        "demon_ring", "frankenstein_fire",
     }
 
 
@@ -3440,6 +3442,130 @@ def verify_haunt28_demon_ring() -> None:
     assert h5.check_victory(engine5) is True and engine5.state.winner is None, "叛徒死亡 ≠ 英雄胜"
 
 
+def verify_haunt29_frankenstein() -> None:
+    """剧本 29：实验室落位/点火与携带上限/火把投掷（命中不击晕、落败不掉血、
+    命中数=玩家数）/推落/攻击 +2/抢火把/速度免疫/胜负（p40/p111）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=29)
+    handler = engine._mode_handler()
+    assert isinstance(handler, FrankensteinMode)
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+
+    # ---- 开局：怪物站在研究实验室或手术室，数值 3/8（p111 页脚）
+    monster = handler._monster(engine)
+    assert monster is not None, "p111：怪物应已入场"
+    assert engine.state.board[monster.room_key].template_id in ("research_laboratory", "operating_laboratory")
+    assert (monster.speed, monster.might) == (3, 8)
+    specs = engine._haunt_rule_state().get("monster_specs", {})
+    assert "speed" in specs["frankenstein"].get("immune_to", []), "p111：免疫速度攻击"
+    assert handler.monster_attack_roll_bonus(engine, monster, hero) == 2, "p111：攻击 +2"
+
+    # ---- 点火把：厨房可点；每人同时只带一支
+    kitchen_key = next(
+        (k for k, r in engine.state.board.items() if r.template_id == "kitchen"),
+        None,
+    )
+    if kitchen_key is None:
+        placed = engine._place_room(engine.catalog.room_templates["kitchen"], 40, 40, 0)
+        placed.revealed = True
+        kitchen_key = placed.key
+    hero.room_key = kitchen_key
+    engine._reset_player_turn_state(hero)
+    assert "light_torch" in {a.id for a in handler.available_actions(engine, hero)}
+    assert engine.perform_haunt_action(hero, "light_torch") is True
+    assert handler._torches(engine, hero), "火把令牌应挂在英雄身上"
+    assert "light_torch" not in {a.id for a in handler.available_actions(engine, hero)}, "已带火把不能再点"
+
+    # ---- 投掷：不邻怪物不可用；邻室命中 → +1 轨道、不击晕、火把消耗
+    assert "throw_torch" not in {a.id for a in handler.available_actions(engine, hero)}, "不邻怪物不能投掷"
+    hero.room_key = monster.room_key
+    engine._reset_player_turn_state(hero)
+    assert "throw_torch" in {a.id for a in handler.available_actions(engine, hero)}
+    with patch.object(engine, "_roll_attack", return_value=6), patch.object(
+        engine, "_roll_monster_attack", return_value=2
+    ):
+        assert engine.perform_haunt_action(hero, "throw_torch") is True
+    assert engine._haunt_track_value("torch_hits") == 1
+    assert not handler._torches(engine, hero), "命中后火把应消耗掉"
+    assert monster.stunned_turns == 0, "p40：火把命中不击晕怪物"
+    assert engine.state.winner is None
+
+    # ---- 投掷落败：只是失去火把，英雄不掉血（p40）
+    hero.room_key = monster.room_key
+    engine._reset_player_turn_state(hero)
+    handler.perform_action(engine, hero, "light_torch", {})
+    stats_before = dict(hero.stats)
+    with patch.object(engine, "_roll_attack", return_value=1), patch.object(
+        engine, "_roll_monster_attack", return_value=7
+    ):
+        assert engine.perform_haunt_action(hero, "throw_torch") is True
+    assert not handler._torches(engine, hero)
+    assert hero.stats == stats_before, "p40：投掷落败英雄不掉血"
+    assert monster.stunned_turns == 0 and not engine._haunt_flags().get("monster_destroyed")
+
+    # ---- 抢火把（p111）：怪物赢 2+ 抢走并销毁；不足 2 不抢
+    handler.perform_action(engine, hero, "light_torch", {})
+    assert handler._torches(engine, hero)
+    assert handler.on_monster_attack(engine, monster, hero, 3) is True
+    assert not handler._torches(engine, hero), "p111：怪物抢走并销毁火把"
+    assert hero.stats == stats_before, "抢火把代替伤害，不掉血"
+    handler.perform_action(engine, hero, "light_torch", {})
+    assert handler.on_monster_attack(engine, monster, hero, 2) is False, "赢不足 2 不抢"
+    assert handler._torches(engine, hero)
+
+    # ---- 火把命中达标 → 怪物死亡 → 英雄胜
+    needed = len(engine.state.players)
+    engine._set_haunt_track_value("torch_hits", needed - 1)
+    engine._reset_player_turn_state(hero)
+    hero.room_key = monster.room_key
+    with patch.object(engine, "_roll_attack", return_value=6), patch.object(
+        engine, "_roll_monster_attack", return_value=2
+    ):
+        assert engine.perform_haunt_action(hero, "throw_torch") is True
+    assert engine._haunt_flags().get("monster_destroyed") is True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes", "p40：命中数达标 → 怪物死亡，英雄胜"
+
+    # ---- 推落：塔楼/深渊同房间力量 6+（p40）
+    engine2 = _run_until_haunt(seed=113, players=3, haunt_id=29)
+    h2 = engine2._mode_handler()
+    monster2 = h2._monster(engine2)
+    hero2 = next(p for p in engine2.state.players if p.role == "hero" and not p.dead)
+    tower_key = next(
+        (k for k, r in engine2.state.board.items() if r.template_id == "tower"),
+        None,
+    )
+    if tower_key is None:
+        placed = engine2._place_room(engine2.catalog.room_templates["tower"], 41, 40, 0)
+        placed.revealed = True
+        tower_key = placed.key
+    hero2.room_key = tower_key
+    monster2.room_key = tower_key
+    engine2.state.turn_order = [hero2.id]
+    engine2.state.turn_index = 0
+    engine2._reset_player_turn_state(hero2)
+    assert "push_monster" in {a.id for a in h2.available_actions(engine2, hero2)}
+    with patch.object(engine2, "_resolve_check", return_value=True):
+        assert engine2.perform_haunt_action(hero2, "push_monster") is True
+    assert engine2._haunt_flags().get("monster_destroyed") is True
+    assert h2.check_victory(engine2) is True
+    assert engine2.state.winner == "heroes", "p40：推落成功 → 英雄胜"
+
+    # ---- 叛徒胜与叛徒死亡兜底（老坑 19 号吸收者）
+    engine3 = _run_until_haunt(seed=113, players=3, haunt_id=29)
+    h3 = engine3._mode_handler()
+    for p in engine3.state.players:
+        if p.role == "hero":
+            p.dead = True
+    assert h3.check_victory(engine3) is True
+    assert engine3.state.winner == "traitor", "p111：英雄全灭 → 叛徒胜"
+    engine4 = _run_until_haunt(seed=113, players=3, haunt_id=29)
+    h4 = engine4._mode_handler()
+    next(p for p in engine4.state.players if p.role == "traitor").dead = True
+    assert h4.check_victory(engine4) is True and engine4.state.winner is None, "叛徒死亡 ≠ 英雄胜"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -3804,6 +3930,7 @@ def main():
     verify_haunt26_pentagram_block()
     verify_haunt27_amok_flesh()
     verify_haunt28_demon_ring()
+    verify_haunt29_frankenstein()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

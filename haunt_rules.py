@@ -1450,6 +1450,70 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [39, 110],
     },
+    29: {
+        # 校准记录（2026-09-04，对照英雄手册 p40 / 叛徒手册 p111）：
+        #   骨架原本用 giant 冒充怪物 + 抽象"火焰弱点"轨道，与原版无关。
+        #   数值（p111 页脚）：弗兰肯斯坦怪物 Speed 3 / Might 8（无神智）。
+        #   开局（p111）：怪物放在研究实验室或手术室；两间都不在场就从
+        #     房间牌堆找出一间放上（本引擎按模板自身楼层放置，原文要求
+        #     放上层——校准简化，见 handler 注释）。另备 5 枚火把令牌
+        #     （原文"游戏过程中找火把没有次数限制"，引擎按无限池处理，
+        #     只保留"每名探险者同时只能带 1 支"的限制）。
+        #   怪物行为（p111）：全速扑向最近的可攻击英雄（引擎默认即如此）；
+        #     攻击掷骰 +2（防守不加，走 monster_attack_roll_bonus）；
+        #     免疫速度攻击（monster_specs immune_to=["speed"]，覆盖左轮
+        #     等标了 speed 标签的武器；本仓库炸药未标 speed，按力量武器
+        #     结算——校准简化）；赢 2+ 时可抢走并销毁英雄的火把而不掉血。
+        #   英雄两种杀法（p40）：
+        #     ① 火刑：在 烧焦的房间/熔炉房/五芒星室/厨房 点燃火把（同回合
+        #        只能带一支）；在怪物所在房或门相连的邻室做速度攻击投掷——
+        #        赢则怪物吃 1 次火把命中且英雄失去火把（不击晕），输则只是
+        #        失去火把。命中次数 = 玩家数时怪物死亡。
+        #     ② 推落：把怪物引到 塔楼/深渊，同房间做力量 6+ 推它坠亡。
+        #   胜负（p40/p111）：英雄胜 = 怪物死亡（火把命中达标或推落成功）；
+        #     叛徒胜 = 英雄全灭。叛徒死亡后怪物照常追杀（怪物回合由本轮
+        #     最后存活玩家代跑，老坑 19 号吸收者）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "frankenstein_fire",
+        "traitor_rule": "revealer",
+        "hero_goal": "点燃火把投进怪物（命中玩家数次），或把它引到塔楼/深渊推下去。",
+        "traitor_goal": "让力大无穷的怪物把所有英雄撕碎。",
+        "suggested_monsters": ["frankenstein"],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": ["torch"],
+        "setup": {
+            "tracks": {
+                "torch_hits": {"label": "火把命中", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {
+                "monster_destroyed": False,
+            },
+        },
+        "monsters": [
+            # spawn=deferred：由 handler 按 p111 放进实验室
+            {"template_id": "frankenstein", "name": "弗兰肯斯坦的怪物", "spawn": "deferred",
+             "speed": 3, "might": 8, "immune_to": ["speed"]},
+        ],
+        "actions": [
+            {"id": "light_torch", "side": "heroes", "label": "点燃火把",
+             "detail": "在烧焦的房间/熔炉房/五芒星室/厨房点燃一支火把（p40）。"
+                       "每名探险者同时只能带 1 支，火把总数不限。",
+             "stat": "knowledge", "target": 0,
+             "rooms": ["charred_room", "furnace_room", "pentagram_chamber", "kitchen"]},
+            {"id": "throw_torch", "side": "heroes", "label": "投掷火把",
+             "detail": "在怪物所在房或门相连的邻室做速度攻击投掷（p40）。命中则怪物"
+                       "吃 1 次火把（不击晕）并失去火把；落败也只是失去火把。",
+             "stat": "knowledge", "target": 0},
+            {"id": "push_monster", "side": "heroes", "label": "把怪物推下去",
+             "detail": "怪物在塔楼或深渊时，同房间力量 6+ 把它推落摔死（p40）。",
+             "stat": "knowledge", "target": 0, "rooms": ["tower", "chasm"]},
+        ],
+        "win_conditions": [],
+        "source_pages": [40, 111],
+    },
 }
 
 
@@ -1610,7 +1674,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    29: dict(mode="frankenstein_fire", traitor_rule="revealer", hero_goal="用火焰弱点摧毁弗兰肯斯坦怪物。", traitor_goal="命令怪物杀死所有英雄。", rooms=("furnace_room", "kitchen", "attic", "research_laboratory"), monsters=("giant",), tokens=("torch", "fire", "monster"), hero_task="准备火焰并击破怪物", traitor_task="增强弗兰肯斯坦怪物", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="在火焰相关房间准备武器，再攻击怪物。", traitor_detail="推进怪物力量轨道。", monster_count=1, hero_win_target=1),
     30: dict(mode="dracula_rising", traitor_rule="revealer", hero_goal="摧毁德古拉伯爵和新娘。", traitor_goal="在阳光削弱吸血鬼前杀死或转化所有英雄。", rooms=("crypt", "graveyard", "bloody_room", "chapel", "balcony", "tower"), monsters=("shadow", "beast"), tokens=("dracula", "bride", "blood", "sun"), hero_task="猎杀德古拉与新娘", traitor_task="汲取鲜血", hero_stat="sanity", hero_target=5, hero_progress_target=2, hero_detail="在吸血鬼所在房间完成两次猎杀行动。", traitor_detail="推进德古拉苏醒与鲜血轨道。", monster_count=2, hero_win_target=2),
     31: dict(mode="living_house", traitor_rule="revealer", hero_goal="用长矛击败房屋的心脏或大脑。", traitor_goal="让活房屋消化并杀死所有英雄。", rooms=("organ_room", "attic", "dining_room", "kitchen", "larder", "crypt"), monsters=("plant",), tokens=("heart", "brain", "stomach", "antibody"), hero_task="攻击房屋心脏或大脑", traitor_task="消化入侵者", hero_stat="might", hero_target=6, hero_progress_target=2, hero_detail="在风琴房或阁楼完成一次长矛攻击行动。", traitor_detail="推进房屋消化轨道。", monster_count=1, hero_win_target=2),
     32: dict(mode="lost_dimension", traitor_rule="revealer", hero_goal="让房屋恢复到英雄所在的维度。", traitor_goal="让有毒维度持续伤害英雄，或杀死所有英雄。", rooms=("organ_room", "entrance_hall", "foyer", "grand_staircase", "basement_landing"), monsters=("shadow",), tokens=("dimension", "poison", "anchor"), hero_task="修复维度锚点", traitor_task="维持异维度", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在风琴房或起始房间完成维度修复检定。", traitor_detail="推进异维度污染轨道。", monster_count=1),

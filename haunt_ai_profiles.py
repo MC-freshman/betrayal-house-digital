@@ -327,6 +327,18 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["hellgate", "ring_control"]},
     },
+    29: {
+        "hero": {
+            # p40：怪物力 8 近身必死，英雄 bot 得先去点火房拿火把。
+            "attack_monsters": False,
+            "victory_focus": "先去点火房拿火把，再投掷烧死怪物，或引到塔楼/深渊推落",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "与怪物夹击英雄，别让他们靠近火源",
+        },
+        "scenario": {"special_rules": ["torch", "fire_weakness"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",
