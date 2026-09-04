@@ -1514,6 +1514,74 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [40, 111],
     },
+    30: {
+        # 校准记录（2026-09-04，对照英雄手册 p41 / 叛徒手册 p112）：
+        #   数值（p112 页脚）：德古拉 速 5/力 8/智 6；新娘 4/4/4
+        #     （新增 dracula、bride 模板）。
+        #   开局（p112）：叛徒变吸血鬼（每项属性 +1）；德古拉放在地窖或墓地
+        #     （都不在场→无人房距最近探索者 ≥4 格，再不行就最远——同 28 号
+        #     地狱门口径）；女孩卡弃掉，新娘放在叛徒房间；回合/伤害轨道置 0。
+        #   时钟（p112）：叛徒回合开始把轨道推进到下一数字（从 1 起）；随后
+        #     立即由其他探险者之一掷「玩家数」枚骰，结果 < 当前回合数 →
+        #     日出（只发生一次）。
+        #   日出后（p41）：每个叛徒回合开始，两只怪物吸血鬼每项属性各 -1
+        #     （叛徒吸血鬼不弱化——原文只要求记录两只怪物的属性）；任一属性
+        #     归零 → 昏迷不醒；英雄与昏迷吸血鬼同房间可自动钉杀（每回合一次，
+        #     代替攻击）；吸血鬼进入/身处 阳台/温室/花园/墓地/庭院/塔楼
+        #     （其它朝外窗未建模，同 24 号）立刻被阳光烧毁——叛徒吸血鬼同理。
+        #   圣物准入（p112）：吸血鬼进教堂或持圣徽者的房间须理智 6+，失败
+        #     不能进。两只怪物由 handler 接管移动逐房判定；叛徒吸血鬼按
+        #     硬阻挡简化（原文可掷骰硬闯，电子版避免选项列表期掷骰）。
+        #   魅惑（p112）：吸血鬼对异性目标可做理智攻击——电子版角色无性别
+        #     字段，对所有目标可用（同 20 号口径）；可隔门从邻室发动；赢则
+        #     目标改受等额速度伤害且可被拉进吸血鬼房间，输则吸血鬼不受伤。
+        #     速度被魅惑打到见底 → 该角色变成吸血鬼（转投叛徒方：角色速度
+        #     恢复初始值再各 +1，引擎 role 改为 traitor 以复用 bot 目标逻辑）。
+        #   英雄杀法（p41）：长矛+力量攻击击败吸血鬼 = 钉杀（直接摧毁）；
+        #     其它成功攻击照常造成伤害/击晕；持圣徽者击败吸血鬼后可按伤害
+        #     点数把它沿门击退等距房间；与昏迷吸血鬼同房间可自动钉杀。
+        #   胜负（p41/p112）：英雄胜 = 德古拉与新娘都被摧毁；叛徒胜 = 所有
+        #     英雄死亡或变成吸血鬼。叛徒死亡后两只怪物照常行动（老坑 20 号
+        #     吸收者）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "dracula_rising",
+        "traitor_rule": "revealer",
+        "hero_goal": "在日出削弱它们后，用长矛钉杀或阳光烧毁灭德古拉与新娘。",
+        "traitor_goal": "让吸血鬼杀光所有英雄，或把他们全部变成吸血鬼。",
+        "suggested_monsters": ["dracula", "bride"],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {
+                "sun_track": {"label": "回合/伤害轨道", "target": 0, "side": "traitor"},
+            },
+            "flags": {
+                "sunrise": False,
+                "vampire_ids": [],
+                "unconscious_ids": [],
+                "dracula_destroyed": False,
+                "bride_destroyed": False,
+            },
+        },
+        "monsters": [
+            # spawn=deferred：德古拉与新娘由 handler 按 p112 放置
+            {"template_id": "dracula", "name": "德古拉伯爵", "spawn": "deferred",
+             "speed": 5, "might": 8, "sanity": 6},
+            {"template_id": "bride", "name": "新娘", "spawn": "deferred",
+             "speed": 4, "might": 4, "sanity": 4},
+        ],
+        "actions": [
+            {"id": "stake_unconscious", "side": "heroes", "label": "钉杀昏迷的吸血鬼",
+             "detail": "与昏迷的吸血鬼同房间时，自动钉杀摧毁它（p41）。每回合一次，"
+                       "代替攻击。",
+             "stat": "knowledge", "target": 0},
+        ],
+        "win_conditions": [],
+        "source_pages": [41, 112],
+    },
 }
 
 
@@ -1674,7 +1742,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    30: dict(mode="dracula_rising", traitor_rule="revealer", hero_goal="摧毁德古拉伯爵和新娘。", traitor_goal="在阳光削弱吸血鬼前杀死或转化所有英雄。", rooms=("crypt", "graveyard", "bloody_room", "chapel", "balcony", "tower"), monsters=("shadow", "beast"), tokens=("dracula", "bride", "blood", "sun"), hero_task="猎杀德古拉与新娘", traitor_task="汲取鲜血", hero_stat="sanity", hero_target=5, hero_progress_target=2, hero_detail="在吸血鬼所在房间完成两次猎杀行动。", traitor_detail="推进德古拉苏醒与鲜血轨道。", monster_count=2, hero_win_target=2),
     31: dict(mode="living_house", traitor_rule="revealer", hero_goal="用长矛击败房屋的心脏或大脑。", traitor_goal="让活房屋消化并杀死所有英雄。", rooms=("organ_room", "attic", "dining_room", "kitchen", "larder", "crypt"), monsters=("plant",), tokens=("heart", "brain", "stomach", "antibody"), hero_task="攻击房屋心脏或大脑", traitor_task="消化入侵者", hero_stat="might", hero_target=6, hero_progress_target=2, hero_detail="在风琴房或阁楼完成一次长矛攻击行动。", traitor_detail="推进房屋消化轨道。", monster_count=1, hero_win_target=2),
     32: dict(mode="lost_dimension", traitor_rule="revealer", hero_goal="让房屋恢复到英雄所在的维度。", traitor_goal="让有毒维度持续伤害英雄，或杀死所有英雄。", rooms=("organ_room", "entrance_hall", "foyer", "grand_staircase", "basement_landing"), monsters=("shadow",), tokens=("dimension", "poison", "anchor"), hero_task="修复维度锚点", traitor_task="维持异维度", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在风琴房或起始房间完成维度修复检定。", traitor_detail="推进异维度污染轨道。", monster_count=1),
     33: dict(mode="lake_rescue", traitor_rule="revealer", hero_goal="在女孩溺水前从地下湖救出她。", traitor_goal="把女孩喂给湖中生物，或杀死所有英雄。", rooms=("underground_lake", "basement_landing", "crypt", "furnace_room"), monsters=("beast",), tokens=("girl", "lake", "drowning"), hero_task="从地下湖救出女孩", traitor_task="把女孩带向湖中生物", hero_stat="might", hero_target=5, hero_progress_target=1, hero_detail="在地下湖或湖区完成救援行动。", traitor_detail="推进溺水倒计时。", monster_count=1, hero_win_target=1),

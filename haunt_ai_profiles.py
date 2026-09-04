@@ -339,6 +339,18 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["torch", "fire_weakness"]},
     },
+    30: {
+        "hero": {
+            # p41：日出会削弱吸血鬼，英雄 bot 拖时间也是策略；圣徽/长矛是关键牌。
+            "attack_traitor_players": True,
+            "victory_focus": "躲开吸血鬼拖到日出，用长矛钉杀或把昏迷的吸血鬼钉死",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "趁夜色杀光或魅惑所有英雄，别让它们晒到太阳",
+        },
+        "scenario": {"special_rules": ["sunrise", "domination"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",

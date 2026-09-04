@@ -43,6 +43,7 @@ if __package__ in {None, ""}:
         AmokFleshMode,
         DemonRingMode,
         FrankensteinMode,
+        DraculaRisingMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -142,8 +143,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(AmokFleshMode) == [27], f"剧本 27 未走定制 handler: {handlers.get(AmokFleshMode)}"
     assert handlers.get(DemonRingMode) == [28], f"剧本 28 未走定制 handler: {handlers.get(DemonRingMode)}"
     assert handlers.get(FrankensteinMode) == [29], f"剧本 29 未走定制 handler: {handlers.get(FrankensteinMode)}"
+    assert handlers.get(DraculaRisingMode) == [30], f"剧本 30 未走定制 handler: {handlers.get(DraculaRisingMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 41, f"应有 41 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 40, f"应有 40 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -159,7 +161,7 @@ def verify_mode_dispatch() -> None:
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
-        "demon_ring", "frankenstein_fire",
+        "demon_ring", "frankenstein_fire", "dracula_rising",
     }
 
 
@@ -3566,6 +3568,185 @@ def verify_haunt29_frankenstein() -> None:
     assert h4.check_victory(engine4) is True and engine4.state.winner is None, "叛徒死亡 ≠ 英雄胜"
 
 
+def verify_haunt30_dracula() -> None:
+    """剧本 30：开局布置/时钟与日出掷骰/弱化与昏迷/自动钉杀/圣物准入/
+    魅惑与吸血鬼化/长矛钉杀/圣徽击退/阳光烧毁/胜负（p41/p112）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=30)
+    handler = engine._mode_handler()
+    assert isinstance(handler, DraculaRisingMode)
+    flags = engine._haunt_flags()
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    hero = heroes[0]
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+
+    # ---- 开局：叛徒变吸血鬼（+1 每项）；德古拉在墓地/地窖；新娘在叛徒房
+    assert handler._is_vampire_player(engine, traitor), "p112：叛徒应变成吸血鬼"
+    dracula = next(m for m in engine.state.monsters if m.template_id == "dracula")
+    bride = next(m for m in engine.state.monsters if m.template_id == "bride")
+    assert engine.state.board[dracula.room_key].template_id in ("crypt", "graveyard")
+    assert bride.room_key == traitor.room_key, "p112：新娘放在叛徒房间"
+    assert (dracula.speed, dracula.might, dracula.sanity) == (5, 8, 6)
+    assert (bride.speed, bride.might, bride.sanity) == (4, 4, 4)
+    assert all("omen_girl" not in p.items for p in engine.state.players), "p112：女孩卡被弃"
+    face = engine.catalog.characters.get(traitor.character_id)
+    for stat in ("might", "speed", "sanity", "knowledge"):
+        assert traitor.stats[stat] >= min(face.stats[stat] + 1, 99), "p112：叛徒每项属性 +1"
+
+    # ---- 时钟：英雄回合开始不推进；叛徒回合开始 +1 并掷日出（ patched 不日出）
+    assert engine._haunt_track_value("sun_track") == 0
+    with patch.object(engine, "roll_dice", return_value=9):
+        handler.on_turn_start(engine, hero)
+    assert engine._haunt_track_value("sun_track") == 0, "只有叛徒回合开始才推进轨道"
+    with patch.object(engine, "roll_dice", return_value=9):
+        handler.on_turn_start(engine, traitor)
+    assert engine._haunt_track_value("sun_track") == 1, "p112：叛徒回合开始推进轨道"
+    assert flags["sunrise"] is False, "日出检定 9 ≥ 1 不日出"
+
+    # ---- 德古拉第 2 回合前不移动不攻击（p112）
+    before = dracula.room_key
+    assert handler.on_monster_turn_start(engine, dracula) is True
+    assert dracula.room_key == before, "p112：德古拉第 2 回合前不动"
+
+    # ---- 日出：掷骰 < 回合数 → 日出；随后每叛徒回合开始怪物每项属性 -1
+    # （先挪出向阳房：德古拉若开局在墓地，日出瞬间被烧是正确行为）
+    safe_key = next(
+        k for k, r in engine.state.board.items()
+        if r.template_id not in DraculaRisingMode.SUNLIT_ROOMS
+    )
+    dracula.room_key = safe_key
+    bride.room_key = safe_key
+    traitor.room_key = safe_key  # 叛徒吸血鬼也别被日出烧死，否则时钟停摆
+    with patch.object(engine, "roll_dice", side_effect=[0, 0]):
+        handler.on_turn_start(engine, traitor)  # 轨道 2，日出检定 0 < 2 → 日出
+    assert flags["sunrise"] is True
+    m_before = (dracula.speed, dracula.might, dracula.sanity)
+    handler.on_turn_start(engine, traitor)  # 轨道 3 + 弱化
+    assert (dracula.speed, dracula.might, dracula.sanity) == tuple(
+        max(0, v - 1) for v in m_before
+    ), "p41：日出后每项属性各 -1"
+
+    # ---- 阳光烧毁：吸血鬼怪物站在向阳房 → 摧毁；叛徒吸血鬼同理
+    tower_key = next(
+        (k for k, r in engine.state.board.items() if r.template_id == "tower"),
+        None,
+    )
+    if tower_key is None:
+        placed = engine._place_room(engine.catalog.room_templates["tower"], 41, 40, 0)
+        placed.revealed = True
+        tower_key = placed.key
+    bride.room_key = tower_key
+    handler._burn_vampires_in_sunlight(engine)
+    assert flags["bride_destroyed"] is True, "p41：新娘在阳光下烧毁"
+    assert bride not in engine.state.monsters
+    traitor.room_key = tower_key
+    handler._burn_vampires_in_sunlight(engine)
+    assert traitor.dead is True, "p41：叛徒吸血鬼站进阳光也会烧死"
+
+    # ---- 魅惑（p112）：隔门理智攻击 → 速度伤害 + 拖入房间；速度见底 → 吸血鬼化
+    engine2 = _run_until_haunt(seed=113, players=3, haunt_id=30)
+    h2 = engine2._mode_handler()
+    t2 = next(p for p in engine2.state.players if p.role == "traitor")
+    hero2 = next(p for p in engine2.state.players if p.role == "hero" and not p.dead)
+    bride2 = next(m for m in engine2.state.monsters if m.template_id == "bride")
+    engine2.state.turn_order = [hero2.id]
+    engine2.state.turn_index = 0
+    bride2.room_key = hero2.room_key
+    neighbor = next(
+        (k for k in engine2._door_neighbors(hero2.room_key) if k in engine2.state.board),
+        None,
+    )
+    assert neighbor, "测试需要一间门邻房"
+    bride2.room_key = neighbor
+    # 抬高速度位置（保证 4 点速度伤害不会直接见底触发吸血鬼化）
+    sp_track = engine2._stat_track(hero2, "speed")
+    hero2.stat_positions["speed"] = min(6, len(sp_track) - 1)
+    hero2.stats["speed"] = sp_track[hero2.stat_positions["speed"]]
+    speed_pos0 = hero2.stat_positions["speed"]
+    hero_room_before = hero2.room_key
+    with patch.object(engine2, "roll_dice", return_value=0), patch.object(
+        engine2, "_roll_monster_attack", return_value=7
+    ), patch.object(engine2, "_roll_attack", return_value=3):
+        # 移动骰 patch 成 0：新娘留在邻室，走魅惑分支（p112 隔门理智攻击）
+        assert h2.on_monster_turn_start(engine2, bride2) is True
+    assert hero2.stat_positions["speed"] == speed_pos0 - 4, "p112：魅惑造成等额速度伤害"
+    assert hero2.room_key == bride2.room_key, "p112：魅惑成功可把英雄拖进吸血鬼房间"
+    hero2.room_key = hero_room_before  # 移回原房间，再测隔门魅惑的落败分支
+    with patch.object(engine2, "roll_dice", return_value=0), patch.object(
+        engine2, "_roll_monster_attack", return_value=2
+    ), patch.object(engine2, "_roll_attack", return_value=7):
+        assert h2.on_monster_turn_start(engine2, bride2) is True
+    assert bride2.stunned_turns == 0, "p112：魅惑落败吸血鬼不受伤"
+
+    # ---- 长矛钉杀（p41）：长矛+力量攻击击败 → 直接摧毁
+    assert h2.monster_killed_on_defeat(engine2, bride2, hero2, "might", "omen_spear") is True
+    assert engine2._haunt_flags()["bride_destroyed"] is True
+
+    # ---- 圣徽击退（p41）：持圣徽击败 → 按伤害点数沿门击退，之后照常击晕
+    hero2.items.append("omen_holy_symbol")
+    drac2 = next(m for m in engine2.state.monsters if m.template_id == "dracula")
+    drac2.room_key = hero2.room_key
+    engine2.state.turn_order = [hero2.id]
+    engine2._reset_player_turn_state(hero2)
+    engine2._roll_monster_attack = lambda monster, attr, reroll_blanks=False: 1  # type: ignore
+    engine2._roll_attack = lambda player, attr, bonus=0: 5  # type: ignore
+    assert engine2.attack(hero2, drac2, None, False) is True
+    assert drac2.room_key != hero2.room_key, "p41：圣徽把吸血鬼击退了"
+    assert drac2.stunned_turns > 0, "击退之后照常被击晕"
+    del engine2._roll_monster_attack
+    del engine2._roll_attack
+
+    # ---- 昏迷与自动钉杀（p41）：属性归零 → 昏迷；同房间钉杀摧毁
+    engine3 = _run_until_haunt(seed=113, players=3, haunt_id=30)
+    h3 = engine3._mode_handler()
+    hero3 = next(p for p in engine3.state.players if p.role == "hero" and not p.dead)
+    bride3 = next(m for m in engine3.state.monsters if m.template_id == "bride")
+    engine3.state.turn_order = [hero3.id]
+    engine3.state.turn_index = 0
+    engine3._haunt_flags()["sunrise"] = True
+    bride3.speed = 0
+    engine3._haunt_flags().setdefault("unconscious_ids", []).append(bride3.id)
+    bride3.room_key = hero3.room_key
+    engine3._reset_player_turn_state(hero3)
+    assert "stake_unconscious" in {a.id for a in h3.available_actions(engine3, hero3)}
+    assert engine3.perform_haunt_action(hero3, "stake_unconscious") is True
+    assert engine3._haunt_flags()["bride_destroyed"] is True, "p41：昏迷吸血鬼被自动钉杀"
+
+    # ---- 圣物准入：吸血鬼怪物进教堂须理智 6+（p112）
+    engine4 = _run_until_haunt(seed=113, players=3, haunt_id=30)
+    h4 = engine4._mode_handler()
+    drac4 = next(m for m in engine4.state.monsters if m.template_id == "dracula")
+    chapel_key = next(
+        (k for k, r in engine4.state.board.items() if r.template_id == "chapel"),
+        None,
+    )
+    assert chapel_key, "测试需要教堂在场"
+    with patch.object(engine4, "_roll_monster_attack", return_value=3):
+        assert h4._holy_blocked(engine4, drac4, chapel_key) is True, "理智 3 < 6 被逼退"
+    with patch.object(engine4, "_roll_monster_attack", return_value=6):
+        assert h4._holy_blocked(engine4, drac4, chapel_key) is False, "理智 6+ 可进入"
+
+    # ---- 胜负：双杀 → 英雄胜；英雄全灭 → 叛徒胜；叛徒死亡兜底
+    engine5 = _run_until_haunt(seed=113, players=3, haunt_id=30)
+    h5 = engine5._mode_handler()
+    engine5._haunt_flags()["dracula_destroyed"] = True
+    engine5._haunt_flags()["bride_destroyed"] = True
+    assert h5.check_victory(engine5) is True
+    assert engine5.state.winner == "heroes", "p41：双杀 → 英雄胜"
+    engine6 = _run_until_haunt(seed=113, players=3, haunt_id=30)
+    h6 = engine6._mode_handler()
+    for p in engine6.state.players:
+        if p.role == "hero":
+            p.dead = True
+    assert h6.check_victory(engine6) is True
+    assert engine6.state.winner == "traitor", "p112：英雄全灭 → 叛徒胜"
+    engine7 = _run_until_haunt(seed=113, players=3, haunt_id=30)
+    h7 = engine7._mode_handler()
+    next(p for p in engine7.state.players if p.role == "traitor").dead = True
+    assert h7.check_victory(engine7) is True and engine7.state.winner is None, "叛徒死亡 ≠ 英雄胜"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -3931,6 +4112,7 @@ def main():
     verify_haunt27_amok_flesh()
     verify_haunt28_demon_ring()
     verify_haunt29_frankenstein()
+    verify_haunt30_dracula()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()
