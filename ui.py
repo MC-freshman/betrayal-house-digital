@@ -100,6 +100,14 @@ def _config_track_tags(widget: tk.Text) -> None:
     widget.tag_configure("tr_label", foreground=PALETTE["text"], font=FONT_UI_BOLD)
 
 
+def _track_cells(value: int, target: int) -> str:
+    """把剧本轨道数值渲染成进度格：已完成 ●、未完成 ○；无目标时不画格。"""
+    if target <= 0:
+        return ""
+    filled = max(0, min(int(value), int(target)))
+    return "●" * filled + "○" * (int(target) - filled)
+
+
 def _append_stat_track(widget: tk.Text, player: Player, stat: str) -> None:
     """向 Text 组件追加一行属性卡尺显示；无轨道数据的角色退化为「当前值/上限」。
 
@@ -2488,6 +2496,13 @@ class GameApp(tk.Tk):
                 lines.append(f"  - {HT.card_short(card)}")
         else:
             lines.append("  (无)")
+        carried = self.engine.tokens_held_by(current.id)
+        lines.append("")
+        lines.append("携带令牌：")
+        if carried:
+            lines.append("  " + "，".join(t.label or t.kind for t in carried))
+        else:
+            lines.append("  (无)")
         lines.append("")
         lines.append("同伴：")
         if current.companions:
@@ -2507,6 +2522,9 @@ class GameApp(tk.Tk):
                 lines.append("  物品：" + "，".join(self.engine.catalog.cards[card_id].name for card_id in room_items))
             else:
                 lines.append("  物品：(无)")
+            room_tokens = self.engine.tokens_in_room(room.key)
+            if room_tokens:
+                lines.append("  令牌：" + "，".join(t.label or t.kind for t in room_tokens))
             occupants: list[str] = []
             for other in state.players:
                 if other.id == current.id or other.dead or other.room_key != room.key:
@@ -2523,6 +2541,20 @@ class GameApp(tk.Tk):
         self.player_info.insert("end", "\n".join(lines))
         self.player_info.config(state="disabled")
         self.player_info.see("1.0")
+
+    def _haunt_progress_summary(self, viewer) -> list[str]:
+        """问当前剧本 handler 要额外的进度摘要行（duck-typed，可选钩子）。"""
+        try:
+            handler = self.engine._mode_handler()
+        except Exception:
+            return []
+        summary = getattr(handler, "progress_summary", None)
+        if not callable(summary):
+            return []
+        try:
+            return list(summary(self.engine, viewer) or [])
+        except Exception:
+            return []
 
     def _refresh_deck_panel(self) -> None:
         state = self.engine.state
@@ -2553,7 +2585,12 @@ class GameApp(tk.Tk):
                     label = track.get("label", "进度")
                     value = track.get("value", 0)
                     target = track.get("target", 0)
-                    lines.append(f"  {label} {value}/{target}")
+                    lines.append(f"  {label} {_track_cells(value, target)}  {value}/{target}")
+            summary = self._haunt_progress_summary(viewer)
+            if summary:
+                lines.append("")
+                lines.append("剧本进度：")
+                lines.extend(f"  {row}" for row in summary)
         self.deck_info.config(text="\n".join(lines))
 
     def _refresh_log(self) -> None:

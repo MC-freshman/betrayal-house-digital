@@ -258,6 +258,14 @@ class GenericModeHandler:
         """
         return []
 
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        """剧本进度摘要（可选，duck-typed，桌面 UI 面板会探测）。
+
+        返回公开信息的可读行；通用轨道（value/target）由 UI 自己渲染，
+        这里只补充轨道表达不了的内容（销毁计数、状态标记等）。
+        """
+        return []
+
     def room_entry_blocked(self, engine: Any, player: Any, room: Any) -> bool:
         """该玩家是否禁止进入/探索该房间（剧本 26：英雄与老鼠进不了五芒星室）。
 
@@ -5500,6 +5508,19 @@ class VoodooMode(GenericModeHandler):
 
     mode = "voodoo_dolls"
 
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        dolls = self._dolls(engine)
+        if not dolls:
+            return []
+        names = {"wax": "蜡", "china": "瓷", "stone": "石", "glass": "玻璃", "cloth": "布"}
+        rows = [f"娃娃 {sum(1 for d in dolls if d['destroyed'])}/{len(dolls)} 已销毁"]
+        for d in dolls:
+            hero = next((p for p in engine.state.players if p.id == d["hero_id"]), None)
+            who = hero.name if hero else "?"
+            state = "已销毁" if d["destroyed"] else ("位置已公开" if d.get("found") else "下落不明")
+            rows.append(f"  {names.get(d['kind'], d['kind'])}·{who}：{state}")
+        return rows
+
     CANDIDATES = {
         "wax": ("furnace_room", "kitchen"),
         "china": ("balcony", "tower"),
@@ -5844,6 +5865,13 @@ class RatRitualMode(GenericModeHandler):
 
     mode = "rat_ritual"
 
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        rats = self._rats(engine)
+        rows = [f"场上老鼠 {len(rats)} 只（须清光）"]
+        if engine._haunt_flags().get("traitor_reached"):
+            rows.append("叛徒已进入五芒星室")
+        return rows
+
     RAT = "rat"
     PENTAGRAM = "pentagram_chamber"
 
@@ -6122,6 +6150,15 @@ class AmokFleshMode(GenericModeHandler):
     """
 
     mode = "blob_weakness"
+
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        flags = engine._haunt_flags()
+        rows = [f"Blob 已吞没 {len(flags.get('blob_rooms', []))} 间房间"]
+        rows.append("弱点：已找到" if flags.get("weakness_found") else "弱点：未找到")
+        bp = len(flags.get("blobperson_ids", []))
+        if bp:
+            rows.append(f"已被同化 {bp} 人")
+        return rows
 
     INGREDIENT_ROOMS = (
         "attic", "conservatory", "furnace_room", "garden", "library",
@@ -6463,6 +6500,19 @@ class DemonRingMode(GenericModeHandler):
 
     mode = "demon_ring"
 
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        flags = engine._haunt_flags()
+        rows = []
+        portal = flags.get("portal_room")
+        room = engine.state.board.get(portal) if portal else None
+        rows.append(f"地狱之门：{room.name if room else '未开启'}")
+        if flags.get("lord_destroyed"):
+            rows.append("恶魔领主：已被戒指摧毁")
+        controlled = len(flags.get("controlled_demons", []))
+        if controlled:
+            rows.append(f"受控恶魔 {controlled} 只")
+        return rows
+
     LORD = "demon_lord"
     DEMON_TEMPLATES = ("demon_1", "demon_2", "demon_3", "demon_4", "demon_5")
 
@@ -6780,6 +6830,11 @@ class FrankensteinMode(GenericModeHandler):
 
     mode = "frankenstein_fire"
 
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        if engine._haunt_flags().get("monster_destroyed"):
+            return ["怪物：已被火把烧毁"]
+        return []
+
     MONSTER = "frankenstein"
     TORCH = "torch"
     TORCH_ROOMS = ("charred_room", "furnace_room", "pentagram_chamber", "kitchen")
@@ -6997,6 +7052,16 @@ class DraculaRisingMode(GenericModeHandler):
     """
 
     mode = "dracula_rising"
+
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        flags = engine._haunt_flags()
+        rows = []
+        if flags.get("sunrise"):
+            rows.append("太阳已经升起——吸血鬼正在弱化")
+        d = "已摧毁" if flags.get("dracula_destroyed") else "仍在"
+        b = "已摧毁" if flags.get("bride_destroyed") else "仍在"
+        rows.append(f"德古拉：{d}；新娘：{b}")
+        return rows
 
     DRACULA = "dracula"
     BRIDE = "bride"
