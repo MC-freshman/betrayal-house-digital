@@ -1582,6 +1582,63 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [41, 112],
     },
+    38: {
+        # 校准记录（2026-09-04，对照英雄手册 p49 / 叛徒手册 p120）：
+        #   机制落在 HellbeastMode（继承 ExorcismMode，与 22 号同一条继承路子；
+        #   交接文档曾建议继承 24 号 BatSwarmMode，经原文核对是错的——火蝠不贴附
+        #   英雄、不可被攻击、叛徒存活、伤害在怪物回合按房间区域结算，与 24 号
+        #   几乎全相反；而驱魔来源清单与 22 号逐字一致，只把灵应板换成戒指）。
+        #   火蝠 Speed 3、不可攻击也不可被攻击（invulnerable）；开局放「玩家数一半
+        #     向上取整」只，全在作祟揭露房；不影响英雄移动（p49/p120）。
+        #   怪物回合（叛徒存活，走引擎正常怪物回合=叛徒回合结束）：一次掷骰结果
+        #     同时决定「现有火蝠移动格数」与「新进揭露房的火蝠数」，新蝠当回合
+        #     不移动（先移动现有蝠→再繁殖→天然满足）。
+        #   移动后：对每个「与≥1 英雄同房」的火蝠群掷「该房火蝠数」枚骰，房内所有
+        #     英雄受该总和的物理伤害（盔甲「只防 1 点」由引擎既有盔甲语义近似承担，
+        #     已知简化，同 24 号）。详见 haunt_modes.HellbeastMode 的已知简化清单。
+        #   驱魔（英雄胜）复用 8/22 号底座：理智 5+（教堂/地窖/五芒星室/圣徽/戒指）
+        #     或知识 5+（图书馆/研究实验室/古书/水晶球），每人每回合限一次，成功
+        #     次数 = 玩家数，每个来源只能成功用一次（成功后作废，房间放检定令牌）。
+        #   叛徒存活并操控火蝠（区别于 24 号叛徒开局即死）；无独立回合时钟。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "hellbeast_exorcism",
+        "traitor_rule": "revealer",
+        "hero_goal": "用不同的房间或物品完成等同玩家数的驱魔检定（理智/知识 5+），把火蝠赶出房屋。",
+        "traitor_goal": "让火蝠把所有英雄烧死。",
+        "suggested_monsters": ["bat"],
+        "required_cards": ["omen_holy_symbol", "omen_ring", "omen_book", "omen_crystal_ball", "item_armor"],
+        "key_rooms": ["chapel", "crypt", "pentagram_chamber", "library", "research_laboratory"],
+        "tokens": ["sanity_check", "knowledge_check", "bat"],
+        "setup": {
+            "tracks": {
+                "exorcism_successes": {"label": "驱魔成功次数", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"used_exorcism_sources": [], "haunt_room": "", "last_swarm_turn": -1},
+        },
+        "monsters": [
+            # spawn=deferred：开局布点与每怪物回合繁殖都由 handler 按 p120 处理
+            {"template_id": "bat", "name": "火蝠", "spawn": "deferred",
+             "speed": 3, "might": 0, "sanity": 0, "invulnerable": True},
+        ],
+        # 九个驱魔行动：id 即来源名（房间用 rooms 限制、物品用 requires 限制），
+        # 通用框架负责检定与进度；"同一来源只能成功一次"由 ExorcismMode
+        # 按 used_exorcism_sources 过滤。22 号同款，戒指替换 8 号的灵应板。
+        "actions": [
+            {"id": "chapel", "side": "heroes", "label": "在教堂驱魔", "detail": "理智检定 5+。教堂只能成功使用一次。", "stat": "sanity", "target": 5, "rooms": ["chapel"], "progress": "exorcism_successes"},
+            {"id": "crypt", "side": "heroes", "label": "在地窖驱魔", "detail": "理智检定 5+。地窖只能成功使用一次。", "stat": "sanity", "target": 5, "rooms": ["crypt"], "progress": "exorcism_successes"},
+            {"id": "pentagram_chamber", "side": "heroes", "label": "在五芒星室驱魔", "detail": "理智检定 5+。五芒星室只能成功使用一次。", "stat": "sanity", "target": 5, "rooms": ["pentagram_chamber"], "progress": "exorcism_successes"},
+            {"id": "omen_holy_symbol", "side": "heroes", "label": "借圣徽驱魔", "detail": "理智检定 5+。圣徽只能成功使用一次。", "stat": "sanity", "target": 5, "requires": ["omen_holy_symbol"], "progress": "exorcism_successes"},
+            {"id": "omen_ring", "side": "heroes", "label": "借戒指驱魔", "detail": "理智检定 5+。戒指只能成功使用一次（p49 用戒指替换 8 号的灵应板）。", "stat": "sanity", "target": 5, "requires": ["omen_ring"], "progress": "exorcism_successes"},
+            {"id": "library", "side": "heroes", "label": "在图书馆驱魔", "detail": "知识检定 5+。图书馆只能成功使用一次。", "stat": "knowledge", "target": 5, "rooms": ["library"], "progress": "exorcism_successes"},
+            {"id": "research_laboratory", "side": "heroes", "label": "在研究实验室驱魔", "detail": "知识检定 5+。研究实验室只能成功使用一次。", "stat": "knowledge", "target": 5, "rooms": ["research_laboratory"], "progress": "exorcism_successes"},
+            {"id": "omen_book", "side": "heroes", "label": "借古书驱魔", "detail": "知识检定 5+。古书只能成功使用一次。", "stat": "knowledge", "target": 5, "requires": ["omen_book"], "progress": "exorcism_successes"},
+            {"id": "omen_crystal_ball", "side": "heroes", "label": "借水晶球驱魔", "detail": "知识检定 5+。水晶球只能成功使用一次。", "stat": "knowledge", "target": 5, "requires": ["omen_crystal_ball"], "progress": "exorcism_successes"},
+        ],
+        "win_conditions": [],
+        "source_pages": [49, 120],
+    },
 }
 
 
@@ -1749,7 +1806,6 @@ _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
     35: dict(mode="small_change_escape", traitor_rule="revealer", hero_goal="让至少一半英雄使用玩具飞机从外缘逃脱。", traitor_goal="让猫吃掉所有缩小的英雄。", rooms=("balcony", "garden", "graveyard", "patio", "tower", "entrance_hall", "foyer"), monsters=("cat",), tokens=("toy_plane", "cat", "small_hero"), hero_task="驾驶玩具飞机逃脱", traitor_task="驱使猫捕食", hero_stat="speed", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在有外缘出口的房间完成一次逃脱行动。", traitor_detail="推进猫的捕食轨道。", monster_count="player_count", hero_win_target="half_players_ceil"),
     36: dict(mode="swamp_escape", traitor_rule="revealer", hero_goal="至少一半原英雄活着逃离房屋，并不能留下其他活着的英雄。", traitor_goal="让房屋沉入沼泽，或杀死所有英雄。", rooms=("attic", "entrance_hall", "foyer", "grand_staircase", "garden", "patio"), monsters=("shadow",), tokens=("rowboat", "swamp", "escape"), hero_task="组织逃离房屋", traitor_task="加速沼泽下沉", hero_stat="might", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在入口大厅准备船并完成一次逃离。", traitor_detail="推进沼泽下沉轨道。", monster_count=1, hero_win_target="half_players_ceil"),
     37: dict(mode="death_checkmate", traitor_rule="revealer", hero_goal="在死亡的棋局中完成一次胜利检定。", traitor_goal="让死亡在无对手时赢下棋局，或杀死所有英雄。", rooms=("vault", "crypt", "research_laboratory", "operating_laboratory", "game_room"), monsters=("shadow",), tokens=("death", "seal", "chess"), hero_task="在棋局中战胜死亡", traitor_task="逼迫死亡弃局", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="与死亡同房间时完成知识检定；圣印可提供帮助。", traitor_detail="推进死亡的棋局压力。", monster_count=1, hero_win_target=1),
-    38: dict(mode="hellbats_exorcism", traitor_rule="revealer", hero_goal="完成驱魔，把火蝠赶出房屋。", traitor_goal="用火蝠吸取英雄的血，或杀死所有英雄。", rooms=("chapel", "crypt", "pentagram_chamber", "library", "research_laboratory"), monsters=("spider",), tokens=("fire_bat", "exorcism", "blood"), hero_task="驱魔火蝠", traitor_task="喂养火蝠", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target="player_count", hero_detail="在驱魔房间累计成功检定。", traitor_detail="推进火蝠繁殖轨道。", monster_count="half_players_ceil"),
     39: dict(mode="secret_heir", traitor_rule="revealer", hero_goal="让真正继承人坐上雕像走廊的王座，并持有长矛和戒指。", traitor_goal="杀死秘密继承人，或杀死所有英雄。", rooms=("statuary_corridor", "gallery", "entrance_hall", "foyer"), monsters=("cultist",), tokens=("heir", "assassin", "throne"), hero_task="确认继承人并登上王座", traitor_task="寻找并刺杀继承人", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="在雕像走廊完成继承仪式。", traitor_detail="推进刺客锁定轨道。", monster_count="player_count", hero_win_target=1, required_cards=("omen_spear", "omen_ring"), hero_requires=("omen_spear", "omen_ring")),
     40: dict(mode="buried_alive", traitor_rule="revealer", hero_goal="在被埋的朋友死亡前挖出他。", traitor_goal="让被埋者窒息，或杀死所有英雄。", rooms=("catacombs", "crypt", "furnace_room", "basement_landing", "junk_room"), monsters=("zombie",), tokens=("buried_friend", "might_check", "time"), hero_task="挖出被埋者", traitor_task="加速窒息倒计时", hero_stat="might", hero_target=5, hero_progress_target=1, hero_detail="在秘密埋葬房间完成力量检定；通灵板可协助定位。", traitor_detail="推进窒息倒计时。", monster_count=1, hero_win_target=1),
     41: dict(mode="invisible_traitor", traitor_rule="revealer", hero_goal="找到并击败隐形叛徒。", traitor_goal="利用隐形状态杀死所有英雄。", rooms=("entrance_hall", "foyer", "grand_staircase", "library", "chapel"), monsters=("shadow",), tokens=("invisible", "tracking", "blind_fight"), hero_task="追踪隐形叛徒", traitor_task="隐形袭击英雄", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="根据叛徒攻击留下的线索完成追踪检定。", traitor_detail="推进隐形袭击轨道。", monster_count=1, hero_win_target=1),

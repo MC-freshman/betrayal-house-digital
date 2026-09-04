@@ -38,6 +38,7 @@ if __package__ in {None, ""}:
         AbyssExorcismMode,
         TentacledHorrorMode,
         BatSwarmMode,
+        HellbeastMode,
         VoodooMode,
         RatRitualMode,
         AmokFleshMode,
@@ -138,6 +139,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(AbyssExorcismMode) == [22], f"剧本 22 未走定制 handler: {handlers.get(AbyssExorcismMode)}"
     assert handlers.get(TentacledHorrorMode) == [23], f"剧本 23 未走定制 handler: {handlers.get(TentacledHorrorMode)}"
     assert handlers.get(BatSwarmMode) == [24], f"剧本 24 未走定制 handler: {handlers.get(BatSwarmMode)}"
+    assert handlers.get(HellbeastMode) == [38], f"剧本 38 未走定制 handler: {handlers.get(HellbeastMode)}"
     assert handlers.get(VoodooMode) == [25], f"剧本 25 未走定制 handler: {handlers.get(VoodooMode)}"
     assert handlers.get(RatRitualMode) == [26], f"剧本 26 未走定制 handler: {handlers.get(RatRitualMode)}"
     assert handlers.get(AmokFleshMode) == [27], f"剧本 27 未走定制 handler: {handlers.get(AmokFleshMode)}"
@@ -145,7 +147,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(FrankensteinMode) == [29], f"剧本 29 未走定制 handler: {handlers.get(FrankensteinMode)}"
     assert handlers.get(DraculaRisingMode) == [30], f"剧本 30 未走定制 handler: {handlers.get(DraculaRisingMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 40, f"应有 40 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 39, f"应有 39 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -161,7 +163,7 @@ def verify_mode_dispatch() -> None:
         "poisonous_plant", "seance_race", "spectre_exorcism", "trap_zombies",
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
-        "demon_ring", "frankenstein_fire", "dracula_rising",
+        "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
     }
 
 
@@ -2772,6 +2774,147 @@ def verify_haunt24_bat_swarm() -> None:
     assert engine.state.winner == "heroes", "封门后杀光贴附蝙蝠即英雄胜（p35）"
 
 
+def verify_haunt38_hellbeast_exorcism() -> None:
+    """剧本 38：火蝠不可攻击/初始数量与位置/一次性驱魔来源(戒指为理智)/
+    怪物回合一次掷骰→移动+繁殖+同房英雄受物理伤/驱魔满员英雄胜/吸收叛徒死亡兜底（p49/p120）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=38)
+    handler = engine._mode_handler()
+    assert isinstance(handler, HellbeastMode)
+    flags = engine._haunt_flags()
+
+    # 复活可能在探险阶段死掉的英雄，保证有足够英雄跑分支断言
+    for person in engine.state.players:
+        if person.role == "hero" and person.dead:
+            person.dead = False
+            for stat in ("speed", "might", "sanity", "knowledge"):
+                person.stats[stat] = 4
+
+    # 叛徒存活并操控火蝠（区别于 24 号叛徒开局即死）
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    assert not traitor.dead, "38 号叛徒应存活"
+
+    # 初始火蝠 = ceil(玩家数/2)，全在作祟揭露房，且不可被攻击
+    expected = (len(engine.state.players) + 1) // 2
+    haunt_room = flags["haunt_room"]
+    assert haunt_room, "应记录作祟揭露房"
+    bats = handler._bats(engine)
+    assert len(bats) == expected, f"初始火蝠应为 ceil(玩家数/2)={expected}，实际 {len(bats)}"
+    assert all(b.room_key == haunt_room for b in bats), "初始火蝠应全在作祟揭露房"
+    for b in bats:
+        assert engine._monster_invulnerable(b), "火蝠不可被攻击（invulnerable）"
+
+    # 驱魔来源：戒指是理智来源（替换 8 号灵应板）；灵应板不在清单
+    assert "omen_ring" in handler.ALL_SOURCES and "omen_ring" in handler.SANITY_ITEM_SOURCES
+    assert "omen_spirit_board" not in handler.ALL_SOURCES
+
+    # 一次性驱魔来源：戒指理智 5+ 成功 → 进度 1、来源作废、放理智检定令牌
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+    hero.items.append("omen_ring")
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "omen_ring", {}) is True
+    assert engine._haunt_track_value("exorcism_successes") == 1
+    assert "omen_ring" in flags["used_exorcism_sources"]
+    assert engine.tokens_of_kind("sanity_check"), "理智驱魔成功应放理智检定令牌"
+    engine._reset_player_turn_state(hero)
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "omen_ring", {}) is False, "同一来源只能成功用一次"
+    assert "omen_ring" not in {a.id for a in handler.available_actions(engine, hero)}, "用过的来源不该再出现"
+
+    # 驱魔【失败】路径（直接验证 Major 修复：只有检定成功才消耗来源）
+    # 圣徽为理智来源；理智 5+ 检定失败 → 轨道不推进、来源不作废、下次仍可用
+    hero.items.append("omen_holy_symbol")
+    engine._reset_player_turn_state(hero)
+    before_fail = engine._haunt_track_value("exorcism_successes")
+    with patch.object(engine, "_resolve_check", return_value=False):
+        assert handler.perform_action(engine, hero, "omen_holy_symbol", {}) is True, "行动可执行即返回 True"
+    assert engine._haunt_track_value("exorcism_successes") == before_fail, "检定失败不该推进轨道"
+    assert "omen_holy_symbol" not in flags["used_exorcism_sources"], "检定失败不该作废来源（消除软锁）"
+    assert "omen_holy_symbol" in {a.id for a in handler.available_actions(engine, hero)}, "失败后来源仍可复用"
+
+    # 知识侧令牌产出：古书为知识来源；知识 5+ 成功 → knowledge_check 令牌 + 轨道 +1 + 来源作废
+    hero.items.append("omen_book")
+    engine._reset_player_turn_state(hero)
+    before_know = engine._haunt_track_value("exorcism_successes")
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "omen_book", {}) is True
+    assert engine._haunt_track_value("exorcism_successes") == before_know + 1, "知识驱魔成功应推进轨道"
+    assert "omen_book" in flags["used_exorcism_sources"], "成功后知识来源作废"
+    assert engine.tokens_of_kind("knowledge_check"), "知识驱魔成功应放知识检定令牌"
+
+    # 怪物回合：一次掷骰 → 现有火蝠移动 + 繁殖等量新火蝠 + 同房英雄受物理伤
+    # 把目标英雄放进揭露房（火蝠已在此），另一名英雄挪到别处不受灼烧
+    other_hero = next((p for p in engine.state.players if p.role == "hero" and not p.dead and p is not hero), None)
+    far_room = next((k for k in sorted(engine.state.board) if k != haunt_room), haunt_room)
+    hero.room_key = haunt_room
+    if other_hero is not None:
+        other_hero.room_key = far_room
+    before = len(handler._bats(engine))
+    flags["last_swarm_turn"] = -1  # 允许本回合跑一次群集阶段
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 2 if "移动" in label else 3), \
+            patch.object(engine, "_deal_damage") as dealt:
+        assert handler.on_monster_turn_start(engine, handler._bats(engine)[0]) is True
+    assert len(handler._bats(engine)) == before + 2, "掷骰结果=新进揭露房的火蝠数（繁殖 2 只）"
+    dealt.assert_called_with(hero, "physical", 3, source=handler.DAMAGE_SOURCE)
+    # 同一怪物回合内第二只火蝠不再重跑群集阶段（last_swarm_turn 守卫）
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 2 if "移动" in label else 3), \
+            patch.object(engine, "_deal_damage") as dealt2:
+        assert handler.on_monster_turn_start(engine, handler._bats(engine)[0]) is True
+    assert len(handler._bats(engine)) == before + 2, "同一怪物回合只跑一次群集阶段"
+    dealt2.assert_not_called()
+
+    # 火蝠朝最近英雄移动：把所有英雄挪到最远房，掷骰给足步数，验证火蝠靠近
+    farthest = max(
+        (k for k in engine.state.board if engine.state.board[k].revealed),
+        key=lambda k: engine._path_length(haunt_room, k),
+    )
+    for p in engine.state.players:
+        if p.role == "hero" and not p.dead:
+            p.room_key = farthest
+    flags["last_swarm_turn"] = -1
+    moving_bat = handler._bats(engine)[0]
+    moving_bat.room_key = haunt_room
+    before_len = engine._path_length(haunt_room, farthest)
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 3 if "移动" in label else 0), \
+            patch.object(engine, "_deal_damage"):
+        assert handler.on_monster_turn_start(engine, moving_bat) is True
+    assert engine._path_length(moving_bat.room_key, farthest) < before_len, "火蝠应朝最近英雄移动"
+
+    # 灼烧只伤英雄不伤叛徒：把叛徒与英雄同时放进有火蝠的揭露房，收集全部 _deal_damage
+    # 调用；灼烧 victims 只筛 role=="hero"，故目标集合应含英雄、不含叛徒（叛徒操控火蝠）
+    for b in handler._bats(engine):
+        b.room_key = haunt_room  # 把所有火蝠收回揭露房，构造确定的灼烧现场
+    hero.room_key = haunt_room
+    traitor.room_key = haunt_room
+    for p in engine.state.players:
+        if p.role == "hero" and not p.dead and p is not hero:
+            p.room_key = far_room  # 其他英雄挪到无蝠房，避免混入
+    flags["last_swarm_turn"] = -1
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 0 if "移动" in label else 3), \
+            patch.object(engine, "_deal_damage") as dealt_burn:
+        assert handler.on_monster_turn_start(engine, handler._bats(engine)[0]) is True
+    burned = [call.args[0] for call in dealt_burn.call_args_list]
+    assert any(v is hero for v in burned), "灼烧应命中同房英雄"
+    assert not any(v is traitor for v in burned), "灼烧绝不该命中叛徒"
+    assert all(v.role == "hero" for v in burned), "灼烧目标集合只含英雄"
+
+    # 胜负：驱魔满员 → 英雄胜；英雄全灭 → 叛徒胜；叛徒死亡不白送英雄胜
+    engine._set_haunt_track_value("exorcism_successes", engine._haunt_track_target("exorcism_successes"))
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    engine._set_haunt_track_value("exorcism_successes", 0)
+    traitor.dead = True
+    assert handler.check_victory(engine) is True and engine.state.winner is None, "应吸收叛徒死亡兜底"
+    traitor.dead = False
+    for player in engine.state.players:
+        if player.role == "hero":
+            player.dead = True
+    assert handler.check_victory(engine) is True and engine.state.winner == "traitor"
+
+
 def _haunt25_effect_doll(kind: str, hero_id: int) -> dict:
     """构造一个合成娃娃，供 _apply_effect 的定点测试使用（不动 setup 的真娃娃）。"""
     return {"kind": kind, "hero_id": hero_id, "room_template": "kitchen",
@@ -4105,6 +4248,7 @@ def main():
     verify_haunt22_abyss_exorcism()
     verify_haunt23_tentacled_horror()
     verify_haunt24_bat_swarm()
+    verify_haunt38_hellbeast_exorcism()
     verify_haunt25_voodoo()
     verify_haunt25_deferred_draw()
     verify_haunt26_rat_ritual()

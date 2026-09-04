@@ -901,6 +901,40 @@
       "monsters": 1,
       "key": "seed109-4p-haunt6",
       "forced_haunt": 6
+    },
+    {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "763c87ce111d86c77d6b725af9dad02d91c4a4040676729f77ee1b08c9882e90",
+      "turns": 32,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "最后一名英雄在火蝠的烈焰里倒下，屋里只剩噼啪的火光。",
+      "haunt": 38,
+      "haunt_name": "地狱兽",
+      "rooms": 26,
+      "monsters": 9,
+      "key": "seed113-3p-haunt38",
+      "forced_haunt": 38
+    },
+    {
+      "seed": 109,
+      "players": 4,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "76bc3b521e7d6babe58b8f61f8ebc5fa590b52b0d566b52aa7d1d53dab1001e2",
+      "turns": 18,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "最后一名英雄在火蝠的烈焰里倒下，屋里只剩噼啪的火光。",
+      "haunt": 38,
+      "haunt_name": "地狱兽",
+      "rooms": 13,
+      "monsters": 15,
+      "key": "seed109-4p-haunt38",
+      "forced_haunt": 38
     }
   ]
 }
