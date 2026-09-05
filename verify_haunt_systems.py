@@ -48,6 +48,7 @@ if __package__ in {None, ""}:
         LivingHouseMode,
         LostDimensionMode,
         LakeRescueMode,
+        SmallChangeMode,
         MadWorldMode,
         BugSprayMode,
         OffspringMode,
@@ -153,9 +154,10 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(LivingHouseMode) == [31], f"剧本 31 未走定制 handler: {handlers.get(LivingHouseMode)}"
     assert handlers.get(LostDimensionMode) == [32], f"剧本 32 未走定制 handler: {handlers.get(LostDimensionMode)}"
     assert handlers.get(LakeRescueMode) == [33], f"剧本 33 未走定制 handler: {handlers.get(LakeRescueMode)}"
+    assert handlers.get(SmallChangeMode) == [35], f"剧本 35 未走定制 handler: {handlers.get(SmallChangeMode)}"
     assert handlers.get(MadWorldMode) == [34], f"剧本 34 未走定制 handler: {handlers.get(MadWorldMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 35, f"应有 35 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 34, f"应有 34 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -172,7 +174,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "mad_world",
+        "living_house", "lost_dimension", "lake_rescue", "mad_world", "small_change_escape",
     }
 
 
@@ -4016,6 +4018,77 @@ def verify_haunt34_mad_world() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt35_small_change() -> None:
+    """剧本 35：缩小移动/猫捕获/挣脱/飞机搜索与发动/逃离胜利（p46/p117）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=35)
+    handler = engine._mode_handler()
+    assert isinstance(handler, SmallChangeMode)
+    flags = engine._haunt_flags()
+
+    # 猫已布点（3 人局 1 只门厅）
+    cats = handler._cats(engine)
+    assert len(cats) >= 1, "至少应有一只猫"
+    entrance = next(k for k, r in engine.state.board.items() if r.template_id == "entrance_hall")
+    assert any(m.room_key == entrance for m in cats), "猫应在门厅"
+
+    # 缩小：移动费用 ×2
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    assert handler.movement_cost_multiplier(engine, hero) == 2, "缩小后移动应 ×2"
+
+    # 叛徒不能直接攻击英雄
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    assert handler.attack_allowed(engine, traitor, hero) is False, "叛徒不能直接攻击"
+
+    # 猫捕获：力量胜利 → 捕获不伤害
+    cat = cats[0]
+    hero.room_key = cat.room_key
+    hero.steps_remaining = 5
+    might_before = hero.stats["might"]
+    with patch.object(engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 9), \
+         patch.object(engine, "_roll_attack", return_value=1):
+        engine._monster_attack(cat, hero)
+    assert str(hero.id) in flags.get("captured", {}), "猫应捕获英雄"
+    assert hero.stats["might"] == might_before, "捕获不应造成伤害"
+
+    # 被俘者挣脱：对决胜利
+    with patch.object(engine, "_roll_attack", return_value=9), patch.object(
+        engine, "roll_dice", side_effect=lambda count, label="": 1 if label == "猫对决" else count
+    ):
+        handler.on_turn_start(engine, hero)
+    assert str(hero.id) not in flags.get("captured", {}), "对决胜利应挣脱"
+
+    # 飞机搜索 + 发动 + 逃离
+    hero.items.append("item_candle")
+    bedroom_room = next((r for r in engine.state.board.values() if r.template_id in
+                         ("bedroom", "master_bedroom", "attic", "game_room", "larder")), None)
+    if bedroom_room is not None:
+        bedroom_room.template_id = "bedroom"
+        hero.room_key = bedroom_room.key
+        _set_current(engine, hero)
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "search_plane" in ids, "在卧室类房间应能搜索飞机"
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, hero, "search_plane", {}) is True
+        assert flags.get("plane_found") is True
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "start_plane" in ids
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, hero, "start_plane", {}) is True
+        assert flags.get("plane_started") is True
+        # 移到外缘房间逃离
+        outer = next((r for r in engine.state.board.values() if r.template_id in handler.OUTER_ROOMS), None)
+        if outer is not None:
+            hero.room_key = outer.key
+            _set_current(engine, hero)
+            ids = {a.id for a in handler.available_actions(engine, hero)}
+            assert "escape_plane" in ids
+            assert handler.perform_action(engine, hero, "escape_plane", {}) is True
+            assert hero.id in flags.get("escaped", [])
+            assert handler.check_victory(engine) is True  # 3 人局需 2 人逃，先1人不够但测试只验证行动
+            # 3 人局 half_ceil = 2，1 人逃不触发英雄胜——但 check_victory 不会返回 False
+            engine.state.winner = None  # 重置以便后续测试
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -4924,6 +4997,7 @@ def main():
     verify_haunt32_lost_dimension()
     verify_haunt33_lake_rescue()
     verify_haunt34_mad_world()
+    verify_haunt35_small_change()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

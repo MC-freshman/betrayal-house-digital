@@ -1859,6 +1859,53 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [45, 116],
     },
+    35: {
+        # 校准记录（2026-09-05，对照英雄手册 p46 / 叛徒手册 p117）：
+        #   机制落在 SmallChangeMode：
+        #   · 缩小：全员移动费用 ×2（movement_cost_multiplier 对所有
+        #     角色返回 2，p46 "doorway counts as 2 spaces"）
+        #   · 猫：3-4 人 1 只门厅 / 5-6 人 2 只（门厅+作祟房），
+        #     Speed 6 / Might 7 / Sanity 5；猫力量胜利改为捕获（不伤害）
+        #   · 捕获逃生：被俘者回合开始选属性对决，赢则自由；
+        #     其他英雄击败猫 → 猫晕 + 释放
+        #   · 玩具飞机：在卧室类房间知识 3+ 搜索 → 知识 4+ 发动 →
+        #     速度 5 移动 → 通过外缘房间逃离（至少半数英雄出逃）
+        #   · 猫拍落飞机：猫 Speed 7+ / 叛徒 Speed 5+
+        #   简化：楼梯 Might 3+ / 不可用电梯/塌房/画廊等缩小限制未建模
+        #     （can_discover_rooms 与 movement 层不区分楼梯与门）；
+        #     叛徒不可直接攻击英雄（p117）——attack_allowed 返回 False；
+        #     飞机搭乘/接送/坠机等细节简化为"发动后在外缘房间逃离"。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "small_change_escape",
+        "traitor_rule": "revealer",
+        "hero_goal": "找到玩具飞机，让至少半数英雄从外缘房间乘机逃离。",
+        "traitor_goal": "让猫吃掉超过半数的英雄。",
+        "suggested_monsters": ["cat"],
+        "required_cards": [],
+        "key_rooms": ["entrance_hall", "bedroom", "master_bedroom", "attic", "garden", "graveyard", "patio", "tower"],
+        "tokens": ["toy_airplane", "cat"],
+        "setup": {
+            "tracks": {
+                "heroes_escaped": {"label": "已逃离英雄", "target": "half_players_ceil", "side": "heroes"},
+            },
+            "flags": {
+                "plane_found": False, "plane_started": False,
+                "captured": {}, "escaped": [],
+            },
+        },
+        "monsters": [
+            {"template_id": "cat", "name": "猫", "spawn": "deferred", "count": 1, "speed": 6, "might": 7, "sanity": 5},
+        ],
+        "actions": [
+            {"id": "search_plane", "side": "heroes", "label": "搜索玩具飞机", "detail": "在卧室类房间做知识 3+（p46）。", "stat": "knowledge", "target": 3, "rooms": ["bedroom", "master_bedroom", "larder", "attic", "game_room"], "requires_flags": {"plane_found": False}, "set_flags": {"plane_found": True}},
+            {"id": "start_plane", "side": "heroes", "label": "发动飞机", "detail": "在同房间做知识 4+ 发动玩具飞机（p46）。", "stat": "knowledge", "target": 4, "requires": [], "requires_flags": {"plane_found": True, "plane_started": False}, "set_flags": {"plane_started": True}},
+            {"id": "escape_plane", "side": "heroes", "label": "乘机逃离", "detail": "在飞机已发动的状态下从外缘房间逃出（p46）。", "requires_flags": {"plane_started": True}},
+        ],
+        "win_conditions": [],
+        "source_pages": [46, 117],
+    },
 }
 
 
@@ -2019,7 +2066,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    35: dict(mode="small_change_escape", traitor_rule="revealer", hero_goal="让至少一半英雄使用玩具飞机从外缘逃脱。", traitor_goal="让猫吃掉所有缩小的英雄。", rooms=("balcony", "garden", "graveyard", "patio", "tower", "entrance_hall", "foyer"), monsters=("cat",), tokens=("toy_plane", "cat", "small_hero"), hero_task="驾驶玩具飞机逃脱", traitor_task="驱使猫捕食", hero_stat="speed", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在有外缘出口的房间完成一次逃脱行动。", traitor_detail="推进猫的捕食轨道。", monster_count="player_count", hero_win_target="half_players_ceil"),
     36: dict(mode="swamp_escape", traitor_rule="revealer", hero_goal="至少一半原英雄活着逃离房屋，并不能留下其他活着的英雄。", traitor_goal="让房屋沉入沼泽，或杀死所有英雄。", rooms=("attic", "entrance_hall", "foyer", "grand_staircase", "garden", "patio"), monsters=("shadow",), tokens=("rowboat", "swamp", "escape"), hero_task="组织逃离房屋", traitor_task="加速沼泽下沉", hero_stat="might", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在入口大厅准备船并完成一次逃离。", traitor_detail="推进沼泽下沉轨道。", monster_count=1, hero_win_target="half_players_ceil"),
     37: dict(mode="death_checkmate", traitor_rule="revealer", hero_goal="在死亡的棋局中完成一次胜利检定。", traitor_goal="让死亡在无对手时赢下棋局，或杀死所有英雄。", rooms=("vault", "crypt", "research_laboratory", "operating_laboratory", "game_room"), monsters=("shadow",), tokens=("death", "seal", "chess"), hero_task="在棋局中战胜死亡", traitor_task="逼迫死亡弃局", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="与死亡同房间时完成知识检定；圣印可提供帮助。", traitor_detail="推进死亡的棋局压力。", monster_count=1, hero_win_target=1),
     39: dict(mode="secret_heir", traitor_rule="revealer", hero_goal="让真正继承人坐上雕像走廊的王座，并持有长矛和戒指。", traitor_goal="杀死秘密继承人，或杀死所有英雄。", rooms=("statuary_corridor", "gallery", "entrance_hall", "foyer"), monsters=("cultist",), tokens=("heir", "assassin", "throne"), hero_task="确认继承人并登上王座", traitor_task="寻找并刺杀继承人", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="在雕像走廊完成继承仪式。", traitor_detail="推进刺客锁定轨道。", monster_count="player_count", hero_win_target=1, required_cards=("omen_spear", "omen_ring"), hero_requires=("omen_spear", "omen_ring")),

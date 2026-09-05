@@ -1022,6 +1022,23 @@
       "forced_haunt": 34
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "5ac7ba4b74efec1b9265de0550c5e238862bb4d91f635883cc6ddfba41514536",
+      "turns": 39,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "超过半数的英雄被猫吃掉了——实验大获成功。",
+      "haunt": 35,
+      "haunt_name": "小小变化",
+      "rooms": 26,
+      "monsters": 1,
+      "key": "seed113-3p-haunt35",
+      "forced_haunt": 35
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,
