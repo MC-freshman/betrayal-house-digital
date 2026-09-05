@@ -49,6 +49,7 @@ if __package__ in {None, ""}:
         LostDimensionMode,
         LakeRescueMode,
         SupernaturalAgingMode,
+        TimeBombMode,
         BuriedAliveMode,
         ShadowExorcismMode,
         HellGateHeroMode,
@@ -163,6 +164,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(LostDimensionMode) == [32], f"剧本 32 未走定制 handler: {handlers.get(LostDimensionMode)}"
     assert handlers.get(LakeRescueMode) == [33], f"剧本 33 未走定制 handler: {handlers.get(LakeRescueMode)}"
     assert handlers.get(SupernaturalAgingMode) == [44], f"剧本 44 未走定制 handler: {handlers.get(SupernaturalAgingMode)}"
+    assert handlers.get(TimeBombMode) == [45], f"剧本 45 未走定制 handler: {handlers.get(TimeBombMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
     assert handlers.get(HellGateHeroMode) == [42], f"剧本  未走定制"
@@ -173,7 +175,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(DeathCheckmateMode) == [37], f"剧本 37 未走定制 handler: {handlers.get(DeathCheckmateMode)}"
     assert handlers.get(MadWorldMode) == [34], f"剧本 34 未走定制 handler: {handlers.get(MadWorldMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 26, f"应有 26 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 25, f"应有 25 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -190,7 +192,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
     }
 
 
@@ -4457,6 +4459,38 @@ def verify_haunt44_supernatural_aging() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt45_time_bomb() -> None:
+    """剧本 45：炸弹标记/拆弹/大炸弹计时/叛徒死胜利（p56/p127）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=45)
+    handler = engine._mode_handler()
+    assert isinstance(handler, TimeBombMode)
+    flags = engine._haunt_flags()
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # 每人身上有炸弹
+    assert handler._has_bomb(engine, hero), "英雄应有炸弹"
+
+    # 拆弹
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "defuse_bomb" in ids, "有炸弹应能拆弹"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "defuse_bomb", {}) is True
+    assert not handler._has_bomb(engine, hero), "拆弹后炸弹应移除"
+
+    # 大炸弹计时：叛徒回合推进
+    with patch.object(engine, "roll_dice", side_effect=lambda c, l="": c):
+        handler.on_turn_start(engine, traitor)
+    assert engine._haunt_track_value("drown_timer") == 1, "叛徒回合应推进大炸弹计时"
+
+    # 叛徒死 + 英雄活 → 英雄胜
+    traitor.dead = True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -5369,6 +5403,7 @@ def main():
     verify_haunt36_swamp_escape()
     verify_haunt37_checkmate()
     verify_haunt44_supernatural_aging()
+    verify_haunt45_time_bomb()
     verify_haunt39_heir()
     verify_haunt40_buried_alive()
     verify_haunt41_invisible_traitor()

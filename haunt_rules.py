@@ -2169,8 +2169,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
     45: {
         # 校准记录（2026-09-05）：骨架 + generic 兜底（M8/M9 批次专项精修）
-        "version": 2,
-        "fidelity": "skeleton",
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "time_bomb",
         "traitor_rule": "revealer",
@@ -2182,10 +2182,12 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "tokens": [],
         "setup": {
             "tracks": {"progress": {"label": "time_bomb", "target": 10, "side": "heroes"}},
-            "flags": {},
+            "flags": {"bomb_defused": [], "big_bomb_timer": 0},
         },
         "monsters": [],
-        "actions": [{"id": "task", "side": "heroes", "label": "任务", "stat": "knowledge", "target": 5, "progress": "progress"}],
+        "actions": [
+            {"id": "defuse_bomb", "side": "heroes", "label": "拆除炸弹", "detail": "知识 7+（疯子卡 5+）拆除自己的炸弹；掷出 ≤2 引爆同房所有炸弹（p56）。", "stat": "knowledge", "target": 7},
+        ],
         "win_conditions": [
             {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
         ],

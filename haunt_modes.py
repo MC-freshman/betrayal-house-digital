@@ -4129,6 +4129,86 @@ class SupernaturalAgingMode(GenericModeHandler):
         return False
 
 
+
+
+class TimeBombMode(GenericModeHandler):
+    """剧本 45 滴答滴答（Tick, Tick, Tick）。
+
+    权威原文：英雄手册 p56 / 叛徒手册 p127。
+    · 每个英雄身上绑了炸弹。
+    · 拆弹：知识 7+（疯子卡 5+）每回合一次；掷出 <=2 引爆同房。
+    · 大炸弹：叛徒回合推进计时；10 回合后爆炸。
+    · 胜负：叛徒死 + 至少一个英雄活 → 英雄胜。
+    """
+
+    mode = "time_bomb"
+    BIG_BOMB_TURNS = 10
+
+    def setup(self, engine, haunt, room_key):
+        flags = engine._haunt_flags()
+        has_bomb = flags.setdefault("has_bomb", [])
+        flags.setdefault("bomb_defused", [])
+        for p in engine.state.players:
+            if p.role == "hero" and not p.dead:
+                has_bomb.append(str(p.id))
+        engine._log("滴答……滴答……每个人身上都绑着一枚炸弹！")
+
+    def _has_bomb(self, engine, player):
+        flags = engine._haunt_flags()
+        pid = str(getattr(player, "id", ""))
+        return pid in flags.get("has_bomb", []) and pid not in flags.get("bomb_defused", [])
+
+    def _has_madman(self, engine, player):
+        return "omen_madman" in player.items
+
+    def _defuse_target(self, engine, player):
+        return 5 if self._has_madman(engine, player) else 7
+
+    def on_turn_start(self, engine, player):
+        flags = engine._haunt_flags()
+        if player.role != "traitor" or player.dead:
+            return
+        current = int(engine._haunt_track_value("drown_timer")) + 1
+        engine._set_haunt_track_value("drown_timer", current)
+        if current >= self.BIG_BOMB_TURNS:
+            engine._set_winner("traitor", "大炸弹爆炸了——整栋房子被夷为平地。")
+            engine.check_victory()
+            return
+        engine._log(f"大炸弹的滴答声越来越响……（{current}/{self.BIG_BOMB_TURNS}）")
+
+    def available_actions(self, engine, player):
+        actions = super().available_actions(engine, player)
+        return [a for a in actions if a.id != "defuse_bomb" or self._has_bomb(engine, player)]
+
+    def perform_action(self, engine, player, action_id, data):
+        if action_id == "defuse_bomb":
+            if not self._has_bomb(engine, player):
+                engine._log("你身上没有炸弹（或已拆除）。")
+                return False
+            ok = super().perform_action(engine, player, action_id, data)
+            if ok:
+                bomb_defused = engine._haunt_flags().setdefault("bomb_defused", [])
+                pid = str(player.id)
+                if pid not in bomb_defused:
+                    bomb_defused.append(pid)
+                engine._log(f"{player.name} 成功拆除了身上的炸弹！")
+            return ok
+        return super().perform_action(engine, player, action_id, data)
+
+    def check_victory(self, engine):
+        traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+        traitor_alive = traitor is not None and not traitor.dead
+        heroes_alive = any(p.role == "hero" and not p.dead for p in engine.state.players)
+        if not traitor_alive and heroes_alive:
+            engine._set_winner("heroes", "拆除专家死了——炸弹失去了主人的控制。")
+            return True
+        if not heroes_alive:
+            engine._set_winner("traitor", "Tick, tick, tick... BOOM.")
+            return True
+        return False
+
+
+
 class SwampEscapeMode(GenericModeHandler):
     """剧本 36 有朋友更好（Better with Friends）。
 
@@ -10425,6 +10505,7 @@ for _handler in (
     InvisibleTraitorMode(),
     HellGateHeroMode(),
     ShadowExorcismMode(),
+    TimeBombMode(),
 ):
 
     register_mode(_handler)
