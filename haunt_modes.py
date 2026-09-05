@@ -3764,7 +3764,7 @@ class HellGateHeroMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "地狱之门打开了。")
             return True
-        return False
+        return super().check_victory(engine)
 
 
 class ShadowExorcismMode(GenericModeHandler):
@@ -3780,7 +3780,7 @@ class ShadowExorcismMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "影子吞噬了最后的灵魂。")
             return True
-        return False
+        return super().check_victory(engine)
 
 
 class SwampEscapeMode(GenericModeHandler):

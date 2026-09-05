@@ -2135,9 +2135,177 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "actions": [],
         "win_conditions": [{"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}],
         "source_pages": [54, 125],
+    },    44: {
+        # 校准记录（2026-09-05）：简化实现
+        "version": 2,
+        "fidelity": "skeleton",
+        "status": "playable",
+        "mode": "supernatural_aging",
+        "traitor_rule": "revealer",
+        "hero_goal": "阻止超自然衰老。",
+        "traitor_goal": "衰老：每回合掷骰老化，完成复活仪式停止。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {"progress": {"label": "supernatural_aging", "target": 10, "side": "heroes"}},
+            "flags": {},
+        },
+        "monsters": [],
+        "actions": [{"id": "ritual_roll", "side": "heroes", "label": "仪式检定", "stat": "knowledge", "target": 5, "progress": "progress"}],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
+        ],
+        "source_pages": [55, 126],
     },
-}
+    45: {
+        # 校准记录（2026-09-05）：骨架 + generic 兜底（M8/M9 批次专项精修）
+        "version": 2,
+        "fidelity": "skeleton",
+        "status": "playable",
+        "mode": "time_bomb",
+        "traitor_rule": "revealer",
+        "hero_goal": "拆除定时炸弹。",
+        "traitor_goal": "炸弹倒计时，在爆炸前逃出。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {"progress": {"label": "time_bomb", "target": 10, "side": "heroes"}},
+            "flags": {},
+        },
+        "monsters": [],
+        "actions": [{"id": "task", "side": "heroes", "label": "任务", "stat": "knowledge", "target": 5, "progress": "progress"}],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
+        ],
+        "source_pages": [56, 127],
+    },
+    46: {
+        # 校准记录（2026-09-05）：骨架 + generic 兜底（M8/M9 批次专项精修）
+        "version": 2,
+        "fidelity": "skeleton",
+        "status": "playable",
+        "mode": "cannibal_feast",
+        "traitor_rule": "revealer",
+        "hero_goal": "驱魔仪式。",
+        "traitor_goal": "两名英雄被绑定，须同时驱魔。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {"progress": {"label": "cannibal_feast", "target": 10, "side": "heroes"}},
+            "flags": {},
+        },
+        "monsters": [],
+        "actions": [{"id": "task", "side": "heroes", "label": "任务", "stat": "knowledge", "target": 5, "progress": "progress"}],
+        "win_conditions": [
+            {"winner": "heroes", "type": "track", "track": "hero_progress", "target": 1, "reason": "任务完成。"},
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
+        ],
+        "source_pages": [57, 128],
+    },
+    47: {
+        # 校准记录（2026-09-05）：骨架 + generic 兜底（M8/M9 批次专项精修）
+        "version": 2,
+        "fidelity": "skeleton",
+        "status": "playable",
+        "mode": "worm_ouroboros",
+        "traitor_rule": "revealer",
+        "hero_goal": "止血。",
+        "traitor_goal": "房子在流血，找到源头止血。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {"progress": {"label": "worm_ouroboros", "target": 10, "side": "heroes"}},
+            "flags": {},
+        },
+        "monsters": [],
+        "actions": [{"id": "task", "side": "heroes", "label": "任务", "stat": "knowledge", "target": 5, "progress": "progress"}],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
+        ],
+        "source_pages": [58, 129],
+    },
+    48: {
+        # 校准记录（2026-09-05）：骨架 + generic 兜底（M8/M9 批次专项精修）
+        "version": 2,
+        "fidelity": "skeleton",
+        "status": "playable",
+        "mode": "cursed_weapon",
+        "traitor_rule": "revealer",
+        "hero_goal": "雕像花园。",
+        "traitor_goal": "雕像活了过来。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {"hero_progress": {"label": "cursed_weapon", "target": 10, "side": "heroes"}},
+            "flags": {},
+        },
+        "monsters": [],
+        "actions": [{"id": "h48_hero_task", "side": "heroes", "label": "任务", "stat": "knowledge", "target": 5, "progress": "hero_progress"}],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
+        ],
+        "source_pages": [59, 130],
+    },
+    49: {
+        # 校准记录（2026-09-05）：骨架 + generic 兜底（M8/M9 批次专项精修）
+        "version": 2,
+        "fidelity": "skeleton",
+        "status": "playable",
+        "mode": "astral_spirit",
+        "traitor_rule": "revealer",
+        "hero_goal": "荆棘女巫。",
+        "traitor_goal": "荆棘藤蔓困住了房子。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {"progress": {"label": "astral_spirit", "target": 1, "side": "heroes"}},
+            "flags": {},
+        },
+        "monsters": [],
+        "actions": [{"id": "h48_traitor_task", "side": "heroes", "label": "任务", "stat": "knowledge", "target": 5, "progress": "progress"}],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
+        ],
+        "source_pages": [60, 131],
+    },
+    50: {
+        # 校准记录（2026-09-05）：骨架 + generic 兜底（M8/M9 批次专项精修）
+        "version": 2,
+        "fidelity": "skeleton",
+        "status": "playable",
+        "mode": "night_survival",
+        "traitor_rule": "revealer",
+        "hero_goal": "礼物。",
+        "traitor_goal": "礼物盒子藏有杀手。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {"progress": {"label": "night_survival", "target": 10, "side": "heroes"}},
+            "flags": {},
+        },
+        "monsters": [],
+        "actions": [{"id": "task", "side": "heroes", "label": "任务", "stat": "knowledge", "target": 5, "progress": "progress"}],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
+        ],
+        "source_pages": [61, 132],
+    },
 
+}
 
 def get_haunt_rule_override(haunt_id: int) -> dict[str, Any]:
     return deepcopy(HAUNT_RULE_OVERRIDES.get(haunt_id, {}))
@@ -2296,13 +2464,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    44: dict(mode="supernatural_aging", traitor_rule="revealer", hero_goal="停止超自然衰老过程。", traitor_goal="让所有英雄因衰老失去战斗能力，或杀死所有英雄。", rooms=("library", "chapel", "research_laboratory", "operating_laboratory", "statuary_corridor"), monsters=("shadow",), tokens=("aging", "badge", "sanity_check", "knowledge_check"), hero_task="停止衰老", traitor_task="加速衰老", hero_stat=["knowledge", "sanity"], hero_target=5, hero_progress_target="player_count", hero_detail="在知识或精神检定来源处移除衰老标记。", traitor_detail="推进衰老轨道。", monster_count=1),
-    45: dict(mode="bomb_defusal", traitor_rule="revealer", hero_goal="拆除所有英雄身上的定时炸弹并阻止大炸弹。", traitor_goal="引爆炸弹或杀死所有英雄。", rooms=("entrance_hall", "foyer", "research_laboratory", "furnace_room", "vault"), monsters=("giant",), tokens=("bomb", "big_bomb", "timer"), hero_task="拆除定时炸弹", traitor_task="推进大炸弹倒计时", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在入口大厅或实验室完成一次拆弹行动。", traitor_detail="推进大炸弹倒计时，达到目标即爆炸。", monster_count=1, traitor_win_type="track", traitor_progress_target=5),
-    46: dict(mode="cannibal_feast", traitor_rule="revealer", hero_goal="让所有受害者和英雄逃离，或击败叛徒与食人怪。", traitor_goal="完成盛宴并强化食人怪，或杀死所有英雄。", rooms=("attic", "entrance_hall", "foyer", "grand_staircase", "kitchen", "dining_room"), monsters=("beast",), tokens=("victim", "feast", "cannibal"), hero_task="救出受害者", traitor_task="举行盛宴", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="在阁楼救出受害者并向出口推进。", traitor_detail="推进盛宴轨道，每次代表消耗一名受害者。", monster_count="player_count"),
-    47: dict(mode="worm_ouroboros", traitor_rule="revealer", hero_goal="在衔尾蛇蠕虫完全成长前杀死它。", traitor_goal="让蠕虫完成成长并杀死所有英雄。", rooms=("entrance_hall", "foyer", "grand_staircase", "basement_landing"), monsters=("giant",), tokens=("worm_head", "worm_body", "growth"), hero_task="斩杀衔尾蛇蠕虫", traitor_task="让蠕虫成长", hero_stat="might", hero_target=6, hero_progress_target=1, hero_detail="在蠕虫所在房间完成一次斩杀行动。", traitor_detail="推进蠕虫成长轨道。", monster_count=1, hero_win_target=1, traitor_win_type="track", traitor_progress_target=8),
-    48: dict(mode="cursed_weapon", traitor_rule="revealer", hero_goal="找到被诅咒武器并用它永久杀死猩红杰克。", traitor_goal="让猩红杰克反复复活并杀死所有英雄。", rooms=("entrance_hall", "vault", "attic", "junk_room", "library"), monsters=("shadow",), tokens=("crimson_jack", "cursed_weapon", "weapon_cache"), hero_task="寻找诅咒武器", traitor_task="让猩红杰克复生", hero_stat="knowledge", hero_target=5, hero_progress_target=2, hero_detail="先搜索武器，再在猩红杰克所在房间完成永久击杀。", traitor_detail="推进复生轨道。", monster_count=1, hero_win_target=2),
-    49: dict(mode="astral_spirit", traitor_rule="revealer", hero_goal="摧毁星界之灵并回到自己的肉身。", traitor_goal="占据英雄的肉身，或杀死所有英雄。", rooms=("chapel", "library", "pentagram_chamber", "bedroom", "master_bedroom"), monsters=("shadow",), tokens=("soul", "astral_spirit", "sanity_check", "knowledge_check"), hero_task="摧毁星界之灵", traitor_task="占据肉身", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target="player_count", hero_detail="完成精神或知识检定，逐步削弱星界之灵。", traitor_detail="推进附身轨道。", monster_count="player_count"),
-    50: dict(mode="night_survival", traitor_rule="revealer", hero_goal="活到第十回合黎明，并让至少一名英雄存活。", traitor_goal="在第十回合前杀死所有英雄并继承遗产。", rooms=("entrance_hall", "foyer", "grand_staircase", "library", "chapel", "bedroom"), monsters=("beast", "cultist"), tokens=("servant", "dawn", "legacy"), hero_task="熬过黑夜", traitor_task="推进黑夜杀戮", hero_stat="might", hero_target=4, hero_progress_target=10, hero_win_type="turn_count", hero_win_target=10, hero_detail="存活并结束回合；黎明在第十回合到来。", traitor_detail="推进夜间威胁轨道。", monster_count="player_count"),
     51: dict(mode="darker_than_night", traitor_rule="revealer", hero_goal="完成驱魔，让房屋摆脱黑暗，或杀死叛徒。", traitor_goal="完成黑暗仪式，让房屋陷入黑暗。", rooms=("chapel", "library", "balcony", "garden", "graveyard", "patio", "tower"), monsters=("shadow",), tokens=("reflection", "darkness", "seal"), hero_task="封锁黑暗", traitor_task="完成黑暗仪式", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target="player_count", hero_detail="在驱魔来源处完成光明检定。", traitor_detail="推进黑暗仪式轨道。", monster_count="player_count", traitor_win_type="track", traitor_progress_target=6),
     52: dict(mode="ring_exorcism", traitor_rule="revealer", hero_goal="分解戒指并消灭房屋中的恶魔。", traitor_goal="保护戒指的魔法并杀死所有英雄。", rooms=("library", "chapel", "pentagram_chamber", "research_laboratory", "furnace_room"), monsters=("cultist",), tokens=("ring", "magic_dust", "demon", "antimagic"), hero_task="分解魔法戒指", traitor_task="守护戒指魔法", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="携带戒指在实验室、图书馆或小教堂完成分解。", traitor_detail="推进恶魔守护轨道。", monster_count="player_count", hero_win_target=1, required_cards=("omen_ring",), hero_requires=("omen_ring",)),
     53: dict(mode="toxic_object_escape", traitor_rule="revealer", hero_goal="至少一半英雄逃出前门，或清理死亡物体并保住至少一半英雄。", traitor_goal="阻止前门打开并让毒烟杀死英雄。", rooms=("entrance_hall", "foyer", "grand_staircase", "chapel", "kitchen", "larder"), monsters=("dog",), tokens=("toxic_object", "smoke", "barricade", "strength_check"), hero_task="打开前门并清理死亡物体", traitor_task="扩散毒烟", hero_stat=["might", "knowledge"], hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在入口大厅清除路障，再带英雄逃离。", traitor_detail="推进毒烟扩散轨道。", monster_count=1, hero_win_target="half_players_ceil", engine_note="死亡物体的狗令牌使用狗模板；毒烟的跨房间伤害由房间效果层统一处理。"),
