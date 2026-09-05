@@ -2143,8 +2143,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [54, 125],
     },    44: {
         # 校准记录（2026-09-05）：简化实现
-        "version": 2,
-        "fidelity": "skeleton",
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "supernatural_aging",
         "traitor_rule": "revealer",
@@ -2152,14 +2152,16 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "traitor_goal": "衰老：每回合掷骰老化，完成复活仪式停止。",
         "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": [],
+        "key_rooms": ["catacombs", "charred_room", "crypt", "gallery", "kitchen", "pentagram_chamber", "tower"],
         "tokens": [],
         "setup": {
             "tracks": {"progress": {"label": "supernatural_aging", "target": 10, "side": "heroes"}},
-            "flags": {},
+            "flags": {"aging_tokens": {}, "ritual_rooms_used": []},
         },
         "monsters": [],
-        "actions": [{"id": "ritual_roll", "side": "heroes", "label": "仪式检定", "stat": "knowledge", "target": 5, "progress": "progress"}],
+        "actions": [
+            {"id": "ritual_roll", "side": "heroes", "label": "仪式检定", "detail": "在仪式房间做理智/知识 5+（p55）。", "stat": ["sanity", "knowledge"], "target": 5, "progress": "ritual_progress"},
+        ],
         "win_conditions": [
             {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
         ],

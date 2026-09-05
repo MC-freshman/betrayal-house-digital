@@ -48,6 +48,7 @@ if __package__ in {None, ""}:
         LivingHouseMode,
         LostDimensionMode,
         LakeRescueMode,
+        SupernaturalAgingMode,
         BuriedAliveMode,
         ShadowExorcismMode,
         HellGateHeroMode,
@@ -161,6 +162,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(LivingHouseMode) == [31], f"剧本 31 未走定制 handler: {handlers.get(LivingHouseMode)}"
     assert handlers.get(LostDimensionMode) == [32], f"剧本 32 未走定制 handler: {handlers.get(LostDimensionMode)}"
     assert handlers.get(LakeRescueMode) == [33], f"剧本 33 未走定制 handler: {handlers.get(LakeRescueMode)}"
+    assert handlers.get(SupernaturalAgingMode) == [44], f"剧本 44 未走定制 handler: {handlers.get(SupernaturalAgingMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
     assert handlers.get(HellGateHeroMode) == [42], f"剧本  未走定制"
@@ -171,7 +173,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(DeathCheckmateMode) == [37], f"剧本 37 未走定制 handler: {handlers.get(DeathCheckmateMode)}"
     assert handlers.get(MadWorldMode) == [34], f"剧本 34 未走定制 handler: {handlers.get(MadWorldMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 27, f"应有 27 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 26, f"应有 26 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -188,7 +190,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
     }
 
 
@@ -4407,6 +4409,54 @@ def verify_haunt43_shadow_exorcism() -> None:
             assert engine.state.winner == "heroes"
 
 
+def verify_haunt44_supernatural_aging() -> None:
+    """剧本 44：衰老 token/十年效果/仪式检定/勋章减速/胜利条件（p55/p126）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=44)
+    handler = engine._mode_handler()
+    assert isinstance(handler, SupernaturalAgingMode)
+    flags = engine._haunt_flags()
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # 开局每人 1 枚衰老 token
+    assert handler._aging_tokens(engine, hero) == 1, "开局应有 1 枚衰老 token"
+
+    # 衰老：叛徒回合开始 → 英雄掷骰加 token
+    tokens_before = handler._aging_tokens(engine, hero)
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 2 if label == "衰老" else count):
+        handler.on_turn_start(engine, traitor)
+    assert handler._aging_tokens(engine, hero) > tokens_before, "叛徒回合应增加衰老 token"
+
+    # 仪式：房间限制 + 每房一次
+    ritual_room = next((r for r in engine.state.board.values() if r.template_id in handler.RITUAL_ROOMS), None)
+    if ritual_room is not None:
+        hero.room_key = ritual_room.key
+        _set_current(engine, hero)
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "ritual_roll" in ids, "在仪式房间应能检定"
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, hero, "ritual_roll", {}) is True
+        # 同房不能再用
+        engine._reset_player_turn_state(hero)
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "ritual_roll" not in ids, "同房不能再次使用"
+
+    # 勋章减速
+    hero.items.append("omen_medallion")
+    tokens_before_med = handler._aging_tokens(engine, hero)
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 3 if label == "衰老" else count):
+        handler.on_turn_start(engine, traitor)
+    # 3-1(勋章)=2 加 token（而非 3）
+    # 勋章持有者获得较少 token（或因衰老效果死亡——都是合法结果）
+    assert hero.dead or handler._aging_tokens(engine, hero) <= tokens_before_med + 2,         "勋章应减少衰老（或英雄因衰老死亡）"
+
+    # 胜利：仪式进度满
+    engine._set_haunt_track_value("ritual_progress", engine._haunt_track_target("ritual_progress"))
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -5318,6 +5368,7 @@ def main():
     verify_haunt35_small_change()
     verify_haunt36_swamp_escape()
     verify_haunt37_checkmate()
+    verify_haunt44_supernatural_aging()
     verify_haunt39_heir()
     verify_haunt40_buried_alive()
     verify_haunt41_invisible_traitor()

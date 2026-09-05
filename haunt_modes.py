@@ -3992,6 +3992,143 @@ class ShadowExorcismMode(GenericModeHandler):
 
 
 
+class SupernaturalAgingMode(GenericModeHandler):
+    """剧本 44 死亡终将降临（Death Doth Find Us All）。
+
+    权威原文：英雄手册 p55 / 叛徒手册 p126。
+
+    · 衰老（p55）：每个英雄开局 1 枚衰老 token；叛徒回合开始，每个
+      英雄掷 1 骰 → 加等量 token。每 token = 10 年。跨越十年界线时
+      施加属性效果（p55 decade 表）。
+    · 十年效果（简化为逐 token 应用）：
+        token 1 (30s): +1 Sanity, +1 Knowledge
+        token 2 (40s): -1 Speed, +1 Sanity
+        token 3 (50s): -1 Might, -1 Knowledge
+        token 4 (60s): -1 Speed, 1 mental damage
+        token 5+ (70s+): -1 each trait
+    · 复活仪式（p55）：玩家数次成功检定。理智/知识 5+，在七类房间
+      （地窖/焦房/地窖/画廊/厨房/五芒星室/塔楼）；每房一次。
+    · 勋章（p55）：持有者衰老掷骰 -1（最低 0）；英雄死亡时持有者 +1 token。
+    · 胜利：仪式完成 → 英雄胜；英雄全灭 → 叛徒胜。
+    · 简化：叛徒吸食死亡力量（roll 3 dice add to traits）未建模；
+      叛徒不可持勋章未在引擎层拦截。
+    """
+
+    mode = "supernatural_aging"
+
+    RITUAL_ROOMS = ["catacombs", "charred_room", "crypt", "gallery", "kitchen", "pentagram_chamber", "tower"]
+
+    # ------------------------------------------------------------- setup
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        flags = engine._haunt_flags()
+        aging = flags.setdefault("aging_tokens", {})
+        for p in engine.state.players:
+            if p.role == "hero" and not p.dead:
+                aging[str(p.id)] = 1  # p55：开局每人 1 token
+        engine._log("所有人的皮肤都在加速老化……")
+
+    # ------------------------------------------------------------- 内部
+    def _aging_tokens(self, engine: Any, player: Any) -> int:
+        return int(engine._haunt_flags().get("aging_tokens", {}).get(str(getattr(player, "id", "")), 0))
+
+    def _add_aging_tokens(self, engine: Any, player: Any, count: int) -> None:
+        if count <= 0:
+            return
+        flags = engine._haunt_flags()
+        aging = flags.setdefault("aging_tokens", {})
+        pid = str(getattr(player, "id", ""))
+        old_count = int(aging.get(pid, 0))
+        new_count = old_count + count
+        aging[pid] = new_count
+        # 跨越十年界线：施加效果
+        self._apply_decade_effects(engine, player, old_count, new_count)
+
+    def _apply_decade_effects(self, engine: Any, player: Any, old: int, new: int) -> None:
+        """p55 decade 表：跨越界线时施加效果（累计）。"""
+        effects = {
+            1: [("sanity", 1), ("knowledge", 1)],      # 30s
+            2: [("speed", -1), ("sanity", 1)],          # 40s
+            3: [("might", -1), ("knowledge", -1)],      # 50s
+            4: [("speed", -1)],                          # 60s
+        }
+        for token_count in range(old + 1, new + 1):
+            if token_count in effects:
+                for stat, delta in effects[token_count]:
+                    if delta > 0:
+                        engine._increase_stat(player, stat, delta)
+                    else:
+                        engine._apply_stat_loss(player, stat, abs(delta))
+            if token_count == 4:
+                # 60s：1 mental damage
+                engine._deal_damage(player, "mental", 1, source="衰老")
+            if token_count >= 5:
+                # 70s+：每个 token -1 each trait
+                for stat in ("speed", "might", "sanity", "knowledge"):
+                    engine._apply_stat_loss(player, stat, 1)
+        engine._check_player_death(player)
+
+    # ------------------------------------------------------------- 回合
+    def on_turn_start(self, engine: Any, player: Any) -> None:
+        flags = engine._haunt_flags()
+        if player.role != "traitor" or player.dead:
+            return
+        # p55：每个英雄掷 1 骰衰老
+        medallion_holder = next(
+            (p for p in engine.state.players if p.role == "hero" and not p.dead
+             and "omen_medallion" in p.items),
+            None,
+        )
+        for hero in engine.state.players:
+            if hero.role != "hero" or hero.dead:
+                continue
+            roll = engine.roll_dice(1, "衰老")
+            if medallion_holder is not None and hero.id == medallion_holder.id:
+                roll = max(0, roll - 1)  # p55：勋章 -1（最低 0）
+            if roll > 0:
+                self._add_aging_tokens(engine, hero, roll)
+                engine._log(f"{hero.name} 衰老了 {roll} 个十年。")
+
+    # ------------------------------------------------------------- 行动
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        actions = super().available_actions(engine, player)
+        result = []
+        used = set(engine._haunt_flags().get("ritual_rooms_used", []))
+        for action in actions:
+            if action.id == "ritual_roll":
+                room_id = engine._current_room_template_id(player)
+                if room_id not in self.RITUAL_ROOMS or room_id in used:
+                    continue
+            result.append(action)
+        return result
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        if action_id == "ritual_roll":
+            room_id = engine._current_room_template_id(player)
+            used = set(engine._haunt_flags().get("ritual_rooms_used", []))
+            if room_id not in self.RITUAL_ROOMS or room_id in used:
+                engine._log("这个房间不能用于仪式（或已被使用）。")
+                return False
+            ok = super().perform_action(engine, player, action_id, data)
+            if ok:
+                used.add(room_id)
+                engine._haunt_flags()["ritual_rooms_used"] = sorted(used)
+                engine.spawn_token("knowledge_check", label="仪式成功", role="check", room_key=player.room_key)
+            return ok
+        return super().perform_action(engine, player, action_id, data)
+
+    # ------------------------------------------------------------- 胜负
+    def check_victory(self, engine: Any) -> bool:
+        flags = engine._haunt_flags()
+        # p55：仪式成功次数 = 玩家数 → 英雄胜
+        if engine._haunt_track_value("ritual_progress") >= engine._haunt_track_target("ritual_progress"):
+            engine._set_winner("heroes", "仪式完成了——超自然衰老停止了！")
+            return True
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "Death doth find us all——除了叛徒。")
+            return True
+        return False
+
+
 class SwampEscapeMode(GenericModeHandler):
     """剧本 36 有朋友更好（Better with Friends）。
 
@@ -10282,6 +10419,7 @@ for _handler in (
     SmallChangeMode(),
     SwampEscapeMode(),
     DeathCheckmateMode(),
+    SupernaturalAgingMode(),
     HeirAssassinMode(),
     BuriedAliveMode(),
     InvisibleTraitorMode(),
