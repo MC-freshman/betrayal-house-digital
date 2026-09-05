@@ -351,6 +351,19 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["sunrise", "domination"]},
     },
+    32: {
+        "hero": {
+            # p43：门槛 15+/16+/18+/20+ 远超裸掷骰上限，必须先集齐线索。
+            # bot_goal_rooms 会先跑线索房再进风琴房（handler 定制寻路）。
+            "attack_traitor_players": True,
+            "victory_focus": "先找齐乐谱/标本/星象三条线索，再进风琴房弹对曲子",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "跑完五间房放干扰令牌，同时用毒大气和攻击拖死英雄",
+        },
+        "scenario": {"special_rules": ["poison_atmosphere", "clue_gathering"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",

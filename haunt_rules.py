@@ -1686,6 +1686,85 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [42, 113],
     },
+    32: {
+        # 校准记录（2026-09-05，对照英雄手册 p43 / 叛徒手册 p114）：
+        #   骨架原本用 shadow 冒充怪物 + 抽象"维度锚点"轨道，与原版无关。
+        #   开局（p114）：叛徒变节后房屋重排——已放置的非起始、非占用房间
+        #     被撤下，与未抽房间牌、弃牌堆一起洗匀。本仓库**没有移除房间**
+        #     的能力（22 号坍塌只是打标记不真删），撤房会破坏存档与寻路，
+        #     故简化为"只洗匀房间牌堆与弃牌堆 + 日志还原氛围"，已知简化。
+        #     风琴房按 _ensure_room_in_play 保证在场（原文：不在就从牌堆取
+        #     出来接在起始房间旁）。
+        #   毒大气（p43）：每个英雄回合开始掷 2 骰，从任意属性组合里扣减。
+        #     人类逐点弹窗自选、bot 自动扣在离骷髅最远的属性上。
+        #   回家（p43）：风琴房每回合可尝试一次知识检定，结果需达到
+        #     3/4/5/6 人 → 15/16/18/20+。加值：场上每间预兆符号房 +1；
+        #     图书馆乐谱/游戏室标本/塔楼星象三条线索各 +2（全局共享）；
+        #     疯子或书在风琴房各 +2；音乐爱好 +2 因角色无 hobby 字段未建模
+        #     （同 24 号口径）。
+        #   干扰（p114）：叛徒在教堂/游戏室/两间实验室/五芒星室做知识 4+，
+        #     每间成功放一枚 -3 令牌，每间限一枚。
+        #   胜负（p43/p114）：英雄胜 = 风琴检定达标把房子送回原维度；
+        #     叛徒胜 = 英雄全灭。叛徒死亡后毒大气照常生效（老坑 21 号吸收者）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "lost_dimension",
+        "traitor_rule": "revealer",
+        "hero_goal": "在风琴房弹对那首曲子，把整栋房子送回自己的维度。",
+        "traitor_goal": "破坏传送器，或让异维度的大气杀死所有英雄。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": ["organ_room"],
+        "tokens": [],
+        "setup": {
+            "tracks": {
+                "clues_found": {"label": "已找到的线索", "target": 3, "side": "heroes"},
+                "sabotage": {"label": "传送器干扰", "target": 4, "side": "traitor"},
+            },
+            "flags": {
+                "clue_books": False,
+                "clue_trophy": False,
+                "clue_stars": False,
+                "sabotage_rooms": [],
+                "returned_home": False,
+            },
+        },
+        "monsters": [],
+        "actions": [
+            {"id": "play_organ", "side": "heroes", "label": "弹奏管风琴",
+             "detail": "在风琴房做知识检定，结果需达到按人数定的门槛（3/4/5/6 人 → "
+                       "15/16/18/20+），可叠加线索与房间加值、扣除叛徒干扰（p43）。"
+                       "每回合一次。",
+             "stat": "knowledge", "target": 0, "rooms": ["organ_room"]},
+            {"id": "search_books", "side": "heroes", "label": "翻找乐谱",
+             "detail": "在图书馆做知识 5+，找到乐谱后所有弹奏者 +2（p43）。"
+                       "每条线索只能找到一次；每回合一次。",
+             "stat": "knowledge", "target": 5, "rooms": ["library"],
+             "requires_flags": {"clue_books": False}, "set_flags": {"clue_books": True},
+             "progress": "clues_found"},
+            {"id": "search_trophy", "side": "heroes", "label": "辨认标本",
+             "detail": "在游戏室做理智 5+，认出异维度生物后所有弹奏者 +2（p43）。"
+                       "每条线索只能找到一次；每回合一次。",
+             "stat": "sanity", "target": 5, "rooms": ["game_room"],
+             "requires_flags": {"clue_trophy": False}, "set_flags": {"clue_trophy": True},
+             "progress": "clues_found"},
+            {"id": "search_stars", "side": "heroes", "label": "观测星象",
+             "detail": "在塔楼做知识 5+，凭星空定位家乡后所有弹奏者 +2（p43）。"
+                       "每条线索只能找到一次；每回合一次。",
+             "stat": "knowledge", "target": 5, "rooms": ["tower"],
+             "requires_flags": {"clue_stars": False}, "set_flags": {"clue_stars": True},
+             "progress": "clues_found"},
+            {"id": "sabotage_transporter", "side": "traitor", "label": "改造传送器",
+             "detail": "在教堂/游戏室/两间实验室/五芒星室做知识 4+，成功后在该房"
+                       "放一枚干扰令牌：英雄的弹奏检定每枚 -3（p114）。每间限一枚。",
+             "stat": "knowledge", "target": 4,
+             "rooms": ["chapel", "game_room", "research_laboratory",
+                       "operating_laboratory", "pentagram_chamber"]},
+        ],
+        "win_conditions": [],
+        "source_pages": [43, 114],
+    },
 }
 
 
@@ -1846,7 +1925,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    32: dict(mode="lost_dimension", traitor_rule="revealer", hero_goal="让房屋恢复到英雄所在的维度。", traitor_goal="让有毒维度持续伤害英雄，或杀死所有英雄。", rooms=("organ_room", "entrance_hall", "foyer", "grand_staircase", "basement_landing"), monsters=("shadow",), tokens=("dimension", "poison", "anchor"), hero_task="修复维度锚点", traitor_task="维持异维度", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在风琴房或起始房间完成维度修复检定。", traitor_detail="推进异维度污染轨道。", monster_count=1),
     33: dict(mode="lake_rescue", traitor_rule="revealer", hero_goal="在女孩溺水前从地下湖救出她。", traitor_goal="把女孩喂给湖中生物，或杀死所有英雄。", rooms=("underground_lake", "basement_landing", "crypt", "furnace_room"), monsters=("beast",), tokens=("girl", "lake", "drowning"), hero_task="从地下湖救出女孩", traitor_task="把女孩带向湖中生物", hero_stat="might", hero_target=5, hero_progress_target=1, hero_detail="在地下湖或湖区完成救援行动。", traitor_detail="推进溺水倒计时。", monster_count=1, hero_win_target=1),
     34: dict(mode="mad_world", traitor_rule="revealer", hero_goal="把疯子锁入保险库，并杀死或锁住叛徒。", traitor_goal="让凯撒和疯子仆从杀死所有英雄。", rooms=("vault", "master_bedroom", "chapel", "conservatory", "game_room", "library", "attic"), monsters=("madman",), tokens=("vault_lock", "madman", "senator"), hero_task="锁住疯子", traitor_task="煽动疯子仆从", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="把疯子引到保险库并完成锁门检定。", traitor_detail="推进疯子仆从的围攻轨道。", monster_count="player_count", hero_win_target=1),
     35: dict(mode="small_change_escape", traitor_rule="revealer", hero_goal="让至少一半英雄使用玩具飞机从外缘逃脱。", traitor_goal="让猫吃掉所有缩小的英雄。", rooms=("balcony", "garden", "graveyard", "patio", "tower", "entrance_hall", "foyer"), monsters=("cat",), tokens=("toy_plane", "cat", "small_hero"), hero_task="驾驶玩具飞机逃脱", traitor_task="驱使猫捕食", hero_stat="speed", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在有外缘出口的房间完成一次逃脱行动。", traitor_detail="推进猫的捕食轨道。", monster_count="player_count", hero_win_target="half_players_ceil"),

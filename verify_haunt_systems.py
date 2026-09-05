@@ -46,6 +46,7 @@ if __package__ in {None, ""}:
         FrankensteinMode,
         DraculaRisingMode,
         LivingHouseMode,
+        LostDimensionMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -148,8 +149,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(FrankensteinMode) == [29], f"剧本 29 未走定制 handler: {handlers.get(FrankensteinMode)}"
     assert handlers.get(DraculaRisingMode) == [30], f"剧本 30 未走定制 handler: {handlers.get(DraculaRisingMode)}"
     assert handlers.get(LivingHouseMode) == [31], f"剧本 31 未走定制 handler: {handlers.get(LivingHouseMode)}"
+    assert handlers.get(LostDimensionMode) == [32], f"剧本 32 未走定制 handler: {handlers.get(LostDimensionMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 38, f"应有 38 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 37, f"应有 37 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -166,7 +168,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house",
+        "living_house", "lost_dimension",
     }
 
 
@@ -4587,6 +4589,148 @@ def verify_haunt31_antibody_wall_move() -> None:
     assert heart.room_key == room_a.key, "返回 False 时钩子不应改动怪物房间"
 
 
+
+def verify_haunt32_lost_dimension() -> None:
+    """剧本 32：开局重排与风琴房入场/毒大气扣属性/三条线索/弹奏门槛与加值/
+    干扰令牌/胜负（p43/p114）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=32)
+    handler = engine._mode_handler()
+    assert isinstance(handler, LostDimensionMode)
+    flags = engine._haunt_flags()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+
+    # ---- 开局：风琴房必须在场；牌堆与弃牌堆被洗匀（撤房未建模，见 handler 文档）
+    organ_keys = [k for k, r in engine.state.board.items() if r.template_id == "organ_room"]
+    assert organ_keys, "p114：风琴房必须在场（不在就从牌堆取）"
+    assert not engine.state.room_discard, "重排后弃牌堆应并入牌堆"
+    assert flags["clue_books"] is False and flags["clue_trophy"] is False and flags["clue_stars"] is False
+    assert flags["sabotage_rooms"] == [] and flags["returned_home"] is False
+
+    # ---- 门槛按人数（p43）
+    assert handler._needed(engine) == 15, "3 人局需要 15+"
+
+    # ---- 毒大气（p43）：英雄回合开始掷 2 骰扣属性；叛徒不受影响
+    before = {st: hero.stat_positions[st] for st in ("might", "speed", "sanity", "knowledge")}
+    traitor_before = {st: traitor.stat_positions[st] for st in before}
+    with patch.object(engine, "roll_dice", return_value=2):
+        handler.on_turn_start(engine, hero)
+        handler.on_turn_start(engine, traitor)
+    after = {st: hero.stat_positions[st] for st in before}
+    assert sum(before[st] - after[st] for st in before) == 2, "掷出 2 → 合计掉 2 格"
+    assert traitor.stat_positions == traitor_before, "p43：叛徒不受毒大气影响"
+    assert not hero.dead
+
+    # ---- 线索：图书馆知识 5+ → 全局线索 + 轨道推进；同一条不可再找
+    def place(template_id: str, x: int, y: int) -> str:
+        for key, room in engine.state.board.items():
+            if room.template_id == template_id:
+                return key
+        placed = engine._place_room(engine.catalog.room_templates[template_id], x, y, 0)
+        placed.revealed = True
+        return placed.key
+
+    library_key = place("library", 40, 40)
+    hero.room_key = library_key
+    engine._reset_player_turn_state(hero)
+    assert "search_books" in {a.id for a in handler.available_actions(engine, hero)}
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert engine.perform_haunt_action(hero, "search_books") is True
+    assert flags["clue_books"] is True, "p43：找到乐谱（全局共享）"
+    assert engine._haunt_track_value("clues_found") == 1
+    engine._reset_player_turn_state(hero)
+    assert "search_books" not in {a.id for a in handler.available_actions(engine, hero)}, "p43：同一条线索不能重复找"
+
+    # ---- 弹奏：门槛 15+，加值 = 预兆房数 + 线索；未达标不获胜，达标 → 英雄胜
+    omen_rooms = sum(
+        1 for room in engine.state.board.values()
+        if room.symbol == "omen" and not engine._is_collapsed(room.key)
+    )
+    organ_key = organ_keys[0]
+    hero.room_key = organ_key
+    engine._reset_player_turn_state(hero)
+    assert "play_organ" in {a.id for a in handler.available_actions(engine, hero)}
+    with patch.object(engine, "roll_dice", return_value=0):
+        assert engine.perform_haunt_action(hero, "play_organ") is True
+    assert flags["returned_home"] is False
+    assert engine.state.winner is None
+    expected_bonus = omen_rooms + 2  # 乐谱线索 +2
+    with patch.object(engine, "roll_dice", return_value=max(1, 15 - expected_bonus)):
+        engine._reset_player_turn_state(hero)
+        assert engine.perform_haunt_action(hero, "play_organ") is True
+    assert flags["returned_home"] is True, "p43：合计达门槛 → 房子回原维度"
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes", "p43：弹对曲子 → 英雄胜"
+
+    # ---- 干扰（p114）：叛徒知识 4+ 放 -3 令牌，每间限一枚
+    engine2 = _run_until_haunt(seed=113, players=3, haunt_id=32)
+    h2 = engine2._mode_handler()
+    t2 = next(p for p in engine2.state.players if p.role == "traitor")
+    engine2.state.turn_order = [t2.id]
+    engine2.state.turn_index = 0
+    chapel_key = next((k for k, r in engine2.state.board.items() if r.template_id == "chapel"), None)
+    if chapel_key is None:
+        placed = engine2._place_room(engine2.catalog.room_templates["chapel"], 41, 40, 0)
+        placed.revealed = True
+        chapel_key = placed.key
+    t2.room_key = chapel_key
+    engine2._reset_player_turn_state(t2)
+    assert "sabotage_transporter" in {a.id for a in h2.available_actions(engine2, t2)}
+    with patch.object(engine2, "_resolve_check", return_value=True):
+        assert engine2.perform_haunt_action(t2, "sabotage_transporter") is True
+    f2 = engine2._haunt_flags()
+    assert f2["sabotage_rooms"] == ["chapel"], "p114：每间只放一枚干扰令牌"
+    assert engine2._haunt_track_value("sabotage") == 1
+    engine2._reset_player_turn_state(t2)
+    assert "sabotage_transporter" not in {a.id for a in h2.available_actions(engine2, t2)}, "p114：同一间房不能重复干扰"
+    hero2 = next(p for p in engine2.state.players if p.role == "hero" and not p.dead)
+    _bonus2, parts2 = h2._bonus(engine2, hero2)
+    assert "叛徒干扰 -3" in "，".join(parts2), "干扰令牌应表现为 -3"
+
+    # ---- 房间加值：疯子/书在风琴房各 +2（p43）
+    organ2 = next(k for k, r in engine2.state.board.items() if r.template_id == "organ_room")
+    hero2.room_key = organ2
+    base2, _ = h2._bonus(engine2, hero2)
+    hero2.companions.append("madman")
+    assert h2._bonus(engine2, hero2)[0] == base2 + 2, "p43：疯子在风琴房 +2"
+    hero2.companions.remove("madman")
+    hero2.items.append("omen_book")
+    assert h2._bonus(engine2, hero2)[0] == base2 + 2, "p43：书在风琴房 +2"
+    hero2.items.remove("omen_book")
+
+    # ---- bot 目标：先补线索再进风琴房；叛徒先跑干扰房
+    goals = h2.bot_goal_rooms(engine2, hero2)
+    assert "organ_room" in goals
+    for room_id, flag in (("library", "clue_books"), ("game_room", "clue_trophy"), ("tower", "clue_stars")):
+        if not f2.get(flag):
+            assert room_id in goals, f"未找到的线索房应在目标里：{room_id}"
+    f2["clue_books"] = f2["clue_trophy"] = f2["clue_stars"] = True
+    assert h2.bot_goal_rooms(engine2, hero2) == ["organ_room"], "线索集齐后只去风琴房"
+    t_goals = h2.bot_goal_rooms(engine2, t2)
+    assert "chapel" not in t_goals, "已干扰过的房间不再作为目标"
+    assert set(t_goals) == set(h2.SABOTAGE_ROOMS) - {"chapel"}
+
+    # ---- 进度摘要
+    summary = h2.progress_summary(engine2, hero2)
+    assert any("回家门槛" in row for row in summary)
+    assert any("叛徒干扰" in row for row in summary)
+
+    # ---- 胜负：英雄全灭 → 叛徒胜；叛徒死亡 ≠ 英雄胜（老坑 21 号吸收者）
+    engine3 = _run_until_haunt(seed=113, players=3, haunt_id=32)
+    h3 = engine3._mode_handler()
+    for p in engine3.state.players:
+        if p.role == "hero":
+            p.dead = True
+    assert h3.check_victory(engine3) is True
+    assert engine3.state.winner == "traitor", "p114：英雄全灭 → 叛徒胜"
+    engine4 = _run_until_haunt(seed=113, players=3, haunt_id=32)
+    h4 = engine4._mode_handler()
+    next(p for p in engine4.state.players if p.role == "traitor").dead = True
+    assert h4.check_victory(engine4) is True and engine4.state.winner is None, "叛徒死亡 ≠ 英雄胜"
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -4656,6 +4800,7 @@ def main():
     verify_haunt31_organ_rooms()
     verify_haunt31_heart_brain_spear()
     verify_haunt31_antibody_wall_move()
+    verify_haunt32_lost_dimension()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()
