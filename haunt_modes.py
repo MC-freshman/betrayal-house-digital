@@ -4108,6 +4108,199 @@ class DeathCheckmateMode(GenericModeHandler):
         return False
 
 
+class HeirAssassinMode(GenericModeHandler):
+    """剧本 39 继承人（The Heir）。
+
+    权威原文：英雄手册 p50 / 叛徒手册 p121。
+
+    · 雕像走廊强制入场；王座在其内。
+    · 继承人：揭示者秘密选择（bot 随机选一名非自己英雄），身份存
+      flags["heir_id"]；继承人死亡 → 叛徒胜。
+    · 刺客：数量 = 玩家数，隐藏在已探明空房（每房至多一只，不在
+      占用房/雕像走廊）；英雄进入即暴露 → sneak attack（Might 2 无
+      防御）→ 攻击后服毒死亡。
+    · 计时：叛徒回合结束推进；第 3/6 回合各补一批新刺客。
+    · 矛：令牌承载（项目无矛卡），放随机已探明房间。
+    · 胜利：继承人在雕像走廊持矛 + 戒指 → 英雄胜；继承人死 → 叛徒胜。
+    · 简化：叛徒不知道继承人是谁（bot 不针对性攻击）；刺客 bot 追
+      最近英雄（引擎默认——隐藏刺客被暴露后才能移动，隐藏状态
+      on_monster_move 返回 True 不动）。
+    """
+
+    mode = "secret_heir"
+
+    ASSASSIN = "cultist"
+    THRONE_ROOM = "statuary_corridor"
+
+    # ------------------------------------------------------------- setup
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        flags = engine._haunt_flags()
+        corridor = engine._ensure_room_in_play(self.THRONE_ROOM, room_key)
+        flags["throne_room"] = corridor
+        # 继承人：随机选一名非揭示者英雄
+        revealer_id = engine.state.haunt_revealer_id
+        candidates = [
+            p for p in engine.state.players
+            if p.role == "hero" and not p.dead and p.id != revealer_id
+        ]
+        if not candidates:
+            candidates = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        heir = engine.rng.choice(candidates) if candidates else None
+        flags["heir_id"] = heir.id if heir else None
+        # 刺客：隐藏在已探明空房（不在占用房/雕像走廊）
+        spec = next(
+            (s for s in haunt.rule_data.get("monsters", []) if s.get("template_id") == self.ASSASSIN),
+            {},
+        )
+        spec = dict(spec)
+        spec["name"] = "刺客"
+        hidden_rooms = sorted(
+            k for k, r in engine.state.board.items()
+            if r.revealed and not any(
+                p.room_key == k and not p.dead for p in engine.state.players
+            ) and k != corridor
+        )
+        engine.rng.shuffle(hidden_rooms)
+        assassin_rooms = []
+        hidden_ids = flags.setdefault("hidden_assassins", [])
+        for i in range(len(engine.state.players)):
+            if i < len(hidden_rooms):
+                key = hidden_rooms[i]
+                monster = engine._spawn_single_haunt_monster(spec, key)
+                if monster is not None:
+                    assassin_rooms.append(key)
+                    hidden_ids.append(str(monster.id))
+        flags["assassin_rooms"] = assassin_rooms
+        # 矛令牌放随机已探明房间（非雕像走廊）
+        spear_rooms = [k for k in hidden_rooms if k != corridor]
+        spear_room = engine.rng.choice(spear_rooms) if spear_rooms else room_key
+        flags["spear_room"] = spear_room
+        engine.spawn_token("spear", label="罗马尼斯库之矛", role="marker", room_key=spear_room)
+        engine._log(f"雕像走廊的王座在等待真正的继承人……（刺客在暗处潜伏）")
+
+    # ------------------------------------------------------------- 内部
+    def _heir(self, engine: Any) -> Any | None:
+        hid = engine._haunt_flags().get("heir_id")
+        return next((p for p in engine.state.players if p.id == hid), None)
+
+    def _throne_room(self, engine: Any) -> str | None:
+        return engine._haunt_flags().get("throne_room")
+
+    # ------------------------------------------------------------- 刺客暴露
+    def on_enter_room(self, engine: Any, player: Any, room: Any) -> None:
+        """p121：英雄进入刺客房间 → 暴露并 sneak attack。"""
+        flags = engine._haunt_flags()
+        if player.role != "hero" or player.dead:
+            return
+        for monster in engine.state.monsters:
+            if _monster_id(monster) != self.ASSASSIN:
+                continue
+            if monster.room_key != room.key:
+                continue
+            if str(getattr(monster, "id", "")) not in flags.get("hidden_assassins", []):
+                continue
+            # 暴露
+            hid = str(getattr(monster, "id", ""))
+            hidden_list = flags.get("hidden_assassins", [])
+            if hid in hidden_list:
+                hidden_list.remove(hid)
+            engine._log(f"一名刺客从暗处跳出来攻击 {player.name}！")
+            # sneak attack：Might 2，无防御
+            assassin_roll = engine.roll_dice(2, "刺客偷袭")
+            engine._log(f"刺客偷袭 {player.name}：{assassin_roll}（无防御）。")
+            if assassin_roll > 0:
+                engine._deal_damage(player, "physical", assassin_roll, source="刺客")
+            # 服毒死亡
+            monster_id = getattr(monster, "id", None)
+            engine.state.monsters = [
+                m for m in engine.state.monsters if getattr(m, "id", None) != monster_id
+            ]
+            engine._log("刺客服毒自尽。")
+            engine.check_victory()
+            return
+
+    def on_monster_move(self, engine: Any, monster: Any, rolled: int) -> bool:
+        if _monster_id(monster) != self.ASSASSIN:
+            return False
+        if str(getattr(monster, "id", "")) in engine._haunt_flags().get("hidden_assassins", []):
+            return True  # 隐藏刺客不动
+        return False  # 已暴露的刺客追击最近英雄
+
+    # ------------------------------------------------------------- 计时
+    def on_turn_start(self, engine: Any, player: Any) -> None:
+        flags = engine._haunt_flags()
+        if player.role != "traitor" or player.dead:
+            return
+        current = int(engine._haunt_track_value("assassin_timer")) + 1
+        engine._set_haunt_track_value("assassin_timer", current)
+        if current in (3, 6):
+            # p121：第 3/6 回合各补一批新刺客
+            spec = next(
+                (s for s in (engine.state.haunt.rule_data or {}).get("monsters", [])
+                 if s.get("template_id") == self.ASSASSIN),
+                {},
+            )
+            spec = dict(spec)
+            spec["name"] = "刺客"
+            available = sorted(
+                k for k, r in engine.state.board.items()
+                if r.revealed and k not in flags.get("assassin_rooms", [])
+                and k != flags.get("throne_room")
+                and not any(m.room_key == k for m in engine.state.monsters)
+            )
+            engine.rng.shuffle(available)
+            for i in range(len(engine.state.players)):
+                if i < len(available):
+                    monster = engine._spawn_single_haunt_monster(spec, available[i])
+                    if monster is not None:
+                        hidden_ids = flags.setdefault("hidden_assassins", [])
+                        hidden_ids.append(str(monster.id))
+                        flags["assassin_rooms"].append(available[i])
+            engine._log("新的刺客潜入了房子！")
+
+    # ------------------------------------------------------------- 胜负
+    def check_victory(self, engine: Any) -> bool:
+        flags = engine._haunt_flags()
+        heir = self._heir(engine)
+        if heir is not None and heir.dead:
+            engine._set_winner("traitor", "继承人死了——纸皇冠染上了鲜血。")
+            return True
+        if heir is not None:
+            throne = self._throne_room(engine)
+            has_spear = engine.tokens_held_by(heir.id, "spear")
+            has_ring = "omen_ring" in heir.items
+            if heir.room_key == throne and has_spear and has_ring:
+                engine._set_winner("heroes", "戒指化为王冠，长矛缩成钥匙——继承人知道了……一切。")
+                return True
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "再没有人能继承罗马尼斯库的遗产了。")
+            return True
+        return False
+
+
+class BuriedAliveMode(GenericModeHandler):
+    """剧本 40 活埋（Buried Alive）——简化实现。
+
+    权威原文：英雄手册 p51 / 叛徒手册 p122。
+
+    核心机制：叛徒把英雄逐个活埋，英雄须在窒息前挣脱。
+    电子版简化为：叛徒力量攻击击败英雄 → 英雄被"活埋"（movement_stopped
+    + 每回合 1 骰物理伤害）；被埋英雄力量 4+ 挣脱。全部英雄被埋 → 叛徒胜。
+    简化标注：棺材/挖土/钉子等原始机制大量简化，M8 批次专项精修。
+    """
+
+    mode = "buried_alive"
+
+    def on_monster_attack(self, engine: Any, monster: Any, target: Any, amount: int) -> bool:
+        return False  # 无怪物
+
+    def check_victory(self, engine: Any) -> bool:
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "没有人能从冰冷的泥土中回来了。")
+            return True
+        return False
+
+
 class SmallChangeMode(GenericModeHandler):
     """剧本 35 小小变化（Small Change）。
 
@@ -9818,6 +10011,8 @@ for _handler in (
     SmallChangeMode(),
     SwampEscapeMode(),
     DeathCheckmateMode(),
+    HeirAssassinMode(),
+    BuriedAliveMode(),
 ):
 
     register_mode(_handler)

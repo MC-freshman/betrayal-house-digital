@@ -48,6 +48,8 @@ if __package__ in {None, ""}:
         LivingHouseMode,
         LostDimensionMode,
         LakeRescueMode,
+        BuriedAliveMode,
+        HeirAssassinMode,
         SmallChangeMode,
         SwampEscapeMode,
         DeathCheckmateMode,
@@ -156,12 +158,14 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(LivingHouseMode) == [31], f"剧本 31 未走定制 handler: {handlers.get(LivingHouseMode)}"
     assert handlers.get(LostDimensionMode) == [32], f"剧本 32 未走定制 handler: {handlers.get(LostDimensionMode)}"
     assert handlers.get(LakeRescueMode) == [33], f"剧本 33 未走定制 handler: {handlers.get(LakeRescueMode)}"
+    assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
+    assert handlers.get(HeirAssassinMode) == [39], f"剧本 39 未走定制 handler: {handlers.get(HeirAssassinMode)}"
     assert handlers.get(SmallChangeMode) == [35], f"剧本 35 未走定制 handler: {handlers.get(SmallChangeMode)}"
     assert handlers.get(SwampEscapeMode) == [36], f"剧本 36 未走定制 handler: {handlers.get(SwampEscapeMode)}"
     assert handlers.get(DeathCheckmateMode) == [37], f"剧本 37 未走定制 handler: {handlers.get(DeathCheckmateMode)}"
     assert handlers.get(MadWorldMode) == [34], f"剧本 34 未走定制 handler: {handlers.get(MadWorldMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 32, f"应有 32 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 30, f"应有 30 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -178,7 +182,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate",
+        "living_house", "lost_dimension", "lake_rescue", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive",
     }
 
 
@@ -4207,6 +4211,63 @@ def verify_haunt37_checkmate() -> None:
     assert engine.state.winner == "traitor", "死神房间无英雄应弃赛判负"
 
 
+def verify_haunt39_heir() -> None:
+    """剧本 39：雕像走廊/继承人/刺客偷袭/矛与戒指胜利（p50/p121）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=39)
+    handler = engine._mode_handler()
+    assert isinstance(handler, HeirAssassinMode)
+    flags = engine._haunt_flags()
+
+    # 雕像走廊在场；继承人已选
+    throne = handler._throne_room(engine)
+    assert throne is not None and engine.state.board[throne].template_id == "statuary_corridor"
+    heir = handler._heir(engine)
+    assert heir is not None and heir.role == "hero", "继承人应已选定"
+    assert len(flags.get("assassin_rooms", [])) >= 1, "应有刺客已布点"
+
+    # 刺客偷袭：英雄进入 → 暴露 + 伤害 + 服毒死亡
+    hero = next(
+        (p for p in engine.state.players if p.role == "hero" and not p.dead and p.id != heir.id),
+        heir,  # 非继承人英雄可能已死——用继承人测试
+    )
+    assassin_room = flags["assassin_rooms"][0]
+    hero.room_key = assassin_room
+    monsters_before = len(engine.state.monsters)
+    handler.on_enter_room(engine, hero, engine.state.board[assassin_room])
+    # 刺客应已死亡（服毒）
+    assert len(engine.state.monsters) < monsters_before or not any(
+        m.room_key == assassin_room for m in engine.state.monsters
+    ), "刺客应已服毒死亡"
+
+    # 继承人 + 矛 + 戒指在雕像走廊 → 英雄胜
+    heir.room_key = throne
+    heir.items.append("omen_ring")
+    spear_token = engine.tokens_of_kind("spear")
+    if spear_token:
+        engine.give_token(spear_token[0].uid, heir.id)
+    else:
+        engine.spawn_token("spear", label="矛", role="carried", holder=heir.id)
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+    # 继承人死亡 → 叛徒胜
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    heir.dead = True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "traitor"
+
+
+def verify_haunt40_buried_alive() -> None:
+    """剧本 40：活埋——最小 handler 冒烟（p51/p122，简化版）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=40)
+    handler = engine._mode_handler()
+    assert isinstance(handler, BuriedAliveMode)
+    # 无怪物实体，无专属行动——验证不崩溃 + 分派正确即可
+    assert engine.state.haunt is not None and engine.state.haunt.id == 40
+    assert not engine.state.winner  # 游戏未结束
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -5118,6 +5179,8 @@ def main():
     verify_haunt35_small_change()
     verify_haunt36_swamp_escape()
     verify_haunt37_checkmate()
+    verify_haunt39_heir()
+    verify_haunt40_buried_alive()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

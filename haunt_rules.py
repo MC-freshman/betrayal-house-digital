@@ -1991,6 +1991,73 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [48, 119],
     },
+    39: {
+        # 校准记录（2026-09-05，对照英雄手册 p50 / 叛徒手册 p121）：
+        #   机制落在 HeirAssassinMode：
+        #   · 雕像走廊强制入场；王座在雕像走廊
+        #   · 继承人：揭示者秘密选择（bot 随机选一名非自己英雄），
+        #     身份存 flags（联机隐藏信息裁剪之外的秘密）
+        #   · 刺客：数量=玩家数，隐藏在已探明空房（每房至多一只），
+        #     英雄进入即暴露并 sneak attack（Might 2，无防御），攻击后服毒死亡
+        #   · 计时：叛徒回合结束推进；第 3/6 回合各补一批新刺客
+        #   · 胜利：继承人在雕像走廊持矛+戒指 → 英雄胜；继承人死 → 叛徒胜
+        #   简化：矛用令牌承载（项目无矛卡，与 15/19 同处理），放随机
+        #     房间；叛徒不知道继承人是谁（bot 也不针对性攻击）；
+        #     继承人死亡的"诚实回答"机制不需要（bot 直接查 flags）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "secret_heir",
+        "traitor_rule": "revealer",
+        "hero_goal": "保护继承人，让TA拿着矛与戒指登上雕像走廊的王座。",
+        "traitor_goal": "让隐藏的刺客杀死继承人。",
+        "suggested_monsters": [],
+        "required_cards": ["omen_ring"],
+        "key_rooms": ["statuary_corridor", "basement_landing"],
+        "tokens": ["spear", "assassin"],
+        "setup": {
+            "tracks": {
+                "assassin_timer": {"label": "刺客计时", "target": 6, "side": "traitor"},
+            },
+            "flags": {
+                "heir_id": None, "assassin_rooms": [], "spear_room": None,
+            },
+        },
+        "monsters": [
+            {"template_id": "cultist", "name": "刺客", "spawn": "deferred", "count": "player_count", "speed": 3, "might": 2, "sanity": 2},
+        ],
+        "actions": [],
+        "win_conditions": [],
+        "source_pages": [50, 121],
+    },
+    40: {
+        # 校准记录（2026-09-05，对照英雄手册 p51 / 叛徒手册 p122）：
+        #   骨架 rule_data 已足够（buried_alive 模式， Monsters: none），
+        #   本剧本的专属行为只有"被活埋的英雄挣脱"与"叛徒挖坑"两条——
+        #   考虑到第三批时间，留为 fidelity=refined + generic 兜底，
+        #   在 M8 批次专项精修。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "buried_alive",
+        "traitor_rule": "revealer",
+        "hero_goal": "在被活埋之前逃出棺材并阻止叛徒。",
+        "traitor_goal": "把所有英雄活埋。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {"buried_count": {"label": "被活埋人数", "target": "player_count", "side": "traitor"}},
+            "flags": {},
+        },
+        "monsters": [],
+        "actions": [],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都被活埋了。"}
+        ],
+        "source_pages": [51, 122],
+    },
 }
 
 
@@ -2151,8 +2218,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    39: dict(mode="secret_heir", traitor_rule="revealer", hero_goal="让真正继承人坐上雕像走廊的王座，并持有长矛和戒指。", traitor_goal="杀死秘密继承人，或杀死所有英雄。", rooms=("statuary_corridor", "gallery", "entrance_hall", "foyer"), monsters=("cultist",), tokens=("heir", "assassin", "throne"), hero_task="确认继承人并登上王座", traitor_task="寻找并刺杀继承人", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="在雕像走廊完成继承仪式。", traitor_detail="推进刺客锁定轨道。", monster_count="player_count", hero_win_target=1, required_cards=("omen_spear", "omen_ring"), hero_requires=("omen_spear", "omen_ring")),
-    40: dict(mode="buried_alive", traitor_rule="revealer", hero_goal="在被埋的朋友死亡前挖出他。", traitor_goal="让被埋者窒息，或杀死所有英雄。", rooms=("catacombs", "crypt", "furnace_room", "basement_landing", "junk_room"), monsters=("zombie",), tokens=("buried_friend", "might_check", "time"), hero_task="挖出被埋者", traitor_task="加速窒息倒计时", hero_stat="might", hero_target=5, hero_progress_target=1, hero_detail="在秘密埋葬房间完成力量检定；通灵板可协助定位。", traitor_detail="推进窒息倒计时。", monster_count=1, hero_win_target=1),
     41: dict(mode="invisible_traitor", traitor_rule="revealer", hero_goal="找到并击败隐形叛徒。", traitor_goal="利用隐形状态杀死所有英雄。", rooms=("entrance_hall", "foyer", "grand_staircase", "library", "chapel"), monsters=("shadow",), tokens=("invisible", "tracking", "blind_fight"), hero_task="追踪隐形叛徒", traitor_task="隐形袭击英雄", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="根据叛徒攻击留下的线索完成追踪检定。", traitor_detail="推进隐形袭击轨道。", monster_count=1, hero_win_target=1),
     42: dict(mode="hell_gate_hero", traitor_rule="revealer", hero_goal="杀死叛徒并关闭地狱之门。", traitor_goal="通过活人献祭打开地狱之门，或杀死所有英雄。", rooms=("pentagram_chamber", "chasm", "chapel", "crypt", "entrance_hall"), monsters=("giant",), tokens=("statue", "hell_gate", "sacrifice"), hero_task="关闭地狱之门", traitor_task="完成活人献祭", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="在五芒星室或入口大厅完成关闭仪式。", traitor_detail="推进地狱之门开启轨道。", monster_count=1, hero_win_target=1, traitor_win_type="track", traitor_progress_target="player_count"),
     43: dict(mode="shadow_exorcism", traitor_rule="revealer", hero_goal="完成光之仪式，在英雄影子进入五芒星室前驱逐暗影。", traitor_goal="让影子抵达五芒星室并把英雄变成幽灵。", rooms=("chapel", "library", "pentagram_chamber", "entrance_hall", "grand_staircase"), monsters=("shadow",), tokens=("shadow", "light_ritual", "sanity_check"), hero_task="完成光之仪式", traitor_task="推进影子入侵", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target="player_count", hero_detail="在小教堂或图书馆完成光之仪式。", traitor_detail="推进影子向五芒星室移动的轨道。", monster_count="player_count"),
