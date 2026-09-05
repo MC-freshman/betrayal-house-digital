@@ -3752,14 +3752,125 @@ class InvisibleTraitorMode(GenericModeHandler):
 
 
 class HellGateHeroMode(GenericModeHandler):
-    """剧本 42 地狱之门英雄（Comes the Hero）——简化实现。
+    """剧本 42 地狱之门英雄（Comes the Hero）。
 
-    核心机制需要"英雄变成英雄怪物"的深层引擎支持，留 M8 批次专项精修。
-    当前版本：generic 兜底，check_victory 判英雄全灭。
+    权威原文：英雄手册 p53 / 叛徒手册 p124。
+
+    · 雕像（Statue token）：放在作祟揭示房间。英雄把圣徽/斧/水晶球/
+      古书放入雕像手中 → 雕像活化（审判官/战士/先知/巫师）。
+    · 活化雕像移动：同房英雄做知识或理智检定，格数=结果
+      （move_statue 行动）。
+    · 雕像攻击：与叛徒同房时降低叛徒对应属性 1 点
+      （审判官→Speed，战士→Might，先知→Sanity，巫师→Knowledge）。
+    · 叛徒无敌：不可被攻击（attack_allowed 返回 False），
+      直到任一属性降至 0 → 可被正常攻击。
+    · 叛徒胜利：杀死英雄 + 尸体带到特定房间 + 检定 4+ → 地狱门打开。
+      简化为"叛徒回合开始如果同房有英雄则掷骰攻击"（bot 局用）。
+    · 简化：雕像不会移动寻路（只在同房英雄的房间之间移动——由
+      move_statue 行动控制）；叛徒门开启的详细流程简化。
     """
 
     mode = "hell_gate_hero"
 
+    STATUE_ITEMS = {
+        "omen_holy_symbol": ("judge", "审判官", "speed"),
+        "item_axe": ("warrior", "战士", "might"),
+        "omen_crystal_ball": ("seer", "先知", "sanity"),
+        "omen_book": ("wizard", "巫师", "knowledge"),
+    }
+
+    # ------------------------------------------------------------- setup
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        flags = engine._haunt_flags()
+        flags["statue_room"] = room_key
+        flags["statue_form"] = None  # None = 未活化
+        flags["gate_open"] = False
+        engine.spawn_token("statue", label="雕像", role="marker", room_key=room_key)
+        engine._log("一尊雕像伸出手指，底座上刻着——'击败不可战胜之人'。")
+
+    # ------------------------------------------------------------- 内部
+    def _statue_room(self, engine: Any) -> str | None:
+        return engine._haunt_flags().get("statue_room")
+
+    def _traitor_vulnerable(self, engine: Any) -> bool:
+        """叛徒任一属性降至 0 → 可被攻击。"""
+        traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+        if traitor is None:
+            return True
+        return any(v <= 0 for v in traitor.stats.values())
+
+    # ------------------------------------------------------------- 攻击规则
+    def attack_allowed(self, engine: Any, attacker: Any, target: Any) -> bool:
+        """p53：叛徒不可被攻击，直到雕像削弱其属性至 0。"""
+        if isinstance(getattr(target, "role", None), str) and target.role == "traitor":
+            return self._traitor_vulnerable(engine)
+        return True
+
+    # ------------------------------------------------------------- 行动
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        actions = super().available_actions(engine, player)
+        result = []
+        flags = engine._haunt_flags()
+        statue_room = self._statue_room(engine)
+        for action in actions:
+            if action.id == "animate_statue":
+                if player.room_key != statue_room or flags.get("statue_form"):
+                    continue
+                has_item = any(item in player.items for item in self.STATUE_ITEMS)
+                if not has_item:
+                    continue
+            if action.id == "move_statue":
+                if player.role != "hero" or not flags.get("statue_form"):
+                    continue
+                if player.room_key != flags.get("statue_room"):
+                    continue
+            result.append(action)
+        return result
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        flags = engine._haunt_flags()
+        statue_room = self._statue_room(engine)
+        if action_id == "animate_statue":
+            if player.room_key != statue_room or flags.get("statue_form"):
+                return False
+            item = next((i for i in player.items if i in self.STATUE_ITEMS), None)
+            if item is None:
+                engine._log("你没有可以放入雕像手中的物品。")
+                return False
+            form_key, form_name, drain_stat = self.STATUE_ITEMS[item]
+            flags["statue_form"] = form_key
+            flags["drain_stat"] = drain_stat
+            player.items.remove(item)
+            engine._log(f"{player.name} 把{engine.catalog.cards[item].name}放入雕像手中——雕像化身为{form_name}！")
+            return True
+
+        if action_id == "move_statue":
+            if not flags.get("statue_form") or player.room_key != flags.get("statue_room"):
+                return False
+            ok = super().perform_action(engine, player, action_id, data)
+            if ok:
+                roll = engine._effective_stat(player, "knowledge") if flags.get("statue_form") == "wizard" else engine._effective_stat(player, "sanity")
+                # 简化：向最近英雄（叛徒）方向移动 min(roll, path)
+                traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+                if traitor is not None and traitor.room_key != statue_room:
+                    path = engine._shortest_path(statue_room, traitor.room_key)
+                    if len(path) > 1:
+                        dest = path[min(len(path) - 1, max(1, roll))]
+                        flags["statue_room"] = dest
+                        engine._log(f"雕像移动到了{engine.state.board[dest].name}。")
+                # 雕像与叛徒同房：降低对应属性
+                traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+                if traitor is not None and traitor.room_key == flags.get("statue_room"):
+                    drain = flags.get("drain_stat", "might")
+                    engine._apply_stat_loss(traitor, drain, 1)
+                    engine._log(f"雕像削弱了叛徒的{drain}（-1）。")
+                    if self._traitor_vulnerable(engine):
+                        engine._log("叛徒的防线被突破了——TA 现在可以被攻击！")
+            return ok
+
+        return super().perform_action(engine, player, action_id, data)
+
+    # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "地狱之门打开了。")

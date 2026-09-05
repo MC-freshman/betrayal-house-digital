@@ -4294,12 +4294,49 @@ def verify_haunt41_invisible_traitor() -> None:
 
 
 def verify_haunt42_hell_gate() -> None:
-    """剧本 42：地狱之门冒烟——分派/简化胜利条件（p53/p124）。"""
+    """剧本 42：雕像活化/属性削弱/叛徒可攻击/胜利条件（p53/p124）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=42)
     handler = engine._mode_handler()
     assert isinstance(handler, HellGateHeroMode)
-    # 无怪物实体——验证分派正确即可
-    assert engine.state.haunt is not None and engine.state.haunt.id == 42
+    flags = engine._haunt_flags()
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # 叛徒无敌：不能被攻击
+    assert handler.attack_allowed(engine, hero, traitor) is False, "叛徒应无敌"
+
+    # 活化雕像：持圣徽 → 审判官
+    hero.items.append("omen_holy_symbol")
+    statue_room = flags["statue_room"]
+    hero.room_key = statue_room
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "animate_statue" in ids, "持圣徽应能活化雕像"
+    assert handler.perform_action(engine, hero, "animate_statue", {}) is True
+    assert flags.get("statue_form") == "judge", "圣徽应活化审判官"
+    assert "omen_holy_symbol" not in hero.items, "圣徽应被消耗"
+
+    # 雕像与叛徒同房 → 削弱 Speed
+    traitor.room_key = statue_room
+    speed_before = traitor.stats["speed"]
+    hero.room_key = statue_room
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "move_statue", {}) is True
+    # 雕像已在叛徒房间 → 削弱
+    assert traitor.stats["speed"] < speed_before or traitor.stat_positions.get("speed", 0) < 3, "雕像应削弱叛徒速度"
+
+    # 削弱至 0 → 可被攻击
+    traitor.stats["speed"] = 1
+    traitor.stat_positions["speed"] = 0
+    traitor.stats["might"] = 0
+    traitor.stat_positions["might"] = 0
+    traitor.stats["sanity"] = 0
+    traitor.stat_positions["sanity"] = 0
+    traitor.stats["knowledge"] = 0
+    traitor.stat_positions["knowledge"] = 0
+    assert handler._traitor_vulnerable(engine) is True
+    assert handler.attack_allowed(engine, hero, traitor) is True, "属性归零后应可被攻击"
 
 
 def verify_haunt43_shadow_exorcism() -> None:

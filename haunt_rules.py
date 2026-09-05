@@ -2097,8 +2097,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         #   骨架 rule_data 已足够（hell_gate_hero 模式），核心机制是
         #   "英雄变成英雄怪物"——需要英雄转怪物的深层引擎支持。
         #   留为 fidelity=skeleton + generic 兜底，M8 批次专项精修。
-        "version": 2,
-        "fidelity": "skeleton",
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "hell_gate_hero",
         "traitor_rule": "revealer",
@@ -2110,7 +2110,10 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "tokens": [],
         "setup": {"tracks": {"progress": {"label": "进度", "target": 10, "side": "heroes"}}, "flags": {}},
         "monsters": [],
-        "actions": [],
+        "actions": [
+            {"id": "animate_statue", "side": "heroes", "label": "激活雕像", "detail": "把一件物品放进雕像手中（p53）。圣徽→审判官/斧→战士/水晶球→先知/古书→巫师。"},
+            {"id": "move_statue", "side": "heroes", "label": "移动雕像", "detail": "知识或理智检定移动雕像（格数=结果）（p53）。"},
+        ],
         "win_conditions": [{"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}],
         "source_pages": [53, 124],
     },
