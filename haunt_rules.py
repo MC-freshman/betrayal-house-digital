@@ -1815,6 +1815,50 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [44, 115],
     },
+    34: {
+        # 校准记录（2026-09-05，对照英雄手册 p45 / 叛徒手册 p116）：
+        #   机制落在 MadWorldMode：
+        #   · 保险库强制入场（p45）；疯子卡归叛徒（p116 "Marc Antony"）
+        #   · 随从（Servants）：数量 = 其他玩家数，每层一只+其余随机
+        #     （spider 模板承载 3/3/1，engine_note 惯例）
+        #   · 捕获：力量攻击击败随从/叛徒 → 选择抓住（不伤害不击晕）；
+        #     背负者力量攻击 -2、入房 2 格、可转交；一次一人
+        #   · 锁入：在保险库房间与被缚者同房花整回合 → 出局；
+        #     入库后不可被营救
+        #   · 营救：未被捕获的随从/叛徒以力量 2+ 胜过背负者 → 释放
+        #   · 胜负：所有随从+叛徒均被锁入/杀灭 → 英雄胜；英雄全灭 → 叛徒胜
+        #   简化：叛徒被杀即随从死亡未建模（原文只说 "kill or lock up the
+        #     traitor"）；随从 bot 追最近英雄（引擎默认）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "mad_world",
+        "traitor_rule": "revealer",
+        "hero_goal": "抓住疯王与所有随从，把他们锁进保险库——背负时力量 -2、入房 2 格。",
+        'traitor_goal': '让疯王与随从杀死所有元老院叛徒。',
+        "suggested_monsters": ["spider"],
+        "required_cards": [],
+        "key_rooms": ["vault", "basement_landing"],
+        "tokens": ["servant", "vault"],
+        "setup": {
+            "tracks": {
+                "captives_locked": {"label": "已锁入保险库", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {
+                "captor": {}, "locked_up": [], "vault_open": False,
+                "servants_killed": 0, "traitor_killed": False,
+            },
+        },
+        "monsters": [
+            {"template_id": "spider", "name": "疯人院随从", "spawn": "deferred", "count": "player_count", "speed": 3, "might": 3, "sanity": 1},
+        ],
+        "actions": [
+            {"id": "lock_up", "side": "heroes", "label": "锁入保险库", "detail": "在保险库房间与被缚者同房花整回合，把TA锁进去（p45）。"},
+            {"id": "pass_captive", "side": "heroes", "label": "转交俘虏", "detail": "把背着的俘虏交给同房间另一名英雄（p45）。"},
+        ],
+        "win_conditions": [],
+        "source_pages": [45, 116],
+    },
 }
 
 
@@ -1975,7 +2019,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    34: dict(mode="mad_world", traitor_rule="revealer", hero_goal="把疯子锁入保险库，并杀死或锁住叛徒。", traitor_goal="让凯撒和疯子仆从杀死所有英雄。", rooms=("vault", "master_bedroom", "chapel", "conservatory", "game_room", "library", "attic"), monsters=("madman",), tokens=("vault_lock", "madman", "senator"), hero_task="锁住疯子", traitor_task="煽动疯子仆从", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="把疯子引到保险库并完成锁门检定。", traitor_detail="推进疯子仆从的围攻轨道。", monster_count="player_count", hero_win_target=1),
     35: dict(mode="small_change_escape", traitor_rule="revealer", hero_goal="让至少一半英雄使用玩具飞机从外缘逃脱。", traitor_goal="让猫吃掉所有缩小的英雄。", rooms=("balcony", "garden", "graveyard", "patio", "tower", "entrance_hall", "foyer"), monsters=("cat",), tokens=("toy_plane", "cat", "small_hero"), hero_task="驾驶玩具飞机逃脱", traitor_task="驱使猫捕食", hero_stat="speed", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在有外缘出口的房间完成一次逃脱行动。", traitor_detail="推进猫的捕食轨道。", monster_count="player_count", hero_win_target="half_players_ceil"),
     36: dict(mode="swamp_escape", traitor_rule="revealer", hero_goal="至少一半原英雄活着逃离房屋，并不能留下其他活着的英雄。", traitor_goal="让房屋沉入沼泽，或杀死所有英雄。", rooms=("attic", "entrance_hall", "foyer", "grand_staircase", "garden", "patio"), monsters=("shadow",), tokens=("rowboat", "swamp", "escape"), hero_task="组织逃离房屋", traitor_task="加速沼泽下沉", hero_stat="might", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在入口大厅准备船并完成一次逃离。", traitor_detail="推进沼泽下沉轨道。", monster_count=1, hero_win_target="half_players_ceil"),
     37: dict(mode="death_checkmate", traitor_rule="revealer", hero_goal="在死亡的棋局中完成一次胜利检定。", traitor_goal="让死亡在无对手时赢下棋局，或杀死所有英雄。", rooms=("vault", "crypt", "research_laboratory", "operating_laboratory", "game_room"), monsters=("shadow",), tokens=("death", "seal", "chess"), hero_task="在棋局中战胜死亡", traitor_task="逼迫死亡弃局", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="与死亡同房间时完成知识检定；圣印可提供帮助。", traitor_detail="推进死亡的棋局压力。", monster_count=1, hero_win_target=1),

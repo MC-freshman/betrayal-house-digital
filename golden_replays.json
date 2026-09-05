@@ -1005,6 +1005,23 @@
       "forced_haunt": 33
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "8715e6862725e7ada920a1e853a79eae2ad9f5a3b15eb9c07eff554e8fc16bc9",
+      "turns": 34,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "Veni, vidi, vici——疯王 Caesar 征服了最后的元老院议员。",
+      "haunt": 34,
+      "haunt_name": "疯狂世界",
+      "rooms": 26,
+      "monsters": 1,
+      "key": "seed113-3p-haunt34",
+      "forced_haunt": 34
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,
