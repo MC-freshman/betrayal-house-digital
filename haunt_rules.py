@@ -1765,6 +1765,56 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [43, 114],
     },
+    33: {
+        # 校准记录（2026-09-05，对照英雄手册 p44 / 叛徒手册 p115）：
+        #   机制落在 LakeRescueMode：
+        #   · 地下湖强制入场（_ensure_room_in_play，带门相邻地下室）
+        #   · 房屋探索关闭：can_discover_rooms 只在"无任何已探明通路进
+        #     地下室"时放行（地下室门厅开局已探明 → 整局关闭，与原文
+        #     "unless there's no way into the basement" 一致）
+        #   · 湖面砖：从地下湖两侧无门水缘按需铺设（extra_move_options
+        #     追加 lake: 选项 → lake_move 铺面并移动），砖名"湖面"、
+        #     面朝下（不触发符号抽牌）、四向互连；铺面从房间牌堆取砖，
+        #     耗尽后取弃牌堆再取其他楼层（p44）
+        #   · 游泳：回合开始在湖面砖上自动掷力量（4+ 每砖 2 格 /
+        #     0-3 每砖 3 格），结果存 flags 供本回合移动费用下限
+        #     （movement_cost_floor 新增 to_key 参数）
+        #   · 搜索表（p115）：回合开始在湖面砖上掷 4 骰 + 距离加值
+        #     （与地下湖间隔砖数含所在砖）+ 水晶球 +2，按表结算
+        #     （19+ 救出女孩；10/17-18 湖怪 Might 5/6；14 触手 Speed 5；
+        #     12-13 大浪 Might 5+；6-7/15-16 理智 4+；11 累计 +3 再掷；
+        #     5 向深处挪 1 格再掷），迭代上限 8 段防死循环
+        #   · 溺水：叛徒回合开始推进计时并掷等量骰，3-4 人局 10+ /
+        #     5-6 人局 9+ 女孩溺亡 → 叛徒胜
+        #   简化：湖面丢弃即沉没（on_item_dropped）；湖面死亡掉落也沉没
+        #     未建模；"本回合铺设的砖 +3"不适用（砖按需即时铺设）；
+        #     女孩卡 set aside、属性微调未建模（同 16/18 号口径）；
+        #     叛徒入湖可战不搜索（bot 自然满足）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "lake_rescue",
+        "traitor_rule": "revealer",
+        "hero_goal": "在女孩溺亡前划入湖面，顶住湖怪与幻象把她救上岸。",
+        "traitor_goal": "让女孩溺亡，或让湖怪吃掉所有英雄。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": ["underground_lake", "basement_landing"],
+        "tokens": ["lake_tile"],
+        "setup": {
+            "tracks": {
+                "drown_timer": {"label": "溺水计时", "target": 20, "side": "traitor"},
+            },
+            "flags": {
+                "girl_rescued": False, "girl_drowned": False,
+                "swim_cost": {}, "drown_threshold": 10,
+            },
+        },
+        "monsters": [],
+        "actions": [],
+        "win_conditions": [],
+        "source_pages": [44, 115],
+    },
 }
 
 
@@ -1925,7 +1975,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    33: dict(mode="lake_rescue", traitor_rule="revealer", hero_goal="在女孩溺水前从地下湖救出她。", traitor_goal="把女孩喂给湖中生物，或杀死所有英雄。", rooms=("underground_lake", "basement_landing", "crypt", "furnace_room"), monsters=("beast",), tokens=("girl", "lake", "drowning"), hero_task="从地下湖救出女孩", traitor_task="把女孩带向湖中生物", hero_stat="might", hero_target=5, hero_progress_target=1, hero_detail="在地下湖或湖区完成救援行动。", traitor_detail="推进溺水倒计时。", monster_count=1, hero_win_target=1),
     34: dict(mode="mad_world", traitor_rule="revealer", hero_goal="把疯子锁入保险库，并杀死或锁住叛徒。", traitor_goal="让凯撒和疯子仆从杀死所有英雄。", rooms=("vault", "master_bedroom", "chapel", "conservatory", "game_room", "library", "attic"), monsters=("madman",), tokens=("vault_lock", "madman", "senator"), hero_task="锁住疯子", traitor_task="煽动疯子仆从", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="把疯子引到保险库并完成锁门检定。", traitor_detail="推进疯子仆从的围攻轨道。", monster_count="player_count", hero_win_target=1),
     35: dict(mode="small_change_escape", traitor_rule="revealer", hero_goal="让至少一半英雄使用玩具飞机从外缘逃脱。", traitor_goal="让猫吃掉所有缩小的英雄。", rooms=("balcony", "garden", "graveyard", "patio", "tower", "entrance_hall", "foyer"), monsters=("cat",), tokens=("toy_plane", "cat", "small_hero"), hero_task="驾驶玩具飞机逃脱", traitor_task="驱使猫捕食", hero_stat="speed", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在有外缘出口的房间完成一次逃脱行动。", traitor_detail="推进猫的捕食轨道。", monster_count="player_count", hero_win_target="half_players_ceil"),
     36: dict(mode="swamp_escape", traitor_rule="revealer", hero_goal="至少一半原英雄活着逃离房屋，并不能留下其他活着的英雄。", traitor_goal="让房屋沉入沼泽，或杀死所有英雄。", rooms=("attic", "entrance_hall", "foyer", "grand_staircase", "garden", "patio"), monsters=("shadow",), tokens=("rowboat", "swamp", "escape"), hero_task="组织逃离房屋", traitor_task="加速沼泽下沉", hero_stat="might", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在入口大厅准备船并完成一次逃离。", traitor_detail="推进沼泽下沉轨道。", monster_count=1, hero_win_target="half_players_ceil"),

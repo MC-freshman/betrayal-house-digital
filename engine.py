@@ -695,6 +695,8 @@ class GameEngine:
                     cost=cost,
                 )
             )
+        # 剧本可追加额外移动选项（剧本 33 p44：从地下湖的无门水缘划入湖面）。
+        options.extend(self._mode_handler().extra_move_options(self, player, options))
         return options
 
     def _no_door_faces_wall(self, target_pos: tuple[int, int, int], doors: tuple[str, ...]) -> bool:
@@ -836,6 +838,9 @@ class GameEngine:
                 break
         else:
             target_key = option.target_key
+            if isinstance(target_key, str) and target_key.startswith("lake:"):
+                # 剧本 33：湖面砖按需铺设并移动，由剧本完全接管。
+                return self._mode_handler().lake_move(self, player, option)
             if target_key not in self.state.board:
                 self._log("目标房间不存在。")
                 return False
@@ -868,8 +873,9 @@ class GameEngine:
         cost = 1 + hostile_count
         # 剧本可加倍移动费用（剧本 14 p96：背着尸体入房按 2 格计）。
         cost *= max(1, int(self._mode_handler().movement_cost_multiplier(self, player, from_key)))
-        # 剧本可抬高移动费用下限（剧本 17 p99：蟑螂在厨房时离开按 3 格计）。
-        floor = int(self._mode_handler().movement_cost_floor(self, player, from_key))
+        # 剧本可抬高移动费用下限（剧本 17 p99：蟑螂守厨房离开按 3 格；
+        # 剧本 33 p44：湖面砖按游泳检定结果计 2/3 格）。
+        floor = int(self._mode_handler().movement_cost_floor(self, player, from_key, to_key=room.key))
         if floor > cost:
             cost = floor
         return cost
@@ -1846,6 +1852,8 @@ class GameEngine:
             return False
         self._discard_card_from_player(player, card_id, return_to_room=True)
         self._log(f"{player.name} 丢弃了 {card.name}。")
+        # 剧本可对丢弃做后处理（剧本 33 p44：湖面上丢弃的物品直接沉没）。
+        self._mode_handler().on_item_dropped(self, player, card_id)
         return True
 
     def pickup_item(self, player: Player, card_id: str) -> bool:

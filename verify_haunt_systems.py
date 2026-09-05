@@ -47,6 +47,7 @@ if __package__ in {None, ""}:
         DraculaRisingMode,
         LivingHouseMode,
         LostDimensionMode,
+        LakeRescueMode,
         BugSprayMode,
         OffspringMode,
         PhantomBombMode,
@@ -150,8 +151,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(DraculaRisingMode) == [30], f"剧本 30 未走定制 handler: {handlers.get(DraculaRisingMode)}"
     assert handlers.get(LivingHouseMode) == [31], f"剧本 31 未走定制 handler: {handlers.get(LivingHouseMode)}"
     assert handlers.get(LostDimensionMode) == [32], f"剧本 32 未走定制 handler: {handlers.get(LostDimensionMode)}"
+    assert handlers.get(LakeRescueMode) == [33], f"剧本 33 未走定制 handler: {handlers.get(LakeRescueMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 37, f"应有 37 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 36, f"应有 36 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -168,7 +170,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension",
+        "living_house", "lost_dimension", "lake_rescue",
     }
 
 
@@ -3895,6 +3897,72 @@ def verify_haunt30_dracula() -> None:
     assert h7.check_victory(engine7) is True and engine7.state.winner is None, "叛徒死亡 ≠ 英雄胜"
 
 
+def verify_haunt33_lake_rescue() -> None:
+    """剧本 33：地下湖强制入场/探索关闭/湖面砖/游泳/搜索表/溺水计时（p44/p115）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=33)
+    handler = engine._mode_handler()
+    assert isinstance(handler, LakeRescueMode)
+    flags = engine._haunt_flags()
+
+    # 地下湖在场；女孩卡 set aside；探索关闭
+    lake = handler._lake_room(engine)
+    assert lake is not None and engine.state.board[lake].template_id == "underground_lake"
+    assert not any("omen_girl" in deck for deck in engine.state.card_decks.values()), "女孩卡应被移出"
+    assert handler.can_discover_rooms(engine, next(p for p in engine.state.players if p.role == "hero")) is False, \
+        "地下室门厅已探明 → 不应允许探索新房间"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # 湖面砖：hero 在地下湖时，extra_move_options 应包含 lake: 前缀选项
+    hero.room_key = lake
+    options = handler.extra_move_options(engine, hero, [])
+    assert any(o.target_key.startswith("lake:") for o in options), "水缘应有湖面选项"
+
+    # 铺设湖面砖并移动（先重置回合状态并给足移动力）
+    engine._reset_player_turn_state(hero)
+    hero.steps_remaining = max(hero.steps_remaining, 3)
+    option = next(o for o in options if o.target_key.startswith("lake:"))
+    assert handler.lake_move(engine, hero, option) is True
+    assert handler._is_lake_tile(engine, hero.room_key), "移动后应在湖面砖上"
+    assert engine.state.board[hero.room_key].name == "湖面", "砖名应为湖面"
+
+    # 游泳检定：4+ → 每砖 2 格
+    with patch.object(engine, "_roll_attack", return_value=5):
+        handler.on_turn_start(engine, hero)
+    assert flags["swim_cost"].get(str(hero.id)) == 2, "游泳 5+ 应给 2 格"
+
+    # 搜索表 19+：直接救出
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 19 if label == "搜寻女孩" else count):
+        handler._search_roll(engine, hero)
+    assert flags.get("girl_rescued") is True, "搜索 19+ 应救出女孩"
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+    # 溺水：叛徒回合开始推进计时，达阈值 → 叛徒胜
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    flags["girl_rescued"] = False
+    threshold = int(flags.get("drown_threshold", 10))
+    engine._set_haunt_track_value("drown_timer", threshold - 1)
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 10 if label == "溺水计时" else count):
+        handler.on_turn_start(engine, traitor)
+    assert flags.get("girl_drowned") is True
+    assert engine.state.winner == "traitor"
+
+    # 湖面丢弃即沉没
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    flags["girl_drowned"] = False
+    hero2 = next((p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead), None)
+    if hero2 is not None:
+        hero2.items.append("item_candle")
+        hero2.room_key = hero.room_key  # 湖面砖上
+        assert engine.drop_item(hero2, "item_candle") is True
+        assert "item_candle" not in engine.room_items(hero2.room_key), "湖面丢弃应沉没"
+        assert "item_candle" not in hero2.items
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -4801,6 +4869,7 @@ def main():
     verify_haunt31_heart_brain_spear()
     verify_haunt31_antibody_wall_move()
     verify_haunt32_lost_dimension()
+    verify_haunt33_lake_rescue()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

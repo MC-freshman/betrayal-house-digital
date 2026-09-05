@@ -988,6 +988,23 @@
       "forced_haunt": 32
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "7bc62d038207cae7ab94028995e0c36c702ebb22c14c39bfea7ef674ee0e1779",
+      "turns": 34,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "湖面恢复了平静——再没有人来打扰湖怪的进食了。",
+      "haunt": 33,
+      "haunt_name": "湖中怪物",
+      "rooms": 26,
+      "monsters": 0,
+      "key": "seed113-3p-haunt33",
+      "forced_haunt": 33
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,
