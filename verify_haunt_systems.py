@@ -49,6 +49,9 @@ if __package__ in {None, ""}:
         LostDimensionMode,
         LakeRescueMode,
         BuriedAliveMode,
+        ShadowExorcismMode,
+        HellGateHeroMode,
+        InvisibleTraitorMode,
         HeirAssassinMode,
         SmallChangeMode,
         SwampEscapeMode,
@@ -159,13 +162,16 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(LostDimensionMode) == [32], f"剧本 32 未走定制 handler: {handlers.get(LostDimensionMode)}"
     assert handlers.get(LakeRescueMode) == [33], f"剧本 33 未走定制 handler: {handlers.get(LakeRescueMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
+    assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
+    assert handlers.get(HellGateHeroMode) == [42], f"剧本  未走定制"
+    assert handlers.get(ShadowExorcismMode) == [43], f"剧本  未走定制"
     assert handlers.get(HeirAssassinMode) == [39], f"剧本 39 未走定制 handler: {handlers.get(HeirAssassinMode)}"
     assert handlers.get(SmallChangeMode) == [35], f"剧本 35 未走定制 handler: {handlers.get(SmallChangeMode)}"
     assert handlers.get(SwampEscapeMode) == [36], f"剧本 36 未走定制 handler: {handlers.get(SwampEscapeMode)}"
     assert handlers.get(DeathCheckmateMode) == [37], f"剧本 37 未走定制 handler: {handlers.get(DeathCheckmateMode)}"
     assert handlers.get(MadWorldMode) == [34], f"剧本 34 未走定制 handler: {handlers.get(MadWorldMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 30, f"应有 30 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 27, f"应有 27 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -182,7 +188,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive",
+        "living_house", "lost_dimension", "lake_rescue", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
     }
 
 
@@ -4268,6 +4274,42 @@ def verify_haunt40_buried_alive() -> None:
     assert not engine.state.winner  # 游戏未结束
 
 
+def verify_haunt41_invisible_traitor() -> None:
+    """剧本 41：隐形叛徒冒烟——分派/侦测行动/胜利条件（p52/p123）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=41)
+    handler = engine._mode_handler()
+    assert isinstance(handler, InvisibleTraitorMode)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    # 侦测行动可用
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "detect_traitor" in ids, "侦测行动应可用"
+
+    # 叛徒死亡 → 英雄胜（引擎兜底）
+    traitor.dead = True
+    engine.check_victory()
+    assert engine.state.winner == "heroes", "叛徒死亡应触发英雄胜利"
+
+
+def verify_haunt42_hell_gate() -> None:
+    """剧本 42：地狱之门冒烟——分派/简化胜利条件（p53/p124）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=42)
+    handler = engine._mode_handler()
+    assert isinstance(handler, HellGateHeroMode)
+    # 无怪物实体——验证分派正确即可
+    assert engine.state.haunt is not None and engine.state.haunt.id == 42
+
+
+def verify_haunt43_shadow_exorcism() -> None:
+    """剧本 43：影子驱魔冒烟——分派/简化胜利条件（p54/p125）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=43)
+    handler = engine._mode_handler()
+    assert isinstance(handler, ShadowExorcismMode)
+    assert engine.state.haunt is not None and engine.state.haunt.id == 43
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -5181,6 +5223,9 @@ def main():
     verify_haunt37_checkmate()
     verify_haunt39_heir()
     verify_haunt40_buried_alive()
+    verify_haunt41_invisible_traitor()
+    verify_haunt42_hell_gate()
+    verify_haunt43_shadow_exorcism()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

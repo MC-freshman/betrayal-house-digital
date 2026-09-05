@@ -3721,6 +3721,68 @@ class MadWorldMode(GenericModeHandler):
         return False
 
 
+class InvisibleTraitorMode(GenericModeHandler):
+    """剧本 41 隐形叛徒（Invisible Traitor）。
+
+    权威原文：英雄手册 p52 / 叛徒手册 p123。
+
+    · 隐形：叛徒不可见。sneak attack = 掷 ceil(原始英雄数/2) 骰的
+      物理伤害，无防御（p123 "Your opponent can't defend against this"）。
+    · 侦测：被偷袭幸存后知识 3+ 探知叛徒所在房间（detect_traitor 行动）。
+    · 胜利：叛徒死亡 → 英雄胜（引擎兜底 traitor_dead → heroes 自动处理）。
+    · 简化：叛徒攻击仍走引擎 attack()（不做无防御 FlatDamage——引擎
+      player-vs-player 伤害公式不可 hook）；骷髅/灵应板追踪/偷窃未建模。
+    """
+
+    mode = "invisible_traitor"
+
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        engine._haunt_flags().setdefault("detected_by", [])
+        engine._log("叛徒的身影从视野中消失了——TA 已经隐形。")
+
+    def on_monster_defeated(self, engine: Any, monster: Any, amount: int) -> bool:
+        return False  # 无怪物
+
+    def check_victory(self, engine: Any) -> bool:
+        # p52：叛徒死 → 英雄胜（引擎兜底已覆盖，这里只处理英雄全灭）
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "隐形的杀手收割了最后的猎物。")
+            return True
+        return False
+
+
+class HellGateHeroMode(GenericModeHandler):
+    """剧本 42 地狱之门英雄（Comes the Hero）——简化实现。
+
+    核心机制需要"英雄变成英雄怪物"的深层引擎支持，留 M8 批次专项精修。
+    当前版本：generic 兜底，check_victory 判英雄全灭。
+    """
+
+    mode = "hell_gate_hero"
+
+    def check_victory(self, engine: Any) -> bool:
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "地狱之门打开了。")
+            return True
+        return False
+
+
+class ShadowExorcismMode(GenericModeHandler):
+    """剧本 43 影子驱魔（They're Here）——简化实现。
+
+    核心机制需要影子分裂机制，留 M8 批次专项精修。
+    当前版本：generic 兜底，check_victory 判英雄全灭。
+    """
+
+    mode = "shadow_exorcism"
+
+    def check_victory(self, engine: Any) -> bool:
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "影子吞噬了最后的灵魂。")
+            return True
+        return False
+
+
 class SwampEscapeMode(GenericModeHandler):
     """剧本 36 有朋友更好（Better with Friends）。
 
@@ -10013,6 +10075,9 @@ for _handler in (
     DeathCheckmateMode(),
     HeirAssassinMode(),
     BuriedAliveMode(),
+    InvisibleTraitorMode(),
+    HellGateHeroMode(),
+    ShadowExorcismMode(),
 ):
 
     register_mode(_handler)

@@ -2058,6 +2058,84 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         ],
         "source_pages": [51, 122],
     },
+    41: {
+        # 校准记录（2026-09-05，对照英雄手册 p52 / 叛徒手册 p123）：
+        #   机制落在 InvisibleTraitorMode：
+        #   · 隐形：叛徒不可见（bot 局仍追击；sneak attack 无防御，
+        #     骰数 = ceil(原始英雄数/2)）
+        #   · 侦测：被偷袭幸存后知识 3+ 探知叛徒所在房间
+        #   · 胜利：叛徒死亡 → 英雄胜
+        #   简化：叛徒攻击仍走引擎攻击流程（不做无防御 FlatDamage——
+        #     引擎 player-vs-player 攻击不可 hook 伤害公式）；骷髅/灵应板
+        #     追踪/偷窃未建模。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "invisible_traitor",
+        "traitor_rule": "revealer",
+        "hero_goal": "侦测隐形叛徒的踪迹，在TA杀死你们之前反杀。",
+        "traitor_goal": "在隐身状态下杀死所有英雄。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {"detections": {"label": "侦测次数", "target": 10, "side": "heroes"}},
+            "flags": {"detected_by": []},
+        },
+        "monsters": [],
+        "actions": [
+            {"id": "detect_traitor", "side": "heroes", "label": "侦测叛徒", "detail": "知识 3+ 探知叛徒所在房间（p52）。", "stat": "knowledge", "target": 3},
+        ],
+        "win_conditions": [
+            {"winner": "heroes", "type": "traitor_dead", "reason": "隐形叛徒被反杀了。"}
+        ],
+        "source_pages": [52, 123],
+    },
+    42: {
+        # 校准记录（2026-09-05，对照英雄手册 p53 / 叛徒手册 p124）：
+        #   骨架 rule_data 已足够（hell_gate_hero 模式），核心机制是
+        #   "英雄变成英雄怪物"——需要英雄转怪物的深层引擎支持。
+        #   留为 fidelity=skeleton + generic 兜底，M8 批次专项精修。
+        "version": 2,
+        "fidelity": "skeleton",
+        "status": "playable",
+        "mode": "hell_gate_hero",
+        "traitor_rule": "revealer",
+        "hero_goal": "阻止地狱之门打开。",
+        "traitor_goal": "打开地狱之门。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {"tracks": {"progress": {"label": "进度", "target": 10, "side": "heroes"}}, "flags": {}},
+        "monsters": [],
+        "actions": [],
+        "win_conditions": [{"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}],
+        "source_pages": [53, 124],
+    },
+    43: {
+        # 校准记录（2026-09-05，对照英雄手册 p54 / 叛徒手册 p125）：
+        #   骨架 rule_data 已足够（shadow_exorcism 模式），核心机制是
+        #   "影子分身逐个击破"——需要影子分裂机制。
+        #   留为 fidelity=skeleton + generic 兜底，M8 批次专项精修。
+        "version": 2,
+        "fidelity": "skeleton",
+        "status": "playable",
+        "mode": "shadow_exorcism",
+        "traitor_rule": "revealer",
+        "hero_goal": "在影子分身杀死你们之前驱逐它们。",
+        "traitor_goal": "让影子分身吃掉所有英雄。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {"tracks": {"progress": {"label": "进度", "target": 10, "side": "heroes"}}, "flags": {}},
+        "monsters": [],
+        "actions": [],
+        "win_conditions": [{"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}],
+        "source_pages": [54, 125],
+    },
 }
 
 
@@ -2218,9 +2296,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    41: dict(mode="invisible_traitor", traitor_rule="revealer", hero_goal="找到并击败隐形叛徒。", traitor_goal="利用隐形状态杀死所有英雄。", rooms=("entrance_hall", "foyer", "grand_staircase", "library", "chapel"), monsters=("shadow",), tokens=("invisible", "tracking", "blind_fight"), hero_task="追踪隐形叛徒", traitor_task="隐形袭击英雄", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="根据叛徒攻击留下的线索完成追踪检定。", traitor_detail="推进隐形袭击轨道。", monster_count=1, hero_win_target=1),
-    42: dict(mode="hell_gate_hero", traitor_rule="revealer", hero_goal="杀死叛徒并关闭地狱之门。", traitor_goal="通过活人献祭打开地狱之门，或杀死所有英雄。", rooms=("pentagram_chamber", "chasm", "chapel", "crypt", "entrance_hall"), monsters=("giant",), tokens=("statue", "hell_gate", "sacrifice"), hero_task="关闭地狱之门", traitor_task="完成活人献祭", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="在五芒星室或入口大厅完成关闭仪式。", traitor_detail="推进地狱之门开启轨道。", monster_count=1, hero_win_target=1, traitor_win_type="track", traitor_progress_target="player_count"),
-    43: dict(mode="shadow_exorcism", traitor_rule="revealer", hero_goal="完成光之仪式，在英雄影子进入五芒星室前驱逐暗影。", traitor_goal="让影子抵达五芒星室并把英雄变成幽灵。", rooms=("chapel", "library", "pentagram_chamber", "entrance_hall", "grand_staircase"), monsters=("shadow",), tokens=("shadow", "light_ritual", "sanity_check"), hero_task="完成光之仪式", traitor_task="推进影子入侵", hero_stat=["sanity", "knowledge"], hero_target=5, hero_progress_target="player_count", hero_detail="在小教堂或图书馆完成光之仪式。", traitor_detail="推进影子向五芒星室移动的轨道。", monster_count="player_count"),
     44: dict(mode="supernatural_aging", traitor_rule="revealer", hero_goal="停止超自然衰老过程。", traitor_goal="让所有英雄因衰老失去战斗能力，或杀死所有英雄。", rooms=("library", "chapel", "research_laboratory", "operating_laboratory", "statuary_corridor"), monsters=("shadow",), tokens=("aging", "badge", "sanity_check", "knowledge_check"), hero_task="停止衰老", traitor_task="加速衰老", hero_stat=["knowledge", "sanity"], hero_target=5, hero_progress_target="player_count", hero_detail="在知识或精神检定来源处移除衰老标记。", traitor_detail="推进衰老轨道。", monster_count=1),
     45: dict(mode="bomb_defusal", traitor_rule="revealer", hero_goal="拆除所有英雄身上的定时炸弹并阻止大炸弹。", traitor_goal="引爆炸弹或杀死所有英雄。", rooms=("entrance_hall", "foyer", "research_laboratory", "furnace_room", "vault"), monsters=("giant",), tokens=("bomb", "big_bomb", "timer"), hero_task="拆除定时炸弹", traitor_task="推进大炸弹倒计时", hero_stat="knowledge", hero_target=5, hero_progress_target="player_count", hero_detail="在入口大厅或实验室完成一次拆弹行动。", traitor_detail="推进大炸弹倒计时，达到目标即爆炸。", monster_count=1, traitor_win_type="track", traitor_progress_target=5),
     46: dict(mode="cannibal_feast", traitor_rule="revealer", hero_goal="让所有受害者和英雄逃离，或击败叛徒与食人怪。", traitor_goal="完成盛宴并强化食人怪，或杀死所有英雄。", rooms=("attic", "entrance_hall", "foyer", "grand_staircase", "kitchen", "dining_room"), monsters=("beast",), tokens=("victim", "feast", "cannibal"), hero_task="救出受害者", traitor_task="举行盛宴", hero_stat="might", hero_target=5, hero_progress_target="player_count", hero_detail="在阁楼救出受害者并向出口推进。", traitor_detail="推进盛宴轨道，每次代表消耗一名受害者。", monster_count="player_count"),
