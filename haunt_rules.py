@@ -1906,6 +1906,48 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [46, 117],
     },
+    36: {
+        # 校准记录（2026-09-05，对照英雄手册 p47 / 叛徒手册 p118）：
+        #   机制落在 SwampEscapeMode：
+        #   · 阁楼强制入场；小艇在阁楼（p118）；背负 ×2 移动、可交易
+        #   · 洪水：叛徒回合结束推进；1-6 回合六个阶段（地下室部分淹
+        #     → 全淹 → 一楼部分淹 → 全淹 → 全屋部分淹 → 全屋全淹）
+        #     部分淹 -2 移动 / 全淹 -4 移动 + 2 骰物理（不可防）；叛徒免疫
+        #   · 逃跑：全部活英雄在阳台/塔楼+小艇 → 逃离（至少半数出逃）
+        #   · 勋章：部分/全淹房间丢弃勋章暂停洪水一回合（弃卡）
+        #   · 破坏小艇：叛徒力量 3+ 攻击小艇，5 次毁坏 → 叛徒胜
+        #   简化：狗不能背小艇未建模（狗令牌本 haunt 不出现）；洪水
+        #     移动减值用 movement_cost_floor 近似（不叠加怪物费）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "swamp_escape",
+        "traitor_rule": "revealer",
+        "hero_goal": "在房子沉没前把小艇扛到阳台或塔楼，全员乘艇逃离。",
+        "traitor_goal": "毁掉小艇或让超过半数英雄淹死。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": ["attic", "balcony", "tower", "basement_landing"],
+        "tokens": ["rowboat"],
+        "setup": {
+            "tracks": {
+                "flood_timer": {"label": "洪水计时", "target": 6, "side": "traitor"},
+                "boat_damage": {"label": "小艇受损", "target": 5, "side": "traitor"},
+            },
+            "flags": {
+                "boat_destroyed": False, "medallion_pause": False,
+                "boat_carrier": None,
+            },
+        },
+        "monsters": [],
+        "actions": [
+            {"id": "take_rowboat", "side": "heroes", "label": "扛起小艇", "detail": "在阁楼拿起小艇（p47）。", "rooms": ["attic"], "requires_flags": {"boat_destroyed": False}},
+            {"id": "drop_medallion", "side": "heroes", "label": "投掷勋章", "detail": "在部分/全淹的房间丢弃勋章暂停洪水一回合（p47）。", "requires": ["omen_medallion"]},
+            {"id": "escape_boat", "side": "heroes", "label": "乘艇逃离", "detail": "全部活英雄在小艇所在的外缘房间时逃离（p47）。", "requires_flags": {"boat_destroyed": False}},
+        ],
+        "win_conditions": [],
+        "source_pages": [47, 118],
+    },
 }
 
 
@@ -2066,7 +2108,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    36: dict(mode="swamp_escape", traitor_rule="revealer", hero_goal="至少一半原英雄活着逃离房屋，并不能留下其他活着的英雄。", traitor_goal="让房屋沉入沼泽，或杀死所有英雄。", rooms=("attic", "entrance_hall", "foyer", "grand_staircase", "garden", "patio"), monsters=("shadow",), tokens=("rowboat", "swamp", "escape"), hero_task="组织逃离房屋", traitor_task="加速沼泽下沉", hero_stat="might", hero_target=5, hero_progress_target="half_players_ceil", hero_detail="在入口大厅准备船并完成一次逃离。", traitor_detail="推进沼泽下沉轨道。", monster_count=1, hero_win_target="half_players_ceil"),
     37: dict(mode="death_checkmate", traitor_rule="revealer", hero_goal="在死亡的棋局中完成一次胜利检定。", traitor_goal="让死亡在无对手时赢下棋局，或杀死所有英雄。", rooms=("vault", "crypt", "research_laboratory", "operating_laboratory", "game_room"), monsters=("shadow",), tokens=("death", "seal", "chess"), hero_task="在棋局中战胜死亡", traitor_task="逼迫死亡弃局", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="与死亡同房间时完成知识检定；圣印可提供帮助。", traitor_detail="推进死亡的棋局压力。", monster_count=1, hero_win_target=1),
     39: dict(mode="secret_heir", traitor_rule="revealer", hero_goal="让真正继承人坐上雕像走廊的王座，并持有长矛和戒指。", traitor_goal="杀死秘密继承人，或杀死所有英雄。", rooms=("statuary_corridor", "gallery", "entrance_hall", "foyer"), monsters=("cultist",), tokens=("heir", "assassin", "throne"), hero_task="确认继承人并登上王座", traitor_task="寻找并刺杀继承人", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="在雕像走廊完成继承仪式。", traitor_detail="推进刺客锁定轨道。", monster_count="player_count", hero_win_target=1, required_cards=("omen_spear", "omen_ring"), hero_requires=("omen_spear", "omen_ring")),
     40: dict(mode="buried_alive", traitor_rule="revealer", hero_goal="在被埋的朋友死亡前挖出他。", traitor_goal="让被埋者窒息，或杀死所有英雄。", rooms=("catacombs", "crypt", "furnace_room", "basement_landing", "junk_room"), monsters=("zombie",), tokens=("buried_friend", "might_check", "time"), hero_task="挖出被埋者", traitor_task="加速窒息倒计时", hero_stat="might", hero_target=5, hero_progress_target=1, hero_detail="在秘密埋葬房间完成力量检定；通灵板可协助定位。", traitor_detail="推进窒息倒计时。", monster_count=1, hero_win_target=1),

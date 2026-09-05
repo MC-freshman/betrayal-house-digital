@@ -1039,6 +1039,23 @@
       "forced_haunt": 35
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "99296e638f5fdb12d163ca8d99e8fc25657fc7e844a1b03bc7b2f17f3510b826",
+      "turns": 32,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "朋友们终于都来了——永远地留在了水下。",
+      "haunt": 36,
+      "haunt_name": "朋友越多越好",
+      "rooms": 26,
+      "monsters": 0,
+      "key": "seed113-3p-haunt36",
+      "forced_haunt": 36
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,

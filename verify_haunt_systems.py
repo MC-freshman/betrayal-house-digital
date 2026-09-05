@@ -49,6 +49,7 @@ if __package__ in {None, ""}:
         LostDimensionMode,
         LakeRescueMode,
         SmallChangeMode,
+        SwampEscapeMode,
         MadWorldMode,
         BugSprayMode,
         OffspringMode,
@@ -155,9 +156,10 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(LostDimensionMode) == [32], f"剧本 32 未走定制 handler: {handlers.get(LostDimensionMode)}"
     assert handlers.get(LakeRescueMode) == [33], f"剧本 33 未走定制 handler: {handlers.get(LakeRescueMode)}"
     assert handlers.get(SmallChangeMode) == [35], f"剧本 35 未走定制 handler: {handlers.get(SmallChangeMode)}"
+    assert handlers.get(SwampEscapeMode) == [36], f"剧本 36 未走定制 handler: {handlers.get(SwampEscapeMode)}"
     assert handlers.get(MadWorldMode) == [34], f"剧本 34 未走定制 handler: {handlers.get(MadWorldMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 34, f"应有 34 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 33, f"应有 33 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -174,7 +176,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "mad_world", "small_change_escape",
+        "living_house", "lost_dimension", "lake_rescue", "mad_world", "small_change_escape", "swamp_escape",
     }
 
 
@@ -4089,6 +4091,75 @@ def verify_haunt35_small_change() -> None:
             engine.state.winner = None  # 重置以便后续测试
 
 
+def verify_haunt36_swamp_escape() -> None:
+    """剧本 36：洪水阶段/小艇/逃离/勋章暂停/小艇破坏/胜利条件（p47/p118）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=36)
+    handler = engine._mode_handler()
+    assert isinstance(handler, SwampEscapeMode)
+    flags = engine._haunt_flags()
+
+    # 阁楼在场；小艇在阁楼
+    attic = next((k for k, r in engine.state.board.items() if r.template_id == "attic"), None)
+    assert attic is not None, "阁楼应被强制入场"
+    boat = engine.tokens_of_kind("rowboat")
+    assert boat and boat[0].room_key == attic, "小艇应在阁楼"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # 洪水推进：叛徒回合开始 → 计时器 1
+    handler.on_turn_start(engine, traitor)
+    assert engine._haunt_track_value("flood_timer") == 1, "叛徒回合应推进洪水"
+    # 地下室部分淹：把英雄放到地下室再检查惩罚
+    basement = next((k for k, r in engine.state.board.items() if r.floor == -1), None)
+    if basement:
+        hero.room_key = basement
+        assert handler.movement_cost_floor(engine, hero) >= 3, "部分淹应有移动惩罚"
+        assert handler._flood_desc(engine, handler._floor_for_room(engine, basement)) == "partial"
+
+    # 扛小艇：×2 移动
+    hero.room_key = attic
+    _set_current(engine, hero)
+    assert handler.perform_action(engine, hero, "take_rowboat", {}) is True
+    assert flags.get("boat_carrier") == hero.id
+    assert handler.movement_cost_multiplier(engine, hero) == 2, "背小艇应 ×2"
+
+    # 勋章暂停（需在淹水房间——把英雄暂时放到地下室）
+    hero.items.append("omen_medallion")
+    basement_key = next(k for k, r in engine.state.board.items() if r.floor == -1)
+    hero.room_key = basement_key
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "drop_medallion" in ids, "持勋章在淹水房间应能投掷"
+    assert handler.perform_action(engine, hero, "drop_medallion", {}) is True
+    assert flags.get("medallion_pause") is True
+    handler.on_turn_start(engine, traitor)  # 应暂停不推进
+    assert engine._haunt_track_value("flood_timer") == 1, "勋章应暂停洪水推进"
+
+    # 逃跑：阳台 + 小艇
+    balcony = next((k for k, r in engine.state.board.items() if r.template_id == "balcony"), None)
+    if balcony is None:
+        balcony = next((k for k, r in engine.state.board.items() if r.template_id == "tower"), attic)
+    # 把小艇放在阳台
+    for t in engine.tokens_of_kind("rowboat"):
+        engine.place_token(t.uid, balcony)
+    hero.room_key = balcony
+    hero.movement_stopped = False
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "escape_boat" in ids, "阳台+小艇应能逃离"
+    assert handler.perform_action(engine, hero, "escape_boat", {}) is True
+    assert hero.id in flags.get("escaped", [])
+    # 3 人局 need_ceil = 2，1 人不够——补一个
+    hero2 = next((p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead), None)
+    if hero2 is not None:
+        hero2.room_key = balcony
+        _set_current(engine, hero2)
+        assert handler.perform_action(engine, hero2, "escape_boat", {}) is True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -4998,6 +5069,7 @@ def main():
     verify_haunt33_lake_rescue()
     verify_haunt34_mad_world()
     verify_haunt35_small_change()
+    verify_haunt36_swamp_escape()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()
