@@ -3879,19 +3879,117 @@ class HellGateHeroMode(GenericModeHandler):
 
 
 class ShadowExorcismMode(GenericModeHandler):
-    """剧本 43 影子驱魔（They're Here）——简化实现。
+    """剧本 43 影子集会（A Gathering of Shadows）。
 
-    核心机制需要影子分裂机制，留 M8 批次专项精修。
-    当前版本：generic 兜底，check_victory 判英雄全灭。
+    权威原文：英雄手册 p54 / 叛徒手册 p125。
+
+    · 影子（ghost 模板承载，Speed 3）：每个英雄一只，"绑定"关系存
+      flags["shadow_bound"]（{monster_id: hero_id}）。影子自动向五芒星
+      室移动（p125 traitor moves Shadows toward Pentagram Chamber）。
+    · 五芒星室强制入场（_ensure_room_in_play）。
+    · 影子进入五芒星室 → 对应英雄变成 Specter（死亡，p54）。
+    · 攻击影子：Speed/Sanity 攻击，击败 → 击晕 + 绑定英雄 -1 Speed
+      （p54 "the hero bound to that Shadow takes 1 point of Speed damage"）。
+    · 光明仪式：①知识 4+ 在地窖/教堂/图书馆/实验室找仪式 →
+      ②知识/理智 5+ 在阳台/花园/墓地/阳台/塔楼放仪式令牌；
+      每房一次；玩家数枚 → 英雄胜。
+    · 简化：蜡烛移动影子 2 格未建模；影子穿墙移动未建模（正常寻路）。
     """
 
     mode = "shadow_exorcism"
 
-    def check_victory(self, engine: Any) -> bool:
-        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
-            engine._set_winner("traitor", "影子吞噬了最后的灵魂。")
+    SHADOW = "ghost"
+
+    # ------------------------------------------------------------- setup
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        flags = engine._haunt_flags()
+        flags["shadow_bound"] = {}
+        flags.setdefault("pentagram_reached", [])
+        # p54：五芒星室强制入场
+        engine._ensure_room_in_play("pentagram_chamber", room_key)
+        pentagram = next(
+            (k for k, r in engine.state.board.items() if r.template_id == "pentagram_chamber"),
+            room_key,
+        )
+        flags["pentagram_room"] = pentagram
+        # 每个英雄一只影子
+        spec = next(
+            (s for s in haunt.rule_data.get("monsters", []) if s.get("template_id") == self.SHADOW),
+            {},
+        )
+        spec = dict(spec)
+        spec["name"] = "影子"
+        spec["speed"] = 3
+        bound = flags.setdefault("shadow_bound", {})
+        for hero in engine.state.players:
+            if hero.role != "hero" or hero.dead:
+                continue
+            monster = engine._spawn_single_haunt_monster(spec, hero.room_key)
+            if monster is not None:
+                bound[str(monster.id)] = hero.id
+        engine._log(f"{len(bound)} 道影子从探险者身上剥离——它们在向五芒星室飘去！")
+
+    # ------------------------------------------------------------- 内部
+    def _pentagram(self, engine: Any) -> str | None:
+        return engine._haunt_flags().get("pentagram_room")
+
+    def _bound_hero(self, engine: Any, monster: Any) -> Any | None:
+        hid = engine._haunt_flags().get("shadow_bound", {}).get(str(getattr(monster, "id", "")))
+        return next((p for p in engine.state.players if p.id == hid), None)
+
+    # ------------------------------------------------------------- 影子移动
+    def on_monster_move(self, engine: Any, monster: Any, rolled: int) -> bool:
+        if _monster_id(monster) != self.SHADOW:
+            return False
+        pentagram = self._pentagram(engine)
+        if not pentagram:
+            return False
+        if monster.room_key == pentagram:
+            # 已到达：检查 Specter 转换
+            hero = self._bound_hero(engine, monster)
+            if hero is not None and not hero.dead:
+                hero.dead = True
+                engine._log(f"{hero.name} 的影子在五芒星室——{hero.name} 变成了 Specter！")
+                engine.check_victory()
             return True
-        return super().check_victory(engine)
+        path = engine._shortest_path(monster.room_key, pentagram)
+        if len(path) > 1:
+            steps = engine.roll_dice(getattr(monster, "speed", 3), "影子移动")
+            monster.room_key = path[min(len(path) - 1, steps)]
+            engine._log(f"影子飘到了{engine.state.board[monster.room_key].name}。")
+        if monster.room_key == pentagram:
+            hero = self._bound_hero(engine, monster)
+            if hero is not None and not hero.dead:
+                hero.dead = True
+                engine._log(f"{hero.name} 的影子到达了五芒星室——{hero.name} 变成了没有灵魂的 Specter！")
+                engine.check_victory()
+        return True
+
+    # ------------------------------------------------------------- 攻击
+    def on_monster_defeated(self, engine: Any, monster: Any, amount: int) -> bool:
+        """p54：击败影子 → 击晕 + 绑定英雄 -1 Speed。"""
+        if _monster_id(monster) != self.SHADOW:
+            return False
+        hero = self._bound_hero(engine, monster)
+        if hero is not None and not hero.dead:
+            engine._apply_stat_loss(hero, "speed", 1)
+            engine._log(f"{hero.name} 的影子被驱散，但TA失去了 1 点 Speed。")
+        return False  # 默认击晕
+
+    # ------------------------------------------------------------- 胜负
+    def check_victory(self, engine: Any) -> bool:
+        flags = engine._haunt_flags()
+        # p54：仪式令牌数 = 玩家数 → 英雄胜
+        tokens = engine.tokens_of_kind("sanity_check") + engine.tokens_of_kind("knowledge_check")
+        if len(tokens) >= len(engine.state.players):
+            engine._set_winner("heroes", "光明仪式完成——所有影子在圣光中消散了！")
+            return True
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "所有的影子都找到了它们的主人——在五芒星室里。")
+            return True
+        return False
+
+
 
 
 class SwampEscapeMode(GenericModeHandler):

@@ -2122,8 +2122,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         #   骨架 rule_data 已足够（shadow_exorcism 模式），核心机制是
         #   "影子分身逐个击破"——需要影子分裂机制。
         #   留为 fidelity=skeleton + generic 兜底，M8 批次专项精修。
-        "version": 2,
-        "fidelity": "skeleton",
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "shadow_exorcism",
         "traitor_rule": "revealer",
@@ -2131,12 +2131,15 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "traitor_goal": "让影子分身吃掉所有英雄。",
         "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": [],
+        "key_rooms": ["pentagram_chamber", "catacombs", "chapel", "library", "research_laboratory", "balcony", "garden", "graveyard", "patio", "tower"],
         "tokens": [],
-        "setup": {"tracks": {"progress": {"label": "进度", "target": 10, "side": "heroes"}}, "flags": {}},
-        "monsters": [],
-        "actions": [],
-        "win_conditions": [{"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}],
+        "setup": {"tracks": {"progress": {"label": "进度", "target": 10, "side": "heroes"}}, "flags": {"ritual_found": False, "shadow_bound": {}, "pentagram_reached": []}},
+        "monsters": [{"template_id": "ghost", "name": "影子", "spawn": "deferred", "count": "player_count", "speed": 3, "might": 0, "sanity": 0, "invulnerable": False}],
+        "actions": [
+            {"id": "find_ritual", "side": "heroes", "label": "寻找仪式", "detail": "在地窖/教堂/图书馆/实验室做知识 4+（p54）。", "stat": "knowledge", "target": 4, "rooms": ["catacombs", "chapel", "library", "research_laboratory"], "requires_flags": {"ritual_found": False}, "set_flags": {"ritual_found": True}},
+            {"id": "ritual_roll", "side": "heroes", "label": "仪式检定", "detail": "在外缘房间做知识/理智 5+，放一枚仪式令牌（p54）。", "stat": ["knowledge", "sanity"], "target": 5, "rooms": ["balcony", "garden", "graveyard", "patio", "tower"], "requires_flags": {"ritual_found": True}, "progress": "ritual_progress"},
+        ],
+        "win_conditions": [],
         "source_pages": [54, 125],
     },    44: {
         # 校准记录（2026-09-05）：简化实现

@@ -4340,11 +4340,71 @@ def verify_haunt42_hell_gate() -> None:
 
 
 def verify_haunt43_shadow_exorcism() -> None:
-    """剧本 43：影子驱魔冒烟——分派/简化胜利条件（p54/p125）。"""
+    """剧本 43：影子绑定/向五芒星移动/攻击影子/仪式胜利（p54/p125）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=43)
     handler = engine._mode_handler()
     assert isinstance(handler, ShadowExorcismMode)
-    assert engine.state.haunt is not None and engine.state.haunt.id == 43
+    flags = engine._haunt_flags()
+
+    # 影子数量 = 英雄数；五芒星室在场
+    shadows = [m for m in engine.state.monsters if m.template_id == "ghost"]
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    assert len(shadows) >= 1, "至少应有一只影子"
+    pentagram = flags.get("pentagram_room")
+    assert pentagram is not None and engine.state.board[pentagram].template_id == "pentagram_chamber"
+
+    # 影子向五芒星移动
+    shadow = shadows[0]
+    dist_before = engine._path_length(shadow.room_key, pentagram)
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 3 if label == "影子移动" else count):
+        assert handler.on_monster_move(engine, shadow, 3) is True
+    dist_after = engine._path_length(shadow.room_key, pentagram)
+    assert dist_after <= dist_before, "影子应向五芒星移动"
+
+    # 影子到达五芒星 → 绑定英雄死亡
+    shadow.room_key = pentagram
+    bound_hero = handler._bound_hero(engine, shadow)
+    assert bound_hero is not None
+    handler.on_monster_move(engine, shadow, 3)
+    assert bound_hero.dead, "影子到达五芒星后绑定英雄应变成 Specter"
+
+    # 攻击影子 → 击晕 + 绑定英雄 -1 Speed（用第二只影子测试）
+    hero2 = next((p for p in engine.state.players if p.role == "hero" and not p.dead), None)
+    if hero2 is not None:
+        shadow2 = next((m for m in engine.state.monsters if m.template_id == "ghost" and m.room_key != pentagram), None)
+        if shadow2 is not None:
+            hero2.room_key = shadow2.room_key
+            engine._active_player_id = hero2.id
+            speed_before = hero2.stat_positions.get("speed")
+            with patch.object(engine, "_roll_attack", return_value=9), patch.object(
+                engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 1
+            ):
+                assert engine.attack(hero2, shadow2) is True
+            assert shadow2.stunned_turns > 0, "影子被击败应击晕"
+            assert hero2.stat_positions.get("speed") is not None and hero2.stat_positions["speed"] < speed_before, "绑定英雄应 -1 Speed"
+
+    # 仪式：找仪式 + 放令牌 → 英雄胜
+    hero3 = next((p for p in engine.state.players if p.role == "hero" and not p.dead), None)
+    if hero3 is not None:
+        ritual_room = next((r for r in engine.state.board.values() if r.template_id in ("catacombs", "chapel", "library", "research_laboratory")), None)
+        if ritual_room is not None:
+            hero3.room_key = ritual_room.key
+            _set_current(engine, hero3)
+            with patch.object(engine, "_resolve_check", return_value=True):
+                assert handler.perform_action(engine, hero3, "find_ritual", {}) is True
+            assert flags.get("ritual_found") is True
+            # 仪式检定（放令牌）
+            outer = next((r for r in engine.state.board.values() if r.template_id in ("balcony", "garden", "graveyard", "patio", "tower")), None)
+            if outer is not None:
+                hero3.room_key = outer.key
+                _set_current(engine, hero3)
+                with patch.object(engine, "_resolve_check", return_value=True):
+                    assert handler.perform_action(engine, hero3, "ritual_roll", {}) is True
+            # 模拟放满玩家数枚令牌 → 英雄胜
+            for i in range(len(engine.state.players)):
+                engine.spawn_token("sanity_check", label="仪式", role="check", room_key=hero3.room_key)
+            assert handler.check_victory(engine) is True
+            assert engine.state.winner == "heroes"
 
 
 def verify_haunt4_setup_and_trapped() -> None:
