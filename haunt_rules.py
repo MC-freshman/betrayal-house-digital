@@ -1948,6 +1948,49 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "win_conditions": [],
         "source_pages": [47, 118],
     },
+    37: {
+        # 校准记录（2026-09-05，对照英雄手册 p48 / 叛徒手册 p119）：
+        #   机制落在 DeathCheckmateMode：
+        #   · 死神（shadow 模板承载）不可被攻击/影响（invulnerable）；
+        #     放在有英雄的房间
+        #   · 国际象棋：死神回合开始，同房知识最高英雄 vs 死神（知识 8、
+        #     空白骰重掷一次）；英雄知识 > 死神 → 将军（英雄胜）
+        #   · 圣印：5 枚（保险库/地窖/实验室/手术室/游戏室），理智 4+
+        #     破解 → 死神掷骰 -1（3-4 人局 -2）
+        #   · 古书：持有者知识检定 +1 骰（上限 8）
+        #   · 死神赢 1-2 → 全英雄 -1 理智；3-4 → -1 力量；5+ → -1 理智-1 力量
+        #   · 弃赛：死神房间无英雄 → 叛徒胜
+        #   简化：叛徒不可进死神房间/不可用铃/枪/炸药未在引擎层拦截
+        #     （bot 自然不会）；死神空白骰重掷用 monster_rerolls_blanks。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "death_checkmate",
+        "traitor_rule": "revealer",
+        "hero_goal": "破解圣印削弱死神，在知识对弈中将军死神。",
+        "traitor_goal": "让死神耗死所有英雄，或让他们弃赛。",
+        "suggested_monsters": ["shadow"],
+        "required_cards": [],
+        "key_rooms": ["vault", "crypt", "research_laboratory", "operating_laboratory", "game_room"],
+        "tokens": ["death_token", "holy_seal"],
+        "setup": {
+            "tracks": {
+                "seals_broken": {"label": "已破解圣印", "target": 5, "side": "heroes"},
+            },
+            "flags": {
+                "seals_broken": 0, "death_dice_reduction": 0,
+                "groom_name_known": False,
+            },
+        },
+        "monsters": [
+            {"template_id": "shadow", "name": "死神", "spawn": "haunt_room", "count": 1, "speed": 0, "might": 0, "sanity": 0, "invulnerable": True},
+        ],
+        "actions": [
+            {"id": "break_seal", "side": "heroes", "label": "破解圣印", "detail": "理智 4+ 破解一枚圣印，死神掷骰减少（p48）。", "stat": "sanity", "target": 4},
+        ],
+        "win_conditions": [],
+        "source_pages": [48, 119],
+    },
 }
 
 
@@ -2108,7 +2151,6 @@ def _make_scenario_rule(
 
 
 _SUPPLEMENTAL_SCENARIOS: dict[int, dict[str, Any]] = {
-    37: dict(mode="death_checkmate", traitor_rule="revealer", hero_goal="在死亡的棋局中完成一次胜利检定。", traitor_goal="让死亡在无对手时赢下棋局，或杀死所有英雄。", rooms=("vault", "crypt", "research_laboratory", "operating_laboratory", "game_room"), monsters=("shadow",), tokens=("death", "seal", "chess"), hero_task="在棋局中战胜死亡", traitor_task="逼迫死亡弃局", hero_stat="knowledge", hero_target=6, hero_progress_target=1, hero_detail="与死亡同房间时完成知识检定；圣印可提供帮助。", traitor_detail="推进死亡的棋局压力。", monster_count=1, hero_win_target=1),
     39: dict(mode="secret_heir", traitor_rule="revealer", hero_goal="让真正继承人坐上雕像走廊的王座，并持有长矛和戒指。", traitor_goal="杀死秘密继承人，或杀死所有英雄。", rooms=("statuary_corridor", "gallery", "entrance_hall", "foyer"), monsters=("cultist",), tokens=("heir", "assassin", "throne"), hero_task="确认继承人并登上王座", traitor_task="寻找并刺杀继承人", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="在雕像走廊完成继承仪式。", traitor_detail="推进刺客锁定轨道。", monster_count="player_count", hero_win_target=1, required_cards=("omen_spear", "omen_ring"), hero_requires=("omen_spear", "omen_ring")),
     40: dict(mode="buried_alive", traitor_rule="revealer", hero_goal="在被埋的朋友死亡前挖出他。", traitor_goal="让被埋者窒息，或杀死所有英雄。", rooms=("catacombs", "crypt", "furnace_room", "basement_landing", "junk_room"), monsters=("zombie",), tokens=("buried_friend", "might_check", "time"), hero_task="挖出被埋者", traitor_task="加速窒息倒计时", hero_stat="might", hero_target=5, hero_progress_target=1, hero_detail="在秘密埋葬房间完成力量检定；通灵板可协助定位。", traitor_detail="推进窒息倒计时。", monster_count=1, hero_win_target=1),
     41: dict(mode="invisible_traitor", traitor_rule="revealer", hero_goal="找到并击败隐形叛徒。", traitor_goal="利用隐形状态杀死所有英雄。", rooms=("entrance_hall", "foyer", "grand_staircase", "library", "chapel"), monsters=("shadow",), tokens=("invisible", "tracking", "blind_fight"), hero_task="追踪隐形叛徒", traitor_task="隐形袭击英雄", hero_stat="knowledge", hero_target=5, hero_progress_target=1, hero_detail="根据叛徒攻击留下的线索完成追踪检定。", traitor_detail="推进隐形袭击轨道。", monster_count=1, hero_win_target=1),

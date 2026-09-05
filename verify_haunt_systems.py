@@ -50,6 +50,7 @@ if __package__ in {None, ""}:
         LakeRescueMode,
         SmallChangeMode,
         SwampEscapeMode,
+        DeathCheckmateMode,
         MadWorldMode,
         BugSprayMode,
         OffspringMode,
@@ -157,9 +158,10 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(LakeRescueMode) == [33], f"剧本 33 未走定制 handler: {handlers.get(LakeRescueMode)}"
     assert handlers.get(SmallChangeMode) == [35], f"剧本 35 未走定制 handler: {handlers.get(SmallChangeMode)}"
     assert handlers.get(SwampEscapeMode) == [36], f"剧本 36 未走定制 handler: {handlers.get(SwampEscapeMode)}"
+    assert handlers.get(DeathCheckmateMode) == [37], f"剧本 37 未走定制 handler: {handlers.get(DeathCheckmateMode)}"
     assert handlers.get(MadWorldMode) == [34], f"剧本 34 未走定制 handler: {handlers.get(MadWorldMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 33, f"应有 33 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 32, f"应有 32 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -176,7 +178,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "mad_world", "small_change_escape", "swamp_escape",
+        "living_house", "lost_dimension", "lake_rescue", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate",
     }
 
 
@@ -4160,6 +4162,51 @@ def verify_haunt36_swamp_escape() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt37_checkmate() -> None:
+    """剧本 37：死神不可攻击/圣印破解/国际象棋将军/弃赛判负（p48/p119）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=37)
+    handler = engine._mode_handler()
+    assert isinstance(handler, DeathCheckmateMode)
+    flags = engine._haunt_flags()
+
+    # 死神不可被攻击
+    death = handler._death(engine)
+    assert death is not None and engine._monster_invulnerable(death)
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    assert handler.attack_allowed(engine, hero, death) is False, "死神不可被攻击"
+
+    # 圣印在场（至少一枚在已探明房间）
+    seals = engine.tokens_of_kind("holy_seal")
+    assert len(seals) >= 1, "至少应有一枚圣印已放置"
+
+    # 破解圣印 → 死神骰减少
+    seal_room = seals[0].room_key
+    hero.room_key = seal_room
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "break_seal" in ids, "在圣印房间应能破解"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "break_seal", {}) is True
+    assert int(flags["seals_broken"]) == 1
+    assert handler._hero_dice_penalty(engine) == 2, "3 人局每枚圣印 -2 骰"
+    assert not engine.tokens_in_room(seal_room, "holy_seal"), "圣印应被移除"
+
+    # 国际象棋：英雄知识 > 死神 → 英雄胜
+    hero.room_key = death.room_key
+    with patch.object(engine, "_roll_attack", return_value=8), patch.object(
+        engine, "roll_dice", side_effect=lambda count, label="": 20 if label == "国际象棋" else count
+    ):
+        assert handler.on_monster_turn_start(engine, death) is True
+    assert engine.state.winner == "heroes", "知识超过死神应将军"
+
+    # 弃赛：死神房间无英雄 → 叛徒胜
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    hero.room_key = next(k for k in engine.state.board if k != death.room_key)
+    assert handler.on_monster_turn_start(engine, death) is True
+    assert engine.state.winner == "traitor", "死神房间无英雄应弃赛判负"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -5070,6 +5117,7 @@ def main():
     verify_haunt34_mad_world()
     verify_haunt35_small_change()
     verify_haunt36_swamp_escape()
+    verify_haunt37_checkmate()
     verify_dead_player_turn_skipped()
     verify_monster_defeated_hook_defaults()
     verify_ensure_room_in_play()

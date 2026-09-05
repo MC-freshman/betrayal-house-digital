@@ -3950,6 +3950,164 @@ class SwampEscapeMode(GenericModeHandler):
         return False
 
 
+class DeathCheckmateMode(GenericModeHandler):
+    """剧本 37 将军（Checkmate）。
+
+    权威原文：英雄手册 p48 / 叛徒手册 p119。
+
+    · 死神（shadow 模板承载）：不可被攻击/影响（invulnerable）；
+      放在有英雄的房间；Speed 0 不移动。
+    · 国际象棋（p48/p119）：死神回合开始，同房知识最高英雄 vs 死神
+      （知识 8、空白骰重掷一次——monster_rerolls_blanks）。
+      英雄知识 > 死神知识 → 将军（英雄胜）。
+    · 圣印（p48）：5 枚放保险库/地窖/实验室/手术室/游戏室（未发现的
+      房间等发现时补放）；理智 4+ 破解（break_seal 行动）；
+      每破一枚死神掷骰 -1（3-4 人局 -2）。
+    · 古书：持有者知识检定 +1 骰（上限 8）。
+    · 死神赢 1-2 → 全英雄 -1 理智；3-4 → -1 力量；5+ → -1 理智 -1 力量。
+    · 弃赛（p119）：死神房间无英雄 → 叛徒胜。
+    · 简化：叛徒不可进死神房间/不可用铃/枪/炸药未在引擎层拦截
+      （bot 自然不会进）；圣印可被叛徒偷取未建模。
+    """
+
+    mode = "death_checkmate"
+
+    DEATH = "shadow"
+
+    # ------------------------------------------------------------- setup
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        flags = engine._haunt_flags()
+        flags["seals_broken"] = 0
+        flags["death_dice_reduction"] = 0
+        # p119：圣印放五个房间（在场即放，否则等发现时补放）
+        seal_rooms = ["vault", "crypt", "research_laboratory", "operating_laboratory", "game_room"]
+        for template_id in seal_rooms:
+            key = next(
+                (k for k, r in engine.state.board.items() if r.template_id == template_id),
+                None,
+            )
+            if key:
+                engine.spawn_token("holy_seal", label="圣印", role="marker", room_key=key)
+        engine._log("一个暗影从棋盘对面缓缓浮现——死神在等你落子。")
+
+    def on_room_discovered(self, engine: Any, player: Any, room: Any) -> None:
+        seal_rooms = ["vault", "crypt", "research_laboratory", "operating_laboratory", "game_room"]
+        if room.template_id in seal_rooms and not engine.tokens_in_room(room.key, "holy_seal"):
+            engine.spawn_token("holy_seal", label="圣印", role="marker", room_key=room.key)
+
+    # ------------------------------------------------------------- 内部
+    def _death(self, engine: Any) -> Any | None:
+        return engine._monster_by_template(self.DEATH)
+
+    def _hero_dice_penalty(self, engine: Any) -> int:
+        """p48：每破一枚圣印死神 -1 骰（3-4 人局 -2）。"""
+        seals = int(engine._haunt_flags().get("seals_broken", 0))
+        return seals * (2 if len(engine.state.players) <= 4 else 1)
+
+    # ------------------------------------------------------------- 攻击
+    def monster_rerolls_blanks(self, engine: Any, monster: Any) -> bool:
+        """p119：死神掷骰后重掷空白骰。"""
+        return _monster_id(monster) == self.DEATH
+
+    def attack_allowed(self, engine: Any, attacker: Any, target: Any) -> bool:
+        """p48：死神不可被攻击。"""
+        if _monster_id(target) == self.DEATH:
+            return False
+        return True
+
+    # ------------------------------------------------------------- 行动
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        actions = super().available_actions(engine, player)
+        result = []
+        for action in actions:
+            if action.id == "break_seal":
+                if not engine.tokens_in_room(player.room_key, "holy_seal"):
+                    continue
+            result.append(action)
+        return result
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        if action_id == "break_seal":
+            token = next(iter(engine.tokens_in_room(player.room_key, "holy_seal")), None)
+            if token is None:
+                engine._log("这个房间里没有圣印。")
+                return False
+            ok = super().perform_action(engine, player, action_id, data)
+            if ok:
+                engine.remove_token(token.uid)
+                flags = engine._haunt_flags()
+                flags["seals_broken"] = int(flags.get("seals_broken", 0)) + 1
+                engine._log(f"圣印碎裂了！死神的力量被削弱（已破 {flags['seals_broken']} 枚）。")
+            return ok
+        return super().perform_action(engine, player, action_id, data)
+
+    # ------------------------------------------------------------- 死神回合
+    def on_monster_turn_start(self, engine: Any, monster: Any) -> bool:
+        if _monster_id(monster) != self.DEATH:
+            return False
+        flags = engine._haunt_flags()
+        # p119：死神房间无英雄 → 弃赛
+        heroes_here = [
+            p for p in engine.state.players
+            if p.role == "hero" and not p.dead and p.room_key == monster.room_key
+        ]
+        if not heroes_here:
+            engine._set_winner("traitor", "没有人敢坐在死神对面——棋赛弃权了。")
+            engine.check_victory()
+            return True
+        # p48/p119：国际象棋
+        challenger = max(heroes_here, key=lambda p: engine._effective_stat(p, "knowledge"))
+        # 死神知识 8，空白骰重掷（monster_rerolls_blanks），减去圣印惩罚
+        death_dice = max(1, 8 - self._hero_dice_penalty(engine))
+        death_values = [engine.rng.choice((0, 1, 2)) for _ in range(death_dice)]
+        blanks = [i for i, v in enumerate(death_values) if v == 0]
+        for idx in blanks:
+            death_values[idx] = engine.rng.choice((0, 1, 2))
+        death_roll = sum(death_values)
+        # 英雄掷知识（古书 +1 骰，上限 8）
+        hero_dice = min(8, engine._effective_stat(challenger, "knowledge"))
+        if "omen_book" in challenger.items:
+            hero_dice = min(8, hero_dice + 1)
+        hero_roll = engine.roll_dice(hero_dice, "国际象棋")
+        engine._log(
+            f"国际象棋对弈：{challenger.name}（{hero_roll}，{hero_dice} 骰）"
+            f" vs 死神（{death_roll}，{death_dice} 骰）。"
+        )
+        if hero_roll > death_roll:
+            engine._set_winner("heroes", "Checkmate. 死神微笑着化为尘埃……")
+            engine.check_victory()
+            return True
+        if hero_roll == death_roll:
+            engine._log("和棋——双方都不敢轻举妄动。")
+            return True
+        diff = death_roll - hero_roll
+        if diff <= 2:
+            for p in engine.state.players:
+                if p.role == "hero" and not p.dead:
+                    engine._apply_stat_loss(p, "sanity", 1)
+            engine._log("死神吃了一枚兵——所有英雄理智 -1。")
+        elif diff <= 4:
+            for p in engine.state.players:
+                if p.role == "hero" and not p.dead:
+                    engine._apply_stat_loss(p, "might", 1)
+            engine._log("死神吃了一枚重要棋子——所有英雄力量 -1。")
+        else:
+            for p in engine.state.players:
+                if p.role == "hero" and not p.dead:
+                    engine._apply_stat_loss(p, "sanity", 1)
+                    engine._apply_stat_loss(p, "might", 1)
+            engine._log('死神冷冷地说："Check." ——所有英雄理智 -1、力量 -1。')
+        engine.check_victory()
+        return True
+
+    # ------------------------------------------------------------- 胜负
+    def check_victory(self, engine: Any) -> bool:
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "最后一个棋子也被将死了。")
+            return True
+        return False
+
+
 class SmallChangeMode(GenericModeHandler):
     """剧本 35 小小变化（Small Change）。
 
@@ -9659,6 +9817,7 @@ for _handler in (
     MadWorldMode(),
     SmallChangeMode(),
     SwampEscapeMode(),
+    DeathCheckmateMode(),
 ):
 
     register_mode(_handler)

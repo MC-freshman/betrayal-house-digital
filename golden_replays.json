@@ -1056,6 +1056,23 @@
       "forced_haunt": 36
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "f6bde2a2e2ed2fff6f16b426f6578f439f0f4430185062ff9464affbe1796d13",
+      "turns": 30,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "没有人敢坐在死神对面——棋赛弃权了。",
+      "haunt": 37,
+      "haunt_name": "将军",
+      "rooms": 26,
+      "monsters": 1,
+      "key": "seed113-3p-haunt37",
+      "forced_haunt": 37
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,
