@@ -2262,27 +2262,55 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [57, 128],
     },
     47: {
-        # 校准记录（2026-09-05）：骨架 + generic 兜底（M8/M9 批次专项精修）
-        "version": 2,
-        "fidelity": "skeleton",
+        # 校准记录（2026-09-06，对照英雄手册 p58 / 叛徒手册 p129）：
+        #   骨架原本是"止血"假机制（task 行动 + progress 轨道），与原版无关。
+        #   机制落在 OuroborosMode：
+        #   · 开局（p129）：叛徒移出游戏（物品掉揭示房、Girl/Dog/Madman 被
+        #     吞掉弃置），两个蛇头放揭示房；骷髅不在掉落堆时补一张（28 号口径，
+        #     强制触发局叛徒未必持有骷髅预兆）。
+        #   · 蛇头行动（p129）：每头掷 1 骰定步数；离开的房间放 1 节蛇身
+        #     （每房限 1 枚、可穿过已放的）；不走密道/秘门/神秘电梯；
+        #     可探索新房间并忽略符号；探索者不影响蛇头。
+        #   · 施咒（p58）：持骷髅者与蛇头同房理智 5+ → 该头力量降 5、解锁攻击
+        #     （未施咒的蛇头 attack_allowed 拦截）。
+        #   · 击杀（p58/p129）：施咒后每次击败=1 hit，需 ceil(玩家数/2) 次
+        #     （3-4 人 2 次、5-6 人 3 次）；不可击晕（on_monster_defeated 拦下计数）。
+        #   · 免疫（p58/p129）：速度攻击无效（monsters spec 声明 immune_to，
+        #     spawn=deferred 只进 monster_specs 不自动 spawn，蛇头由 handler 放置）。
+        #   · 胜负（p58/p129）：英雄胜 = 双头皆斩；叛徒胜 = 16 节蛇身进场。
+        #     叛徒开局出局（变蛇）→ 必须吸收"叛徒死亡→英雄胜"兜底（10 号同款）。
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "worm_ouroboros",
         "traitor_rule": "revealer",
-        "hero_goal": "止血。",
-        "traitor_goal": "房子在流血，找到源头止血。",
+        "hero_goal": "捡起骷髅对蛇头施削弱咒（理智 5+，力量降 5），再围殴累计重击斩下双头。",
+        "traitor_goal": "双头游走留下蛇身，16 节蛇身全部进场即可碾碎房子。",
         "suggested_monsters": [],
         "required_cards": [],
         "key_rooms": [],
-        "tokens": [],
+        "tokens": [{"kind": "ouroboros_body", "label": "蛇身", "note": "蛇头离开的房间各留 1 节，16 节铺满即叛徒胜"}],
         "setup": {
-            "tracks": {"progress": {"label": "worm_ouroboros", "target": 10, "side": "heroes"}},
-            "flags": {},
+            "tracks": {"ouroboros_body": {"label": "蛇身节数", "target": 16, "side": "traitor"}},
+            "flags": {
+                "weakened_heads": [],
+                "head_hits": {},
+                "hits_needed": 2,
+                "body_left": 16,
+            },
         },
-        "monsters": [],
-        "actions": [{"id": "task", "side": "heroes", "label": "任务", "stat": "knowledge", "target": 5, "progress": "progress"}],
-        "win_conditions": [
-            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
+        "monsters": [
+            {"template_id": "ouroboros_head", "spawn": "deferred", "immune_to": ["speed"],
+             "name": "衔尾蛇头"},
         ],
+        "actions": [
+            {"id": "cast_weakening_spell", "side": "heroes", "label": "施放削弱咒",
+             "detail": "持有骷髅并与蛇头同房间时，做理智 5+ 检定（每回合一次）：成功后该蛇头"
+                       "力量降为 5，此后可被攻击（p58）。",
+             "stat": "sanity", "target": 5,
+             "requires": ["omen_skull", "same_room:ouroboros_head"]},
+        ],
+        "win_conditions": [],
         "source_pages": [58, 129],
     },
     48: {

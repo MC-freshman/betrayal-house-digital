@@ -376,6 +376,14 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["victim_escort", "feasting", "front_door"]},
     },
+    47: {
+        "hero": {
+            # p58：先捡骷髅施削弱咒（理智 5+）解锁攻击，再围殴累计重击；
+            # 叛徒已变蛇出局，attack_traitor_players 无意义。
+            "victory_focus": "捡起骷髅追上蛇头施咒，削弱后集中重击斩头，别让蛇身铺满 16 节",
+        },
+        "scenario": {"special_rules": ["weakening_spell", "body_tokens", "speed_immune"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",

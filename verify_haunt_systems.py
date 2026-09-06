@@ -51,6 +51,7 @@ if __package__ in {None, ""}:
         SupernaturalAgingMode,
         TimeBombMode,
         CannibalFeastMode,
+        OuroborosMode,
         BuriedAliveMode,
         ShadowExorcismMode,
         HellGateHeroMode,
@@ -176,8 +177,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(DeathCheckmateMode) == [37], f"剧本 37 未走定制 handler: {handlers.get(DeathCheckmateMode)}"
     assert handlers.get(MadWorldMode) == [34], f"剧本 34 未走定制 handler: {handlers.get(MadWorldMode)}"
     assert handlers.get(CannibalFeastMode) == [46], f"剧本 46 未走定制 handler: {handlers.get(CannibalFeastMode)}"
+    assert handlers.get(OuroborosMode) == [47], f"剧本 47 未走定制 handler: {handlers.get(OuroborosMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 24, f"应有 24 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 23, f"应有 23 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -196,6 +198,7 @@ def verify_mode_dispatch() -> None:
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
         "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
+        "worm_ouroboros",
     }
 
 
@@ -4615,6 +4618,98 @@ def verify_haunt46_front_door_and_victory() -> None:
     assert f2["victim_escaped_any"] is False
 
 
+def verify_haunt47_worm_ouroboros_setup() -> None:
+    """剧本 47：变蛇出局/物品掉落/同伴吞掉/骷髅兜底/双头布点（p58/p129）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=47)
+    handler = engine._mode_handler()
+    assert isinstance(handler, OuroborosMode)
+    flags = engine._haunt_flags()
+    haunt_room = engine.state.meta["haunt_rule"]["haunt_room"]
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # p129：叛徒移出游戏（变蛇），物品全掉揭示房
+    assert traitor.dead, "叛徒应变蛇出局"
+    assert traitor.items == [] and traitor.companions == []
+    pile = engine.state.room_items.get(haunt_room, [])
+    assert pile, "揭示房应有物品堆"
+    # p129：Girl/Dog/Madman 被吞掉（不在掉落堆里）
+    assert not any(cid in handler.DEVOUR_CARDS for cid in pile), "被吞的同伴不该出现在掉落堆"
+
+    # p58：施咒焦点骷髅必须在场（掉落堆或某英雄手里）
+    assert handler.SKULL in pile or any(
+        handler.SKULL in p.items for p in engine.state.players
+    ), "骷髅兜底未生效"
+
+    # 双头放揭示房；hit 需求数 = ceil(玩家数/2)
+    heads = handler._heads(engine)
+    assert len(heads) == 2 and all(h.room_key == haunt_room for h in heads)
+    assert flags["hits_needed"] == 2, "3 人局应需 2 次重击"
+    assert flags["body_left"] == 16
+
+    # p129：蛇头不可击晕——on_monster_defeated 记 hit 而非击晕
+    head = heads[0]
+    assert handler.on_monster_defeated(engine, head, 2) is True
+    assert head.stunned_turns == 0, "蛇头不该被击晕"
+    assert flags["head_hits"][head.id] == 1 and head in engine.state.monsters
+    # 未满数不移除；满数由 handler 杀死
+    handler.on_monster_defeated(engine, head, 1)
+    assert all(m.id != head.id for m in engine.state.monsters), "满数后蛇头应被移除"
+
+    # p58：未削弱的蛇头禁止攻击（attack_allowed 拦截）
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    other = next(h for h in handler._heads(engine))
+    assert handler.attack_allowed(engine, hero, other) is False
+
+
+def verify_haunt47_spell_and_bodies() -> None:
+    """剧本 47：施咒链路、蛇身放置、胜负分支（p58/p129）。"""
+    engine = _run_until_haunt(seed=137, players=3, haunt_id=47)
+    handler = engine._mode_handler()
+    assert isinstance(handler, OuroborosMode)
+    flags = engine._haunt_flags()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    head = handler._heads(engine)[0]
+
+    # 施咒：无骷髅失败 → 给骷髅 + 同房 → 理智检定 mock 成功 → 力量降 5、可被攻击
+    _set_current(engine, hero)
+    assert handler.perform_action(engine, hero, "cast_weakening_spell", {}) is False
+    hero.items.append(handler.SKULL)
+    hero.room_key = head.room_key
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "cast_weakening_spell", {}) is True
+    assert head.might == 5 and head.id in flags["weakened_heads"]
+    assert handler.attack_allowed(engine, hero, head) is True, "削弱后应可攻击"
+
+    # p129：蛇身放置——每房限 1 枚、计数推进、放满 16 节判叛徒胜
+    room_a = head.room_key
+    room_b = next(k for k in engine.state.board if k != room_a)
+    handler._drop_body(engine, room_a)
+    assert int(flags["body_left"]) == 15
+    handler._drop_body(engine, room_a)  # 同房重复放应被拒绝
+    assert int(flags["body_left"]) == 15
+    handler._drop_body(engine, room_b)
+    assert engine._haunt_track_value("ouroboros_body") == 2
+    flags["body_left"] = 1
+    room_c = next(k for k in engine.state.board if k not in (room_a, room_b))
+    handler._drop_body(engine, room_c)
+    engine.check_victory()  # 真实链路由 _resolve_monster_turns 末尾触发
+    assert engine.state.winner == "traitor", "16 节蛇身放满应判叛徒胜"
+
+    # 重开一局验证英雄胜：双头皆斩（p58）
+    engine2 = _run_until_haunt(seed=137, players=3, haunt_id=47)
+    h2 = engine2._mode_handler()
+    assert isinstance(h2, OuroborosMode)
+    for m in list(h2._heads(engine2)):
+        h2.on_monster_defeated(engine2, m, 1)  # 2 次 hit 杀死
+        h2.on_monster_defeated(engine2, m, 1)
+    assert h2.check_victory(engine2) is True
+    assert engine2.state.winner == "heroes"
+    # 叛徒开局出局也不能触发"英雄胜"兜底——双头在场时游戏必须继续
+    engine3 = _run_until_haunt(seed=137, players=3, haunt_id=47)
+    h3 = engine3._mode_handler()
+    assert h3.check_victory(engine3) is True and engine3.state.winner is None
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -5530,6 +5625,8 @@ def main():
     verify_haunt45_time_bomb()
     verify_haunt46_the_feast_setup()
     verify_haunt46_front_door_and_victory()
+    verify_haunt47_worm_ouroboros_setup()
+    verify_haunt47_spell_and_bodies()
     verify_haunt39_heir()
     verify_haunt40_buried_alive()
     verify_haunt41_invisible_traitor()

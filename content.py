@@ -1870,6 +1870,15 @@ MONSTER_BASES = [
         text="宅子里的疯子食人族；被击败即死。整回合进食尸体会让所有属性 +1。",
         tags=("human", "haunt_specific"),
     ),
+    monster_def(
+        monster_id="ouroboros_head",
+        name="衔尾蛇头",
+        source_name="Ouroboros Head",
+        speed=1,
+        might=6,
+        text="世界之蛇的双头之一；不可击晕、免疫速度攻击，需先被削弱咒降为力量 5 才能攻击。",
+        tags=("beast", "haunt_specific"),
+    ),
 ]
 
 
