@@ -1850,6 +1850,26 @@ MONSTER_BASES = [
         text="活房子的大脑；以力量 6 防御但不造成伤害，攻击它须先通过理智检定。",
         tags=("haunt_specific",),
     ),
+    monster_def(
+        monster_id="victim",
+        name="受害者",
+        source_name="Victim",
+        speed=2,
+        might=3,
+        sanity=3,
+        text="被诱拐到宅子里的受害者；不能攻击，被击败即死并化为尸体，在屋内漫无目的地游荡。",
+        tags=("human", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="cannibal_freak",
+        name="食人狂徒",
+        source_name="Cannibal Freak",
+        speed=2,
+        might=4,
+        sanity=4,
+        text="宅子里的疯子食人族；被击败即死。整回合进食尸体会让所有属性 +1。",
+        tags=("human", "haunt_specific"),
+    ),
 ]
 
 

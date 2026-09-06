@@ -2194,28 +2194,71 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [56, 127],
     },
     46: {
-        # 校准记录（2026-09-05）：骨架 + generic 兜底（M8/M9 批次专项精修）
-        "version": 2,
-        "fidelity": "skeleton",
+        # 校准记录（2026-09-06，对照英雄手册 p57 / 叛徒手册 p128）：
+        #   骨架原本是"驱魔仪式"的假机制（task 行动 + progress 轨道），与原版无关。
+        #   机制落在 CannibalFeastMode：
+        #   · 开局：阁楼（上层）放受害者=英雄数、餐厅（地面层）放食人狂徒=英雄数；
+        #     两房不在场时 _ensure_room_in_play 强制入场（模板自带楼层）。
+        #   · 受害者漫游：叛徒左侧玩家回合开始，直行 2 格/左转/不穿未探明门/
+        #     遇英雄停（按门方位实现，比 8/20 号连通图近似更保真）。
+        #   · 护送：原版回合开始免费带 2 格任意方向 → 电子版 1 行动、自动朝正门
+        #     （已知简化）；正门：门厅知识检定或力量 5+，成功开门并结束回合。
+        #   · 伤亡封锁：任何受害者/英雄被杀 → 全员逃生路线关闭；受害者逃出 →
+        #     叛徒"吃光"路线关闭。双方胜利路线互斥门控。
+        #   · 尸体与进食：被杀翻成尸体令牌；叛徒/狂徒与尸体同房且无活英雄时
+        #     花整回合进食 +1 全属性（狂徒直接改怪物属性，45 号蜘蛛同款）。
+        #   · 怪物互吃：狂徒回合手写力量对决吃同房受害者（引擎无怪物互攻，
+        #     21/27 号口径）；受害者怪物回合完全跳过（on_monster_turn_start）。
+        #   · 胜负：英雄胜 = 叛徒+狂徒全灭 或 零伤亡全员逃出；叛徒胜 = 吃光
+        #     受害者 或 杀光英雄。叛徒死≠英雄胜（狂徒还在继续打），老坑 #1 吸收。
+        #   · suggested_monsters 必须留空——该字段会被引擎自动 spawn（各 1 只
+        #     在作祟房），46 号的受害者/狂徒全由 handler 按英雄数放置（32 号口径）。
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "cannibal_feast",
         "traitor_rule": "revealer",
-        "hero_goal": "驱魔仪式。",
-        "traitor_goal": "两名英雄被绑定，须同时驱魔。",
+        "hero_goal": "把所有受害者从正门送出去（保持零伤亡），或杀光叛徒与食人狂徒。",
+        "traitor_goal": "吃光所有受害者，或杀光所有英雄；一旦有受害者逃出就只能杀人。",
         "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": [],
-        "tokens": [],
+        "key_rooms": ["attic", "dining_room", "entrance_hall"],
+        "tokens": [{"kind": "corpse", "label": "尸体", "note": "受害者/英雄被杀后生成，叛徒与狂徒可进食"}],
         "setup": {
-            "tracks": {"progress": {"label": "cannibal_feast", "target": 10, "side": "heroes"}},
-            "flags": {},
+            # 逃出的受害者：target 在 handler.setup 里改写为实际英雄数
+            "tracks": {"victims_escaped": {"label": "逃出的受害者", "target": 6, "side": "heroes"}},
+            "flags": {
+                "front_door_open": False,
+                "blood_spilled": False,
+                "victims_escaped": 0,
+                "victim_escaped_any": False,
+                "victim_corpses": 0,
+                "escaped_hero_ids": [],
+                "victim_facing": {},
+            },
         },
         "monsters": [],
-        "actions": [{"id": "task", "side": "heroes", "label": "任务", "stat": "knowledge", "target": 5, "progress": "progress"}],
-        "win_conditions": [
-            {"winner": "heroes", "type": "track", "track": "hero_progress", "target": 1, "reason": "任务完成。"},
-            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
+        "actions": [
+            {"id": "unlock_front_door", "side": "heroes", "label": "撬开正门",
+             "detail": "在门厅做知识检定（撬锁）或力量 5+（撞开），成功后开门并结束回合（p57）。",
+             "rooms": ["entrance_hall"], "requires_flags": {"front_door_open": False}},
+            {"id": "escort_victim", "side": "heroes", "label": "护送受害者",
+             "detail": "带同房间的受害者沿最短路朝正门移动最多 2 格（原版为回合开始免费带行、"
+                       "任意方向；电子版简化为 1 行动、自动朝门，p57）。",
+             "requires": ["same_room:victim"]},
+            {"id": "send_victim_out", "side": "heroes", "label": "送受害者出门",
+             "detail": "正门已开时，把同房间的受害者送出正门（1 格），受害者移出游戏（p57）。",
+             "rooms": ["entrance_hall"], "requires": ["same_room:victim"],
+             "requires_flags": {"front_door_open": True}},
+            {"id": "escape_house", "side": "heroes", "label": "逃出宅子",
+             "detail": "正门已开时从门厅逃出（之后可用「重新进门」回来接人）（p57）。",
+             "rooms": ["entrance_hall"], "requires_flags": {"front_door_open": True}},
+            {"id": "feast_corpse", "side": "traitor", "label": "进食",
+             "detail": "与尸体同房间且房内没有活着的英雄时，花整回合进食：所有属性 +1，"
+                       "尸体移出游戏（p128）。狂徒也会这样做。",
+             "requires": ["same_room:corpse"]},
         ],
+        "win_conditions": [],
         "source_pages": [57, 128],
     },
     47: {

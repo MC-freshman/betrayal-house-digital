@@ -50,6 +50,7 @@ if __package__ in {None, ""}:
         LakeRescueMode,
         SupernaturalAgingMode,
         TimeBombMode,
+        CannibalFeastMode,
         BuriedAliveMode,
         ShadowExorcismMode,
         HellGateHeroMode,
@@ -174,8 +175,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(SwampEscapeMode) == [36], f"剧本 36 未走定制 handler: {handlers.get(SwampEscapeMode)}"
     assert handlers.get(DeathCheckmateMode) == [37], f"剧本 37 未走定制 handler: {handlers.get(DeathCheckmateMode)}"
     assert handlers.get(MadWorldMode) == [34], f"剧本 34 未走定制 handler: {handlers.get(MadWorldMode)}"
+    assert handlers.get(CannibalFeastMode) == [46], f"剧本 46 未走定制 handler: {handlers.get(CannibalFeastMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 25, f"应有 25 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 24, f"应有 24 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -193,6 +195,7 @@ def verify_mode_dispatch() -> None:
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
         "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "cannibal_feast",
     }
 
 
@@ -4491,6 +4494,127 @@ def verify_haunt45_time_bomb() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt46_the_feast_setup() -> None:
+    """剧本 46：开局布点、被击败即死、受害者尸体链路、漫游触发（p57/p128）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=46)
+    handler = engine._mode_handler()
+    assert isinstance(handler, CannibalFeastMode)
+    flags = engine._haunt_flags()
+    hero_count = sum(1 for p in engine.state.players if p.role == "hero")
+
+    # 阁楼与餐厅被强制入场（模板自带楼层：阁楼上、餐厅下）
+    attic = next(r for r in engine.state.board.values() if r.template_id == "attic")
+    dining = next(r for r in engine.state.board.values() if r.template_id == "dining_room")
+    victims = [m for m in engine.state.monsters if m.template_id == "victim"]
+    freaks = [m for m in engine.state.monsters if m.template_id == "cannibal_freak"]
+    assert len(victims) == hero_count and len(freaks) == hero_count
+    assert all(v.room_key == attic.key for v in victims), "受害者应全在阁楼"
+    assert all(f.room_key == dining.key for f in freaks), "狂徒应全在餐厅"
+    assert flags["victims_total"] == hero_count
+    assert len(flags["victim_facing"]) == hero_count
+
+    # 被击败即死（p57/p128）：对受害者的查询自带处决副作用——生成尸体、
+    # 移出对局、封锁逃生路线（该钩子的调用点唯一且就在引擎击杀结算处）；
+    # 对狂徒的查询是纯判定（狂徒由引擎移除、不翻尸体）。
+    v0 = victims[0]
+    room_of_v0 = v0.room_key
+    assert handler.monster_killed_on_defeat(engine, v0, None, "might", "") is True
+    assert handler.monster_killed_on_defeat(engine, freaks[0], None, "might", "") is True
+    corpses = engine.tokens_in_room(room_of_v0, "corpse")
+    assert len(corpses) == 1 and corpses[0].label == "受害者尸体"
+    assert flags["blood_spilled"] is True and flags["victim_corpses"] == 1
+    assert all(m.id != v0.id for m in engine.state.monsters), "受害者应已移出对局"
+    remaining_freaks = [m for m in engine.state.monsters if m.template_id == "cannibal_freak"]
+    assert len(remaining_freaks) == hero_count, "狂徒查询不应有副作用（仍在场）"
+
+    # 英雄被杀 likewise：尸体 + 血腥标志（p128 "dead explorer"）
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    hero_room = hero.room_key
+    handler.on_player_died(engine, hero)
+    assert any(t.label == "探险者尸体" for t in engine.tokens_in_room(hero_room, "corpse"))
+
+    # 漫游（p57）：叛徒左侧玩家的回合开始触发；与英雄同房间的受害者不动
+    mover = handler._victim_mover(engine)
+    assert mover is not None
+    live = [m for m in engine.state.monsters if m.template_id == "victim"]
+    assert live, "应还有受害者存活"
+    live[0].room_key = hero.room_key  # hero 在上面只被模拟了尸体后处理，人还活着
+    handler.on_turn_start(engine, mover)
+    still = next(m for m in engine.state.monsters if m.id == live[0].id)
+    assert still.room_key == hero.room_key, "与英雄同房间的受害者不应移动"
+
+
+def verify_haunt46_front_door_and_victory() -> None:
+    """剧本 46：开正门→护送/送出/出逃链路、进食、胜负分支（p57/p128）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=46)
+    handler = engine._mode_handler()
+    flags = engine._haunt_flags()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # 开正门（知识检定/力量掷骰都 mock 成必成）→ 门开 + 结束回合（p57）
+    _set_current(engine, hero)
+    with patch.object(engine, "_resolve_check", return_value=True), patch.object(
+        engine, "roll_dice", return_value=6
+    ):
+        assert handler.perform_action(engine, hero, "unlock_front_door", {}) is True
+    assert flags["front_door_open"] is True
+    assert hero.movement_stopped, "开门后应结束回合"
+
+    # 护送：英雄与受害者同房 → 带往门厅方向（p57，电子版简化口径）
+    entrance = next(r for r in engine.state.board.values() if r.template_id == "entrance_hall")
+    victim = next(m for m in engine.state.monsters if m.template_id == "victim")
+    victim.room_key = hero.room_key = entrance.key
+    assert handler.perform_action(engine, hero, "send_victim_out", {}) is True
+    assert flags["victims_escaped"] == 1 and flags["victim_escaped_any"] is True
+    assert all(m.id != victim.id for m in engine.state.monsters), "逃出的受害者应移出游戏"
+
+    # 英雄出逃/再进门（p57 shuttle）
+    assert handler.perform_action(engine, hero, "escape_house", {}) is True
+    assert hero.id in flags["escaped_hero_ids"]
+    assert handler.perform_action(engine, hero, "reenter_house", {}) is True
+    assert hero.id not in flags["escaped_hero_ids"]
+
+    # 进食：叛徒与受害者尸体同房、无活英雄 → 全属性上移一格、尸体移除（p128）
+    # 注意引擎的"+1"是卡尺格位上移（轨道有重复数值，数值未必 +1——25/32 号同款坑）
+    corpse = engine.spawn_token("corpse", label="受害者尸体", role="marker", room_key=traitor.room_key)
+    flags["victim_corpses"] = 1
+    pos_before = {s: traitor.stat_positions.get(s, 0) for s in ("speed", "might", "sanity", "knowledge")}
+    _set_current(engine, traitor)
+    assert handler.perform_action(engine, traitor, "feast_corpse", {}) is True
+    for s in ("speed", "might", "sanity", "knowledge"):
+        track = engine._stat_track(traitor, s) or []
+        if pos_before[s] < len(track) - 1:
+            assert traitor.stat_positions.get(s, 0) == pos_before[s] + 1, f"{s} 应上移一格"
+    assert engine.token_by_uid(corpse.uid) is None, "吃掉的尸体应移出游戏"
+    assert flags["victim_corpses"] == 0
+    assert traitor.movement_stopped, "进食应花掉整回合"
+
+    # 胜负：叛徒死 + 狂徒还在 → 吸收兜底（不判英雄胜，游戏继续）
+    traitor.dead = True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner is None, "狂徒还在，叛徒死不该直接判英雄胜"
+
+    # 狂徒也全灭 → 英雄胜（p57 路线 A）
+    for m in [m for m in engine.state.monsters if m.template_id == "cannibal_freak"]:
+        engine._kill_monster(m)
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+    # 重开一局验证叛徒胜 A：受害者被吃光（无尸体剩余、无人逃出过）
+    engine2 = _run_until_haunt(seed=137, players=3, haunt_id=46)
+    h2 = engine2._mode_handler()
+    f2 = engine2._haunt_flags()
+    assert isinstance(h2, CannibalFeastMode)
+    for m in [m for m in engine2.state.monsters if m.template_id == "victim"]:
+        h2._kill_victim_to_corpse(engine2, m)
+    for t in list(engine2.tokens_of_kind("corpse")):
+        h2._consume_corpse(engine2, t)
+    assert h2.check_victory(engine2) is True
+    assert engine2.state.winner == "traitor", "受害者被吃光应判叛徒胜"
+    assert f2["victim_escaped_any"] is False
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -5404,6 +5528,8 @@ def main():
     verify_haunt37_checkmate()
     verify_haunt44_supernatural_aging()
     verify_haunt45_time_bomb()
+    verify_haunt46_the_feast_setup()
+    verify_haunt46_front_door_and_victory()
     verify_haunt39_heir()
     verify_haunt40_buried_alive()
     verify_haunt41_invisible_traitor()

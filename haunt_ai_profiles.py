@@ -364,6 +364,18 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["poison_atmosphere", "clue_gathering"]},
     },
+    46: {
+        "hero": {
+            # p57：零伤亡才能走"全员逃生"路线；bot_goal_rooms 会先追受害者再护送到门厅。
+            "attack_traitor_players": True,
+            "victory_focus": "先开正门，再反复护送受害者出门；一旦见血就转杀光狂徒",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "让狂徒扑杀受害者并进食变强，同时堵住英雄的护送路线",
+        },
+        "scenario": {"special_rules": ["victim_escort", "feasting", "front_door"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",
