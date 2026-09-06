@@ -2314,27 +2314,59 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [58, 129],
     },
     48: {
-        # 校准记录（2026-09-05）：骨架 + generic 兜底（M8/M9 批次专项精修）
-        "version": 2,
-        "fidelity": "skeleton",
+        # 校准记录（2026-09-06，对照英雄手册 p59 / 叛徒手册 p130）：
+        #   骨架原本是"雕像花园"假机制（h48_hero_task + hero_progress 轨道），
+        #   且 47/48 的原文标题在骨架表上错位。机制落在 CrimsonJackMode：
+        #   · 开局（p130）：杰克放门厅（前门旁），叛徒仍在场未出局。
+        #   · 打不死（p130）：被击败不晕不伤，只是暂时移出；叛徒下回合
+        #     开始时回到门厅，且每次回归全属性 +1（flags["jack_bonus"]）。
+        #   · 恐惧光环（p59/p130）：与杰克同房的英雄回合开始须理智 3+，
+        #     失败各掉 1 点精神属性与 1 点物理属性。
+        #   · 找武器（p59）：图书馆/教堂/金库（须 data["opened"]）/阁楼
+        #     知识 3+，成功取斧/矛/血匕首之一并洗匀该牌堆。
+        #   · 研究（p59）：持武器者力量 5+ 或知识 5+，累计玩家数枚令牌
+        #     即理解用法（flags["cursed_weapon_understood"]）。
+        #   · 永杀（p59）：理解用法后用该武器击败 → 杰克永久死亡，英雄胜。
+        #   · 胜负：英雄胜 = 诅咒武器永杀；叛徒胜 = 英雄全灭。叛徒被杀而
+        #     杰克还在时杰克继续行动（7/8 号口径），故吸收兜底。
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "cursed_weapon",
         "traitor_rule": "revealer",
-        "hero_goal": "雕像花园。",
-        "traitor_goal": "雕像活了过来。",
+        "hero_goal": "在图书馆/教堂/金库/阁楼找到诅咒武器，研究明白用法后用它永久杀死血腥杰克。",
+        "traitor_goal": "让血腥杰克杀光所有英雄——他每次回归都会更强。",
         "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": [],
+        "key_rooms": ["entrance_hall", "library", "chapel", "vault", "attic"],
         "tokens": [],
         "setup": {
-            "tracks": {"hero_progress": {"label": "cursed_weapon", "target": 10, "side": "heroes"}},
-            "flags": {},
+            # 研究进度：target 在 handler.setup 里改写为玩家数
+            "tracks": {"study_tokens": {"label": "研究进度", "target": 6, "side": "heroes"}},
+            "flags": {
+                "jack_bonus": 0,
+                "jack_banished": False,
+                "jack_killed": False,
+                "cursed_weapon": None,
+                "cursed_weapon_understood": False,
+            },
         },
-        "monsters": [],
-        "actions": [{"id": "h48_hero_task", "side": "heroes", "label": "任务", "stat": "knowledge", "target": 5, "progress": "hero_progress"}],
-        "win_conditions": [
-            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
+        "monsters": [
+            # spawn=deferred：只进 monster_specs，由 handler 放进门厅
+            {"template_id": "crimson_jack", "spawn": "deferred", "name": "血腥杰克"},
         ],
+        "actions": [
+            {"id": "search_cursed_weapon", "side": "heroes", "label": "搜寻诅咒武器",
+             "detail": "在图书馆/教堂/金库（须已开）/阁楼做知识 3+ 检定（每回合一次）："
+                       "成功后从对应牌堆取一件自选诅咒武器（斧/矛/血匕首）并洗匀该堆（p59）。",
+             "stat": "knowledge", "target": 3,
+             "rooms": ["library", "chapel", "vault", "attic"]},
+            {"id": "study_cursed_weapon", "side": "heroes", "label": "研究诅咒武器",
+             "detail": "持有诅咒武器时做力量 5+ 或知识 5+（每回合一次）：每成功一次 +1 枚"
+                       "研究令牌，累计到玩家数即理解用法，此后可用它永久杀死血腥杰克（p59）。",
+             "stat": "might", "target": 5, "progress": "study_tokens"},
+        ],
+        "win_conditions": [],
         "source_pages": [59, 130],
     },
     49: {

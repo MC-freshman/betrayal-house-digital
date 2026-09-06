@@ -52,6 +52,7 @@ if __package__ in {None, ""}:
         TimeBombMode,
         CannibalFeastMode,
         OuroborosMode,
+        CrimsonJackMode,
         BuriedAliveMode,
         ShadowExorcismMode,
         HellGateHeroMode,
@@ -178,8 +179,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(MadWorldMode) == [34], f"剧本 34 未走定制 handler: {handlers.get(MadWorldMode)}"
     assert handlers.get(CannibalFeastMode) == [46], f"剧本 46 未走定制 handler: {handlers.get(CannibalFeastMode)}"
     assert handlers.get(OuroborosMode) == [47], f"剧本 47 未走定制 handler: {handlers.get(OuroborosMode)}"
+    assert handlers.get(CrimsonJackMode) == [48], f"剧本 48 未走定制 handler: {handlers.get(CrimsonJackMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 23, f"应有 23 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 22, f"应有 22 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -199,6 +201,7 @@ def verify_mode_dispatch() -> None:
         "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
         "worm_ouroboros",
+        "cursed_weapon",
     }
 
 
@@ -4710,6 +4713,96 @@ def verify_haunt47_spell_and_bodies() -> None:
     assert h3.check_victory(engine3) is True and engine3.state.winner is None
 
 
+def verify_haunt48_crimson_jack_setup() -> None:
+    """剧本 48：杰克布点、恐惧光环掉点、打不死→回归且强化（p59/p130）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=48)
+    handler = engine._mode_handler()
+    assert isinstance(handler, CrimsonJackMode)
+    flags = engine._haunt_flags()
+
+    # p130：杰克放门厅
+    jack = handler._jack(engine)
+    assert jack is not None, "杰克应在场"
+    entrance = handler._entrance_key(engine)
+    assert entrance is not None and jack.room_key == entrance
+    assert (jack.speed, jack.might, jack.sanity) == (3, 3, 3)
+    # p130：叛徒仍在场（未出局）
+    assert any(p.role == "traitor" and not p.dead for p in engine.state.players)
+
+    # p59/p130：恐惧光环——与杰克同房间的英雄，理智检定失败则各掉 1 点
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    hero.room_key = jack.room_key
+    before = dict(hero.stat_positions)
+    with patch.object(engine, "_resolve_check", return_value=False):
+        handler.on_turn_start(engine, hero)
+    lost_mental = sum(before[s] - hero.stat_positions[s] for s in handler.MENTAL)
+    lost_physical = sum(before[s] - hero.stat_positions[s] for s in handler.PHYSICAL)
+    assert lost_mental == 1 and lost_physical == 1, "掉点应为 1 精神 + 1 物理"
+
+    # p130：不是诅咒武器击败 → 暂时消散（不入晕、不死）
+    jack.stunned_turns = 0
+    assert handler.monster_killed_on_defeat(engine, jack, hero, "might", "") is False
+    assert handler.on_monster_defeated(engine, jack, 2) is True
+    assert handler._jack(engine) is None and flags["jack_banished"] is True
+
+    # p130：叛徒回合开始 → 回到门厅且全属性 +1
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    handler.on_turn_start(engine, traitor)
+    jack2 = handler._jack(engine)
+    assert jack2 is not None and jack2.room_key == entrance, "杰克应回到门厅"
+    assert (jack2.speed, jack2.might, jack2.sanity) == (4, 4, 4), "回归应全属性 +1"
+    assert flags["jack_banished"] is False and flags["jack_bonus"] == 1
+
+
+def verify_haunt48_cursed_weapon_flow() -> None:
+    """剧本 48：找武器/研究/理解用法/诅咒武器永杀（p59）。"""
+    engine = _run_until_haunt(seed=137, players=3, haunt_id=48)
+    handler = engine._mode_handler()
+    assert isinstance(handler, CrimsonJackMode)
+    flags = engine._haunt_flags()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine, hero)
+
+    # 金库未开时在该房间不提供搜寻行动（p59 "the Vault must be open"）
+    vault = next((r for r in engine.state.board.values() if r.template_id == "vault"), None)
+    if vault is not None:
+        vault.data["opened"] = False
+        hero.room_key = vault.key
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "search_cursed_weapon" not in ids, "金库未开不应能搜寻"
+        vault.data["opened"] = True
+
+    # 搜寻：检定失败一无所获；mock 成功 → 拿到一件诅咒武器
+    with patch.object(engine, "_resolve_check", return_value=False):
+        assert handler.perform_action(engine, hero, "search_cursed_weapon", {}) is False
+    hero.room_key = next(
+        (r.key for r in engine.state.board.values()
+         if r.template_id in handler.SEARCH_ROOMS and r.template_id != "vault"),
+        hero.room_key,
+    )
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "search_cursed_weapon", {}) is True
+    weapon = flags["cursed_weapon"]
+    assert weapon in handler.WEAPON_NAMES and weapon in hero.items
+
+    # 研究：力量/知识 5+ 每次成功 +1 令牌，累计到玩家数即理解用法
+    needed = engine._haunt_track_target("study_tokens")
+    assert needed == len(engine.state.players), "研究需求应等于玩家数"
+    for _ in range(needed):
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, hero, "study_cursed_weapon", {}) is True
+    assert flags["cursed_weapon_understood"] is True
+
+    # p59：理解用法后用该诅咒武器击败 → 永久死亡 + 英雄胜
+    jack = handler._jack(engine)
+    assert jack is not None
+    hero.room_key = jack.room_key  # 攻击需要同房间
+    assert handler.monster_killed_on_defeat(engine, jack, hero, "might", weapon) is True
+    assert flags["jack_killed"] is True
+    engine.check_victory()  # 引擎版 check_victory 返回 None，只断言胜方
+    assert engine.state.winner == "heroes"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -5627,6 +5720,8 @@ def main():
     verify_haunt46_front_door_and_victory()
     verify_haunt47_worm_ouroboros_setup()
     verify_haunt47_spell_and_bodies()
+    verify_haunt48_crimson_jack_setup()
+    verify_haunt48_cursed_weapon_flow()
     verify_haunt39_heir()
     verify_haunt40_buried_alive()
     verify_haunt41_invisible_traitor()

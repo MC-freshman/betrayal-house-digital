@@ -1879,6 +1879,17 @@ MONSTER_BASES = [
         text="世界之蛇的双头之一；不可击晕、免疫速度攻击，需先被削弱咒降为力量 5 才能攻击。",
         tags=("beast", "haunt_specific"),
     ),
+    monster_def(
+        monster_id="crimson_jack",
+        name="血腥杰克",
+        source_name="Crimson Jack",
+        speed=3,
+        might=3,
+        sanity=3,
+        text="五年前的连环杀手；被击败只是暂时消散，下个回合会更强地回到门厅，"
+             "只有诅咒武器能永久杀死他。",
+        tags=("undead", "haunt_specific"),
+    ),
 ]
 
 

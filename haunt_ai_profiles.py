@@ -384,6 +384,17 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["weakening_spell", "body_tokens", "speed_immune"]},
     },
+    48: {
+        "hero": {
+            # p59：前期别和杰克硬拼（打不死只会让他更强），先找武器再研究。
+            "victory_focus": "先去图书馆/教堂/金库/阁楼找诅咒武器，研究满令牌后再用该武器斩杀杰克",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "让杰克缠住英雄杀光他们，别把回合浪费在别处",
+        },
+        "scenario": {"special_rules": ["cursed_weapon", "reviving_monster", "fear_aura"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",
