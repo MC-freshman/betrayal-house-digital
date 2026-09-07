@@ -1902,6 +1902,17 @@ MONSTER_BASES = [
              "以知识/理智攻击累积足够成果才能将它摧毁。",
         tags=("spectral", "haunt_specific"),
     ),
+    monster_def(
+        monster_id="servant",
+        name="贪婪仆人",
+        source_name="Servant",
+        speed=3,
+        might=3,
+        sanity=3,
+        text="老普雷斯蒂科特的仆人；夜越深越强——存活到第 10 回合日出，"
+             "英雄们就能分到遗产。",
+        tags=("human", "haunt_specific"),
+    ),
 ]
 
 

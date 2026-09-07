@@ -54,6 +54,7 @@ if __package__ in {None, ""}:
         OuroborosMode,
         CrimsonJackMode,
         AstralSpiritMode,
+        NightMurderMode,
         BuriedAliveMode,
         ShadowExorcismMode,
         HellGateHeroMode,
@@ -182,8 +183,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(OuroborosMode) == [47], f"剧本 47 未走定制 handler: {handlers.get(OuroborosMode)}"
     assert handlers.get(CrimsonJackMode) == [48], f"剧本 48 未走定制 handler: {handlers.get(CrimsonJackMode)}"
     assert handlers.get(AstralSpiritMode) == [49], f"剧本 49 未走定制 handler: {handlers.get(AstralSpiritMode)}"
+    assert handlers.get(NightMurderMode) == [50], f"剧本 50 未走定制 handler: {handlers.get(NightMurderMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 21, f"应有 22 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 20, f"应有 22 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -205,6 +207,7 @@ def verify_mode_dispatch() -> None:
         "worm_ouroboros",
         "cursed_weapon",
         "astral_spirit",
+        "night_survival",
     }
 
 
@@ -4896,6 +4899,76 @@ def verify_haunt49_banish_and_possession() -> None:
     assert engine2.state.winner == "traitor"
 
 
+def verify_haunt50_night_murder_setup() -> None:
+    """剧本 50：仆人布点、夜晚推进、强化表（p61/p132）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=50)
+    handler = engine._mode_handler()
+    assert isinstance(handler, NightMurderMode)
+
+    # p132：仆人数 = 英雄数，初始 3/3/3
+    servants = handler._servants(engine)
+    hero_count = sum(1 for p in engine.state.players if p.role == "hero")
+    assert len(servants) == hero_count, "仆人数应等于英雄数"
+    assert all((s.speed, s.might, s.sanity) == (3, 3, 3) for s in servants)
+    # 前三个尽量各占一层（受"仆人数"与"有空房的层数"共同约束）
+    floors = {engine.state.board[s.room_key].floor for s in servants[:3]}
+    occupied = {p.room_key for p in engine.state.players if not p.dead}
+    empty_floors = {
+        room.floor for key, room in engine.state.board.items() if key not in occupied
+    }
+    assert len(floors) >= min(len(servants), len(empty_floors)), (
+        f"前三个仆人应尽量分布在不同楼层：实际 {sorted(floors)}，"
+        f"空房楼层 {sorted(empty_floors)}"
+    )
+    # 轨道从 0 开始，日出目标 10
+    assert engine._haunt_track_value("night_timer") == 0
+    assert engine._haunt_track_target("night_timer") == 10
+
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    # p132：叛徒回合结束推进夜晚；按表重算仆人属性
+    handler.on_turn_end(engine, traitor)
+    assert engine._haunt_track_value("night_timer") == 1
+    # 推到 4 → 4/4/4；8 → 5/5/5；9 → 6/6/6
+    for _ in range(3):
+        handler.on_turn_end(engine, traitor)
+    assert engine._haunt_track_value("night_timer") == 4
+    assert all((s.speed, s.might, s.sanity) == (4, 4, 4) for s in handler._servants(engine))
+    for _ in range(4):
+        handler.on_turn_end(engine, traitor)
+    assert engine._haunt_track_value("night_timer") == 8
+    assert all((s.speed, s.might, s.sanity) == (5, 5, 5) for s in handler._servants(engine))
+    handler.on_turn_end(engine, traitor)
+    assert engine._haunt_track_value("night_timer") == 9
+    assert all((s.speed, s.might, s.sanity) == (6, 6, 6) for s in handler._servants(engine))
+
+
+def verify_haunt50_dawn_and_absorption() -> None:
+    """剧本 50：日出分遗产、叛徒出局吸收兜底、英雄全灭（p61/p132）。"""
+    engine = _run_until_haunt(seed=137, players=3, haunt_id=50)
+    handler = engine._mode_handler()
+    assert isinstance(handler, NightMurderMode)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # p132：叛徒出局也不判英雄胜（仆人继续，照样能赢）
+    traitor.dead = True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner is None, "叛徒死了也不该直接判英雄胜"
+
+    # p61：撑到日出（轨道 10）→ 存活英雄胜
+    engine._set_haunt_track_value("night_timer", 10)
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+    # p132：黎明前英雄全灭 → 叛徒胜
+    engine2 = _run_until_haunt(seed=137, players=3, haunt_id=50)
+    h2 = engine2._mode_handler()
+    for p in engine2.state.players:
+        if p.role == "hero":
+            p.dead = True
+    assert h2.check_victory(engine2) is True
+    assert engine2.state.winner == "traitor"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -5817,6 +5890,8 @@ def main():
     verify_haunt48_cursed_weapon_flow()
     verify_haunt49_astral_spirit_setup()
     verify_haunt49_banish_and_possession()
+    verify_haunt50_night_murder_setup()
+    verify_haunt50_dawn_and_absorption()
     verify_haunt39_heir()
     verify_haunt40_buried_alive()
     verify_haunt41_invisible_traitor()

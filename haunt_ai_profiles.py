@@ -407,6 +407,18 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["soul_out_of_body", "ritual_possession", "mental_only"]},
     },
+    50: {
+        "hero": {
+            # p61：没有别的胜利条件——活到日出即可。仆人夜越深越强，
+            # 前期能打就打，后期（8 回合后）以躲为主。
+            "victory_focus": "撑到日出（夜晚进度 10）就能分遗产；后期仆人变强时优先自保",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "让仆人在第 10 回合之前杀光所有英雄；叛徒死了也不影响胜利",
+        },
+        "scenario": {"special_rules": ["survive_until_dawn", "growing_monsters"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",

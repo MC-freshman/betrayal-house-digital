@@ -2420,27 +2420,40 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [60, 131],
     },
     50: {
-        # 校准记录（2026-09-05）：骨架 + generic 兜底（M8/M9 批次专项精修）
-        "version": 2,
-        "fidelity": "skeleton",
+        # 校准记录（2026-09-07，对照英雄手册 p61 / 叛徒手册 p132）：
+        #   骨架原本是"礼物盒子"假机制（错位的 10 号文案 + task 行动）。
+        #   机制落在 NightMurderMode：
+        #   · 开局（p132）：仆人数 = 英雄数；前三个尽量各占一层空房，多余
+        #     放任意空房，空房不足时平均分配到已占用房间（21/28 号口径）。
+        #   · 夜晚推进（p132）：叛徒回合结束推进 night_timer；叛徒若已死由
+        #     "本轮最后存活玩家"代跑——p132 明说叛徒死了照样能赢，计时器
+        #     绝不能因叛徒出局停摆（4 号 spider_timer 同款坑的预防）。
+        #   · 强化表（p132）：0-3→3/3/3、4-7→4/4/4、8→5/5/5、9→6/6/6，
+        #     每次推进后重算全体仆人属性（45 号蜘蛛成长同款写法）。
+        #   · 胜负（p61/p132）：night_timer 到 10（日出）→ 存活英雄胜；
+        #     黎明前英雄全灭 → 叛徒胜；叛徒出局吸收"叛徒死→英雄胜"兜底。
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "night_survival",
         "traitor_rule": "revealer",
-        "hero_goal": "礼物。",
-        "traitor_goal": "礼物盒子藏有杀手。",
+        "hero_goal": "在房子里撑到天亮（夜晚进度 10），活着的继承人平分遗产。",
+        "traitor_goal": "让仆人在黎明前杀光所有英雄——叛徒就算死了也一样赢。",
         "suggested_monsters": [],
         "required_cards": [],
         "key_rooms": [],
         "tokens": [],
         "setup": {
-            "tracks": {"progress": {"label": "night_survival", "target": 10, "side": "heroes"}},
+            # 夜晚进度：推进到 10 即日出
+            "tracks": {"night_timer": {"label": "夜晚进度（日出）", "target": 10, "side": "heroes"}},
             "flags": {},
         },
-        "monsters": [],
-        "actions": [{"id": "task", "side": "heroes", "label": "任务", "stat": "knowledge", "target": 5, "progress": "progress"}],
-        "win_conditions": [
-            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
+        "monsters": [
+            # spawn=deferred：只进 monster_specs，由 handler 按楼层布点
+            {"template_id": "servant", "spawn": "deferred", "name": "贪婪仆人"},
         ],
+        "actions": [],
+        "win_conditions": [],
         "source_pages": [61, 132],
     },
     51: {
