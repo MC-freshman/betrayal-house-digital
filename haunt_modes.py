@@ -11949,6 +11949,142 @@ class NightMurderMode(GenericModeHandler):
 
 
 
+
+
+class ToxicObjectEscapeMode(GenericModeHandler):
+    """剧本 53 死亡恶臭（Reeking of Death）。
+
+    权威原文：英雄手册 p64 / 叛徒手册 p135。
+    · 死亡之物：狗携带（Speed 6 Might 4）；可被偷/掉落。
+    · 毒云：有物之房间放 token；进入掷骰（2 无/1 -1 物理/0 -1 物理-1 精神）；
+      回合结束在有物或毒云房间 -1 全属性。
+    · 逃跑：清障碍（力量 4+，人数次）→ 解锁（知识 5+）→ 逃离（2 格移动）。
+    · 净化：在熔炉房/地下湖开始回合持物。
+    · 英雄胜：半数逃出 或 净化+半数存活；叛徒胜：英雄全灭。
+    · 简化：狗掉落物品（2+ 物理伤害）未建模；毒云逐回合扩展未建模。
+    """
+
+    mode = "toxic_object_escape"
+
+    def setup(self, engine, haunt, room_key):
+        flags = engine._haunt_flags()
+        flags["object_cleansed"] = False
+        flags["door_unlocked"] = False
+        flags["escaped"] = []
+        # 死亡之物令牌由狗携带
+        dog = engine._monster_by_template("dog")
+        if dog is not None:
+            engine.spawn_token("deathly_object", label="死亡之物", role="carried", holder=int(dog.id.split("_")[-1]) if "_" in dog.id else None)
+        engine._log("恶臭弥漫——狗叼着一个死亡之物在房子里游荡！")
+
+    def on_turn_start(self, engine, player):
+        flags = engine._haunt_flags()
+        if player.dead or player.role == "traitor":
+            return
+        # 毒云伤害：回合结束在有物或毒云房间
+        obj_room = self._object_room(engine)
+        poison_rooms = set(engine.tokens_in_room.__self__.state.tokens and
+                           [t.room_key for t in engine.state.tokens if t.kind == "poison_cloud"] or [])
+        if (player.room_key == obj_room or player.room_key in poison_rooms) and obj_room:
+            for stat in ("speed", "might", "sanity", "knowledge"):
+                engine._apply_stat_loss(player, stat, 1)
+            engine._log(f"{player.name} 在毒气中失去了 1 点全属性。")
+            engine.check_victory()
+
+    def on_enter_room(self, engine, player, room):
+        if player.dead or player.role == "traitor":
+            return
+        obj_room = self._object_room(engine)
+        poison_rooms = [t.room_key for t in engine.state.tokens if t.kind == "poison_cloud"]
+        if room.key == obj_room or room.key in poison_rooms:
+            roll = engine.roll_dice(1, "毒云")
+            if roll == 0:
+                engine._apply_stat_loss(player, "might", 1)
+                engine._apply_stat_loss(player, "sanity", 1)
+                engine._log(f"{player.name} 吸入毒气（-1 物理 -1 精神）。")
+            elif roll == 1:
+                engine._apply_stat_loss(player, "might", 1)
+                engine._log(f"{player.name} 吸入毒气（-1 物理）。")
+            else:
+                engine._log(f"{player.name} 屏住了呼吸。")
+            engine.check_victory()
+
+    def _object_room(self, engine):
+        for t in engine.state.tokens:
+            if t.kind == "deathly_object":
+                if t.holder is not None:
+                    p = next((p for p in engine.state.players if p.id == t.holder), None)
+                    return p.room_key if p else None
+                return t.room_key
+        return None
+
+    def available_actions(self, engine, player):
+        actions = super().available_actions(engine, player)
+        result = []
+        flags = engine._haunt_flags()
+        for action in actions:
+            if action.id == "cleanse_object":
+                room_id = engine._current_room_template_id(player)
+                if room_id not in ("furnace_room", "underground_lake"):
+                    continue
+                if not engine.tokens_held_by(player.id, "deathly_object"):
+                    continue
+            result.append(action)
+        return result
+
+    def perform_action(self, engine, player, action_id, data):
+        flags = engine._haunt_flags()
+        if action_id == "flee_house":
+            escaped = flags.setdefault("escaped", [])
+            if player.id not in escaped:
+                escaped.append(player.id)
+                engine._log(f"{player.name} 冲出了前门！")
+            engine.check_victory()
+            return True
+
+        if action_id == "cleanse_object":
+            if not engine.tokens_held_by(player.id, "deathly_object"):
+                engine._log("你身上没有死亡之物。")
+                return False
+            token = next(iter(engine.tokens_held_by(player.id, "deathly_object")), None)
+            if token:
+                engine.remove_token(token.uid)
+            flags["object_cleansed"] = True
+            engine._log("死亡之物被净化了——诅咒结束了！")
+            engine.check_victory()
+            return True
+
+        if action_id == "unlock_door":
+            ok = super().perform_action(engine, player, action_id, data)
+            if ok:
+                flags["door_unlocked"] = True
+                engine._log("前门解锁了！")
+            return ok
+
+        return super().perform_action(engine, player, action_id, data)
+
+    def check_victory(self, engine):
+        import math
+        flags = engine._haunt_flags()
+        heroes_start = sum(1 for p in engine.state.players if p.role == "hero")
+        escaped = len(flags.get("escaped", []))
+        need = math.ceil(heroes_start / 2)
+        cleansed = flags.get("object_cleansed", False)
+        heroes_alive = sum(1 for p in engine.state.players if p.role == "hero" and not p.dead)
+
+        if cleansed and heroes_alive >= need:
+            engine._set_winner("heroes", "死亡之物被净化了——毒气消散了。")
+            return True
+        if escaped >= need:
+            engine._set_winner("heroes", "半数英雄逃出了前门——他们得救了。")
+            return True
+        if heroes_alive == 0:
+            engine._set_winner("traitor", "毒气吞噬了最后的生命。")
+            return True
+        return False
+
+
+
 class CracklingAuraMode(GenericModeHandler):
     """剧本 52 噼啪光环中（In a Crackling Aura）。
 
@@ -12166,6 +12302,7 @@ for _handler in (
     NightMurderMode(),
     DarkerThanNightMode(),
     CracklingAuraMode(),
+    ToxicObjectEscapeMode(),
 ):
 
     register_mode(_handler)

@@ -2531,22 +2531,44 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [63, 134],
     },
     53: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'toxic_object_escape',
-        "traitor_rule": 'revealer',
-        "hero_goal": '至少一半英雄逃出前门，或清理死亡物体并保住至少一半英雄。',
-        "traitor_goal": '阻止前门打开并让毒烟杀死英雄。',
-        "suggested_monsters": ['dog'],
+        # 校准记录（2026-09-05，对照英雄手册 p64 / 叛徒手册 p135）：
+        #   机制落在 ToxicObjectEscapeMode：
+        #   · 死亡之物（令牌）由狗携带（Speed 6 Might 4）；可被偷/掉落
+        #   · 毒云：有物之房间放 token；进入掷骰（2 无/1 -1 物理/0 -1 物理-1 精神）；
+        #     回合结束在有物或毒云房间 -1 全属性
+        #   · 逃跑：清障碍（力量 4+）→ 解锁（知识 5+）→ 逃离（2 格移动）
+        #   · 净化：在熔炉房/地下湖开始回合持物 → 净化
+        #   · 英雄胜：半数英雄逃出 或 净化+半数存活
+        #   简化：狗掉落物品（2+ 物理伤害）未建模；
+        #     毒云逐回合扩展未建模（仅在有物房间放 token）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "toxic_object_escape",
+        "traitor_rule": "revealer",
+        "hero_goal": "净化死亡之物或从正门逃出——避开毒云。",
+        "traitor_goal": "让毒气杀死所有英雄。",
+        "suggested_monsters": ["dog"],
         "required_cards": [],
-        "key_rooms": ['entrance_hall', 'foyer', 'grand_staircase', 'chapel', 'kitchen', 'larder'],
-        "tokens": ['toxic_object', 'smoke', 'barricade', 'strength_check'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：打开前门并清理死亡物体', 'target': 'half_players_ceil', 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：扩散毒烟', 'target': 'player_count', 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'dog', 'spawn': 'haunt_room', 'count': 1}],
-        "actions": [{'id': 'h53_hero_task', 'side': 'heroes', 'label': '打开前门并清理死亡物体', 'detail': '在入口大厅清除路障，再带英雄逃离。', 'stat': ['might', 'knowledge'], 'target': 5, 'rooms': ['entrance_hall', 'foyer', 'grand_staircase', 'chapel', 'kitchen', 'larder'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h53_traitor_task', 'side': 'traitor', 'label': '扩散毒烟', 'detail': '推进毒烟扩散轨道。', 'stat': 'might', 'target': 5, 'rooms': ['entrance_hall', 'foyer', 'grand_staircase', 'chapel', 'kitchen', 'larder'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 'half_players_ceil', 'reason': '至少一半英雄逃出前门，或清理死亡物体并保住至少一半英雄。'}, {'winner': 'traitor', 'type': 'all_heroes_dead', 'track': None, 'operator': '>=', 'target': 'player_count', 'reason': '阻止前门打开并让毒烟杀死英雄。'}],
+        "key_rooms": ["entrance_hall", "furnace_room", "underground_lake"],
+        "tokens": ["deathly_object", "poison_cloud"],
+        "setup": {
+            "tracks": {
+                "barricade_tokens": {"label": "已清除障碍", "target": "player_count", "side": "heroes"},
+                "escaped_count": {"label": "已逃出英雄", "target": "half_players_ceil", "side": "heroes"},
+            },
+            "flags": {"object_cleansed": False, "door_unlocked": False, "escaped": []},
+        },
+        "monsters": [
+            {"template_id": "dog", "name": "地狱犬", "spawn": "haunt_room", "count": 1, "speed": 6, "might": 4, "sanity": 0},
+        ],
+        "actions": [
+            {"id": "clear_barricade", "side": "heroes", "label": "清除障碍", "detail": "在门厅做力量 4+，推进障碍清除计数（p64）。", "stat": "might", "target": 4, "rooms": ["entrance_hall"], "progress": "barricade_tokens"},
+            {"id": "unlock_door", "side": "heroes", "label": "解锁前门", "detail": "障碍清完后在门厅做知识 5+（p64）。", "stat": "knowledge", "target": 5, "rooms": ["entrance_hall"], "requires_flags": {"door_unlocked": False}},
+            {"id": "flee_house", "side": "heroes", "label": "逃离房子", "detail": "门开后花 2 格移动逃离（p64）。", "requires_flags": {"door_unlocked": True}},
+            {"id": "cleanse_object", "side": "heroes", "label": "净化死亡之物", "detail": "在熔炉房/地下湖开始回合持物（p64）。"},
+        ],
+        "win_conditions": [],
         "source_pages": [64, 135],
     },
     54: {

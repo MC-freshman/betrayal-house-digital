@@ -1396,6 +1396,23 @@
       "forced_haunt": 52
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "2e393d4cbc46eaea19b981e227b62f7230c26d22f07e0cd87cf158823d799a45",
+      "turns": 32,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "毒气吞噬了最后的生命。",
+      "haunt": 53,
+      "haunt_name": "死亡恶臭",
+      "rooms": 26,
+      "monsters": 1,
+      "key": "seed113-3p-haunt53",
+      "forced_haunt": 53
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,

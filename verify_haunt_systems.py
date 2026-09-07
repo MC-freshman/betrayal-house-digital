@@ -51,6 +51,7 @@ if __package__ in {None, ""}:
         SupernaturalAgingMode,
         DarkerThanNightMode,
         CracklingAuraMode,
+        ToxicObjectEscapeMode,
         TimeBombMode,
         CannibalFeastMode,
         OuroborosMode,
@@ -173,6 +174,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(SupernaturalAgingMode) == [44], f"剧本 44 未走定制 handler: {handlers.get(SupernaturalAgingMode)}"
     assert handlers.get(DarkerThanNightMode) == [51], f"51 未走定制: {handlers.get(DarkerThanNightMode)}"
     assert handlers.get(CracklingAuraMode) == [52], f"52 未走定制"
+    assert handlers.get(ToxicObjectEscapeMode) == [53], f"53 未走定制"
     assert handlers.get(TimeBombMode) == [45], f"剧本 45 未走定制 handler: {handlers.get(TimeBombMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
@@ -189,7 +191,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(AstralSpiritMode) == [49], f"剧本 49 未走定制 handler: {handlers.get(AstralSpiritMode)}"
     assert handlers.get(NightMurderMode) == [50], f"剧本 50 未走定制 handler: {handlers.get(NightMurderMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 18, f"应有 18 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 17, f"应有 17 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -206,7 +208,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
         "worm_ouroboros",
         "cursed_weapon",
@@ -5045,6 +5047,55 @@ def verify_haunt52_crackling_aura() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt53_toxic_object_escape() -> None:
+    """剧本 53：死亡之物/逃跑链路/净化/胜利条件（p64/p135）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=53)
+    handler = engine._mode_handler()
+    assert isinstance(handler, ToxicObjectEscapeMode)
+    flags = engine._haunt_flags()
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    # 狗在场且有死亡之物
+    dog = engine._monster_by_template("dog")
+    assert dog is not None, "狗应已布点"
+
+    # 逃跑链路：清障碍→解锁→逃离
+    entrance = next(k for k, r in engine.state.board.items() if r.template_id == "entrance_hall")
+    hero.room_key = entrance
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "clear_barricade" in ids, "在门厅应能清障碍"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "clear_barricade", {}) is True
+    assert engine._haunt_track_value("barricade_tokens") == 1
+
+    # 解锁
+    engine._set_haunt_track_value("barricade_tokens", engine._haunt_track_target("barricade_tokens"))
+    engine._reset_player_turn_state(hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "unlock_door" in ids, "障碍清完应能解锁"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "unlock_door", {}) is True
+    assert flags.get("door_unlocked") is True
+
+    # 逃离
+    engine._reset_player_turn_state(hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "flee_house" in ids, "门开后应能逃离"
+    assert handler.perform_action(engine, hero, "flee_house", {}) is True
+    assert hero.id in flags.get("escaped", [])
+
+    # 半数逃出 → 英雄胜
+    hero2 = next((p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead), None)
+    if hero2 is not None:
+        hero2.room_key = entrance
+        _set_current(engine, hero2)
+        handler.perform_action(engine, hero2, "flee_house", {})
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -5960,6 +6011,7 @@ def main():
     verify_haunt45_time_bomb()
     verify_haunt51_darker_than_night()
     verify_haunt52_crackling_aura()
+    verify_haunt53_toxic_object_escape()
     verify_haunt46_the_feast_setup()
     verify_haunt46_front_door_and_victory()
     verify_haunt47_worm_ouroboros_setup()
