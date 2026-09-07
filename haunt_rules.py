@@ -2572,22 +2572,39 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [64, 135],
     },
     54: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'arkanok_skull',
-        "traitor_rule": 'revealer',
-        "hero_goal": '把阿卡诺克之颅送回其遗骸所在房间，打破死灵咒语。',
-        "traitor_goal": '召唤阿卡诺克的幽灵，或杀死所有英雄。',
-        "suggested_monsters": ['zombie', 'ghost'],
-        "required_cards": ['omen_skull'],
-        "key_rooms": ['chapel', 'crypt', 'graveyard', 'furnace_room', 'bloody_room', 'charred_room'],
-        "tokens": ['skull', 'arkanok', 'zombie', 'sanity_check'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：归还阿卡诺克之颅', 'target': 1, 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：召唤阿卡诺克幽灵', 'target': 'player_count', 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'zombie', 'spawn': 'haunt_room', 'count': 'player_count'}, {'template_id': 'ghost', 'spawn': 'haunt_room', 'count': 1}],
-        "actions": [{'id': 'h54_hero_task', 'side': 'heroes', 'label': '归还阿卡诺克之颅', 'detail': '携带颅骨在遗骸房间完成归还仪式。', 'stat': 'knowledge', 'target': 5, 'rooms': ['chapel', 'crypt', 'graveyard', 'furnace_room', 'bloody_room', 'charred_room'], 'progress': 'hero_progress', 'requires': ['omen_skull']}, {'id': 'h54_traitor_task', 'side': 'traitor', 'label': '召唤阿卡诺克幽灵', 'detail': '推进死灵召唤轨道。', 'stat': 'might', 'target': 5, 'rooms': ['chapel', 'crypt', 'graveyard', 'furnace_room', 'bloody_room', 'charred_room'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 1, 'reason': '把阿卡诺克之颅送回其遗骸所在房间，打破死灵咒语。'}, {'winner': 'traitor', 'type': 'all_heroes_dead', 'track': None, 'operator': '>=', 'target': 'player_count', 'reason': '召唤阿卡诺克的幽灵，或杀死所有英雄。'}],
+        # 校准记录（2026-09-05，对照英雄手册 p65 / 叛徒手册 p136）：
+        #   机制落在 ArkanokSkullMode：
+        #   · 骷髅 token 放作祟房间；遗骸在六类房间之一（叛徒知道）
+        #   · 侦测：持骷髅/圣徽 → 理智 4+；持水晶球/灵应板 → 知识 5+
+        #   · 净化：持骷髅在遗骸房间理智 5+
+        #   · 僵尸：2× 英雄数，Speed 1 Might 4 Sanity 2
+        #   · 英雄胜：净化遗骸；叛徒胜：英雄全灭
+        #   简化：僵尸擒抱未建模（正常怪物攻击）；叛徒死亡变鬼未建模。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "arkanok_skull",
+        "traitor_rule": "revealer",
+        "hero_goal": "找到 Ar'Kanok 的遗骸所在房间，持骷髅前往净化。",
+        "traitor_goal": "让僵尸杀死所有英雄。",
+        "suggested_monsters": ["zombie"],
+        "required_cards": [],
+        "key_rooms": ["chapel", "crypt", "graveyard", "furnace_room", "bloody_room", "charred_room"],
+        "tokens": ["skull"],
+        "setup": {
+            "tracks": {
+                "ritual_progress": {"label": "净化进度", "target": 1, "side": "heroes"},
+            },
+            "flags": {"remains_room": None, "remains_found": False, "skull_picked": False},
+        },
+        "monsters": [
+            {"template_id": "zombie", "name": "僵尸", "spawn": "deferred", "count": 1, "speed": 1, "might": 4, "sanity": 2},
+        ],
+        "actions": [
+            {"id": "detect_remains", "side": "heroes", "label": "侦测遗骸", "detail": "持骷髅/圣徽理智 4+ 或持水晶球/灵应板知识 5+（p65）。"},
+            {"id": "exorcise", "side": "heroes", "label": "净化 Ar'Kanok", "detail": "持骷髅在遗骸房间理智 5+（p65）。", "stat": "sanity", "target": 5, "requires_flags": {"remains_found": True}, "progress": "ritual_progress"},
+        ],
+        "win_conditions": [],
         "source_pages": [65, 136],
     },
     55: {

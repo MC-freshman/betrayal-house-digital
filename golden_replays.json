@@ -1413,6 +1413,23 @@
       "forced_haunt": 53
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "90d4fecc016bba7edf4f654bc18d0f3a0fc8e0a952bf0e3c0fa406c8b9345f5d",
+      "turns": 35,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "僵尸撕碎了最后的英雄。",
+      "haunt": 54,
+      "haunt_name": "阿卡诺克之颅",
+      "rooms": 26,
+      "monsters": 4,
+      "key": "seed113-3p-haunt54",
+      "forced_haunt": 54
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,
