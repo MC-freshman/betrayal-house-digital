@@ -11953,6 +11953,82 @@ class NightMurderMode(GenericModeHandler):
 
 
 
+
+
+class KingsRoadsMode(GenericModeHandler):
+    """剧本 55 国王之路（The King's Roads）。
+
+    权威原文：英雄手册 p66 / 叛徒手册 p137。
+    · 驱魔检定：知识/理智 5+，实验室/教堂/温室/地窖；每房一次。
+    · 影子（ghost 模板承载，Speed 3）：每玩家一只，追击英雄。
+    · 英雄胜：驱魔数 = 玩家数；叛徒胜：英雄全灭。
+    · 简化：国王之路传送未建模（影子正常追击）；擒抱未建模。
+    """
+
+    mode = "kings_roads"
+
+    ENTRANCE_ROOMS = ["garden", "graveyard", "patio", "tower", "balcony", "underground_lake"]
+    DISENCHANT_ROOMS = ["research_laboratory", "chapel", "conservatory", "crypt", "mystic_elevator"]
+
+    def setup(self, engine, haunt, room_key):
+        flags = engine._haunt_flags()
+        flags["used_sources"] = []
+        # 影子：每玩家一只，放最近入口房间
+        spec = next((s for s in haunt.rule_data.get("monsters", []) if s.get("template_id") == "ghost"), {})
+        spec = dict(spec)
+        spec["name"] = "影子"
+        spec["speed"] = 3
+        entrances = [k for k, r in engine.state.board.items()
+                     if r.template_id in self.ENTRANCE_ROOMS]
+        if not entrances:
+            entrances = [room_key]
+        for hero in engine.state.players:
+            if hero.role != "hero" or hero.dead:
+                continue
+            nearest = min(sorted(entrances), key=lambda k: engine._path_length(hero.room_key, k))
+            engine._spawn_single_haunt_monster(spec, nearest)
+        engine._log(f"{len(engine.state.monsters)} 道影子从国王之路涌入了房子！")
+
+    def available_actions(self, engine, player):
+        actions = super().available_actions(engine, player)
+        result = []
+        used = set(engine._haunt_flags().get("used_sources", []))
+        for action in actions:
+            if action.id == "disenchant_room":
+                room_id = engine._current_room_template_id(player)
+                if room_id in used:
+                    continue
+                has_item = any(item in player.items for item in ("omen_crystal_ball", "omen_mask"))
+                if room_id not in self.DISENCHANT_ROOMS and not has_item:
+                    continue
+            result.append(action)
+        return result
+
+    def perform_action(self, engine, player, action_id, data):
+        if action_id == "disenchant_room":
+            room_id = engine._current_room_template_id(player)
+            used = set(engine._haunt_flags().get("used_sources", []))
+            if room_id in used:
+                engine._log("这个房间已经用过了。")
+                return False
+            ok = super().perform_action(engine, player, action_id, data)
+            if ok:
+                used.add(room_id)
+                engine._haunt_flags()["used_sources"] = sorted(used)
+            return ok
+        return super().perform_action(engine, player, action_id, data)
+
+    def check_victory(self, engine):
+        if engine._haunt_track_value("disenchant_progress") >= engine._haunt_track_target("disenchant_progress"):
+            engine._set_winner("heroes", "国王之路被封住了——影子退回了暗影国度。")
+            return True
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "影子附身了最后的英雄。")
+            return True
+        return False
+
+
+
 class ArkanokSkullMode(GenericModeHandler):
     """剧本 54 阿卡诺克之颅（The Skull of Ar'Kanok）。
 
@@ -12432,6 +12508,7 @@ for _handler in (
     CracklingAuraMode(),
     ToxicObjectEscapeMode(),
     ArkanokSkullMode(),
+    KingsRoadsMode(),
 ):
 
     register_mode(_handler)

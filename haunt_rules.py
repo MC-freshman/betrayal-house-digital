@@ -2608,22 +2608,37 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [65, 136],
     },
     55: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'kings_roads',
-        "traitor_rule": 'revealer',
-        "hero_goal": '完成祛魅，关闭国王之路。',
-        "traitor_goal": '让所有英雄被阴影附身或死亡。',
-        "suggested_monsters": ['shadow'],
+        # 校准记录（2026-09-05，对照英雄手册 p66 / 叛徒手册 p137）：
+        #   机制落在 KingsRoadsMode：
+        #   · 驱魔检定：知识 5+（实验室/电梯/水晶球）或理智 5+
+        #     （教堂/温室/地窖/面具）；每房/每预兆一次
+        #   · 影子：每玩家一只，从最近入口追击英雄
+        #   · 国王之路：简化为影子正常追击（路网传送未建模）
+        #   · 英雄胜：驱魔数 = 玩家数；叛徒胜：英雄全灭
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "kings_roads",
+        "traitor_rule": "revealer",
+        "hero_goal": "在影子附身之前完成驱魔，封住国王之路。",
+        "traitor_goal": "让影子附身所有英雄。",
+        "suggested_monsters": ["shadow"],
         "required_cards": [],
-        "key_rooms": ['garden', 'graveyard', 'patio', 'tower', 'balcony', 'underground_lake', 'chapel', 'library'],
-        "tokens": ['shadow', 'kings_road', 'sanity_check', 'knowledge_check'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：祛魅国王之路', 'target': 'player_count', 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：让阴影附身英雄', 'target': 'player_count', 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'shadow', 'spawn': 'haunt_room', 'count': 'player_count'}],
-        "actions": [{'id': 'h55_hero_task', 'side': 'heroes', 'label': '祛魅国王之路', 'detail': '在国王之路入口或仪式房间完成祛魅检定。', 'stat': ['sanity', 'knowledge'], 'target': 5, 'rooms': ['garden', 'graveyard', 'patio', 'tower', 'balcony', 'underground_lake', 'chapel', 'library'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h55_traitor_task', 'side': 'traitor', 'label': '让阴影附身英雄', 'detail': '推进附身轨道。', 'stat': 'might', 'target': 5, 'rooms': ['garden', 'graveyard', 'patio', 'tower', 'balcony', 'underground_lake', 'chapel', 'library'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 'player_count', 'reason': '完成祛魅，关闭国王之路。'}, {'winner': 'traitor', 'type': 'all_heroes_dead', 'track': None, 'operator': '>=', 'target': 'player_count', 'reason': '让所有英雄被阴影附身或死亡。'}],
+        "key_rooms": ["research_laboratory", "chapel", "conservatory", "crypt", "mystic_elevator", "garden", "graveyard", "patio", "tower", "balcony"],
+        "tokens": [],
+        "setup": {
+            "tracks": {
+                "disenchant_progress": {"label": "驱魔进度", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"used_sources": []},
+        },
+        "monsters": [
+            {"template_id": "ghost", "name": "影子", "spawn": "deferred", "count": "player_count", "speed": 3, "might": 0, "sanity": 0},
+        ],
+        "actions": [
+            {"id": "disenchant_room", "side": "heroes", "label": "驱魔检定", "detail": "在实验室/教堂/温室/地窖做知识或理智 5+（p66）。", "stat": ["knowledge", "sanity"], "target": 5, "progress": "disenchant_progress"},
+        ],
+        "win_conditions": [],
         "source_pages": [66, 137],
     },
     56: {

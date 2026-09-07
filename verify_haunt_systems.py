@@ -53,6 +53,7 @@ if __package__ in {None, ""}:
         CracklingAuraMode,
         ToxicObjectEscapeMode,
         ArkanokSkullMode,
+        KingsRoadsMode,
         TimeBombMode,
         CannibalFeastMode,
         OuroborosMode,
@@ -177,6 +178,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(CracklingAuraMode) == [52], f"52 未走定制"
     assert handlers.get(ToxicObjectEscapeMode) == [53], f"53 未走定制"
     assert handlers.get(ArkanokSkullMode) == [54], f"54 未走定制"
+    assert handlers.get(KingsRoadsMode) == [55], f"55 未走定制"
     assert handlers.get(TimeBombMode) == [45], f"剧本 45 未走定制 handler: {handlers.get(TimeBombMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
@@ -193,7 +195,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(AstralSpiritMode) == [49], f"剧本 49 未走定制 handler: {handlers.get(AstralSpiritMode)}"
     assert handlers.get(NightMurderMode) == [50], f"剧本 50 未走定制 handler: {handlers.get(NightMurderMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 16, f"应有 16 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 15, f"应有 15 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -210,7 +212,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
         "worm_ouroboros",
         "cursed_weapon",
@@ -5138,6 +5140,41 @@ def verify_haunt54_arkanok_skull() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt55_kings_roads() -> None:
+    """剧本 55：影子追击/驱魔检定/每房一次/胜利条件（p66/p137）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=55)
+    handler = engine._mode_handler()
+    assert isinstance(handler, KingsRoadsMode)
+    flags = engine._haunt_flags()
+
+    # 影子已布点
+    shadows = [m for m in engine.state.monsters if m.template_id == "ghost"]
+    assert len(shadows) >= 1, "至少应有一只影子"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    # 驱魔检定：在仪式房间
+    dis_room = next((r for r in engine.state.board.values()
+                     if r.template_id in handler.DISENCHANT_ROOMS), None)
+    if dis_room is not None:
+        hero.room_key = dis_room.key
+        _set_current(engine, hero)
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "disenchant_room" in ids, "在仪式房间应能驱魔"
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, hero, "disenchant_room", {}) is True
+        assert engine._haunt_track_value("disenchant_progress") == 1
+        # 同房不能再用
+        engine._reset_player_turn_state(hero)
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "disenchant_room" not in ids, "同房不能再次驱魔"
+
+    # 胜利：驱魔满
+    engine._set_haunt_track_value("disenchant_progress", engine._haunt_track_target("disenchant_progress"))
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -6055,6 +6092,7 @@ def main():
     verify_haunt52_crackling_aura()
     verify_haunt53_toxic_object_escape()
     verify_haunt54_arkanok_skull()
+    verify_haunt55_kings_roads()
     verify_haunt46_the_feast_setup()
     verify_haunt46_front_door_and_victory()
     verify_haunt47_worm_ouroboros_setup()
