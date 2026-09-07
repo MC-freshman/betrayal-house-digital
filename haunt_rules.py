@@ -2493,22 +2493,41 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [62, 133],
     },
     52: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'ring_exorcism',
-        "traitor_rule": 'revealer',
-        "hero_goal": '分解戒指并消灭房屋中的恶魔。',
-        "traitor_goal": '保护戒指的魔法并杀死所有英雄。',
-        "suggested_monsters": ['cultist'],
-        "required_cards": ['omen_ring'],
-        "key_rooms": ['library', 'chapel', 'pentagram_chamber', 'research_laboratory', 'furnace_room'],
-        "tokens": ['ring', 'magic_dust', 'demon', 'antimagic'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：分解魔法戒指', 'target': 1, 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：守护戒指魔法', 'target': 'player_count', 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'cultist', 'spawn': 'haunt_room', 'count': 'player_count'}],
-        "actions": [{'id': 'h52_hero_task', 'side': 'heroes', 'label': '分解魔法戒指', 'detail': '携带戒指在实验室、图书馆或小教堂完成分解。', 'stat': 'knowledge', 'target': 6, 'rooms': ['library', 'chapel', 'pentagram_chamber', 'research_laboratory', 'furnace_room'], 'progress': 'hero_progress', 'requires': ['omen_ring']}, {'id': 'h52_traitor_task', 'side': 'traitor', 'label': '守护戒指魔法', 'detail': '推进恶魔守护轨道。', 'stat': 'might', 'target': 5, 'rooms': ['library', 'chapel', 'pentagram_chamber', 'research_laboratory', 'furnace_room'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 1, 'reason': '分解戒指并消灭房屋中的恶魔。'}, {'winner': 'traitor', 'type': 'all_heroes_dead', 'track': None, 'operator': '>=', 'target': 'player_count', 'reason': '保护戒指的魔法并杀死所有英雄。'}],
+        # 校准记录（2026-09-05，对照英雄手册 p63 / 叛徒手册 p134）：
+        #   机制落在 CracklingAuraMode：
+        #   · 叛徒召唤恶魔领主（五芒星室，知识 5+，Might 7 Speed 5 Sanity 4）
+        #   · 魔法尘：英雄在事件房掷 3 骰（水晶球 4 骰）4+ → 获得魔法尘；
+        #     丢弃→ 反魔法场（叛徒不可在其中施法/召唤）
+        #   · 英雄胜：叛徒死 + 无恶魔在场
+        #   简化：叛徒法术系统（火球/传送/回程）未建模；
+        #     反魔法场回合清除未建模（持续到被覆盖）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "ring_exorcism",
+        "traitor_rule": "revealer",
+        "hero_goal": "搜索魔法尘创建反魔法场，杀死叛徒并驱逐所有恶魔。",
+        "traitor_goal": "召唤恶魔领主杀死所有英雄。",
+        "suggested_monsters": ["giant"],
+        "required_cards": [],
+        "key_rooms": ["pentagram_chamber"],
+        "tokens": ["magic_dust", "demon_lord"],
+        "setup": {
+            "tracks": {
+                "demon_slain": {"label": "已驱逐恶魔", "target": 10, "side": "heroes"},
+            },
+            "flags": {"anti_magic_rooms": [], "demon_alive": False},
+        },
+        "monsters": [
+            {"template_id": "giant", "name": "恶魔领主", "spawn": "deferred", "count": 1, "speed": 5, "might": 7, "sanity": 4},
+        ],
+        "actions": [
+            {"id": "search_dust", "side": "heroes", "label": "搜索魔法尘", "detail": "在有事件图标的房间掷 3 骰（水晶球 4 骰）4+（p63）。"},
+            {"id": "drop_dust", "side": "heroes", "label": "散布魔法尘", "detail": "把魔法尘丢在地上创建反魔法场（p63）。"},
+        ],
+        "win_conditions": [
+            {"winner": "heroes", "type": "traitor_dead", "reason": "叛徒被杀，恶魔被驱逐。"}
+        ],
         "source_pages": [63, 134],
     },
     53: {

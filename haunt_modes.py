@@ -11947,6 +11947,125 @@ class NightMurderMode(GenericModeHandler):
 
 
 
+
+
+class CracklingAuraMode(GenericModeHandler):
+    """剧本 52 噼啪光环中（In a Crackling Aura）。
+
+    权威原文：英雄手册 p63 / 叛徒手册 p134。
+    · 魔法尘：英雄在事件房掷 3 骰（水晶球 4 骰）4+ → 获得魔法尘。
+    · 反魔法场：丢弃魔法尘 → 该房间变反魔法场（叛徒不可施法/召唤）。
+    · 恶魔领主：叛徒在五芒星室知识 5+ 召唤（Might 7 Speed 5 Sanity 4）。
+    · 英雄胜：叛徒死 + 无恶魔在场。
+    · 简化：叛徒法术系统（火球/传送）未建模；反魔法场回合清除未建模。
+    """
+
+    mode = "ring_exorcism"
+
+    def setup(self, engine, haunt, room_key):
+        flags = engine._haunt_flags()
+        flags["anti_magic_rooms"] = []
+        flags["demon_alive"] = False
+        engine._log("你的朋友手上戴着一枚发光的戒指，周身噼啪作响……")
+
+    def on_turn_start(self, engine, player):
+        flags = engine._haunt_flags()
+        if player.role != "traitor" or player.dead:
+            return
+        # p134：叛徒在五芒星室召唤恶魔领主
+        pentagram = next(
+            (k for k, r in engine.state.board.items() if r.template_id == "pentagram_chamber"),
+            None,
+        )
+        if pentagram is None or player.room_key != pentagram:
+            return
+        if flags.get("demon_alive"):
+            return
+        if pentagram in flags.get("anti_magic_rooms", []):
+            engine._log("反魔法场阻止了召唤！")
+            return
+        roll = engine.roll_dice(max(1, engine._effective_stat(player, "knowledge")), "召唤恶魔")
+        if roll >= 5:
+            spec = next(
+                (s for s in haunt.rule_data.get("monsters", []) if s.get("template_id") == "giant"),
+                {},
+            )
+            spec = dict(spec)
+            spec["name"] = "恶魔领主"
+            monster = engine._spawn_single_haunt_monster(spec, pentagram)
+            if monster is not None:
+                flags["demon_alive"] = True
+                engine._log("恶魔领主从五芒星室中降临！")
+        else:
+            engine._log(f"召唤失败（{roll}）。")
+
+    def on_monster_defeated(self, engine, monster, amount):
+        if getattr(monster, "name", "") != "恶魔领主":
+            return False
+        flags = engine._haunt_flags()
+        flags["demon_alive"] = False
+        monster_id = getattr(monster, "id", None)
+        engine.state.monsters = [
+            m for m in engine.state.monsters if getattr(m, "id", None) != monster_id
+        ]
+        engine._log("恶魔领主被驱回了地狱！")
+        engine.check_victory()
+        return True
+
+    def available_actions(self, engine, player):
+        actions = super().available_actions(engine, player)
+        result = []
+        for action in actions:
+            if action.id == "search_dust":
+                room = engine.current_room(player)
+                if room.symbol != "event":
+                    continue
+            if action.id == "drop_dust":
+                if not engine.tokens_held_by(player.id, "magic_dust"):
+                    continue
+            result.append(action)
+        return result
+
+    def perform_action(self, engine, player, action_id, data):
+        flags = engine._haunt_flags()
+        if action_id == "search_dust":
+            dice = 4 if "omen_crystal_ball" in player.items else 3
+            roll = engine.roll_dice(dice, "魔法尘")
+            if roll >= 4:
+                engine.spawn_token("magic_dust", label="魔法尘", role="carried", holder=player.id)
+                engine._log(f"{player.name} 找到了魔法尘！（{roll}）")
+            else:
+                engine._log(f"{player.name} 没有找到魔法尘（{roll}）。")
+            return True
+
+        if action_id == "drop_dust":
+            token = next(iter(engine.tokens_held_by(player.id, "magic_dust")), None)
+            if token is None:
+                return False
+            engine.place_token(token.uid, player.room_key)
+            anti = flags.setdefault("anti_magic_rooms", [])
+            if player.room_key not in anti:
+                anti.append(player.room_key)
+            engine._log(f"魔法尘散布在{engine.state.board[player.room_key].name}——反魔法场形成了！")
+            return True
+
+        return super().perform_action(engine, player, action_id, data)
+
+    def check_victory(self, engine):
+        flags = engine._haunt_flags()
+        traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+        demons = [m for m in engine.state.monsters if getattr(m, "name", "") == "恶魔领主"]
+        traitor_dead = traitor is None or traitor.dead
+        if traitor_dead and not demons:
+            engine._set_winner("heroes", "戒指失去了魔力——叛徒倒在 你的脚下。")
+            return True
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "恶魔的嚎叫淹没 了最后的呼救。")
+            return True
+        return False
+
+
+
 class DarkerThanNightMode(GenericModeHandler):
     """剧本 51 比夜更黑（Darker than Night）。"""
 
@@ -12046,6 +12165,7 @@ for _handler in (
     AstralSpiritMode(),
     NightMurderMode(),
     DarkerThanNightMode(),
+    CracklingAuraMode(),
 ):
 
     register_mode(_handler)

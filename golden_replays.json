@@ -1379,6 +1379,23 @@
       "forced_haunt": 51
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "7e4866b716329e9d4b48e75ee453753e0067c99d17e81c197cfbb0904bc768be",
+      "turns": 58,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "恶魔的嚎叫淹没 了最后的呼救。",
+      "haunt": 52,
+      "haunt_name": "噼啪光环中",
+      "rooms": 26,
+      "monsters": 0,
+      "key": "seed113-3p-haunt52",
+      "forced_haunt": 52
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,
