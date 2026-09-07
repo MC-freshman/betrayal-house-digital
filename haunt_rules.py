@@ -2457,22 +2457,39 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [61, 132],
     },
     51: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'darker_than_night',
-        "traitor_rule": 'revealer',
-        "hero_goal": '完成驱魔，让房屋摆脱黑暗，或杀死叛徒。',
-        "traitor_goal": '完成黑暗仪式，让房屋陷入黑暗。',
-        "suggested_monsters": ['shadow'],
+        # 校准记录（2026-09-05，对照英雄手册 p62 / 叛徒手册 p133）：
+        #   机制落在 DarkerThanNightMode：
+        #   · 镜面房间（6 间）创造圣印（理智 4+，每房限一枚）
+        #   · 叛徒分身在镜面房间繁殖（每房限一只）；圣印阻止繁殖
+        #   · 叛徒受伤可用分身抵消（消耗一只分身）
+        #   · 黑暗仪式：外缘房间知识 5+ 放 Hex 令牌，3 枚 → 叛徒胜
+        #   · 英雄胜利：圣印数 = 玩家数 或 叛徒死亡
+        #   简化：分身不可被普通攻击/ consecrated weapon 未建模；
+        #     破解圣印（Sanity 5+）未建模；叛徒不可直接攻击英雄未建模。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "darker_than_night",
+        "traitor_rule": "revealer",
+        "hero_goal": "在镜面房间创造圣印，把黑暗从房子里驱逐出去。",
+        "traitor_goal": "在房子里种下 3 枚黑暗 Hex，或让分身吃掉所有英雄。",
+        "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": ['chapel', 'library', 'balcony', 'garden', 'graveyard', 'patio', 'tower'],
-        "tokens": ['reflection', 'darkness', 'seal'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：封锁黑暗', 'target': 'player_count', 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：完成黑暗仪式', 'target': 6, 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'shadow', 'spawn': 'haunt_room', 'count': 'player_count'}],
-        "actions": [{'id': 'h51_hero_task', 'side': 'heroes', 'label': '封锁黑暗', 'detail': '在驱魔来源处完成光明检定。', 'stat': ['sanity', 'knowledge'], 'target': 5, 'rooms': ['chapel', 'library', 'balcony', 'garden', 'graveyard', 'patio', 'tower'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h51_traitor_task', 'side': 'traitor', 'label': '完成黑暗仪式', 'detail': '推进黑暗仪式轨道。', 'stat': 'might', 'target': 5, 'rooms': ['chapel', 'library', 'balcony', 'garden', 'graveyard', 'patio', 'tower'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 'player_count', 'reason': '完成驱魔，让房屋摆脱黑暗，或杀死叛徒。'}, {'winner': 'traitor', 'type': 'track', 'track': 'traitor_progress', 'operator': '>=', 'target': 6, 'reason': '完成黑暗仪式，让房屋陷入黑暗。'}],
+        "key_rooms": ["bedroom", "chapel", "conservatory", "dining_room", "grand_staircase", "master_bedroom", "balcony", "garden", "graveyard", "patio", "tower"],
+        "tokens": ["holy_seal", "dark_hex"],
+        "setup": {
+            "tracks": {
+                "hero_progress": {"label": "圣印数", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"dark_hexes": 0, "seal_rooms_used": []},
+        },
+        "monsters": [],
+        "actions": [
+            {"id": "create_seal", "side": "heroes", "label": "创造圣印", "detail": "在镜面房间做理智 4+，每房限一枚（p62）。", "stat": "sanity", "target": 4, "rooms": ["bedroom", "chapel", "conservatory", "dining_room", "grand_staircase", "master_bedroom"], "progress": "hero_progress"},
+        ],
+        "win_conditions": [
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "黑暗吞噬了最后的英雄。"}
+        ],
         "source_pages": [62, 133],
     },
     52: {

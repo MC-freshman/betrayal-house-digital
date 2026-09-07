@@ -1362,6 +1362,23 @@
       "forced_haunt": 50
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "77509f45e7e0d0bc5c0ef46c52319c8fcd01e367096f4dc8c17982ff897d51fb",
+      "turns": 33,
+      "phase": "GAME_OVER",
+      "winner": "heroes",
+      "winner_reason": "圣印驱散了黑暗。",
+      "haunt": 51,
+      "haunt_name": "比夜更黑",
+      "rooms": 26,
+      "monsters": 0,
+      "key": "seed113-3p-haunt51",
+      "forced_haunt": 51
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,
