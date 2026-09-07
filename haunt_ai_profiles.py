@@ -395,6 +395,18 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["cursed_weapon", "reviving_monster", "fear_aura"]},
     },
+    49: {
+        "hero": {
+            # p60：攻击星界灵成功即累积驱逐令牌（不是伤害），失败也不受伤——
+            # 全员贴脸输出就是最优解；灵魂不能探索，别浪费步数。
+            "victory_focus": "全员围住星界灵用知识/理智轮番攻击，攒满驱逐令牌摧毁它",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "用星界灵磨掉英雄的精神属性毁掉灵魂，再让仪式附身空壳",
+        },
+        "scenario": {"special_rules": ["soul_out_of_body", "ritual_possession", "mental_only"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",

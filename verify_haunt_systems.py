@@ -53,6 +53,7 @@ if __package__ in {None, ""}:
         CannibalFeastMode,
         OuroborosMode,
         CrimsonJackMode,
+        AstralSpiritMode,
         BuriedAliveMode,
         ShadowExorcismMode,
         HellGateHeroMode,
@@ -180,8 +181,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(CannibalFeastMode) == [46], f"剧本 46 未走定制 handler: {handlers.get(CannibalFeastMode)}"
     assert handlers.get(OuroborosMode) == [47], f"剧本 47 未走定制 handler: {handlers.get(OuroborosMode)}"
     assert handlers.get(CrimsonJackMode) == [48], f"剧本 48 未走定制 handler: {handlers.get(CrimsonJackMode)}"
+    assert handlers.get(AstralSpiritMode) == [49], f"剧本 49 未走定制 handler: {handlers.get(AstralSpiritMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 22, f"应有 22 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 21, f"应有 22 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -202,6 +204,7 @@ def verify_mode_dispatch() -> None:
         "cannibal_feast",
         "worm_ouroboros",
         "cursed_weapon",
+        "astral_spirit",
     }
 
 
@@ -4803,6 +4806,96 @@ def verify_haunt48_cursed_weapon_flow() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt49_astral_spirit_setup() -> None:
+    """剧本 49：星界灵布点、灵魂规则（禁探索/精神攻击/失败免伤）（p60/p131）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=49)
+    handler = engine._mode_handler()
+    assert isinstance(handler, AstralSpiritMode)
+    flags = engine._haunt_flags()
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # p131：星界灵放叛徒所在房间
+    spirit = handler._spirit(engine)
+    assert spirit is not None and spirit.room_key == traitor.room_key
+    assert (spirit.speed, spirit.sanity, spirit.knowledge) == (3, 1, 6)
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    # p60：灵魂不能探索新房间
+    assert handler.can_discover_rooms(engine, hero) is False
+    # p60：灵魂攻击/防御只能用知识/理智——力量攻击被覆盖为较高精神属性
+    override = handler.attack_attr_override(engine, hero, spirit, "might")
+    assert override in ("sanity", "knowledge")
+    assert handler.attack_attr_override(engine, traitor, hero, "might") is None
+    # p60：攻击星界灵失败不受伤
+    assert handler.attack_loss_damage_disabled(engine, hero, spirit) is True
+    other_monster = None  # 其他怪物场景回落 False
+    assert handler.attack_loss_damage_disabled(engine, hero, other_monster) is False
+
+    # p131：星界灵攻击 = 知识对决精神伤害（mock 掷出压倒性结果）
+    hero.room_key = spirit.room_key
+    with patch.object(engine, "_roll_monster_attack", return_value=8), patch.object(
+        engine, "_roll_attack", return_value=2
+    ):
+        assert handler.on_monster_turn_attack(engine, spirit) is True
+    lost = sum(
+        1
+        for s in ("sanity", "knowledge")
+        if hero.stat_positions.get(s, 0) < hero.stats.get(s, 0)
+    ) or hero.stats.get("sanity", 0) < 4
+    assert hero.stat_positions["sanity"] < 4 or hero.stat_positions["knowledge"] < 4, (
+        "精神伤害应体现在卡尺格位上移向下"
+    )
+
+    # p131：灵魂被毁（死亡）→ 肉体进入无魂名单
+    handler.on_player_died(engine, hero)
+    assert str(hero.id) in flags["soulless"], "死亡英雄的肉体应记录为无魂"
+
+
+def verify_haunt49_banish_and_possession() -> None:
+    """剧本 49：驱逐令牌摧毁星界灵、附身仪式两条胜负线（p60/p131）。"""
+    engine = _run_until_haunt(seed=137, players=3, haunt_id=49)
+    handler = engine._mode_handler()
+    assert isinstance(handler, AstralSpiritMode)
+    flags = engine._haunt_flags()
+    spirit = handler._spirit(engine)
+    needed = engine._haunt_track_target("banish_tokens")
+    assert needed == len(engine.state.players)
+
+    # p60：攻击成功 → 驱逐令牌 +1（星界灵不晕不死、留场）
+    assert handler.on_monster_defeated(engine, spirit, 2) is True
+    assert engine._haunt_track_value("banish_tokens") == 1
+    assert spirit.stunned_turns == 0 and spirit in engine.state.monsters
+    for _ in range(needed - 1):
+        handler.on_monster_defeated(engine, spirit, 1)
+    assert flags["spirit_destroyed"] is True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+    # 重开一局验证附身线：灵魂被毁 → 仪式 → 附身 → 叛徒胜
+    engine2 = _run_until_haunt(seed=137, players=3, haunt_id=49)
+    h2 = engine2._mode_handler()
+    assert isinstance(h2, AstralSpiritMode)
+    f2 = engine2._haunt_flags()
+    spirit2 = h2._spirit(engine2)
+    hero2 = next(p for p in engine2.state.players if p.role == "hero" and not p.dead)
+    h2.on_player_died(engine2, hero2)
+    body = f2["soulless"][str(hero2.id)]
+    body["room_key"] = spirit2.room_key  # 把空壳挪到星界灵房间
+    players2 = len(engine2.state.players)
+    # 检定低于起始理智：不累积
+    with patch.object(engine2, "roll_dice", return_value=0):
+        h2.on_monster_turn_start(engine2, spirit2)
+    assert body["ritual"] == 0, "低于起始理智不应累积附身印记"
+    # 检定高于起始理智：累积；满玩家数 → 附身 → 叛徒胜
+    f2["soulless"][str(hero2.id)]["room_key"] = spirit2.room_key
+    f2["soulless"][str(hero2.id)]["ritual"] = players2 - 1
+    with patch.object(engine2, "roll_dice", return_value=9):
+        h2.on_monster_turn_start(engine2, spirit2)
+    assert f2["spirit_inhabited"] is True
+    assert h2.check_victory(engine2) is True
+    assert engine2.state.winner == "traitor"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -5722,6 +5815,8 @@ def main():
     verify_haunt47_spell_and_bodies()
     verify_haunt48_crimson_jack_setup()
     verify_haunt48_cursed_weapon_flow()
+    verify_haunt49_astral_spirit_setup()
+    verify_haunt49_banish_and_possession()
     verify_haunt39_heir()
     verify_haunt40_buried_alive()
     verify_haunt41_invisible_traitor()

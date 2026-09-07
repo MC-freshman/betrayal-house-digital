@@ -1890,6 +1890,18 @@ MONSTER_BASES = [
              "只有诅咒武器能永久杀死他。",
         tags=("undead", "haunt_specific"),
     ),
+    monster_def(
+        monster_id="astral_spirit",
+        name="星界灵",
+        source_name="Astral Spirit",
+        speed=3,
+        might=0,
+        sanity=1,
+        knowledge=6,
+        text="索取灵魂的古老存在；被击败不会晕也不会受伤，只有英雄们齐心"
+             "以知识/理智攻击累积足够成果才能将它摧毁。",
+        tags=("spectral", "haunt_specific"),
+    ),
 ]
 
 

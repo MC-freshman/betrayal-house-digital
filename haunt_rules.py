@@ -2370,27 +2370,53 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [59, 130],
     },
     49: {
-        # 校准记录（2026-09-05）：骨架 + generic 兜底（M8/M9 批次专项精修）
-        "version": 2,
-        "fidelity": "skeleton",
+        # 校准记录（2026-09-07，对照英雄手册 p60 / 叛徒手册 p131）：
+        #   骨架原本是"荆棘女巫"假机制（错位的 15 号文案 + progress 轨道）。
+        #   机制落在 AstralSpiritMode：
+        #   · 开局（p130/p131）：星界灵放叛徒房间；英雄灵魂出窍——电子版把
+        #     灵魂与昏迷肉体建在同一位英雄身上（位置即肉体位置，玩家继续
+        #     扮演自己的灵魂，无需独立灵魂令牌）。
+        #   · 灵魂规则（p60，保真）：英雄不能探索新房间；攻击/防御只能用
+        #     知识/理智（attack_attr_override 覆盖力量/速度为较高精神属性）；
+        #     攻击星界灵失败不受伤（attack_loss_damage_disabled）。
+        #   · 摧毁星界灵（p60）：攻击成功不造成伤害，改为 +1 枚驱逐令牌
+        #     （星界灵不晕不死）；累计玩家数枚 → 摧毁 → 英雄胜。
+        #   · 星界灵攻击（p131）：on_monster_turn_attack 接管为知识对决，
+        #     差值即精神伤害；被击败则无事发生。
+        #   · 毁灭灵魂（p131）：叛徒攻击英雄——电子版简化为标准对决（原版
+        #     无防御固定 2 骰精神伤）；精神属性到骷髅 = 灵魂被毁，英雄出局，
+        #     肉体进无魂名单（从此不能被附身）。
+        #   · 附身仪式（p131）：星界灵回合移向最近的无魂肉体，同房理智掷骰
+        #     须高于起始理智（用属性轨道上限近似），累计玩家数枚 → 附身，
+        #     叛徒胜。
+        #   · 胜负：英雄胜 = 摧毁星界灵；叛徒胜 = 附身或灵魂全灭。叛徒被杀
+        #     而星界灵还在时星界灵继续行动（7/8 号口径），故吸收兜底。
+        "version": 3,
+        "fidelity": "refined",
         "status": "playable",
         "mode": "astral_spirit",
         "traitor_rule": "revealer",
-        "hero_goal": "荆棘女巫。",
-        "traitor_goal": "荆棘藤蔓困住了房子。",
+        "hero_goal": "以知识/理智攻击星界灵累积驱逐令牌（玩家数枚），摧毁它回到肉体。",
+        "traitor_goal": "让星界灵磨灭所有灵魂，或附身一具无魂肉体。",
         "suggested_monsters": [],
         "required_cards": [],
         "key_rooms": [],
         "tokens": [],
         "setup": {
-            "tracks": {"progress": {"label": "astral_spirit", "target": 1, "side": "heroes"}},
-            "flags": {},
+            # 驱逐进度：target 在 handler.setup 里改写为玩家数
+            "tracks": {"banish_tokens": {"label": "驱逐星界灵", "target": 6, "side": "heroes"}},
+            "flags": {
+                "spirit_destroyed": False,
+                "spirit_inhabited": False,
+                "soulless": {},
+            },
         },
-        "monsters": [],
-        "actions": [{"id": "h48_traitor_task", "side": "heroes", "label": "任务", "stat": "knowledge", "target": 5, "progress": "progress"}],
-        "win_conditions": [
-            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄都死了。"}
+        "monsters": [
+            # spawn=deferred：只进 monster_specs，由 handler 放到叛徒房间
+            {"template_id": "astral_spirit", "spawn": "deferred", "name": "星界灵"},
         ],
+        "actions": [],
+        "win_conditions": [],
         "source_pages": [60, 131],
     },
     50: {
