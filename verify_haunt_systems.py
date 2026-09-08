@@ -60,6 +60,7 @@ if __package__ in {None, ""}:
         CrimsonJackMode,
         AstralSpiritMode,
         NightMurderMode,
+        SandsOfTimeMode,
         BuriedAliveMode,
         ShadowExorcismMode,
         HellGateHeroMode,
@@ -194,8 +195,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(CrimsonJackMode) == [48], f"剧本 48 未走定制 handler: {handlers.get(CrimsonJackMode)}"
     assert handlers.get(AstralSpiritMode) == [49], f"剧本 49 未走定制 handler: {handlers.get(AstralSpiritMode)}"
     assert handlers.get(NightMurderMode) == [50], f"剧本 50 未走定制 handler: {handlers.get(NightMurderMode)}"
+    assert handlers.get(SandsOfTimeMode) == [56], f"剧本 56 未走定制 handler: {handlers.get(SandsOfTimeMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 15, f"应有 15 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 14, f"应有 15 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -218,6 +220,7 @@ def verify_mode_dispatch() -> None:
         "cursed_weapon",
         "astral_spirit",
         "night_survival",
+        "time_sands",
     }
 
 
@@ -5175,6 +5178,105 @@ def verify_haunt55_kings_roads() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt56_sands_of_time_setup() -> None:
+    """剧本 56：幽影布点、面具加成、戒指/奖章规则、穿墙移动（p67/p138）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=56)
+    handler = engine._mode_handler()
+    assert isinstance(handler, SandsOfTimeMode)
+    flags = engine._haunt_flags()
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # p138：幽影 = 英雄数，放作祟房；轨道从 0 开始
+    haunt_room = engine.state.meta["haunt_rule"]["haunt_room"]
+    spectres = handler._spectres(engine)
+    hero_count = sum(1 for p in engine.state.players if p.role == "hero")
+    assert len(spectres) == hero_count
+    assert all(s.room_key == haunt_room for s in spectres)
+    assert flags["time_track"] == 0
+
+    # p138：面具已戴上（+2 知识且叛徒未死——理智保护生效）
+    assert not traitor.dead, "理智保护应防止面具直接杀死叛徒"
+    # p67：持戒指者力量攻击覆盖为理智；未持戒指不覆盖
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    hero.items.append(handler.RING)
+    assert handler.attack_attr_override(engine, hero, spectres[0], "might") == "sanity"
+    hero.items.remove(handler.RING)
+    assert handler.attack_attr_override(engine, hero, spectres[0], "might") is None
+    # p67：持奖章者与幽影对决落败免伤
+    hero.items.append(handler.MEDALLION)
+    assert handler.attack_loss_damage_disabled(engine, hero, spectres[0]) is True
+    hero.items.remove(handler.MEDALLION)
+
+    # p138：幽影穿墙移动（同层正交邻格，无需门）
+    spirit = spectres[0]
+    before = spirit.room_key
+    handler.on_monster_turn_start(engine, spirit)
+    after = spirit.room_key
+    assert after != before, "幽影应能穿墙移动（同房必有正交邻格）"
+
+    # p67 失控检定：轨道 3、掷骰必低 → 循环磨损到轨道 0
+    flags["time_track"] = 3
+    pos_before = dict(traitor.stat_positions)
+    with patch.object(engine, "roll_dice", return_value=0):
+        handler.on_turn_end(engine, traitor)
+    assert flags["time_track"] == 0, "失控循环应把轨道磨到 0"
+    lost = sum(
+        pos_before[s] - traitor.stat_positions[s]
+        for s in ("sanity", "knowledge", "might", "speed")
+    )
+    assert lost >= 3, f"失控应磨损叛徒属性（实际 -{lost}）"
+
+
+def verify_haunt56_time_powers() -> None:
+    """剧本 56：命运之风/时停打击/补充时沙/欺骗命运/胜负（p67/p138）。"""
+    engine = _run_until_haunt(seed=137, players=3, haunt_id=56)
+    handler = engine._mode_handler()
+    assert isinstance(handler, SandsOfTimeMode)
+    flags = engine._haunt_flags()
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    spectre = handler._spectres(engine)[0]
+
+    # p138 命运之风：+2 移动 + 轨道 +1
+    _set_current(engine, traitor)
+    steps_before = max(1, traitor.stats["speed"])
+    traitor.steps_remaining = steps_before
+    assert handler.perform_action(engine, traitor, "winds_of_fate", {}) is True
+    assert traitor.steps_remaining == steps_before + 2 and flags["time_track"] == 1
+
+    # p138 时停打击：造成伤害 → 目标进跳过名单；下回合开始被冻结
+    traitor.room_key = hero.room_key
+    with patch.object(engine, "_roll_attack", side_effect=[9, 2]):
+        assert handler.perform_action(engine, traitor, "time_stop_strike", {}) is True
+    assert hero.id in flags["skip_turn_ids"] and flags["time_track"] == 2
+    handler.on_turn_start(engine, hero)
+    assert hero.movement_stopped and hero.attack_used
+    assert hero.id not in flags["skip_turn_ids"], "冻结应只持续一回合"
+
+    # p138 补充时沙：成功 → 每只同房幽影轨道 -1、幽影全晕
+    traitor.room_key = spectre.room_key
+    before_track = flags["time_track"]
+    here_count = sum(1 for s in handler._spectres(engine) if s.room_key == traitor.room_key)
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, traitor, "replenish_sands", {}) is True
+    assert flags["time_track"] == max(0, before_track - here_count)
+    assert spectre.stunned_turns >= 1
+
+    # p67 欺骗命运：持水晶球 + 同房幽影 + 知识 4+ → 放逐
+    hero.room_key = spectre.room_key
+    hero.items.append(handler.CRYSTAL_BALL)
+    _set_current(engine, hero)
+    assert handler._cheat_fate_allowed(engine, hero) is True
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "cheat_fate", {}) is True
+    assert all(m.id != spectre.id for m in engine.state.monsters), "幽影应被放逐"
+
+    # p67 胜负：叛徒死亡 → 英雄胜
+    traitor.dead = True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -6093,6 +6195,8 @@ def main():
     verify_haunt53_toxic_object_escape()
     verify_haunt54_arkanok_skull()
     verify_haunt55_kings_roads()
+    verify_haunt56_sands_of_time_setup()
+    verify_haunt56_time_powers()
     verify_haunt46_the_feast_setup()
     verify_haunt46_front_door_and_victory()
     verify_haunt47_worm_ouroboros_setup()

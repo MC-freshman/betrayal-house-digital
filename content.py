@@ -1913,6 +1913,16 @@ MONSTER_BASES = [
              "英雄们就能分到遗产。",
         tags=("human", "haunt_specific"),
     ),
+    monster_def(
+        monster_id="spectre",
+        name="记忆幽影",
+        source_name="Spectre",
+        speed=2,
+        might=0,
+        sanity=4,
+        text="记忆与命运的幽影；免疫力量攻击，只能以理智攻击，可在相邻房间间穿行。",
+        tags=("spectral", "haunt_specific"),
+    ),
 ]
 
 

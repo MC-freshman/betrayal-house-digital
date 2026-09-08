@@ -419,6 +419,18 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["survive_until_dawn", "growing_monsters"]},
     },
+    56: {
+        "hero": {
+            # p67：幽影免疫力量攻击——持戒指用理智、否则去骗命运放逐；
+            # 别急着围殴叛徒，逼他多用时间之力就会自毁。
+            "victory_focus": "持戒指理智清幽影，或独处骗命运放逐；缠住叛徒等时之沙反噬",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "用幽影与时停磨死英雄，但每用一次时间之力都要掂量失控风险",
+        },
+        "scenario": {"special_rules": ["sands_of_time", "wall_phasing", "control_check"]},
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",

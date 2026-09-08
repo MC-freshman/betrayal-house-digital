@@ -2642,22 +2642,67 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [66, 137],
     },
     56: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'time_sands',
-        "traitor_rule": 'revealer',
-        "hero_goal": '击败叛徒并夺回时间之沙。',
-        "traitor_goal": '保持对时间之沙的控制并杀死所有英雄。',
-        "suggested_monsters": ['shadow'],
+        # 校准记录（2026-09-08，对照英雄手册 p67 / 叛徒手册 p138）：
+        #   骨架原本是"夺回时间之沙"假机制（h56_hero_task + 进度轨道）。
+        #   机制落在 SandsOfTimeMode：
+        #   · 开局（p138）：幽影（spectre）= 英雄数，放作祟房；叛徒立即
+        #     戴面具：+2 知识、-2 理智（理智死亡保护到骷髅上一格，p138 明文）。
+        #   · 幽影（p138/p67）：免疫力量攻击（monster_specs immune_to）；
+        #     理智攻击接管（on_monster_turn_attack，精神伤害）；穿墙移动
+        #     （同层正交邻格，p138 明文"无需门"；上下楼通道简化）。
+        #   · 时间之力（p138，每次 flags["time_track"] +1、无上限）：
+        #     命运之风（+2 移动）、时停打击（造成 ≥1 伤害跳过下回合，
+        #     重构为显式行动）、补充时沙（知识 3+，每只同房幽影轨道 -1、
+        #     同房幽影全晕）。
+        #   · 失控检定（p67）：叛徒回合结束（叛徒死由最后存活玩家代跑）
+        #     掷玩家数骰，≤ 轨道 → 叛徒全属性 -1、轨道 -1、循环再掷。
+        #   · 欺骗命运（p67）：持水晶球或独处 + 同房幽影 → 知识 4+ 放逐。
+        #   · 戒指/奖章：持戒指理智攻幽影（attack_attr_override）；持奖章
+        #     落败免伤（attack_loss_damage_disabled）。
+        #   · 胜负（p67/p138）：英雄胜 = 叛徒死（失控磨损同算）；叛徒胜 =
+        #     英雄全灭。叛徒死即英雄胜，无需吸收兜底。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "time_sands",
+        "traitor_rule": "revealer",
+        "hero_goal": "杀死叛徒（逼他滥用时间之力直到失控自毁），或直接击杀。",
+        "traitor_goal": "用时间之力与幽影杀光所有英雄——但每次使用都在自毁。",
+        "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": ['library', 'attic', 'entrance_hall', 'foyer', 'grand_staircase'],
-        "tokens": ['time_sand', 'memory_ghost', 'time'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：夺回时间之沙', 'target': 1, 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：操纵时间', 'target': 7, 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'shadow', 'spawn': 'haunt_room', 'count': 'player_count'}],
-        "actions": [{'id': 'h56_hero_task', 'side': 'heroes', 'label': '夺回时间之沙', 'detail': '完成时间线索检定，最终击败叛徒。', 'stat': 'knowledge', 'target': 5, 'rooms': ['library', 'attic', 'entrance_hall', 'foyer', 'grand_staircase'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h56_traitor_task', 'side': 'traitor', 'label': '操纵时间', 'detail': '推进时间失控轨道。', 'stat': 'might', 'target': 5, 'rooms': ['library', 'attic', 'entrance_hall', 'foyer', 'grand_staircase'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 1, 'reason': '击败叛徒并夺回时间之沙。'}, {'winner': 'traitor', 'type': 'track', 'track': 'traitor_progress', 'operator': '>=', 'target': 7, 'reason': '保持对时间之沙的控制并杀死所有英雄。'}],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            # 时之沙掌控：flags["time_track"] 记真实值（无上限），此轨道封顶显示
+            "tracks": {"time_track": {"label": "时之沙掌控（失控线）", "target": 10, "side": "traitor"}},
+            "flags": {
+                "time_track": 0,
+                "skip_turn_ids": [],
+            },
+        },
+        "monsters": [
+            # spawn=deferred：只进 monster_specs，由 handler 放作祟房
+            {"template_id": "spectre", "spawn": "deferred", "immune_to": ["might"],
+             "name": "记忆幽影"},
+        ],
+        "actions": [
+            {"id": "cheat_fate", "side": "heroes", "label": "欺骗命运",
+             "detail": "与幽影同房间，且持有水晶球或房内没有其他英雄时：做知识 4+ 检定，"
+                       "成功则该幽影立即移出游戏（p67）。每回合一次。",
+             "stat": "knowledge", "target": 4, "requires": ["same_room:spectre"]},
+            {"id": "winds_of_fate", "side": "traitor", "label": "命运之风",
+             "detail": "本回合获得 2 点额外移动力；时之沙轨道 +1（p138）。每回合一次。",
+             "stat": "knowledge", "target": 0},
+            {"id": "time_stop_strike", "side": "traitor", "label": "时停打击",
+             "detail": "对同房间的英雄做力量攻击；若造成至少 1 点伤害，该英雄跳过下个回合。"
+                       "时之沙轨道 +1（p138，重构为显式行动）。每回合一次。",
+             "stat": "might", "target": 0},
+            {"id": "replenish_sands", "side": "traitor", "label": "补充时沙",
+             "detail": "与幽影同房间时做知识 3+ 检定：成功则每只同房幽影使时之沙轨道 -1"
+                       "（最低 0）；无论成败，同房幽影全部被击晕（p138）。每回合一次。",
+             "stat": "knowledge", "target": 3, "requires": ["same_room:spectre"]},
+        ],
+        "win_conditions": [],
         "source_pages": [67, 138],
     },
     57: {
