@@ -12326,8 +12326,9 @@ class CracklingAuraMode(GenericModeHandler):
             return
         roll = engine.roll_dice(max(1, engine._effective_stat(player, "knowledge")), "召唤恶魔")
         if roll >= 5:
+            haunt_rule = engine.state.haunt.rule_data or {}
             spec = next(
-                (s for s in haunt.rule_data.get("monsters", []) if s.get("template_id") == "giant"),
+                (s for s in haunt_rule.get("monsters", []) if s.get("template_id") == "giant"),
                 {},
             )
             spec = dict(spec)
