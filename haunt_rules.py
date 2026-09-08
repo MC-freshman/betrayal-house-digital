@@ -2706,22 +2706,77 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [67, 138],
     },
     57: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'portrait_curse',
-        "traitor_rule": 'revealer',
-        "hero_goal": '重新绘制肖像，打破肖像的保护诅咒。',
-        "traitor_goal": '保护肖像并摧毁至少三件绘画，或杀死所有英雄。',
-        "suggested_monsters": ['shadow'],
+        # 精修 v3（M10-1）：对照英雄手册 p68 / 叛徒手册 p139 逐字重写，
+        # 逻辑落在 haunt_modes.PortraitCurseMode。
+        #   · 颜料（p68）：令牌数 = 英雄数 + 2，只放阁楼/废弃房/坍塌房/露台/
+        #     雕像走廊/储藏室/酒窖，每间一枚；房间比令牌多时优先放"离任何
+        #     探险者最远"的房间，多出的令牌搁置、待这些房间被发现时补放。
+        #   · 重绘（p68）：英雄在画廊持一枚颜料做知识 4+，成功则颜料耗尽并
+        #     在房内放一枚知识检定令牌；集满"作祟开始时的英雄数"破除诅咒。
+        #   · 无敌（p139）：事件、房间特征与伤害都不能削减叛徒属性（仅持
+        #     远古护身符的英雄在肉搏中打赢他是例外）；本剧本没有怪物。
+        #   · 肖像（p139）：叛徒进入画廊或回合开始即在画廊 → 理智 4+，失败
+        #     吃 1 骰精神伤害——唯一无视其免疫的伤害，也是他能被杀死的途径。
+        #   · 胜负（p68/p139）：英雄胜 = 集满知识检定令牌 或 叛徒死亡；
+        #     叛徒胜 = 销毁 3 枚颜料 或 英雄全灭（后两条引擎通用规则兜底）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "portrait_curse",
+        "traitor_rule": "revealer",
+        "hero_goal": "把颜料送进画廊反复重绘肖像，或逼叛徒自己毁在画像前。",
+        "traitor_goal": "销毁三枚颜料，或杀光所有英雄——他本人刀枪不入。",
+        "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": ['attic', 'abandoned_room', 'collapsed_room', 'patio', 'statuary_corridor', 'larder', 'crypt'],
-        "tokens": ['painting', 'portrait', 'knowledge_check'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：重绘受诅咒肖像', 'target': 'player_count', 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：保护并破坏画作', 'target': 'player_count', 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'shadow', 'spawn': 'haunt_room', 'count': 1}],
-        "actions": [{'id': 'h57_hero_task', 'side': 'heroes', 'label': '重绘受诅咒肖像', 'detail': '收集颜料，在肖像所在房间完成重绘。', 'stat': 'knowledge', 'target': 5, 'rooms': ['attic', 'abandoned_room', 'collapsed_room', 'patio', 'statuary_corridor', 'larder', 'crypt'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h57_traitor_task', 'side': 'traitor', 'label': '保护并破坏画作', 'detail': '推进画作破坏轨道。', 'stat': 'might', 'target': 5, 'rooms': ['attic', 'abandoned_room', 'collapsed_room', 'patio', 'statuary_corridor', 'larder', 'crypt'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 'player_count', 'reason': '重新绘制肖像，打破肖像的保护诅咒。'}, {'winner': 'traitor', 'type': 'all_heroes_dead', 'track': None, 'operator': '>=', 'target': 'player_count', 'reason': '保护肖像并摧毁至少三件绘画，或杀死所有英雄。'}],
+        # key_rooms 故意留空：bot_ai._haunt_goal_rooms 会把这里的每一间都当成
+        # 常驻寻路目标，于是"颜料已被拿走的颜料房"和"画廊"平级地把英雄来回拉扯
+        # （实测 seed=109/4p 英雄在两个房间之间踱步，重绘 0/3）。本剧本的目标
+        # 完全由 PortraitCurseMode.bot_goal_rooms 按"手里有没有颜料"动态给出。
+        "key_rooms": [],
+        "tokens": ["paint", "knowledge_check"],
+        "setup": {
+            # repaint 的上限在 setup 里按"作祟开始时活着的英雄数"重写：
+            # 通用 hero_count 换算只数当前活人，英雄中途阵亡会让目标缩水。
+            "tracks": {
+                "repaint": {"label": "英雄：重绘肖像（知识检定令牌）", "target": "hero_count", "side": "heroes"},
+                "paint_destroyed": {"label": "叛徒：销毁颜料", "target": 3, "side": "traitor"},
+            },
+            "flags": {
+                "spell_broken": False,
+                "paint_total": 0,
+                "pending_paint": 0,
+                "repaint_needed": 0,
+                "destroyed_this_turn": False,
+            },
+        },
+        "monsters": [],
+        "actions": [
+            # 重绘排在取用之前：bot 按标签打分相同，靠列表顺序优先做关键动作。
+            # 两个行动都不写 rooms——写了就会变成机器人的常驻目标（见上）。
+            # "在画廊""房间里有颜料"这两条限制由 handler 把关。
+            {"id": "repaint_portrait", "side": "heroes", "label": "重绘肖像",
+             "detail": "在画廊随身携带一枚颜料时做知识 4+ 检定：成功则颜料耗尽，"
+                       "并在画廊放上一枚知识检定令牌；集满英雄数即破除诅咒（p68）。",
+             "stat": "knowledge", "target": 4, "progress": "repaint"},
+            {"id": "take_paint", "side": "both", "label": "拿起颜料",
+             "detail": "收走本房间的一枚颜料令牌。每人同时只能携带一枚（p68）。"},
+            {"id": "pass_paint", "side": "heroes", "label": "把颜料交给队友",
+             "detail": "把随身颜料交给同房间没带颜料的英雄——颜料可以像普通物品"
+                       "一样交易（p68）。",
+             "requires": ["same_room:hero"]},
+            {"id": "drop_paint", "side": "both", "label": "放下颜料",
+             "detail": "把随身颜料留在当前房间（p68：可被捡起、交易与抢夺）。"},
+            {"id": "destroy_paint", "side": "traitor", "label": "销毁颜料",
+             "detail": "毁掉随身携带的一枚颜料，代替本回合的一次攻击；"
+                       "毁满 3 枚即胜（p139）。"},
+        ],
+        "win_conditions": [
+            {"winner": "heroes", "type": "flag", "flag": "spell_broken",
+             "reason": "最后一笔落下，肖像交出了它封存三百年的力量。"},
+            {"winner": "traitor", "type": "track", "track": "paint_destroyed",
+             "operator": ">=", "target": 3,
+             "reason": "颜料毁尽，再没有人能触碰那幅画。"},
+        ],
         "source_pages": [68, 139],
     },
     58: {

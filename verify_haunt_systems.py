@@ -61,6 +61,7 @@ if __package__ in {None, ""}:
         AstralSpiritMode,
         NightMurderMode,
         SandsOfTimeMode,
+        PortraitCurseMode,
         BuriedAliveMode,
         ShadowExorcismMode,
         HellGateHeroMode,
@@ -196,8 +197,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(AstralSpiritMode) == [49], f"剧本 49 未走定制 handler: {handlers.get(AstralSpiritMode)}"
     assert handlers.get(NightMurderMode) == [50], f"剧本 50 未走定制 handler: {handlers.get(NightMurderMode)}"
     assert handlers.get(SandsOfTimeMode) == [56], f"剧本 56 未走定制 handler: {handlers.get(SandsOfTimeMode)}"
+    assert handlers.get(PortraitCurseMode) == [57], f"剧本 57 未走定制 handler: {handlers.get(PortraitCurseMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 14, f"应有 15 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 13, f"应有 13 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -221,6 +223,7 @@ def verify_mode_dispatch() -> None:
         "astral_spirit",
         "night_survival",
         "time_sands",
+        "portrait_curse",
     }
 
 
@@ -5277,6 +5280,156 @@ def verify_haunt56_time_powers() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt57_paint_setup() -> None:
+    """剧本 57 开局：画廊强制入场、颜料数与搁置、无怪物、叛徒加属性（p68/p139）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=57)
+    handler = engine._mode_handler()
+    assert isinstance(handler, PortraitCurseMode)
+    flags = engine._haunt_flags()
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # p68：肖像所在的画廊必须在场，否则英雄无处重绘
+    assert any(room.template_id == "gallery" for room in engine.state.board.values()), "画廊应被强制放入房子"
+    # p68：颜料 = 英雄数 + 2；场上放不下的搁置，等房间被发现时补放
+    paints = engine.tokens_of_kind("paint")
+    assert len(paints) + int(flags["pending_paint"]) == len(heroes) + 2
+    assert len(paints) >= len(heroes), "场上颜料至少要够英雄重绘所需的量，否则剧本死锁"
+    assert all(token.holder is None for token in paints)
+    # 每间合适房最多一枚
+    room_keys = [token.room_key for token in paints]
+    assert len(room_keys) == len(set(room_keys)), "每间合适房间只放一枚颜料（p68）"
+    assert all(engine.state.board[key].template_id in handler.PAINT_ROOMS for key in room_keys)
+    # p68/p139：本剧本没有怪物
+    assert engine.state.monsters == []
+    # p68：知识检定令牌的目标数按"作祟开始时的英雄数"快照
+    assert engine._haunt_track_target("repaint") == len(heroes)
+    assert flags["repaint_needed"] == len(heroes)
+    assert engine._haunt_track_target("paint_destroyed") == 3
+
+    # p139：低于起点的属性先补回起点，再每名英雄抬一格
+    face = engine.catalog.characters[traitor.character_id]
+    for stat in handler.STAT_ORDER:
+        assert traitor.stats[stat] >= face.stats[stat], f"{stat} 不应低于起点"
+    gained = sum(traitor.stats[stat] - face.stats[stat] for stat in handler.STAT_ORDER)
+    assert gained > 0, "叛徒开局应高出起点（每名英雄一次）"
+
+
+def verify_haunt57_repaint_and_immunity() -> None:
+    """剧本 57：重绘链路 + 叛徒免疫与护身符例外 + 画廊凝视 + 胜负（p68/p139）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=57)
+    handler = engine._mode_handler()
+    flags = engine._haunt_flags()
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    gallery_key = next(k for k, r in engine.state.board.items() if r.template_id == "gallery")
+
+    # p139：事件/房间/伤害都不能削减叛徒的属性
+    engine._active_player_id = hero.id
+    stats_before = dict(traitor.stats)
+    positions_before = dict(traitor.stat_positions)
+    engine._deal_damage(traitor, "physical", 5, source="攻击")
+    engine._deal_damage(traitor, "mental", 3, source="深渊")
+    assert traitor.stats == stats_before and traitor.stat_positions == positions_before, (
+        "叛徒应完全免疫伤害削减"
+    )
+
+    # p68 例外：持远古护身符的英雄在肉搏中打赢他，伤害照常扣属性
+    # （轨道上有重复数值格，所以要看滑格位置，不能只看数值）
+    hero.items.append("item_amulet_of_the_ages")
+    engine._deal_damage(traitor, "physical", 1, source="攻击")
+    assert traitor.stat_positions != positions_before, "远古护身符应能伤到叛徒"
+    hero.items.remove("item_amulet_of_the_ages")
+    traitor.stat_positions.update(positions_before)  # 复原：后面还要一个完好的叛徒
+    traitor.stats.update(stats_before)
+
+    # p139：进入画廊 → 理智 4+，失败吃 1 骰精神伤害（唯一无视免疫的伤害）
+    traitor.room_key = gallery_key
+    gaze_positions = dict(traitor.stat_positions)
+    gaze_stats = dict(traitor.stats)
+    with patch.object(engine, "_resolve_check", return_value=False), patch.object(engine, "roll_dice", return_value=2):
+        handler._portrait_gaze(engine, traitor)
+    assert traitor.stat_positions != gaze_positions, "凝视肖像的反噬必须真的落到属性上"
+    # 复原：后面还要用这个叛徒走"销毁颜料"链路
+    traitor.stat_positions.update(gaze_positions)
+    traitor.stats.update(gaze_stats)
+    traitor.dead = False
+
+    # p68：拿起颜料 → 进画廊重绘（知识 4+ 成功消耗颜料并放一枚知识检定令牌）
+    paint_token = next(iter(engine.tokens_of_kind("paint")), None)
+    assert paint_token is not None
+    engine.place_token(paint_token.uid, hero.room_key)
+    _set_current(engine, hero)
+    handler.on_turn_start(engine, hero)
+    assert handler.perform_action(engine, hero, "take_paint", {}) is True
+    assert len(handler._held_paint(engine, hero)) == 1
+    # p68：每人同时只能携带一枚
+    engine.spawn_token("paint", label="颜料", role="marker", room_key=hero.room_key)
+    assert handler.perform_action(engine, hero, "take_paint", {}) is False
+
+    # p68：rooms 限制不再写在 rule_data 里（否则会变成机器人的常驻目标），
+    # 由 handler 把关：人在画廊外就算手持颜料也不能重绘。
+    if hero.room_key == gallery_key:  # 恰好已在画廊：挪出去再验这条限制
+        hero.room_key = next(k for k in engine.state.board if k != gallery_key)
+    outside = {a.id for a in handler.available_actions(engine, hero)}
+    assert "repaint_portrait" not in outside and "take_paint" not in outside
+    assert handler.perform_action(engine, hero, "repaint_portrait", {}) is False
+
+    hero.room_key = gallery_key
+    goal_before = engine._haunt_track_value("repaint")
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "repaint_portrait", {}) is True
+    assert engine._haunt_track_value("repaint") == goal_before + 1
+    assert not handler._held_paint(engine, hero), "重绘成功后颜料耗尽（p68）"
+    assert engine.tokens_in_room(gallery_key, "knowledge_check"), "重绘成功应在画廊放一枚知识检定令牌"
+
+    # 检定失败时颜料不消耗（p68：只有成功才销毁颜料）
+    engine.give_token(engine.tokens_of_kind("paint")[0].uid, hero.id)
+    with patch.object(engine, "_resolve_check", return_value=False):
+        handler.perform_action(engine, hero, "repaint_portrait", {})
+    assert len(handler._held_paint(engine, hero)) == 1, "重绘失败应留着颜料"
+
+    # p68：颜料可以像普通物品一样交易给队友，但不许随处乱丢（防机器人原地打转）
+    other = next(p for p in engine.state.players if p.role == "hero" and not p.dead and p.id != hero.id)
+    other.stats["knowledge"] = hero.stats["knowledge"] + 2
+    paint_room_key = next(
+        (t.room_key for t in engine.tokens_of_kind("paint") if t.room_key and t.room_key != gallery_key),
+        None,
+    ) or next(k for k in engine.state.board if k != gallery_key)
+
+    other.room_key = hero.room_key = gallery_key
+    in_gallery = {a.id for a in handler.available_actions(engine, hero)}
+    assert "repaint_portrait" in in_gallery
+    assert not {"pass_paint", "drop_paint"} & in_gallery, "在画廊里只该重绘，不该传/放颜料"
+
+    other.room_key = hero.room_key = paint_room_key
+    _set_current(engine, hero)
+    available = {a.id for a in handler.available_actions(engine, hero)}
+    assert {"pass_paint", "drop_paint"} <= available, "有更强的队友接得住时才提供传/放"
+    assert handler.perform_action(engine, hero, "pass_paint", {}) is True
+    assert handler._held_paint(engine, other), "颜料应传到更懂行的队友手里"
+
+    # p139：叛徒手持颜料可销毁一枚，且"代替一次攻击"
+    traitor_paint = engine.tokens_of_kind("paint")[0]
+    engine.give_token(traitor_paint.uid, traitor.id)
+    _set_current(engine, traitor)
+    handler.on_turn_start(engine, traitor)
+    assert handler.perform_action(engine, traitor, "destroy_paint", {}) is True
+    assert engine._haunt_track_value("paint_destroyed") == 1
+    assert handler.attack_allowed(engine, traitor, hero) is False, "销毁颜料应占掉本回合的攻击"
+
+    # p139：毁满三枚颜料 → 叛徒胜
+    engine._set_haunt_track_value("paint_destroyed", 3)
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "traitor"
+
+    # p68：另一条英雄胜路线——叛徒死亡（引擎通用规则兜底）
+    engine.state.winner = ""
+    engine._haunt_flags()["spell_broken"] = True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes", "集满知识检定令牌即破除诅咒"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -6197,6 +6350,8 @@ def main():
     verify_haunt55_kings_roads()
     verify_haunt56_sands_of_time_setup()
     verify_haunt56_time_powers()
+    verify_haunt57_paint_setup()
+    verify_haunt57_repaint_and_immunity()
     verify_haunt46_the_feast_setup()
     verify_haunt46_front_door_and_victory()
     verify_haunt47_worm_ouroboros_setup()

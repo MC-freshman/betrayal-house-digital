@@ -431,6 +431,31 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["sands_of_time", "wall_phasing", "control_check"]},
     },
+    57: {
+        "hero": {
+            # p68/p139：叛徒不受伤害削减，正面围殴纯属白费——除非谁手里有
+            # 远古护身符。真正的胜利只有一条：把颜料一罐罐带进画廊重绘。
+            "objective_type": "collect_and_ritual",
+            # 颜料房与画廊都不写在这里：画像的 target_rooms 是常驻加分（normal +100），
+            # 比剧本的动态目标（normal +95）更硬，实测会把英雄钉死在"颜料早被拿走"的
+            # 房间里来回踱步（seed=109/4p 重绘 0/3）。两种目标都由
+            # PortraitCurseMode.bot_goal_rooms 按"手里有没有颜料"动态给出。
+            "target_rooms": [],
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "一人抢一罐颜料送进画廊做知识 4+ 重绘，攒满知识检定令牌；别把回合花在打叛徒上",
+        },
+        "traitor": {
+            # p139：毁满三罐颜料即胜，且自己绝不能进展厅（那是唯一能杀死他的地方）。
+            "attack_heroes": True,
+            "avoid_rooms": ["gallery"],
+            "victory_focus": "抢到颜料就用它代替攻击销毁，毁满三罐即胜；离画廊越远越好",
+        },
+        "scenario": {
+            "tokens": ["颜料", "知识检定"],
+            "special_rules": ["traitor_damage_immunity", "paint_race", "portrait_gaze"],
+        },
+    },
     36: {
         "hero": {
             "objective_type": "cooperate_and_collect",
