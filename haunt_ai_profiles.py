@@ -455,6 +455,21 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["medallion_escort", "steal_medallion", "statue_threshold"]},
     },
+    67: {
+        "hero": {
+            # p78：目标随已抽取任务变化，不能写进静态 target_rooms。
+            "target_rooms": [],
+            "attack_monsters": True,
+            "attack_traitor_players": False,
+            "victory_focus": "与入定叛徒同房抽任务，按任务条件完成；够数后活到故事结束",
+        },
+        "traitor": {
+            "attack_heroes": False,
+            "victory_focus": "入定读故事，用尸体令牌推悲伤结局或让怪物杀光英雄",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"special_rules": ["trance", "quests", "plot_twists", "story_track"]},
+    },
     66: {
         "hero": {
             # p77：目标随圣徽位置变化，chapel/library 不能写进静态 target_rooms。

@@ -3212,22 +3212,43 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [77, 148],
     },
     67: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'storybook_twists',
-        "traitor_rule": 'revealer',
-        "hero_goal": '完成与英雄人数相等的任务，并活到故事结束。',
-        "traitor_goal": '让故事到达悲伤结局，或杀死所有英雄。',
-        "suggested_monsters": ['spider', 'witch', 'giant'],
+        # 校准记录（2026-09-09，对照英雄手册 p78 / 叛徒手册 p149）：
+        #   机制落在 StorybookTwistsMode：
+        #   · 叛徒入定：不能移动/攻击/用物品，不能被攻击，属性不升不降
+        #   · 英雄与叛徒同房可偷（含疯子/女孩/狗）；叛徒不阻挡离房
+        #   · 同房知识+故事轨 ≥6 抽取任务（6 骰 0–12，已抽则顺延）
+        #   · 完成任务数 = 开局英雄数，并活到故事轨到 7 → 英雄胜，否则悲伤结局
+        #   · 猎蛛开局；女巫/恶龙由故事段落召唤；剧情转折用尸体令牌
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "storybook_twists",
+        "traitor_rule": "revealer",
+        "hero_goal": "完成与开局英雄人数相等的任务，并活到故事结束。",
+        "traitor_goal": "让故事走到悲伤结局，或杀死所有英雄。",
+        "suggested_monsters": ["story_spider"],
         "required_cards": [],
-        "key_rooms": ['library', 'attic', 'chapel', 'garden', 'tower', 'pentagram_chamber'],
-        "tokens": ['story', 'body', 'twist', 'witch', 'dragon'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：完成故事任务', 'target': 'player_count', 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：推动悲伤结局', 'target': 7, 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'spider', 'spawn': 'haunt_room', 'count': 1}, {'template_id': 'witch', 'spawn': 'haunt_room', 'count': 1}, {'template_id': 'giant', 'spawn': 'haunt_room', 'count': 1}],
-        "actions": [{'id': 'h67_hero_task', 'side': 'heroes', 'label': '完成故事任务', 'detail': '完成当前章节所需任务；轨道推进由故事回合记录。', 'stat': 'knowledge', 'target': 5, 'rooms': ['library', 'attic', 'chapel', 'garden', 'tower', 'pentagram_chamber'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h67_traitor_task', 'side': 'traitor', 'label': '推动悲伤结局', 'detail': '推进故事章节和悲伤结局轨道。', 'stat': 'might', 'target': 5, 'rooms': ['library', 'attic', 'chapel', 'garden', 'tower', 'pentagram_chamber'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 'player_count', 'reason': '完成与英雄人数相等的任务，并活到故事结束。'}, {'winner': 'traitor', 'type': 'track', 'track': 'traitor_progress', 'operator': '>=', 'target': 7, 'reason': '让故事到达悲伤结局，或杀死所有英雄。'}],
+        "key_rooms": [],
+        "tokens": ["story", "body", "twist", "witch", "dragon"],
+        "setup": {
+            "tracks": {
+                "quests": {"label": "已完成的故事任务", "target": "hero_count", "side": "heroes", "value": 0},
+                "story": {"label": "故事进度", "target": 7, "side": "traitor", "value": 0},
+            },
+            "flags": {"scenario_started": True},
+        },
+        "monsters": [
+            {"template_id": "story_spider", "spawn": "deferred", "count": 1, "name": "猎蛛", "speed": 4, "might": 5, "sanity": 3},
+            {"template_id": "story_witch", "spawn": "deferred", "count": 1, "name": "女巫", "speed": 3, "might": 4, "sanity": 5},
+            {"template_id": "story_dragon", "spawn": "deferred", "count": 1, "name": "恶龙", "speed": 5, "might": 7, "sanity": 4},
+        ],
+        "actions": [
+            {"id": "obtain_quest", "side": "heroes", "label": "寻找关键情节", "detail": "与入定的叛徒同房，知识加上故事进度达到 6+，抽取一个任务。"},
+            {"id": "complete_quest", "side": "heroes", "label": "完成故事任务", "detail": "按已抽取任务的条件结算；完成数需达到开局英雄人数。"},
+            {"id": "steal_from_traitor", "side": "heroes", "label": "从入定者身上偷取", "detail": "代替攻击：与叛徒同房时自动偷走一件物品（含疯子、女孩、狗）。"},
+            {"id": "plot_twist", "side": "traitor", "label": "剧情转折", "detail": "花费一枚尸体令牌，发动一次尚未用过的剧情转折。"},
+        ],
+        "win_conditions": [],
         "source_pages": [78, 149],
     },
     68: {

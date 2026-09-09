@@ -1997,6 +1997,36 @@ MONSTER_BASES = [
         text="人间地狱的领主。只能被圣徽伤害；属性随玩家人数变化。",
         tags=("demon", "haunt_specific"),
     ),
+    monster_def(
+        monster_id="story_spider",
+        name="猎蛛",
+        source_name="Giant Hunting Spider",
+        speed=4,
+        might=5,
+        sanity=3,
+        text="故事里的巨型猎蛛。毒牙在造成物理伤害前先降低一项属性；穿过对手不付额外移动。",
+        tags=("animal", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="story_witch",
+        name="女巫",
+        source_name="Witch",
+        speed=3,
+        might=4,
+        sanity=5,
+        text="故事里的女巫。可传送到任意英雄身边，并能用力量或理智攻击。",
+        tags=("caster", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="story_dragon",
+        name="恶龙",
+        source_name="Dragon",
+        speed=5,
+        might=7,
+        sanity=4,
+        text="故事里的恶龙。喷火攻击同房所有人；除非被特定武器击中，否则被击败不击晕。",
+        tags=("beast", "haunt_specific"),
+    ),
 ]
 
 

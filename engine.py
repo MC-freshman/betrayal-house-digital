@@ -867,7 +867,8 @@ class GameEngine:
         hostile_count = 0
         for occupant in self.room_occupants(room.key):
             if occupant["kind"] == "player" and occupant["player"].role != player.role and not occupant["player"].dead:
-                hostile_count += 1
+                if self._mode_handler().counts_as_movement_obstacle(self, player, occupant["player"]):
+                    hostile_count += 1
             elif occupant["kind"] == "monster" and occupant["monster"].stunned_turns <= 0:
                 hostile_count += 1
         cost = 1 + hostile_count
@@ -1907,6 +1908,9 @@ class GameEngine:
     def use_item(self, player: Player, card_id: str) -> bool:
         if card_id not in player.items:
             return False
+        if self._mode_handler().item_use_blocked(self, player, card_id):
+            self._log(f"{player.name} 此刻不能使用物品。")
+            return False
         card = self.catalog.cards[card_id]
         if player.item_used and card.effect_id not in {"item_angel_feather", "item_bottle", "item_dark_dice"}:
             self._log(f"{player.name} 这一回合已经用过一个物品了。")
@@ -2339,6 +2343,8 @@ class GameEngine:
     ) -> None:
         if amount <= 0:
             return
+        self._last_attack_weapon_id = weapon_id
+        self._last_attack_attr = attack_attr
         damage_type = "physical" if attack_attr in PHYSICAL_STATS else "mental"
         if isinstance(target, Monster):
             # 剧本可按"谁用什么打的"决定这次击败是直接杀死（剧本 21 p32：

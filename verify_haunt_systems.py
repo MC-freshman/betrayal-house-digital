@@ -60,6 +60,7 @@ if __package__ in {None, ""}:
         BloodOfferingMode,
         BreathOfWindMode,
         HellOnEarthMode,
+        StorybookTwistsMode,
         TimeBombMode,
         CannibalFeastMode,
         OuroborosMode,
@@ -196,6 +197,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(BloodOfferingMode) == [64], f"64 未走定制"
     assert handlers.get(BreathOfWindMode) == [65], f"65 未走定制"
     assert handlers.get(HellOnEarthMode) == [66], f"66 未走定制"
+    assert handlers.get(StorybookTwistsMode) == [67], f"67 未走定制"
     assert handlers.get(TimeBombMode) == [45], f"剧本 45 未走定制 handler: {handlers.get(TimeBombMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
@@ -217,7 +219,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ForAThousandYearsMode) == [59], f"剧本 59 未走定制 handler: {handlers.get(ForAThousandYearsMode)}"
     assert handlers.get(BurningSandsMode) == [60], f"剧本 60 未走定制 handler: {handlers.get(BurningSandsMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 4, f"应有 4 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 3, f"应有 3 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -234,7 +236,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "haunt_exorcism", "hell_on_earth", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "haunt_exorcism", "hell_on_earth", "storybook_twists", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
         "worm_ouroboros",
         "cursed_weapon",
@@ -6858,6 +6860,98 @@ def verify_haunt66_hell_on_earth() -> None:
     assert engine3.state.winner == "traitor"
 
 
+def verify_haunt67_once_upon_a_time() -> None:
+    """剧本 67：入定 / 抽任务 / 完成任务 / 故事终局（p78/p149）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=67)
+    handler = engine._mode_handler()
+    assert isinstance(handler, StorybookTwistsMode)
+    assert engine.state.haunt is not None and engine.state.haunt.id == 67
+
+    spider = engine._monster_by_template("story_spider")
+    assert spider is not None, "猎蛛应已生成"
+    assert spider.speed == 4 and spider.might == 5 and spider.sanity == 3
+    assert engine._monster_by_template("story_witch") is None
+    assert engine._monster_by_template("story_dragon") is None
+    assert engine._haunt_track_value("story") == 0
+    assert engine._haunt_track_value("quests") == 0
+    flags = engine._haunt_flags()
+    flags["initial_hero_count"] = 2
+    engine._haunt_tracks()["quests"]["target"] = 2
+
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    assert handler.attack_allowed(engine, hero, traitor) is False
+    assert handler.attack_allowed(engine, traitor, hero) is False
+    assert handler.counts_as_movement_obstacle(engine, hero, traitor) is False
+    assert handler.item_use_blocked(engine, traitor, "item_axe") is True
+    assert handler.can_discover_rooms(engine, traitor) is False
+
+    # 与叛徒同房可抽任务；检定失败仍消耗行动
+    hero.room_key = traitor.room_key
+    _set_current(engine, hero)
+    engine._reset_player_turn_state(hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "obtain_quest" in ids
+    with patch.object(engine, "roll_dice", return_value=1):
+        assert handler.perform_action(engine, hero, "obtain_quest", {}) is True
+    assert engine._haunt_flags().get("obtained_quests") in (None, [])
+
+    # 检定过关则抽取任务；随后强制放进「高贵受苦」以便完成链路可测
+    engine._haunt_rule_state().setdefault("actions_used", {}).pop(str(hero.id), None)
+    hero.attack_used = False
+    with patch.object(engine, "roll_dice", return_value=9):
+        assert handler.perform_action(engine, hero, "obtain_quest", {}) is True
+    assert engine._haunt_flags().get("obtained_quests")
+    engine._haunt_flags()["obtained_quests"] = [9]
+
+    # 在血房间完成高贵受苦（活着才算）
+    bloody = next((k for k, r in engine.state.board.items() if r.template_id == "bloody_room"), None)
+    if bloody is None:
+        template = engine.catalog.room_templates["bloody_room"]
+        placed = engine._place_room(template, 20, 20, 0)
+        bloody = placed.key
+    hero.room_key = bloody
+    engine._haunt_rule_state().setdefault("actions_used", {}).pop(str(hero.id), None)
+    with patch.object(engine, "roll_dice", return_value=0):
+        assert handler.perform_action(engine, hero, "complete_quest", {}) is True
+    assert 9 in engine._haunt_flags().get("completed_quests", [])
+    assert engine._haunt_track_value("quests") == 1
+
+    # 故事走到 7、任务未满 → 悲伤结局
+    engine2 = _run_until_haunt(seed=113, players=3, haunt_id=67)
+    handler2 = engine2._mode_handler()
+    engine2._haunt_flags()["initial_hero_count"] = 2
+    traitor2 = next(p for p in engine2.state.players if p.role == "traitor")
+    _set_current(engine2, traitor2)
+    engine2._reset_player_turn_state(traitor2)
+    engine2._set_haunt_track_value("story", 6)
+    handler2.on_turn_start(engine2, traitor2)
+    assert engine2._haunt_flags().get("story_ended") is True
+    assert engine2.state.winner == "traitor"
+
+    # 任务数够、故事结束 → 英雄胜；叛徒倒下不能让英雄赢
+    engine3 = _run_until_haunt(seed=113, players=3, haunt_id=67)
+    handler3 = engine3._mode_handler()
+    engine3._haunt_flags()["initial_hero_count"] = 2
+    traitor3 = next(p for p in engine3.state.players if p.role == "traitor")
+    traitor3.dead = True
+    assert handler3.check_victory(engine3) is True
+    assert engine3.state.winner is None
+    engine3._haunt_flags()["completed_quests"] = [0, 1]
+    engine3._haunt_flags()["story_ended"] = True
+    assert handler3.check_victory(engine3) is True
+    assert engine3.state.winner == "heroes"
+
+    # 全灭英雄 → 叛徒胜
+    engine4 = _run_until_haunt(seed=113, players=3, haunt_id=67)
+    handler4 = engine4._mode_handler()
+    for p in engine4.state.players:
+        if p.role == "hero":
+            p.dead = True
+    assert handler4.check_victory(engine4) is True
+    assert engine4.state.winner == "traitor"
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -6946,6 +7040,7 @@ def main():
     verify_haunt64_blood_offering()
     verify_haunt65_breath_of_wind()
     verify_haunt66_hell_on_earth()
+    verify_haunt67_once_upon_a_time()
     verify_haunt56_sands_of_time_setup()
     verify_haunt56_time_powers()
     verify_haunt58_nightfall_setup()
