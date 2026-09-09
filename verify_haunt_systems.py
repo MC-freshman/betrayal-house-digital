@@ -58,6 +58,7 @@ if __package__ in {None, ""}:
         BagOfTricksMode,
         TwistingNetherMode,
         BloodOfferingMode,
+        BreathOfWindMode,
         TimeBombMode,
         CannibalFeastMode,
         OuroborosMode,
@@ -192,6 +193,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(BagOfTricksMode) == [62], f"62 未走定制"
     assert handlers.get(TwistingNetherMode) == [63], f"63 未走定制"
     assert handlers.get(BloodOfferingMode) == [64], f"64 未走定制"
+    assert handlers.get(BreathOfWindMode) == [65], f"65 未走定制"
     assert handlers.get(TimeBombMode) == [45], f"剧本 45 未走定制 handler: {handlers.get(TimeBombMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
@@ -213,7 +215,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ForAThousandYearsMode) == [59], f"剧本 59 未走定制 handler: {handlers.get(ForAThousandYearsMode)}"
     assert handlers.get(BurningSandsMode) == [60], f"剧本 60 未走定制 handler: {handlers.get(BurningSandsMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 6, f"应有 9 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 5, f"应有 9 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -230,7 +232,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "haunt_exorcism", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
         "worm_ouroboros",
         "cursed_weapon",
@@ -6730,6 +6732,52 @@ def verify_haunt64_blood_offering() -> None:
     assert engine.state.winner == "traitor"
 
 
+
+def verify_haunt65_breath_of_wind() -> None:
+    """剧本 65：骚灵/蜡烛寻找/点燃/倒计时/胜利条件（p76/p147）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=65)
+    handler = engine._mode_handler()
+    assert isinstance(handler, BreathOfWindMode)
+    flags = engine._haunt_flags()
+
+    # 骚灵在场
+    poltergeist = engine._monster_by_template("ghost")
+    assert poltergeist is not None, "骚灵应已生成"
+
+    # 计时从 3 开始
+    assert engine._haunt_track_value("poltergeist_timer") == 3, "计时应从 3 开始"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    # 找蜡烛（在厨房/餐厅/教堂/画廊）
+    candle_room = next((r for r in engine.state.board.values()
+                        if r.template_id in ("kitchen", "dining_room", "chapel", "gallery")), None)
+    if candle_room is not None:
+        hero.room_key = candle_room.key
+        _set_current(engine, hero)
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "find_candle" in ids, "在蜡烛房间应能找蜡烛"
+        with patch.object(engine, "_roll_attack", return_value=5):
+            assert handler.perform_action(engine, hero, "find_candle", {}) is True
+        assert engine.tokens_held_by(hero.id, "candle"), "找蜡烛应获得蜡烛"
+
+    # 点燃蜡烛
+    haunt_floor = engine.state.board.get(engine._haunt_rule_state().get("haunt_room", "")).floor
+    hero.room_key = next(k for k, r in engine.state.board.items() if r.floor == haunt_floor)
+    _set_current(engine, hero)
+    engine._reset_player_turn_state(hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "burn_candle" in ids, "持蜡烛在作祟层应能点燃"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "burn_candle", {}) is True
+    assert engine._haunt_track_value("exorcism_progress") == 1
+
+    # 胜利：进度满
+    engine._set_haunt_track_value("exorcism_progress", engine._haunt_track_target("exorcism_progress"))
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -6816,6 +6864,7 @@ def main():
     verify_haunt62_bag_of_tricks()
     verify_haunt63_twisting_nether()
     verify_haunt64_blood_offering()
+    verify_haunt65_breath_of_wind()
     verify_haunt56_sands_of_time_setup()
     verify_haunt56_time_powers()
     verify_haunt58_nightfall_setup()

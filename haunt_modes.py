@@ -14190,6 +14190,103 @@ class PortraitCurseMode(GenericModeHandler):
 
 
 
+
+
+class BreathOfWindMode(GenericModeHandler):
+    """剧本 65 一阵风息（A Breath of Wind）。
+
+    权威原文：英雄手册 p76 / 叛徒手册 p147。
+    · 骚灵（ghost 模板，Speed 3）生成于作祟房间。
+    · 计时从 3 开始，每个怪物回合 -1；归零 → 英雄死亡。
+    · 找蜡烛：速度 3+（厨房/餐厅/教堂/画廊），每回合一次。
+    · 用蜡烛：弃蜡烛 + 知识 5+（作祟层）→ 放 token（每房一次）。
+    · 仪式 token 数 = 英雄数 → 英雄胜。
+    · 简化：骚灵免疫力量攻击/左轮/重生未建模。
+    """
+
+    mode = "haunt_exorcism"
+
+    def setup(self, engine, haunt, room_key):
+        flags = engine._haunt_flags()
+        flags["candle_rooms_used"] = []
+        flags["candles_found"] = 0
+        engine._set_haunt_track_value("poltergeist_timer", 3)  # p76：计时从 3 开始
+        engine._log("骚灵发出了疯狂的笑声——物件开始朝你飞来！")
+
+    def on_turn_start(self, engine, player):
+        flags = engine._haunt_flags()
+        if player.role == "traitor" and not player.dead:
+            # 每个怪物回合递减计时
+            current = int(engine._haunt_track_value("poltergeist_timer"))
+            if current > 0:
+                engine._set_haunt_track_value("poltergeist_timer", current - 1)
+                engine._log(f"骚灵的愤怒升级了！（倒计时 {current - 1}）")
+                if current - 1 <= 0:
+                    # 骚灵杀死一个英雄
+                    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+                    if heroes:
+                        victim = engine.rng.choice(heroes)
+                        victim.dead = True
+                        engine._log(f"{victim.name} 被骚灵的狂怒撕碎了！")
+                        engine.check_victory()
+
+    def available_actions(self, engine, player):
+        actions = super().available_actions(engine, player)
+        result = []
+        flags = engine._haunt_flags()
+        for action in actions:
+            if action.id == "burn_candle":
+                if not engine.tokens_held_by(player.id, "candle"):
+                    continue
+                room_id = engine._current_room_template_id(player)
+                if room_id in flags.get("candle_rooms_used", []):
+                    continue
+                # 必须在作祟层
+                room = engine.current_room(player)
+                if room.floor != engine.state.board[engine._haunt_rule_state().get("haunt_room", "")].floor:
+                    continue
+            result.append(action)
+        return result
+
+    def perform_action(self, engine, player, action_id, data):
+        flags = engine._haunt_flags()
+        if action_id == "find_candle":
+            ok = super().perform_action(engine, player, action_id, data)
+            if ok:
+                engine.spawn_token("candle", label="蜡烛", role="carried", holder=player.id)
+                flags["candles_found"] = int(flags.get("candles_found", 0)) + 1
+                engine._log(f"{player.name} 找到了一根蜡烛。")
+            return ok
+
+        if action_id == "burn_candle":
+            token = next(iter(engine.tokens_held_by(player.id, "candle")), None)
+            if token is None:
+                engine._log("你没有蜡烛。")
+                return False
+            engine.remove_token(token.uid)
+            ok = super().perform_action(engine, player, action_id, data)
+            if ok:
+                room_id = engine._current_room_template_id(player)
+                used = flags.setdefault("candle_rooms_used", [])
+                used.append(room_id)
+                engine.spawn_token("knowledge_check", label="驱魔成功", role="check", room_key=player.room_key)
+                engine._log("蜡烛的火焰净化了这个房间！")
+                engine.check_victory()
+            return ok
+
+        return super().perform_action(engine, player, action_id, data)
+
+    def check_victory(self, engine):
+        if engine._haunt_track_value("exorcism_progress") >= engine._haunt_track_target("exorcism_progress"):
+            engine._set_winner("heroes", "驱魔完成——骚灵消散了！")
+            return True
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "骚灵的狂笑回荡在空荡的房子里。")
+            return True
+        return False
+
+
+
 class BloodOfferingMode(GenericModeHandler):
     """剧本 64 血之献祭（An Offering of Blood）。
 
@@ -14589,6 +14686,7 @@ for _handler in (
     BagOfTricksMode(),
     TwistingNetherMode(),
     BloodOfferingMode(),
+    BreathOfWindMode(),
 ):
 
     register_mode(_handler)

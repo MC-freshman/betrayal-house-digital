@@ -3112,22 +3112,40 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [75, 146],
     },
     65: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'haunt_exorcism',
-        "traitor_rule": 'revealer',
-        "hero_goal": '驱逐恶作剧者。',
-        "traitor_goal": '让恶作剧者杀死所有英雄。',
-        "suggested_monsters": ['ghost'],
+        # 校准记录（2026-09-05，对照英雄手册 p76 / 叛徒手册 p147）：
+        #   机制落在 BreathOfWindMode：
+        #   · 骚灵（ghost 模板，Speed 3）生成于作祟房间
+        #   · 计时从 3 开始，每个怪物回合 -1；归零 → 英雄死亡
+        #   · 找蜡烛：速度 3+（厨房/餐厅/教堂/画廊），每回合一次
+        #   · 用蜡烛：弃蜡烛 + 知识 5+（作祟层）→ 放 token（每房一次）
+        #   · 仪式 token 数 = 英雄数 → 英雄胜
+        #   简化：骚灵免疫力量攻击/左轮/重生未建模。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "haunt_exorcism",
+        "traitor_rule": "revealer",
+        "hero_goal": "找蜡烛点燃仪式，在骚灵杀死你们之前驱逐它。",
+        "traitor_goal": "让骚灵在仪式完成前杀死所有英雄。",
+        "suggested_monsters": ["ghost"],
         "required_cards": [],
-        "key_rooms": ['junk_room', 'larder', 'attic', 'library', 'research_laboratory', 'operating_laboratory', 'chapel'],
-        "tokens": ['haunt', 'candle', 'knowledge_check'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：驱逐恶作剧者', 'target': 'player_count', 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：增强恶作剧者', 'target': 'player_count', 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'ghost', 'spawn': 'haunt_room', 'count': 1}],
-        "actions": [{'id': 'h65_hero_task', 'side': 'heroes', 'label': '驱逐恶作剧者', 'detail': '在指定房间完成驱魔检定。', 'stat': ['sanity', 'knowledge'], 'target': 5, 'rooms': ['junk_room', 'larder', 'attic', 'library', 'research_laboratory', 'operating_laboratory', 'chapel'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h65_traitor_task', 'side': 'traitor', 'label': '增强恶作剧者', 'detail': '推进恶作剧者强度轨道。', 'stat': 'might', 'target': 5, 'rooms': ['junk_room', 'larder', 'attic', 'library', 'research_laboratory', 'operating_laboratory', 'chapel'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 'player_count', 'reason': '驱逐恶作剧者。'}, {'winner': 'traitor', 'type': 'all_heroes_dead', 'track': None, 'operator': '>=', 'target': 'player_count', 'reason': '让恶作剧者杀死所有英雄。'}],
+        "key_rooms": ["kitchen", "dining_room", "chapel", "gallery"],
+        "tokens": ["candle", "poltergeist"],
+        "setup": {
+            "tracks": {
+                "poltergeist_timer": {"label": "骚灵倒计时", "target": 3, "side": "traitor"},
+                "exorcism_progress": {"label": "驱魔进度", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"candle_rooms_used": [], "candles_found": 0},
+        },
+        "monsters": [
+            {"template_id": "ghost", "name": "骚灵", "spawn": "haunt_room", "count": 1, "speed": 3, "might": 0, "sanity": 4},
+        ],
+        "actions": [
+            {"id": "find_candle", "side": "heroes", "label": "寻找蜡烛", "detail": "速度 3+（厨房/餐厅/教堂/画廊）（p76）。", "stat": "speed", "target": 3, "rooms": ["kitchen", "dining_room", "chapel", "gallery"]},
+            {"id": "burn_candle", "side": "heroes", "label": "点燃蜡烛", "detail": "弃蜡烛 + 知识 5+ 在作祟层放 token（每房一次）（p76）。", "stat": "knowledge", "target": 5, "progress": "exorcism_progress"},
+        ],
+        "win_conditions": [],
         "source_pages": [76, 147],
     },
     66: {
