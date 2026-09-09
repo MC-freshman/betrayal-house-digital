@@ -63,6 +63,7 @@ if __package__ in {None, ""}:
         SandsOfTimeMode,
         NightfallMode,
         ForAThousandYearsMode,
+        BurningSandsMode,
         PortraitCurseMode,
         BuriedAliveMode,
         ShadowExorcismMode,
@@ -202,8 +203,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(PortraitCurseMode) == [57], f"剧本 57 未走定制 handler: {handlers.get(PortraitCurseMode)}"
     assert handlers.get(NightfallMode) == [58], f"剧本 58 未走定制 handler: {handlers.get(NightfallMode)}"
     assert handlers.get(ForAThousandYearsMode) == [59], f"剧本 59 未走定制 handler: {handlers.get(ForAThousandYearsMode)}"
+    assert handlers.get(BurningSandsMode) == [60], f"剧本 60 未走定制 handler: {handlers.get(BurningSandsMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 11, f"应有 13 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 10, f"应有 13 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -230,6 +232,7 @@ def verify_mode_dispatch() -> None:
         "portrait_curse",
         "nightfall_twilight",
         "badge_curse",
+        "sphinx_riddle",
     }
 
 
@@ -5642,6 +5645,109 @@ def verify_haunt59_medallion_flow() -> None:
     assert cat3.room_key in engine3.state.room_items and h3.MEDALLION in engine3.state.room_items[cat3.room_key]
 
 
+def verify_haunt60_burning_sands_setup() -> None:
+    """剧本 60：斯芬克斯布点门厅、拦路费用、嘲讽攻击不受伤（p71/p142）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=60)
+    handler = engine._mode_handler()
+    assert isinstance(handler, BurningSandsMode)
+
+    # p140：斯芬克斯 = 英雄数，全部在门厅
+    hero_count = sum(1 for p in engine.state.players if p.role == "hero")
+    sphinxes = [
+        m for m in engine.state.monsters if m.template_id == handler.SPHINX
+    ]
+    assert len(sphinxes) == hero_count
+    hall = next(k for k, r in engine.state.board.items() if r.template_id == handler.HALL)
+    assert all(s.room_key == hall for s in sphinxes)
+
+    # p71：离开有斯芬克斯的房间每只 3 点；晕的不拦
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    hero.room_key = hall
+    assert handler.movement_cost_floor(engine, hero, hall, None) == 3 * hero_count
+    for s in sphinxes:
+        s.stunned_turns = 1
+    assert handler.movement_cost_floor(engine, hero, hall, None) == 0, "被晕的斯芬克斯不拦路"
+    for s in sphinxes:
+        s.stunned_turns = 0
+
+    # p142：嘲讽攻击——斯芬克斯输了对决不受伤也不被晕
+    target = hero
+    sphinxes[0].room_key = target.room_key
+    before_stun = sphinxes[0].stunned_turns
+    with patch.object(engine, "_roll_monster_attack", return_value=2), patch.object(
+        engine, "_roll_attack", return_value=5
+    ):
+        assert handler.on_monster_turn_attack(engine, sphinxes[0]) is True
+    assert sphinxes[0].stunned_turns == before_stun, "斯芬克斯输了对决也不该被晕"
+    assert engine.state.players and target.stat_positions["sanity"] >= 0
+
+
+def verify_haunt60_riddle_race() -> None:
+    """剧本 60：三线索收集、英雄解谜胜利、叛徒解谜胜利（p71/p142）。"""
+    engine = _run_until_haunt(seed=137, players=3, haunt_id=60)
+    handler = engine._mode_handler()
+    assert isinstance(handler, BurningSandsMode)
+    flags = engine._haunt_flags()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine, hero)
+
+    # 三线索：不在对应房间失败；在对应房间且检定成功 → 线索 +1 并抽事件牌
+    assert handler.perform_action(engine, hero, "clue_junk", {}) is False
+    room_of = {
+        tid: k
+        for tid in handler.CLUE_ROOMS.values()
+        for k, r in engine.state.board.items()
+        if r.template_id == tid
+    }
+    hero.room_key = room_of["junk_room"]
+    events_before = len(engine.state.card_discards.get("event", []))
+    with patch.object(engine, "_resolve_check", return_value=True), patch.object(
+        engine, "_draw_event", return_value=None
+    ) as draw:
+        assert handler.perform_action(engine, hero, "clue_junk", {}) is True
+        assert draw.called, "拿线索后应抽一张事件牌"
+    assert set(flags["clues"][str(hero.id)]) == {"might"}
+    # 重复拿同一条线索：不允许
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "clue_junk", {}) is False
+    # 其余两条
+    hero.room_key = room_of["game_room"]
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "clue_gameroom", {}) is True
+    hero.room_key = room_of["organ_room"]
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "clue_organ", {}) is True
+    assert len(handler._clues(engine, hero)) == 3
+
+    # 线索不全时解谜失败（新英雄没有线索；该局可能有英雄阵亡，先复活）
+    hero2 = next(p for p in engine.state.players if p.role == "hero" and p.id != hero.id)
+    hero2.dead = False
+    _set_current(engine, hero2)
+    haunt_room = engine.state.meta["haunt_rule"]["haunt_room"]
+    hero2.room_key = haunt_room
+    assert handler.perform_action(engine, hero2, "solve_riddle", {}) is False
+
+    # p71：集齐三线索 + 作祟房知识 6+ 成功 → 英雄胜
+    _set_current(engine, hero)
+    hero.room_key = haunt_room
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "solve_riddle", {}) is True
+    assert engine.state.winner == "heroes"
+
+    # p142：叛徒解谜（知识 5+）→ 叛徒胜
+    engine2 = _run_until_haunt(seed=137, players=3, haunt_id=60)
+    h2 = engine2._mode_handler()
+    assert isinstance(h2, BurningSandsMode)
+    f2 = engine2._haunt_flags()
+    traitor2 = next(p for p in engine2.state.players if p.role == "traitor")
+    _set_current(engine2, traitor2)
+    f2["clues"][str(traitor2.id)] = ["might", "speed", "sanity"]
+    traitor2.room_key = engine2.state.meta["haunt_rule"]["haunt_room"]
+    with patch.object(engine2, "_resolve_check", return_value=True):
+        assert h2.perform_action(engine2, traitor2, "traitor_solve_riddle", {}) is True
+    assert engine2.state.winner == "traitor"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -6566,6 +6672,8 @@ def main():
     verify_haunt58_torch_banish_haunting()
     verify_haunt59_badge_setup()
     verify_haunt59_medallion_flow()
+    verify_haunt60_burning_sands_setup()
+    verify_haunt60_riddle_race()
     verify_haunt57_paint_setup()
     verify_haunt57_repaint_and_immunity()
     verify_haunt46_the_feast_setup()

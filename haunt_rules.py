@@ -2909,22 +2909,68 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [70, 141],
     },
     60: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'sphinx_riddle',
-        "traitor_rule": 'revealer',
-        "hero_goal": '解开古老谜语并阻止邪恶力量释放。',
-        "traitor_goal": '先解开谜语释放力量，或杀死所有英雄。',
-        "suggested_monsters": ['cultist'],
+        # 校准记录（2026-09-09，对照英雄手册 p71 / 叛徒手册 p142）：
+        #   骨架原本是"燃烧之沙"假机制（h60 任务 + 进度轨道）。
+        #   机制落在 BurningSandsMode：
+        #   · 开局（p140）：斯芬克斯（Speed 3 / Might 5 / Sanity 3 / Know 4）
+        #     = 英雄数，全部放门厅（_ensure_room_in_play 保证门厅在场）。
+        #   · 三线索（p71/p142，双方同规则、各自集齐）：垃圾房力量 4+、
+        #     游戏室速度 4+、管风琴房理智 4+；成功后英雄抽一张事件牌；
+        #     每回合一条检定（引擎 haunt action 限额天然满足）。
+        #   · 解谜（p71/p142）：集齐三线索后在作祟房做知识检定——英雄 6+
+        #     （持水晶球/灵应板 +1 骰未建模，见简化）、叛徒 5+；英雄成功
+        #     → 英雄胜，叛徒成功 → 叛徒胜。
+        #   · 斯芬克斯拦路（p71/p142）：英雄离开有未晕斯芬克斯的房间，该步
+        #     成本每只 3 点（movement_cost_floor 钩子，17 号蟑螂守厨房先例；
+        #     引擎本就按房间怪物数 +1，钩子抬高下限）；被晕的不拦。
+        #   · 嘲讽攻击（p142）：斯芬克斯以理智攻击（目标理智防御、精神伤害），
+        #     它输了对决不受伤也不被晕（on_monster_turn_attack 全权接管）。
+        #   · 胜负（p71/p142）：英雄胜 = 解开谜语；叛徒胜 = 解开谜语或英雄
+        #     全灭。叛徒出局时斯芬克斯继续守谜，吸收兜底（7/8 号口径）。
+        #   已知简化：英雄知识攻击斯芬克斯（解谜攻击）与多只同时知识战未建模
+        #     （引擎无玩家攻击属性选择层）；沙偶重生未建模；斯芬克斯"不进
+        #     有英雄的房间"未建模（bot 守门厅不主动追击）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "sphinx_riddle",
+        "traitor_rule": "revealer",
+        "hero_goal": "在垃圾房/游戏室/管风琴房各拿一条线索，回作祟房做知识 6+ 解开谜语。",
+        "traitor_goal": "抢先解开谜语（知识 5+），或让斯芬克斯拖死所有英雄。",
+        "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": ['library', 'research_laboratory', 'pentagram_chamber', 'crypt', 'chapel'],
-        "tokens": ['sphinx', 'riddle', 'might_check', 'speed_check', 'sanity_check'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：解开古老谜语', 'target': 1, 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：解开谜语释放力量', 'target': 1, 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'cultist', 'spawn': 'haunt_room', 'count': 'player_count'}],
-        "actions": [{'id': 'h60_hero_task', 'side': 'heroes', 'label': '解开古老谜语', 'detail': '在图书馆、实验室或五芒星室完成谜语检定。', 'stat': 'knowledge', 'target': 6, 'rooms': ['library', 'research_laboratory', 'pentagram_chamber', 'crypt', 'chapel'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h60_traitor_task', 'side': 'traitor', 'label': '解开谜语释放力量', 'detail': '推进谜语倒计时。', 'stat': 'might', 'target': 5, 'rooms': ['library', 'research_laboratory', 'pentagram_chamber', 'crypt', 'chapel'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 1, 'reason': '解开古老谜语并阻止邪恶力量释放。'}, {'winner': 'traitor', 'type': 'track', 'track': 'traitor_progress', 'operator': '>=', 'target': 1, 'reason': '先解开谜语释放力量，或杀死所有英雄。'}],
+        "key_rooms": ["entrance_hall", "junk_room", "game_room", "organ_room"],
+        "tokens": ["sphinx", "clue_might", "clue_speed", "clue_sanity"],
+        "setup": {
+            "tracks": {"riddle": {"label": "谜语进度", "target": 3, "side": "heroes"}},
+            "flags": {
+                "clues": {},
+                "riddle_solved": False,
+            },
+        },
+        "monsters": [
+            # spawn=deferred：只进 monster_specs，由 handler 全部放门厅
+            {"template_id": "sphinx", "spawn": "deferred", "name": "斯芬克斯"},
+        ],
+        "actions": [
+            {"id": "clue_junk", "side": "both", "label": "翻找垃圾（线索·力量）",
+             "detail": "在垃圾房做力量 4+：成功获得一条线索（英雄成功后抽一张事件牌）"
+                       "（p71/p142）。每回合只能尝试一条解谜检定。",
+             "stat": "might", "target": 4, "rooms": ["junk_room"]},
+            {"id": "clue_gameroom", "side": "both", "label": "整理游戏（线索·速度）",
+             "detail": "在游戏室做速度 4+：成功获得一条线索（p71/p142）。",
+             "stat": "speed", "target": 4, "rooms": ["game_room"]},
+            {"id": "clue_organ", "side": "both", "label": "聆听音乐（线索·理智）",
+             "detail": "在管风琴房做理智 4+：成功获得一条线索（p71/p142）。",
+             "stat": "sanity", "target": 4, "rooms": ["organ_room"]},
+            {"id": "solve_riddle", "side": "heroes", "label": "解开谜语",
+             "detail": "集齐三条线索后在作祟房做知识 6+：成功即解开谜语、英雄获胜（p71）。",
+             "stat": "knowledge", "target": 6},
+            {"id": "traitor_solve_riddle", "side": "traitor", "label": "解开谜语",
+             "detail": "集齐三条线索后在作祟房做知识 5+：成功即解开谜语、叛徒获胜（p142）。",
+             "stat": "knowledge", "target": 5},
+        ],
+        "win_conditions": [],
         "source_pages": [71, 142],
     },
     61: {

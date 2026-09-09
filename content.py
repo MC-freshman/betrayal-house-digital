@@ -1975,6 +1975,18 @@ MONSTER_BASES = [
         text="侍奉女巫的信徒；打伤持徽章者时可以顺手把徽章抢走。",
         tags=("human", "haunt_specific"),
     ),
+    monster_def(
+        monster_id="sphinx",
+        name="斯芬克斯",
+        source_name="Sphinx",
+        speed=3,
+        might=5,
+        sanity=3,
+        knowledge=4,
+        text="燃烧之沙凝成的守谜者；挡在路上的每只都要英雄多付 3 点移动力，"
+             "被击败只会暂时眩晕。",
+        tags=("construct", "haunt_specific"),
+    ),
 ]
 
 

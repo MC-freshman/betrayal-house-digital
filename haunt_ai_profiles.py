@@ -455,6 +455,18 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["medallion_escort", "steal_medallion", "statue_threshold"]},
     },
+    60: {
+        "hero": {
+            # p71：解谜竞速——三条线索各自收集（力量/速度/理智 4+），集齐后
+            # 回作祟房知识 6+；斯芬克斯挡路每只多花 3 移动，绕开别硬闯。
+            "victory_focus": "分头收集三条线索（垃圾房/游戏室/管风琴房），集齐后回作祟房解谜",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "用斯芬克斯堵住三个线索房拖慢英雄，自己抢先解谜（知识 5+）",
+        },
+        "scenario": {"special_rules": ["riddle_race", "sphinx_toll", "clue_hunt"]},
+    },
     57: {
         "hero": {
             # p68/p139：叛徒不受伤害削减，正面围殴纯属白费——除非谁手里有
