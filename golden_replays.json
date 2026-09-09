@@ -1736,6 +1736,23 @@
       "forced_haunt": 61
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "397ea4f365487d2df0567d6f4f71075250069d3e2bc6d84a0c73839346c75925",
+      "turns": 29,
+      "phase": "GAME_OVER",
+      "winner": "heroes",
+      "winner_reason": "叛徒已经倒下。",
+      "haunt": 62,
+      "haunt_name": "魔袋把戏",
+      "rooms": 26,
+      "monsters": 1,
+      "key": "seed113-3p-haunt62",
+      "forced_haunt": 62
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,

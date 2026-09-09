@@ -3014,22 +3014,36 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [72, 143],
     },
     62: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'bag_of_tricks',
-        "traitor_rule": 'revealer',
-        "hero_goal": '利用四件纪念品的力量送走疯子并恢复房屋。',
-        "traitor_goal": '收集四件纪念品，或杀死所有英雄。',
-        "suggested_monsters": ['madman'],
+        # 校准记录（2026-09-05，对照英雄手册 p73 / 叛徒手册 p144）：
+        #   机制落在 BagOfTricksMode：
+        #   · 叛徒角色从游戏中移除（p73）；疯子怪物（Speed 4 Might 3）生成
+        #   · 英雄在同疯子/小玩意的房间做知识 6+ 推进进度
+        #   · 进度 = 玩家数 → 疯子被送走（英雄胜）
+        #   简化：小玩意收集/每房限一枚/灵应板加骰未建模。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "bag_of_tricks",
+        "traitor_rule": "revealer",
+        "hero_goal": "在疯子杀死你们之前破解他的小玩意。",
+        "traitor_goal": "让疯子收集足够的纪念品。",
+        "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": ['bloody_room', 'larder', 'crypt', 'junk_room', 'vault', 'attic'],
-        "tokens": ['trinket', 'madman', 'speed_check', 'sanity_check'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：利用纪念品送走疯子', 'target': 1, 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：收集纪念品', 'target': 'player_count', 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'madman', 'spawn': 'haunt_room', 'count': 1}],
-        "actions": [{'id': 'h62_hero_task', 'side': 'heroes', 'label': '利用纪念品送走疯子', 'detail': '在物品房间搜集纪念品并在疯子所在房间使用。', 'stat': ['speed', 'sanity'], 'target': 4, 'rooms': ['bloody_room', 'larder', 'crypt', 'junk_room', 'vault', 'attic'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h62_traitor_task', 'side': 'traitor', 'label': '收集纪念品', 'detail': '每次成功搜索获得一件纪念品。', 'stat': 'might', 'target': 5, 'rooms': ['bloody_room', 'larder', 'crypt', 'junk_room', 'vault', 'attic'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 1, 'reason': '利用四件纪念品的力量送走疯子并恢复房屋。'}, {'winner': 'traitor', 'type': 'all_heroes_dead', 'track': None, 'operator': '>=', 'target': 'player_count', 'reason': '收集四件纪念品，或杀死所有英雄。'}],
+        "key_rooms": [],
+        "tokens": ["madman_token"],
+        "setup": {
+            "tracks": {
+                "trinket_progress": {"label": "小玩意破解", "target": "player_count", "side": "heroes"},
+            },
+            "flags": {"traitor_removed": True},
+        },
+        "monsters": [
+            {"template_id": "madman", "name": "疯子（收藏家）", "spawn": "haunt_room", "count": 1, "speed": 4, "might": 3, "sanity": 0},
+        ],
+        "actions": [
+            {"id": "tap_trinkets", "side": "heroes", "label": "破解小玩意", "detail": "在同疯子的房间做知识 6+（p73）。", "stat": "knowledge", "target": 6, "progress": "trinket_progress"},
+        ],
+        "win_conditions": [],
         "source_pages": [73, 144],
     },
     63: {

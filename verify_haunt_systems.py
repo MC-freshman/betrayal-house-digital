@@ -55,6 +55,7 @@ if __package__ in {None, ""}:
         ArkanokSkullMode,
         KingsRoadsMode,
         EternalGloryMode,
+        BagOfTricksMode,
         TimeBombMode,
         CannibalFeastMode,
         OuroborosMode,
@@ -186,6 +187,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ArkanokSkullMode) == [54], f"54 未走定制"
     assert handlers.get(KingsRoadsMode) == [55], f"55 未走定制"
     assert handlers.get(EternalGloryMode) == [61], f"61 未走定制"
+    assert handlers.get(BagOfTricksMode) == [62], f"62 未走定制"
     assert handlers.get(TimeBombMode) == [45], f"剧本 45 未走定制 handler: {handlers.get(TimeBombMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
@@ -207,7 +209,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ForAThousandYearsMode) == [59], f"剧本 59 未走定制 handler: {handlers.get(ForAThousandYearsMode)}"
     assert handlers.get(BurningSandsMode) == [60], f"剧本 60 未走定制 handler: {handlers.get(BurningSandsMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 9, f"应有 9 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 8, f"应有 9 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -224,7 +226,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
         "worm_ouroboros",
         "cursed_weapon",
@@ -6624,6 +6626,37 @@ def verify_haunt61_eternal_glory() -> None:
     assert engine._haunt_track_value("persuasion_track") >= 1
 
 
+
+def verify_haunt62_bag_of_tricks() -> None:
+    """剧本 62：叛徒移除/疯子生成/破解进度/胜利条件（p73/p144）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=62)
+    handler = engine._mode_handler()
+    assert isinstance(handler, BagOfTricksMode)
+    flags = engine._haunt_flags()
+
+    # 叛徒已移除
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    assert traitor.dead, "叛徒应已从游戏移除"
+
+    # 疯子怪物在场
+    madman = engine._monster_by_template("madman")
+    assert madman is not None, "疯子怪物应已生成"
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    # 破解小玩意
+    hero.room_key = madman.room_key
+    _set_current(engine, hero)
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "tap_trinkets", {}) is True
+    assert engine._haunt_track_value("trinket_progress") == 1
+
+    # 胜利：进度满
+    engine._set_haunt_track_value("trinket_progress", engine._haunt_track_target("trinket_progress"))
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -6707,6 +6740,7 @@ def main():
     verify_haunt54_arkanok_skull()
     verify_haunt55_kings_roads()
     verify_haunt61_eternal_glory()
+    verify_haunt62_bag_of_tricks()
     verify_haunt56_sands_of_time_setup()
     verify_haunt56_time_powers()
     verify_haunt58_nightfall_setup()

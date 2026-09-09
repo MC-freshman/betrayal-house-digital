@@ -14184,6 +14184,52 @@ class PortraitCurseMode(GenericModeHandler):
 
 
 
+
+
+class BagOfTricksMode(GenericModeHandler):
+    """剧本 62 魔袋把戏（Bag of Tricks）。
+
+    权威原文：英雄手册 p73 / 叛徒手册 p144。
+    · 叛徒角色从游戏中移除；疯子怪物（Speed 4 Might 3）生成。
+    · 英雄在同疯子的房间做知识 6+ 推进进度。
+    · 进度 = 玩家数 → 英雄胜；英雄全灭 → 叛徒胜。
+    """
+
+    mode = "bag_of_tricks"
+
+    def setup(self, engine, haunt, room_key):
+        flags = engine._haunt_flags()
+        flags["traitor_removed"] = True
+        # p73：叛徒角色从游戏中移除
+        traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+        if traitor is not None:
+            engine._drop_inventory_on_death(traitor)
+            traitor.dead = True
+            engine._log(f"{traitor.name}消失在空气中——TA 离开了游戏。")
+        engine.check_victory()
+
+    def available_actions(self, engine, player):
+        actions = super().available_actions(engine, player)
+        result = []
+        for action in actions:
+            if action.id == "tap_trinkets":
+                madman = engine._monster_by_template("madman")
+                if madman is None or madman.room_key != player.room_key:
+                    continue
+            result.append(action)
+        return result
+
+    def check_victory(self, engine):
+        if engine._haunt_track_value("trinket_progress") >= engine._haunt_track_target("trinket_progress"):
+            engine._set_winner("heroes", "疯子被送走了——房子恢复了原状。")
+            return True
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "最后的英雄也消失了。")
+            return True
+        return False
+
+
+
 class EternalGloryMode(GenericModeHandler):
     """剧本 61 永恒荣耀（Eternal Glory）。"""
 
@@ -14358,6 +14404,7 @@ for _handler in (
     KingsRoadsMode(),
     PortraitCurseMode(),
     EternalGloryMode(),
+    BagOfTricksMode(),
 ):
 
     register_mode(_handler)
