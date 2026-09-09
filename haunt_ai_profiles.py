@@ -455,6 +455,30 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["medallion_escort", "steal_medallion", "statue_threshold"]},
     },
+    68: {
+        "hero": {
+            # p79：钥匙房与入口大厅都不能写进静态 target_rooms——该搜钥匙还是
+            # 该往门口跑，取决于"手里有没有钥匙""门开没开"，全由
+            # LabyrinthEscapeMode.bot_goal_rooms 动态给出（见 handoff §6 第 6 条）。
+            "target_rooms": [],
+            # 不追杀仆人：怪物房在寻路里是 +100 的常驻目标，会压过剧本动态目标（+95）。
+            # 实测英雄全跑去跟仆人互殴，三把钥匙躺在地上没人捡（seed=7/5p）。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "一人拿一把钥匙带回入口大厅，凑齐后做知识 5+ 开锁，再花 2 点移动逃出去——杀死叛徒不算赢",
+        },
+        "traitor": {
+            # p150：他捡不起也抢不走钥匙，能做的只有杀戮与拖延；迷宫自己会合上。
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "用仆人磨死英雄、拖到回合/伤害轨掷出 6+ 封闭迷宫；钥匙你碰不得",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {
+            "tokens": ["钥匙", "神志检定"],
+            "special_rules": ["turn_seal_roll", "confusion_force_move", "traitor_cannot_touch_keys", "escape_majority_win"],
+        },
+    },
     67: {
         "hero": {
             # p78：目标随已抽取任务变化，不能写进静态 target_rooms。

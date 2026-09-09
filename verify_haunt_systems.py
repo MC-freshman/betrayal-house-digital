@@ -61,6 +61,7 @@ if __package__ in {None, ""}:
         BreathOfWindMode,
         HellOnEarthMode,
         StorybookTwistsMode,
+        LabyrinthEscapeMode,
         TimeBombMode,
         CannibalFeastMode,
         OuroborosMode,
@@ -198,6 +199,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(BreathOfWindMode) == [65], f"65 未走定制"
     assert handlers.get(HellOnEarthMode) == [66], f"66 未走定制"
     assert handlers.get(StorybookTwistsMode) == [67], f"67 未走定制"
+    assert handlers.get(LabyrinthEscapeMode) == [68], f"68 未走定制"
     assert handlers.get(TimeBombMode) == [45], f"剧本 45 未走定制 handler: {handlers.get(TimeBombMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
@@ -219,10 +221,10 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ForAThousandYearsMode) == [59], f"剧本 59 未走定制 handler: {handlers.get(ForAThousandYearsMode)}"
     assert handlers.get(BurningSandsMode) == [60], f"剧本 60 未走定制 handler: {handlers.get(BurningSandsMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 3, f"应有 3 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 2, f"应有 2 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
-    assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
+    assert isinstance(get_mode_handler("labyrinth_escape"), LabyrinthEscapeMode)
     assert isinstance(get_mode_handler(None), GenericModeHandler)
     assert isinstance(get_mode_handler(""), GenericModeHandler)
     # 不存在的 mode 也不能崩
@@ -236,7 +238,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "haunt_exorcism", "hell_on_earth", "storybook_twists", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "haunt_exorcism", "hell_on_earth", "storybook_twists", "labyrinth_escape", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
         "worm_ouroboros",
         "cursed_weapon",
@@ -6952,6 +6954,189 @@ def verify_haunt67_once_upon_a_time() -> None:
     assert engine4.state.winner == "traitor"
 
 
+def verify_haunt68_setup_and_seal() -> None:
+    """剧本 68：开局布点（钥匙/仆人/地下墓穴）与回合/伤害轨封口（p79/p150）。"""
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=68)
+    handler = engine._mode_handler()
+    assert isinstance(handler, LabyrinthEscapeMode)
+    flags = engine._haunt_flags()
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    hall = handler._hall_key(engine)
+    assert hall, "入口大厅必须在场——那是唯一的出口"
+
+    # p79/p150：钥匙数 = 英雄数；每间一枚，且不放在大厅（大厅里的钥匙不算"手上"）
+    assert flags["hero_count"] == len(heroes)
+    assert flags["keys_total"] == len(heroes)
+    assert flags["escape_target"] == (len(heroes) + 1) // 2
+    keys = engine.tokens_of_kind("key")
+    assert len(keys) == len(heroes)
+    assert all(token.holder is None for token in keys)
+    key_rooms = [token.room_key for token in keys]
+    assert len(key_rooms) == len(set(key_rooms)), "钥匙应分散在不同房间"
+    assert all(engine.state.board[room].template_id != "entrance_hall" for room in key_rooms)
+
+    # p150：仆人 = 英雄数-1，速4/力3/智5
+    servants = [m for m in engine.state.monsters if m.template_id == "labyrinth_servant"]
+    assert len(servants) == max(0, len(heroes) - 1)
+    for servant in servants:
+        assert (servant.speed, servant.might, servant.sanity) == (4, 3, 5)
+
+    # p150：地下墓穴移出本局——用塌方标记等价实现，里面不能还留着活人
+    catacombs = [key for key, room in engine.state.board.items() if room.template_id == "catacombs"]
+    for key in catacombs:
+        assert engine._is_collapsed(key), "地下墓穴应被翻出本局"
+        assert not any(not p.dead and p.room_key == key for p in engine.state.players)
+        assert not any(monster.room_key == key for monster in engine.state.monsters)
+
+    # p150：回合/伤害轨归零（真实位数走 flags，UI 轨只到刻度 12）
+    assert flags["turn_position"] == 0
+    assert engine._haunt_track_value("labyrinth_turn") == 0
+    assert engine._haunt_track_target("labyrinth_turn") == 12
+
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    _set_current(engine, traitor)
+    with patch.object(engine, "roll_dice", return_value=2):
+        handler.on_turn_start(engine, traitor)
+    assert flags["turn_position"] == 1 and not flags["sealed"], "掷不满 6 不该封口"
+    assert engine._haunt_track_value("labyrinth_turn") == 1
+
+    flags["turn_position"] = 15
+    with patch.object(engine, "roll_dice", return_value=3):
+        handler._advance_seal(engine)
+    assert flags["turn_position"] == 16, "真实位数不该被轨道上限截断"
+    assert engine._haunt_track_value("labyrinth_turn") == 12, "UI 轨只到刻度 12"
+
+    # p150：出 6+ 即迷宫自我封闭 → 叛徒胜
+    flags["turn_position"] = 3
+    flags["sealed"] = False
+    engine.state.winner = ""
+    with patch.object(engine, "roll_dice", return_value=6):
+        handler._advance_seal(engine)
+    assert flags["sealed"] and engine.state.winner == "traitor"
+
+    # p150 的胜负不依赖叛徒活着：他死了也要继续合拢（本轮首位存活英雄代推）
+    engine.state.winner = ""
+    flags["sealed"] = False
+    traitor.dead = True
+    first_hero, second_hero = heroes[0], heroes[1]
+    # 本轮 turn_order 里第一个还活着的英雄是 second_hero（叛徒已排在其后且已死）
+    engine.state.turn_order = [second_hero.id, traitor.id, first_hero.id]
+    before = int(flags["turn_position"])
+    _set_current(engine, second_hero)
+    handler.on_turn_start(engine, second_hero)
+    assert flags["turn_position"] == before + 1, "叛徒死后首位存活英雄应代推进轨道"
+    _set_current(engine, first_hero)
+    handler.on_turn_start(engine, first_hero)
+    assert flags["turn_position"] == before + 1, "同一轮不能推进两次"
+
+
+def verify_haunt68_key_route_and_confusion() -> None:
+    """剧本 68：集钥匙→开锁→逃出，以及仆人致迷乱与白走一格（p79/p150）。"""
+    engine = _run_until_haunt(seed=23, players=5, haunt_id=68)
+    handler = engine._mode_handler()
+    assert isinstance(handler, LabyrinthEscapeMode)
+    flags = engine._haunt_flags()
+    hall = handler._hall_key(engine)
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    keys = engine.tokens_of_kind("key")
+    assert len(keys) == len(heroes)
+
+    # 厅外拿着全部钥匙也开不了锁（p79：开锁必须站在入口大厅）
+    far_room = next(key for key in engine.state.board if key != hall)
+    for index, hero in enumerate(heroes):
+        engine.give_token(keys[index].uid, hero.id)
+        hero.room_key = far_room
+    carrier = heroes[0]
+    _set_current(engine, carrier)
+    assert "unlock_door" not in {a.id for a in handler.available_actions(engine, carrier)}
+    assert handler.perform_action(engine, carrier, "unlock_door", {}) is False
+
+    # 全员带钥匙进厅：条件满足 → 开锁可用；厅内不再提供转交/放下
+    for hero in heroes:
+        hero.room_key = hall
+    assert handler._all_keys_in_hall(engine) is True
+    offered = {a.id for a in handler.available_actions(engine, carrier)}
+    assert "unlock_door" in offered and not {"pass_key", "drop_key"} & offered
+
+    # 检定失败：门不开（_perform_generic_haunt_action 失败也返回 True，只看 flag）
+    _set_current(engine, carrier)
+    carrier.steps_remaining = 5
+    with patch.object(engine, "_resolve_check", return_value=False):
+        handler.perform_action(engine, carrier, "unlock_door", {})
+    assert not flags["door_unlocked"], "开锁失败不该把门打开"
+
+    # 检定成功：门开 + 抽一张事件牌并结束回合（p79）
+    with patch.object(engine, "_resolve_check", return_value=True), \
+            patch.object(engine, "_draw_symbol_card", return_value=None) as drawn:
+        assert handler.perform_action(engine, carrier, "unlock_door", {}) is True
+    assert flags["door_unlocked"] is True
+    assert drawn.called, "开锁成功者要抽一张事件牌（p79）"
+    assert carrier.steps_remaining == 0 and carrier.movement_stopped, "开锁花掉本回合剩余行动"
+
+    # 逃出要留 2 点移动；逃走者出局且身上的钥匙不会散落（p79）
+    flags["escape_target"] = 1  # 本用例只验证"逃够即胜"这条判定线
+    flee_hero = heroes[1]
+    flee_hero.steps_remaining = 1
+    _set_current(engine, flee_hero)
+    assert "flee_labyrinth" not in {a.id for a in handler.available_actions(engine, flee_hero)}
+    flee_hero.steps_remaining = 5
+    held_before = [token.uid for token in engine.tokens_held_by(flee_hero.id, "key")]
+    assert handler.perform_action(engine, flee_hero, "flee_labyrinth", {}) is True
+    assert flee_hero.dead and flee_hero.id in flags["escaped_hero_ids"]
+    assert flee_hero.steps_remaining == 3, "逃出消耗 2 点移动（p79）"
+    assert [token.uid for token in engine.tokens_held_by(flee_hero.id, "key")] == held_before, \
+        "逃走者把钥匙随身带走，不该散落在大厅"
+    assert handler.check_victory(engine) and engine.state.winner == "heroes"
+
+    # p150：仆人可改用理智攻击——打赢只是弄糊涂，双方属性都不掉
+    engine.state.winner = ""
+    flags["door_unlocked"] = False
+    flags["escaped_hero_ids"] = [int(x) for x in flags["escaped_hero_ids"] if x != flee_hero.id]
+    flags["escape_target"] = max(1, len(heroes) - 1)
+    victim = next(p for p in engine.state.players if not p.dead and p.role == "hero")
+    servant = next((m for m in engine.state.monsters if m.template_id == "labyrinth_servant"), None)
+    if servant is None:  # 英雄数-1 可能为 0，补一只来验这条规则
+        servant = engine._spawn_single_haunt_monster(
+            dict(LabyrinthEscapeMode.SERVANT_SPEC), victim.room_key
+        )
+    # 把 victim 和仆人单独关进一间没有别的活人的房间：handler 按"理智最低"
+    # 挑对手，同屋只可能选到她。
+    isolate = next(
+        key for key in engine.state.board
+        if key != hall and not any(
+            player.room_key == key for player in engine.state.players
+            if not player.dead and player.id != victim.id
+        )
+    )
+    victim.room_key = isolate
+    servant.room_key = isolate
+    positions_before = dict(victim.stat_positions)
+    with patch.object(engine, "_roll_monster_attack", return_value=6), \
+            patch.object(engine, "_roll_attack", return_value=1):
+        assert handler.on_monster_turn_attack(engine, servant) is True
+    assert engine.tokens_held_by(victim.id, "confused"), "仆人打赢应放一枚神志检定令牌"
+    assert victim.stat_positions == positions_before, "理智攻击双方都不掉属性（p150）"
+
+    # 迷乱者回合结束：被逼着白走一格（不花移动点），然后神志恢复
+    victim.room_key = hall
+    start_room = victim.room_key
+    steps_before = victim.steps_remaining = 4
+    handler.on_turn_end(engine, victim)
+    assert victim.room_key != start_room, "叛徒应逼她白走一格（p150）"
+    assert victim.steps_remaining == steps_before, "这一步不花她的移动点"
+    assert not engine.tokens_held_by(victim.id, "confused"), "回合结束迷乱解除"
+
+    # 仆人打不赢就什么都没有（原文：双方都不受伤害）
+    other = next(p for p in engine.state.players if not p.dead and p.role == "hero" and p.id != victim.id)
+    other.room_key = servant.room_key
+    other_positions = dict(other.stat_positions)
+    with patch.object(engine, "_roll_monster_attack", return_value=1), \
+            patch.object(engine, "_roll_attack", return_value=6):
+        handler.on_monster_turn_attack(engine, servant)
+    assert not engine.tokens_held_by(other.id, "confused")
+    assert other.stat_positions == other_positions, "仆人不该在理智对决中吃亏"
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -7041,6 +7226,8 @@ def main():
     verify_haunt65_breath_of_wind()
     verify_haunt66_hell_on_earth()
     verify_haunt67_once_upon_a_time()
+    verify_haunt68_setup_and_seal()
+    verify_haunt68_key_route_and_confusion()
     verify_haunt56_sands_of_time_setup()
     verify_haunt56_time_powers()
     verify_haunt58_nightfall_setup()

@@ -3252,22 +3252,78 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [78, 149],
     },
     68: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'labyrinth_escape',
-        "traitor_rule": 'revealer',
-        "hero_goal": '收集钥匙、打开入口大厅前门并让至少一半英雄逃离迷宫。',
-        "traitor_goal": '让迷宫自行封闭，或杀死超过一半英雄。',
-        "suggested_monsters": ['cultist'],
+        # 精修 v3（M10-12）：对照英雄手册 p79 / 叛徒手册 p150 逐字重写，
+        # 逻辑落在 haunt_modes.LabyrinthEscapeMode。骨架时代的 h68_hero_task /
+        # h68_traitor_task 双任务轨是占位假机制（原文里叛徒根本不做检定，
+        # 只是每回合推轨掷骰），已整段替换。
+        #   · 布点（p150）：地下墓穴移出本局；英雄数枚钥匙（五边形令牌）与
+        #     「英雄数-1」只仆人（速4/力3/智5）放进已探索房间；回合/伤害轨归零。
+        #   · 逃脱（p79）：把「英雄数」枚钥匙全部带进入口大厅 → 厅里的英雄做
+        #     知识 5+ 开锁；成功者抽一张事件牌并结束回合。门开后再进大厅的
+        #     英雄花 2 点移动逃出，逃出者移出对局、不能返回。
+        #   · 胜负（p79/p150）：逃出人数达到「作祟开始时活着的英雄数的一半」
+        #     → 英雄胜；叛徒回合开始把轨 +1 后掷等于新位数的骰，总和 6+ →
+        #     迷宫自我封闭 → 叛徒胜；或死亡英雄超过一半 → 叛徒胜。
+        #   · 钥匙（p150）：叛徒既不能拾取也不能抢夺钥匙。
+        #   · 迷乱（p150）：仆人可改用理智攻击——双方都不掉属性，但打赢就把一枚
+        #     神志检定令牌放到该英雄身上；叛徒可在她回合内逼她白走一格（不花移动
+        #     点），回合结束解除迷乱。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "labyrinth_escape",
+        "traitor_rule": "revealer",
+        "hero_goal": "收齐钥匙打开入口大厅的前门，让至少一半英雄逃出去。",
+        "traitor_goal": "在迷宫自我封闭前杀死超过一半英雄——但你碰不到钥匙。",
+        "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": ['entrance_hall', 'catacombs', 'mystic_elevator', 'foyer', 'grand_staircase', 'upper_landing'],
-        "tokens": ['key', 'servant', 'maze', 'sanity_check'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：收集钥匙并逃离迷宫', 'target': 'half_players_floor', 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：封闭迷宫', 'target': 6, 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'cultist', 'spawn': 'haunt_room', 'count': 'player_count'}],
-        "actions": [{'id': 'h68_hero_task', 'side': 'heroes', 'label': '收集钥匙并逃离迷宫', 'detail': '在入口大厅完成开门检定，再完成逃离行动。', 'stat': 'knowledge', 'target': 5, 'rooms': ['entrance_hall', 'catacombs', 'mystic_elevator', 'foyer', 'grand_staircase', 'upper_landing'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h68_traitor_task', 'side': 'traitor', 'label': '封闭迷宫', 'detail': '推进迷宫封闭轨道。', 'stat': 'might', 'target': 5, 'rooms': ['entrance_hall', 'catacombs', 'mystic_elevator', 'foyer', 'grand_staircase', 'upper_landing'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 'half_players_floor', 'reason': '收集钥匙、打开入口大厅前门并让至少一半英雄逃离迷宫。'}, {'winner': 'traitor', 'type': 'track', 'track': 'traitor_progress', 'operator': '>=', 'target': 6, 'reason': '让迷宫自行封闭，或杀死超过一半英雄。'}],
+        # key_rooms / actions.rooms 一律留空：它们是机器人的常驻寻路目标，
+        # 而本剧本的目标要看"手里有没有钥匙""门开没开"（见 handoff §6 第 6 条）。
+        "key_rooms": [],
+        "tokens": ["key", "confused"],
+        "setup": {
+            # 回合/伤害轨的真实位数记在 flags["turn_position"]（引擎轨道会被
+            # target 封顶，56 号同款）；UI 轨只做 1..12 的刻度显示。
+            "tracks": {
+                "labyrinth_turn": {"label": "回合/伤害轨（迷宫封闭倒计时）", "target": 12, "side": "traitor"},
+            },
+            "flags": {
+                "scenario_started": True,
+                "hero_count": 0,
+                "keys_total": 0,
+                "escape_target": 0,
+                "turn_position": 0,
+                "door_unlocked": False,
+                "sealed": False,
+                "escaped_hero_ids": [],
+            },
+        },
+        "monsters": [
+            {"template_id": "labyrinth_servant", "spawn": "deferred", "count": 1,
+             "name": "迷宫仆人", "speed": 4, "might": 3, "sanity": 5},
+        ],
+        "actions": [
+            # 顺序即机器人的优先级（同分时取列表靠前者）：能逃就先逃，
+            # 其次开锁，再次捡钥匙，最后才是倒手。房间与持物限制由 handler 把关。
+            {"id": "flee_labyrinth", "side": "heroes", "label": "逃出迷宫",
+             "detail": "门已开、人站在入口大厅时消耗 2 点移动逃出这栋房子："
+                       "你被移出对局且再也回不来（p79）。",
+             "requires_flags": {"door_unlocked": True}},
+            {"id": "unlock_door", "side": "heroes", "label": "试着转动钥匙",
+             "detail": "所有钥匙都在入口大厅里的英雄手上时，任何厅内英雄做知识 5+ "
+                       "检定找出正确的开锁顺序；成功后你抽一张事件牌并结束回合（p79）。",
+             "stat": "knowledge", "target": 5, "set_flags": {"door_unlocked": True}},
+            {"id": "grab_key", "side": "heroes", "label": "拿起钥匙",
+             "detail": "收走本房间的一枚钥匙。钥匙像物品一样可以拾取、放下、"
+                       "交易和抢夺，但不能由狗携带（p79）。"},
+            # 标签刻意避开"交给/交出"：bot 的行动打分给这两个词 +20，
+            # 会让"转手"压过"拿起钥匙"和"试着转动钥匙"。
+            {"id": "pass_key", "side": "heroes", "label": "把钥匙转交队友",
+             "detail": "把钥匙转交给同房间里还缺一把钥匙的英雄（p79：钥匙可交易）。"},
+            {"id": "drop_key", "side": "heroes", "label": "放下钥匙",
+             "detail": "把钥匙留在当前房间（p79）。"},
+        ],
+        "win_conditions": [],
         "source_pages": [79, 150],
     },
     69: {

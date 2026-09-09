@@ -15756,6 +15756,481 @@ class EternalGloryMode(GenericModeHandler):
         return False
 
 
+class LabyrinthEscapeMode(GenericModeHandler):
+    """剧本 68「The Labyrinth / 迷宫」（英雄手册 p79 / 叛徒手册 p150）。
+
+    地下墓穴膨胀开来，把整栋房子拧成一座迷宫；石头还在挪动，滴答声越来越近。
+    叛徒不改规则、不施法术，他只是比谁都清楚这座迷宫的出口在哪。
+
+    · 开局（p150）：地下墓穴移出本局；把「英雄数」枚钥匙（五边形令牌）与
+      「英雄数-1」只迷宫仆人（速4/力3/智5）放进已探索房间；回合/伤害轨归零。
+    · 逃脱（p79）：钥匙能拿、能放、能交易、能被抢（但不能被狗携带）。当
+      「所有」钥匙都在入口大厅里的英雄手上时，厅内任一英雄做知识 5+ 找开锁
+      顺序；成功者抽一张事件牌并结束回合。门开之后，厅内英雄花 2 点移动逃出，
+      逃出者移出对局、再也回不来。
+    · 封印（p150）：叛徒回合开始把轨 +1，然后掷等于新位数的骰（骰子数按引擎
+      口径封顶 8 枚），总和 6+ → 迷宫自我封闭 → 叛徒胜。真实位数存
+      flags["turn_position"]（引擎轨道会被 target 封顶，56 号同款处理）。
+    · 迷乱（p150）：仆人可改用理智攻击——双方都不掉属性，但仆人打赢就把一枚
+      神志检定令牌放到该英雄身上。叛徒可以在她回合内的任何时候逼她白走一格
+      （不花移动点）；回合结束迷乱解除。
+    · 钥匙禁令（p150）：叛徒既不能拾取也不能抢夺钥匙——`grab_key` 只挂在
+      side=heroes 上，令牌也不走引擎的卡牌抢夺分支，所以这条由结构保证。
+    · 胜负（p79/p150）：英雄胜 = 逃出人数 ≥「作祟开始时活着的英雄数的一半」；
+      叛徒胜 = 迷宫合拢，或死亡英雄超过一半。叛徒死亡**不**判英雄胜：门不会
+      因为死人而打开，迷宫也照样合得拢（引擎通用兜底在此吸收）。
+
+    已知简化：
+        · "把剩余房间板块重排成叛徒喜欢的形状"未实现：本仓库没有搬动已放置
+          房间的能力（doors 是模板属性，搬了就对不上邻格），沿用既有结论。
+          地下墓穴的"移出本局"用塌方标记等价实现（连通图与移动选项都会排除
+          坍塌板块），里面的人与怪先搬到邻接房间、不走坠亡结算。
+        · "万能钥匙可替代一把钥匙"未实现：本项目 80 张卡牌目录里没有骷髅钥匙
+          （见 67 号同款说明），要落地得先扩卡池并同步后端的数量断言。
+        · 迷乱者的那一格位移固定在"她的回合结束"执行（原文是"回合内任何时刻"），
+          且特殊移动所需的属性检定不免判（本引擎的特殊移动选项本就无需检定）。
+        · 狗不能携带钥匙自动满足——本项目同伴卡不占物品栏、无法持物。
+        · 拿/转交/放下/开锁/逃出共用引擎"每人每回合一次剧本行动"的限额；
+          逃出在原版只花 2 点移动、不占行动。
+        · 逃走者在界面上按"已出局"显示：引擎没有独立的出局状态，沿用 6/47 号
+          的口径（直接置 dead 标记、不走死亡流程，所以物品与钥匙不会散落）。
+        · 神秘电梯"落到该层哪个位置由叛徒挑"未实现（引擎按随机/固定落点处理）。
+    """
+
+    mode = "labyrinth_escape"
+
+    KEY = "key"
+    CONFUSED = "confused"
+    SERVANT = "labyrinth_servant"
+    HALL = "entrance_hall"
+    CATACOMBS = "catacombs"
+    TURN_TRACK = "labyrinth_turn"
+    UI_TRACK_CAP = 12
+    SEAL_ROLL_TARGET = 6
+    FLEE_COST = 2
+    ATTACK_DICE_CAP = 8
+    SERVANT_SPEC = {
+        "template_id": SERVANT, "name": "迷宫仆人", "speed": 4, "might": 3, "sanity": 5,
+    }
+
+    # ------------------------------------------------------------- 工具
+    def _traitor(self, engine: Any):
+        return next((p for p in engine.state.players if p.role == "traitor"), None)
+
+    def _living_heroes(self, engine: Any) -> list[Any]:
+        return [p for p in engine.state.players if p.role == "hero" and not p.dead]
+
+    def _hall_key(self, engine: Any) -> str:
+        return next(
+            (key for key, room in sorted(engine.state.board.items())
+             if room.template_id == self.HALL),
+            "",
+        )
+
+    def _in_hall(self, engine: Any, player: Any) -> bool:
+        room = engine.state.board.get(player.room_key)
+        return room is not None and room.template_id == self.HALL
+
+    def _keys_held_by_heroes_in_hall(self, engine: Any) -> int:
+        hall = self._hall_key(engine)
+        if not hall:
+            return 0
+        return sum(
+            1 for token in engine.tokens_of_kind(self.KEY)
+            if token.holder is not None
+            and 0 <= token.holder < len(engine.state.players)
+            and engine.state.players[token.holder].role == "hero"
+            and not engine.state.players[token.holder].dead
+            and engine.state.players[token.holder].room_key == hall
+        )
+
+    def _all_keys_in_hall(self, engine: Any) -> bool:
+        total = int(engine._haunt_flags().get("keys_total", 0))
+        return total > 0 and self._keys_held_by_heroes_in_hall(engine) >= total
+
+    def _confused(self, engine: Any, player: Any) -> bool:
+        return bool(engine.tokens_held_by(player.id, self.CONFUSED))
+
+    def _stage_rooms(self, engine: Any) -> list[str]:
+        """可作为布点场的房间：已探索、没塌、不是入口大厅（叛徒不会把
+        钥匙和伏兵留在门口——原文明说位置由叛徒挑）。"""
+        hall = self._hall_key(engine)
+        return [
+            key for key, room in sorted(engine.state.board.items())
+            if room.revealed and key != hall and not engine._is_collapsed(key)
+        ]
+
+    # ------------------------------------------------------------- 开局
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        flags = engine._haunt_flags()
+        hero_count = max(1, len(self._living_heroes(engine)))
+        flags["hero_count"] = hero_count
+        flags["keys_total"] = hero_count
+        flags["escape_target"] = (hero_count + 1) // 2
+        flags["door_unlocked"] = False
+        flags["sealed"] = False
+        flags["escaped_hero_ids"] = []
+        flags["turn_position"] = 0
+        tracks = engine._haunt_tracks()
+        tracks.setdefault(
+            self.TURN_TRACK,
+            {"label": "回合/伤害轨（迷宫封闭倒计时）", "target": self.UI_TRACK_CAP, "value": 0},
+        )
+        tracks[self.TURN_TRACK]["target"] = self.UI_TRACK_CAP
+        engine._set_haunt_track_value(self.TURN_TRACK, 0)
+
+        self._retire_catacombs(engine)
+        rooms = self._stage_rooms(engine)
+        if not rooms:
+            rooms = [key for key, room in sorted(engine.state.board.items()) if room.revealed]
+        for index in range(hero_count):
+            if not rooms:
+                break
+            engine.spawn_token(self.KEY, label="钥匙", role="marker", room_key=rooms[index % len(rooms)])
+        servant_count = max(0, hero_count - 1)
+        for index in range(servant_count):
+            if not rooms:
+                break
+            engine._spawn_single_haunt_monster(dict(self.SERVANT_SPEC), rooms[index % len(rooms)])
+        engine._log(
+            f"房子拧成了一整座迷宫：{hero_count} 把钥匙散在厅外，"
+            f"{servant_count} 个仆人在墙之间游荡，"
+            f"逃出去一半人（{flags['escape_target']} 名）才算赢。"
+        )
+
+    def _retire_catacombs(self, engine: Any) -> None:
+        """p150：把地下墓穴从房子里拿走。本仓库没有"撤房"能力，用塌方标记
+        等价实现——先把它里面的人与怪搬到邻接的已探索房间，再翻掉这块牌。"""
+        key = next(
+            (k for k, room in sorted(engine.state.board.items()) if room.template_id == self.CATACOMBS),
+            "",
+        )
+        if not key or engine._is_collapsed(key):
+            return
+        refuge = self._catacomb_refuge(engine, key)
+        if not refuge:
+            engine._log("地下墓穴无处可撤（它被孤立在别处）：本局仍按原样使用它（已知简化）。")
+            return
+        for player in [p for p in engine.state.players if not p.dead and p.room_key == key]:
+            engine._move_to_room(player, refuge, via_effect=False)
+        for monster in [m for m in engine.state.monsters if m.room_key == key]:
+            monster.room_key = refuge
+        engine._collapse_room(key, cause="迷宫重组后的黑暗里", consumes_monsters=False)
+
+    def _catacomb_refuge(self, engine: Any, key: str) -> str:
+        candidates = [
+            other for other in engine._door_neighbors(key)
+            if other != key and not engine._is_collapsed(other) and engine.state.board[other].revealed
+        ]
+        if candidates:
+            return candidates[0]
+        return next(
+            (
+                other for other, room in sorted(engine.state.board.items())
+                if other != key and room.revealed and not engine._is_collapsed(other)
+            ),
+            "",
+        )
+
+    # ------------------------------------------------------- 回合与迷宫合拢
+    def on_turn_start(self, engine: Any, player: Any) -> None:
+        flags = engine._haunt_flags()
+        if flags.get("sealed"):
+            return
+        traitor = self._traitor(engine)
+        if traitor is not None and not traitor.dead:
+            if player.role == "traitor":
+                self._advance_seal(engine)
+            return
+        # 叛徒已死也要继续合拢（p150 的胜负条件不依赖他活着）：本轮首位英雄代推
+        if player.role == "hero" and self._is_first_living_in_order(engine, player):
+            self._advance_seal(engine)
+
+    def _is_first_living_in_order(self, engine: Any, player: Any) -> bool:
+        for player_id in engine.state.turn_order:
+            candidate = next((p for p in engine.state.players if p.id == player_id), None)
+            if candidate is not None and not candidate.dead and candidate.role == "hero":
+                return candidate.id == player.id
+        return False
+
+    def _advance_seal(self, engine: Any) -> None:
+        flags = engine._haunt_flags()
+        position = int(flags.get("turn_position", 0)) + 1
+        flags["turn_position"] = position
+        engine._set_haunt_track_value(self.TURN_TRACK, min(position, self.UI_TRACK_CAP))
+        dice = max(1, min(position, self.ATTACK_DICE_CAP))
+        roll = engine.roll_dice(dice, "迷宫是否合拢")
+        engine._log(f"石头咯咯作响（回合/伤害轨第 {position} 格：{dice} 骰掷出 {roll}，需 {self.SEAL_ROLL_TARGET}+ 才合拢）。")
+        if roll >= self.SEAL_ROLL_TARGET:
+            flags["sealed"] = True
+            engine._log("最后一道门化进了墙里。迷宫合上了。")
+            engine.check_victory()
+
+    # --------------------------------------------------------------- 迷乱
+    def on_monster_turn_attack(self, engine: Any, monster: Any) -> bool:
+        """p150：仆人可用理智代替力量——双方都不掉属性，打赢即弄糊涂目标。"""
+        if getattr(monster, "template_id", "") != self.SERVANT:
+            return False
+        targets = [
+            p for p in engine.state.players
+            if p.role == "hero" and not p.dead and p.room_key == monster.room_key
+        ]
+        if not targets:
+            return False
+        fresh = [p for p in targets if not self._confused(engine, p)]
+        if not fresh:
+            return False  # 已经糊涂的人再推一把没意义：改用普通力量攻击
+        target = min(fresh, key=lambda p: (p.stats.get("sanity", 9), p.id))
+        monster_roll = engine._roll_monster_attack(monster, "sanity")
+        hero_roll = engine._roll_attack(target, "sanity")
+        engine._log(f"{monster.name} 低语着扰乱 {engine._player_label(target)} 的神志：{monster_roll} 对 {hero_roll}。")
+        if monster_roll > hero_roll:
+            engine.spawn_token(self.CONFUSED, label="神志检定", role="check", holder=target.id)
+            engine._log(f"{target.name} 分不清东南西北了（叛徒可以随时逼她白走一格）。")
+        else:
+            engine._log("她的神志守住了——谁都没受伤。")
+        return True
+
+    def on_turn_end(self, engine: Any, player: Any) -> None:
+        if player.dead or not self._confused(engine, player):
+            return
+        self._force_stumble(engine, player)
+        for token in engine.tokens_held_by(player.id, self.CONFUSED):
+            engine.remove_token(token.uid)
+        if not player.dead:
+            engine._log(f"{player.name} 回过神来——刚才那一步是别人替她走的。")
+
+    def _force_stumble(self, engine: Any, player: Any) -> None:
+        """p150：叛徒逼迷乱者走一格，不花她的移动点。"""
+        saved_steps = player.steps_remaining
+        saved_stopped = player.movement_stopped
+        player.movement_stopped = False
+        player.steps_remaining = max(1, saved_steps)
+        try:
+            options = [option for option in engine.available_move_options(player) if not option.is_new_room]
+            if not options:
+                return
+            option = self._stumble_option(engine, player, options)
+            engine.move_player(player, option)
+        finally:
+            player.steps_remaining = saved_steps
+            player.movement_stopped = saved_stopped
+
+    def _stumble_option(self, engine: Any, player: Any, options: list[Any]) -> Any:
+        hall = self._hall_key(engine)
+        servant_rooms = {monster.room_key for monster in engine.state.monsters if monster.template_id == self.SERVANT}
+        traitor = self._traitor(engine)
+        if traitor is not None and traitor.control == "human":
+            labels = [
+                f"{engine._direction_cn(option.direction)} → {option.target_room_name or '未知房间'}"
+                for option in options
+            ]
+            choice = engine.prompter.choose_from_list(
+                "迷宫的错觉", f"{player.name} 神志不清，要把她往哪边推？", labels
+            )
+            if choice is not None and 0 <= choice < len(options):
+                return options[choice]
+        # 机器人叛徒：优先推进有仆人的房间，否则推得离前门越远越好
+        return max(
+            options,
+            key=lambda option: (
+                option.target_key in servant_rooms,
+                engine._path_length(option.target_key, hall) if hall else 0,
+                option.target_key,
+            ),
+        )
+
+    # ------------------------------------------------------------- 行动
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        actions = super().available_actions(engine, player)
+        if player.role != "hero" or player.dead:
+            return []
+        flags = engine._haunt_flags()
+        held = engine.tokens_held_by(player.id, self.KEY)
+        can_unlock = self._in_hall(engine, player) and self._all_keys_in_hall(engine)
+        can_flee = (
+            self._in_hall(engine, player)
+            and bool(flags.get("door_unlocked"))
+            and player.steps_remaining >= self.FLEE_COST
+        )
+        result = []
+        for action in actions:
+            action_id = action.id
+            if action_id == "flee_labyrinth":
+                if not can_flee:
+                    continue
+            elif action_id == "unlock_door":
+                if not can_unlock:
+                    continue
+            elif action_id == "grab_key":
+                if not engine.tokens_in_room(player.room_key, self.KEY):
+                    continue
+            elif action_id in {"pass_key", "drop_key"}:
+                if not held or can_unlock or self._in_hall(engine, player):
+                    # 能开锁就别再倒手；站在大厅里更别放——放下后钥匙就不算
+                    # "在英雄手上"，p79 的开锁条件会被自己弄丢。
+                    continue
+                if not self._pass_targets(engine, player):
+                    # 没有还空着手的队友就别放下（防机器人原地循环）
+                    continue
+            result.append(action)
+        return result
+
+    def _pass_targets(self, engine: Any, player: Any) -> list[Any]:
+        """同房间里一把钥匙都没带的英雄——钥匙得有人带得动。"""
+        return [
+            other for other in engine.state.players
+            if not other.dead and other.id != player.id and other.role == "hero"
+            and other.room_key == player.room_key and not engine.tokens_held_by(other.id, self.KEY)
+        ]
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        flags = engine._haunt_flags()
+        held = engine.tokens_held_by(player.id, self.KEY)
+
+        if action_id == "grab_key":
+            token = next(iter(engine.tokens_in_room(player.room_key, self.KEY)), None)
+            if token is None:
+                engine._log("这个房间里没有钥匙。")
+                return False
+            engine.give_token(token.uid, player.id)
+            need = int(flags.get("keys_total", 0))
+            engine._log(f"{player.name} 收起了{token.label}（全队要集齐 {need} 把）。")
+            return True
+
+        if action_id == "drop_key":
+            if not held:
+                engine._log("你身上没有钥匙。")
+                return False
+            engine.place_token(held[0].uid, player.room_key)
+            room = engine.state.board.get(player.room_key)
+            engine._log(f"{player.name} 把钥匙留在了{(room.name if room else '原地')}。")
+            return True
+
+        if action_id == "pass_key":
+            if not held:
+                engine._log("你身上没有钥匙可转交。")
+                return False
+            candidates = self._pass_targets(engine, player)
+            if not candidates:
+                engine._log("同房间里没有还缺钥匙的队友。")
+                return False
+            choice = engine.prompter.choose_from_list(
+                "转交钥匙", "把钥匙交给谁？", [other.name for other in candidates]
+            )
+            target = candidates[choice] if choice is not None and 0 <= choice < len(candidates) else candidates[0]
+            engine.give_token(held[0].uid, target.id)
+            engine._log(f"{player.name} 把钥匙塞给了{target.name}。")
+            return True
+
+        if action_id == "unlock_door":
+            if not self._in_hall(engine, player) or not self._all_keys_in_hall(engine):
+                engine._log("开锁得站在入口大厅，而且所有钥匙都要在厅里英雄的手上（p79）。")
+                return False
+            was_unlocked = bool(flags.get("door_unlocked"))
+            ran = super().perform_action(engine, player, action_id, data)
+            if ran and not was_unlocked and flags.get("door_unlocked"):
+                engine._log("锁簧依次归位——前门开了！")
+                engine._draw_symbol_card(player, "event")  # p79：成功者抽一张事件牌
+                player.movement_stopped = True
+                player.steps_remaining = 0
+                player.attack_used = True
+                engine._log(f"{player.name} 把剩下的力气都用在推门上，回合结束。")
+                engine.check_victory()
+            return ran
+
+        if action_id == "flee_labyrinth":
+            if not flags.get("door_unlocked"):
+                engine._log("前门还锁着。")
+                return False
+            if not self._in_hall(engine, player):
+                engine._log("逃出迷宫必须站在入口大厅。")
+                return False
+            if player.steps_remaining < self.FLEE_COST:
+                engine._log(f"逃出要留下 2 点移动，你只剩 {player.steps_remaining} 点。")
+                return False
+            player.steps_remaining -= self.FLEE_COST
+            escaped = sorted(set(int(x) for x in (flags.get("escaped_hero_ids") or [])) | {player.id})
+            flags["escaped_hero_ids"] = escaped
+            flags["escaped_heroes"] = len(escaped)
+            # 引擎没有独立的"出局"状态：直接置 dead、不走死亡流程，
+            # 所以他身上的钥匙与物品不会散落在大厅里（6/47 号同款口径）。
+            player.dead = True
+            engine._log(
+                f"{player.name} 挤出那道门缝，消失在夜里——他再也不会回来"
+                f"（逃出 {len(escaped)}/{flags.get('escape_target', 1)}）。"
+            )
+            return True
+
+        return super().perform_action(engine, player, action_id, data)
+
+    # ------------------------------------------------------------- 进度
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        flags = engine._haunt_flags()
+        total = int(flags.get("keys_total", 0))
+        position = int(flags.get("turn_position", 0))
+        escaped = len(flags.get("escaped_hero_ids") or [])
+        lines = [
+            f"钥匙：厅内英雄手上 {self._keys_held_by_heroes_in_hall(engine)}/{total}｜"
+            f"随身 {sum(1 for token in engine.tokens_of_kind(self.KEY) if token.holder is not None)}｜"
+            f"散落在房间 {sum(1 for token in engine.tokens_of_kind(self.KEY) if token.room_key)}",
+            (
+                f"前门已开：站在入口大厅花 {self.FLEE_COST} 点移动就能逃（逃出 {escaped}/"
+                f"{flags.get('escape_target', 1)} 即英雄胜）"
+                if flags.get("door_unlocked")
+                else f"前门锁着：把 {total} 把钥匙全部带进入口大厅的英雄手上，再做知识 5+"
+            ),
+            f"回合/伤害轨：第 {position} 格（掷 {max(1, min(position, self.ATTACK_DICE_CAP))} 骰，"
+            f"{self.SEAL_ROLL_TARGET}+ 迷宫就合上）",
+        ]
+        confused = [p.name for p in self._living_heroes(engine) if self._confused(engine, p)]
+        if confused:
+            lines.append("神志不清：" + "、".join(confused))
+        return lines
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """手里有钥匙（或门已开）就往入口大厅跑，空手就去搜钥匙。"""
+        if player.dead or player.role != "hero":
+            return []
+        flags = engine._haunt_flags()
+        hall = self._hall_key(engine)
+        if flags.get("door_unlocked") or engine.tokens_held_by(player.id, self.KEY):
+            return [f"__room__{hall}"] if hall else []
+        return [
+            f"__room__{token.room_key}"
+            for token in engine.tokens_of_kind(self.KEY) if token.room_key
+        ]
+
+    def check_victory(self, engine: Any) -> bool:
+        flags = engine._haunt_flags()
+        hero_count = max(1, int(flags.get("hero_count", 0)))
+        escaped_ids = {int(x) for x in (flags.get("escaped_hero_ids") or [])}
+        escaped = len(escaped_ids)
+        target = max(1, int(flags.get("escape_target", 1)))
+        if escaped >= target:
+            engine._set_winner("heroes", "门外的冷风扑面而来——至少一半人逃出了迷宫。")
+            return True
+        if flags.get("sealed"):
+            engine._set_winner("traitor", "迷宫合上了。永恒等待着他们。")
+            return True
+        dead = sum(
+            1 for player in engine.state.players
+            if player.role == "hero" and player.dead and player.id not in escaped_ids
+        )
+        if dead > hero_count / 2:
+            engine._set_winner("traitor", "超过一半的英雄死在了迷宫深处。")
+            return True
+        traitor = self._traitor(engine)
+        if traitor is not None and not traitor.dead:
+            return False
+        # 叛徒已死：引擎"叛徒死 → 英雄胜"的兜底不适用于本剧本，这里吸收掉，
+        # 让门与迷宫自己决定结局。
+        if not self._living_heroes(engine):
+            engine._set_winner("traitor", "迷宫里再没有一个活着的英雄。")
+            return True
+        return True
+
+
 for _handler in (
     GenericModeHandler(),
     BanishmentEscortMode(),
@@ -15825,6 +16300,7 @@ for _handler in (
     BreathOfWindMode(),
     HellOnEarthMode(),
     StorybookTwistsMode(),
+    LabyrinthEscapeMode(),
 ):
 
     register_mode(_handler)

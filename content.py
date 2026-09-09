@@ -2027,6 +2027,17 @@ MONSTER_BASES = [
         text="故事里的恶龙。喷火攻击同房所有人；除非被特定武器击中，否则被击败不击晕。",
         tags=("beast", "haunt_specific"),
     ),
+    monster_def(
+        monster_id="labyrinth_servant",
+        name="迷宫仆人",
+        source_name="Servants",
+        speed=4,
+        might=3,
+        sanity=5,
+        text="迷宫的主人布下的仆从。可以改用理智发动攻击：双方都不受伤，"
+             "但打赢的目标会被弄糊涂（p150）。",
+        tags=("human", "haunt_specific"),
+    ),
 ]
 
 

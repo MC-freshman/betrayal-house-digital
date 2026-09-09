@@ -1853,6 +1853,40 @@
       "monsters": 3,
       "key": "seed109-4p-haunt60",
       "forced_haunt": 60
+    },
+    {
+      "seed": 23,
+      "players": 5,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "081e70e0564d4a561327dbe8ce1366b3b00532cfd28b5e7c1c828e37b4217080",
+      "turns": 50,
+      "phase": "GAME_OVER",
+      "winner": "heroes",
+      "winner_reason": "门外的冷风扑面而来——至少一半人逃出了迷宫。",
+      "haunt": 68,
+      "haunt_name": "迷宫",
+      "rooms": 30,
+      "monsters": 2,
+      "key": "seed23-5p-haunt68",
+      "forced_haunt": 68
+    },
+    {
+      "seed": 109,
+      "players": 4,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "71e96c9a5cd04fabd502a6100e2685b5a59e4415649a74a190abef1aa648e165",
+      "turns": 21,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "迷宫合上了。永恒等待着他们。",
+      "haunt": 68,
+      "haunt_name": "迷宫",
+      "rooms": 16,
+      "monsters": 2,
+      "key": "seed109-4p-haunt68",
+      "forced_haunt": 68
     }
   ]
 }

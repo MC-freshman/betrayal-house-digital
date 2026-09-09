@@ -45,7 +45,7 @@ else:
 # 通用行动/轨道胜负回归样本：须为 fidelity=skeleton、hero_progress target>=2、
 # 无 required_cards/无 action requires、且不在当前精修批次队列内的剧本；
 # 精修到该号时必须同步把此常量搬迁到另一个仍满足条件的骨架剧本。
-_GENERIC_SAMPLE_HAUNT = 68  # 67 号已于 M10-11 精修，骨架样本顺延到 68（foyer 在 rooms，target=half_players_floor）
+_GENERIC_SAMPLE_HAUNT = 69  # 68 号已于 M10-12 精修，骨架样本顺延到 69（h69_hero_task 无 requires、rooms 含 foyer、target=player_count）
 
 
 def _configs(count: int = 4, bot_difficulty: str = "hard") -> list[dict]:
