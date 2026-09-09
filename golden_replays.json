@@ -1666,6 +1666,40 @@
       "monsters": 0,
       "key": "seed109-4p-haunt58",
       "forced_haunt": 58
+    },
+    {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "7067781f3d4ac0a58a307a16d3fcf61e77d6683b35630e617306f4f75d602755",
+      "turns": 36,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "最后的继承人倒下了——血脉永埋尘土。",
+      "haunt": 59,
+      "haunt_name": "千年长咒",
+      "rooms": 26,
+      "monsters": 1,
+      "key": "seed113-3p-haunt59",
+      "forced_haunt": 59
+    },
+    {
+      "seed": 109,
+      "players": 4,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "247c3945e6c7678d057eaad20d46440deb355009224c333e66d89d57f22483c7",
+      "turns": 18,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "最后的继承人倒下了——血脉永埋尘土。",
+      "haunt": 59,
+      "haunt_name": "千年长咒",
+      "rooms": 13,
+      "monsters": 2,
+      "key": "seed109-4p-haunt59",
+      "forced_haunt": 59
     }
   ]
 }

@@ -2846,22 +2846,66 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [69, 140],
     },
     59: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'badge_curse',
-        "traitor_rule": 'revealer',
-        "hero_goal": '把徽章挂到雕像上，打破女巫诅咒。',
-        "traitor_goal": '把徽章从塔楼扔入地下湖摧毁，或杀死所有英雄。',
-        "suggested_monsters": ['witch'],
-        "required_cards": ['item_amulet_of_the_ages'],
-        "key_rooms": ['tower', 'underground_lake', 'statuary_corridor', 'gallery', 'chapel'],
-        "tokens": ['badge', 'statue', 'curse'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：把徽章挂上雕像', 'target': 1, 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：摧毁徽章', 'target': 'player_count', 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'witch', 'spawn': 'haunt_room', 'count': 1}],
-        "actions": [{'id': 'h59_hero_task', 'side': 'heroes', 'label': '把徽章挂上雕像', 'detail': '携带徽章在雕像走廊完成悬挂仪式。', 'stat': ['knowledge', 'might'], 'target': 5, 'rooms': ['tower', 'underground_lake', 'statuary_corridor', 'gallery', 'chapel'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h59_traitor_task', 'side': 'traitor', 'label': '摧毁徽章', 'detail': '推进徽章毁坏轨道。', 'stat': 'might', 'target': 5, 'rooms': ['tower', 'underground_lake', 'statuary_corridor', 'gallery', 'chapel'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 1, 'reason': '把徽章挂到雕像上，打破女巫诅咒。'}, {'winner': 'traitor', 'type': 'all_heroes_dead', 'track': None, 'operator': '>=', 'target': 'player_count', 'reason': '把徽章从塔楼扔入地下湖摧毁，或杀死所有英雄。'}],
+        # 校准记录（2026-09-09，对照英雄手册 p70 / 叛徒手册 p141）：
+        #   骨架原本是"徽章诅咒"假机制（h59 任务 + 进度轨道）。
+        #   机制落在 ForAThousandYearsMode：
+        #   · 开局（p141）：女巫 + 雕像放带预兆图标的房间（除作祟房，无则
+        #     任意房）；英雄数 ≥3 → 熊（预兆图标空房，无则女巫房）、≥4 →
+        #     猫（女巫房）、≥5 → 信徒（叛徒房）。徽章（omen_medallion）确保
+        #     在叛徒手里（47 号骷髅兜底同口径）。
+        #   · 徽章归属：flags["medallion_holder"] 统一追踪（traitor/monster/
+        #     hero:<id> / None=地上）；英雄持有时同步把卡放进 items。
+        #   · 持徽章英雄每回合最多移动 2 格（on_player_moved 计数 +
+        #     movement_stopped；叛徒不限速——原文只限英雄）。
+        #   · 放置徽章（p70）：持徽章者在雕像房速度掷骰 ≥ 房间内未昏迷对手数
+        #     （叛徒+怪物）的两倍 → 挂上雕像 → 英雄胜。
+        #   · 摧毁徽章（p141）：持有者（叛徒/怪物）在塔楼/地下湖结束回合 →
+        #     扔下徽章 → 叛徒胜（check_victory 检查）。
+        #   · 怪物攻击（p141）：女巫知识攻击（目标理智防御、精神伤害）；熊
+        #     力量 +2 骰；猫速度攻击（目标速度防御、物理）；猫/信徒造成 ≥2
+        #     伤害且目标持徽章 → 偷走徽章。
+        #   · 徽章易手：怪物可拾取地上徽章（on_monster_turn_start）；怪物被
+        #     击败/击晕时徽章掉地上（on_monster_defeated），英雄拾取即持有。
+        #   · 胜负（p70/p141）：英雄胜 = 徽章挂上雕像；叛徒胜 = 徽章扔进
+        #     塔楼/地下湖，或英雄全灭。叛徒出局时女巫使魔继续行动，
+        #     吸收兜底（7/8 号口径）。
+        #   已知简化：拖拽昏迷怪物、怪物探索新房间、熊/猫禁用特殊通道、
+        #     猫坠落即晕、徽章"仅回合开始可弃/交易"与"狗不能携带"均未建模。
+        #   专属怪物模板 curse_witch/curse_bear/curse_cat/curse_cultist（属性
+        #     与 3 号的 witch/cat 不同，避免语义混淆）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "badge_curse",
+        "traitor_rule": "revealer",
+        "hero_goal": "从叛徒手里夺回王室徽章（或在它落地时捡起），护送到雕像房挂上去即破咒。",
+        "traitor_goal": "让女巫使魔抢走徽章并扔进塔楼或地下湖，或杀光所有英雄。",
+        "suggested_monsters": [],
+        "required_cards": [],
+        "key_rooms": ["tower", "underground_lake"],
+        "tokens": ["royal_statue", "witch", "bear", "cat", "cultist"],
+        "setup": {
+            "tracks": {"medallion": {"label": "王室徽章", "target": 1, "side": "heroes"}},
+            "flags": {
+                "medallion_holder": None,
+                "medallion_steps": {},
+                "statue_key": None,
+            },
+        },
+        "monsters": [
+            # spawn=deferred：只进 monster_specs，由 handler 按预兆图标房布点
+            {"template_id": "curse_witch", "spawn": "deferred", "name": "诅咒女巫"},
+            {"template_id": "curse_bear", "spawn": "deferred", "name": "女巫之熊"},
+            {"template_id": "curse_cat", "spawn": "deferred", "name": "女巫之猫"},
+            {"template_id": "curse_cultist", "spawn": "deferred", "name": "女巫信徒"},
+        ],
+        "actions": [
+            {"id": "place_medallion", "side": "heroes", "label": "挂上王室徽章",
+             "detail": "持徽章者在雕像所在房间做速度掷骰：结果 ≥ 房间内未昏迷对手数"
+                       "（叛徒+怪物）的两倍即成功，诅咒破除、英雄获胜（p70）。",
+             "stat": "speed", "target": 0, "requires": ["same_room:royal_statue"]},
+        ],
+        "win_conditions": [],
         "source_pages": [70, 141],
     },
     60: {

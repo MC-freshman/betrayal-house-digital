@@ -1934,6 +1934,47 @@ MONSTER_BASES = [
         text="夜幕降临时爬出梦魇的东西；受 2 点以上伤害即被摧毁，还能钻进英雄的梦里缠住他。",
         tags=("spectral", "haunt_specific"),
     ),
+    # 剧本 59 的女巫与使魔（属性与 3 号的 witch/cat 不同，故用专属 id，避免语义混淆）
+    monster_def(
+        monster_id="curse_witch",
+        name="诅咒女巫",
+        source_name="Witch",
+        speed=4,
+        might=3,
+        sanity=3,
+        knowledge=5,
+        text="千年前降下诅咒的妖妇；以知识攻击（目标以理智防御、精神伤害）。",
+        tags=("caster", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="curse_bear",
+        name="女巫之熊",
+        source_name="Bear",
+        speed=3,
+        might=4,
+        text="女巫的使魔；力量攻击时多掷两枚骰子。",
+        tags=("animal", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="curse_cat",
+        name="女巫之猫",
+        source_name="Cat",
+        speed=5,
+        might=2,
+        sanity=1,
+        text="女巫的使魔；以速度攻击（目标以速度防御、物理伤害），能抢走徽章。",
+        tags=("animal", "haunt_specific"),
+    ),
+    monster_def(
+        monster_id="curse_cultist",
+        name="女巫信徒",
+        source_name="Cultist",
+        speed=3,
+        might=4,
+        sanity=3,
+        text="侍奉女巫的信徒；打伤持徽章者时可以顺手把徽章抢走。",
+        tags=("human", "haunt_specific"),
+    ),
 ]
 
 

@@ -443,6 +443,18 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["twilight", "torches", "haunting", "knowledge_attacks"]},
     },
+    59: {
+        "hero": {
+            # p70：徽章开局在叛徒手里——打掉他/让猫抢了再夺回，捡到后只能
+            # 慢慢挪（每回合 2 格），直奔雕像房挂上去。
+            "victory_focus": "夺回王室徽章，护送（每回合限 2 格）到雕像房挂上去",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "让使魔抢走徽章送到塔楼或地下湖扔掉，守住雕像不让英雄挂徽章",
+        },
+        "scenario": {"special_rules": ["medallion_escort", "steal_medallion", "statue_threshold"]},
+    },
     57: {
         "hero": {
             # p68/p139：叛徒不受伤害削减，正面围殴纯属白费——除非谁手里有

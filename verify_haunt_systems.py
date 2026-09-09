@@ -62,6 +62,7 @@ if __package__ in {None, ""}:
         NightMurderMode,
         SandsOfTimeMode,
         NightfallMode,
+        ForAThousandYearsMode,
         PortraitCurseMode,
         BuriedAliveMode,
         ShadowExorcismMode,
@@ -200,8 +201,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(SandsOfTimeMode) == [56], f"剧本 56 未走定制 handler: {handlers.get(SandsOfTimeMode)}"
     assert handlers.get(PortraitCurseMode) == [57], f"剧本 57 未走定制 handler: {handlers.get(PortraitCurseMode)}"
     assert handlers.get(NightfallMode) == [58], f"剧本 58 未走定制 handler: {handlers.get(NightfallMode)}"
+    assert handlers.get(ForAThousandYearsMode) == [59], f"剧本 59 未走定制 handler: {handlers.get(ForAThousandYearsMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 12, f"应有 13 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 11, f"应有 13 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -227,6 +229,7 @@ def verify_mode_dispatch() -> None:
         "time_sands",
         "portrait_curse",
         "nightfall_twilight",
+        "badge_curse",
     }
 
 
@@ -5541,6 +5544,104 @@ def verify_haunt58_torch_banish_haunting() -> None:
     assert nm3.room_key == target3.room_key
 
 
+def verify_haunt59_badge_setup() -> None:
+    """剧本 59：女巫/雕像布点、徽章归属、持徽章英雄限速 2 格（p70/p141）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=59)
+    handler = engine._mode_handler()
+    assert isinstance(handler, ForAThousandYearsMode)
+    flags = engine._haunt_flags()
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # p141：女巫 + 雕像在带预兆图标的房间（非作祟房）
+    haunt_room = engine.state.meta["haunt_rule"]["haunt_room"]
+    hero_count = sum(1 for p in engine.state.players if p.role == "hero")
+    statue_key = flags["statue_key"]
+    assert statue_key and engine.state.board[statue_key].symbol == "omen"
+    assert statue_key != haunt_room
+    assert any(
+        m.template_id == handler.WITCH and m.room_key == statue_key
+        for m in engine.state.monsters
+    )
+    # p141：英雄数 ≥3 才放熊（3 人局 = 1 叛徒 + 2 英雄，熊不应出现）；
+    #       4 英雄局再加猫、5 英雄局再加信徒
+    bears = [m for m in engine.state.monsters if m.template_id == handler.BEAR]
+    if hero_count >= 3:
+        assert bears, "英雄数 ≥3 应放熊"
+    else:
+        assert not bears, "英雄数 <3 不应放熊"
+    cats = [m for m in engine.state.monsters if m.template_id == handler.CAT]
+    assert (len(cats) > 0) == (hero_count >= 4)
+    assert flags["medallion_holder"] == f"traitor:{traitor.id}"
+    assert handler.MEDALLION in traitor.items
+
+    # p70：持徽章英雄每回合最多 2 格（手动给他徽章模拟夺回）
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor.items = [c for c in traitor.items if c != handler.MEDALLION]
+    flags["medallion_holder"] = f"hero:{hero.id}"
+    hero.items.append(handler.MEDALLION)
+    flags["medallion_steps"] = {}
+    handler.on_player_moved(engine, hero)
+    handler.on_player_moved(engine, hero)
+    assert hero.movement_stopped and hero.steps_remaining == 0, "持徽章第 2 格应停下"
+    # 回合开始重置
+    handler.on_turn_start(engine, hero)
+    assert hero.movement_stopped is False or str(hero.id) not in flags["medallion_steps"]
+
+
+def verify_haunt59_medallion_flow() -> None:
+    """剧本 59：放置徽章胜利、猫抢徽章、塔楼毁徽章、怪物掉徽章（p70/p141）。"""
+    engine = _run_until_haunt(seed=137, players=3, haunt_id=59)
+    handler = engine._mode_handler()
+    assert isinstance(handler, ForAThousandYearsMode)
+    flags = engine._haunt_flags()
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    # p70：挂徽章胜利——mock 速度检定成功
+    flags["medallion_holder"] = f"hero:{hero.id}"
+    hero.items.append(handler.MEDALLION)
+    hero.room_key = flags["statue_key"]
+    _set_current(engine, hero)
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "place_medallion", {}) is True
+    assert engine.state.winner == "heroes"
+
+    # 重开一局：猫抢徽章 + 塔楼毁徽章 → 叛徒胜
+    engine2 = _run_until_haunt(seed=137, players=3, haunt_id=59)
+    h2 = engine2._mode_handler()
+    assert isinstance(h2, ForAThousandYearsMode)
+    f2 = engine2._haunt_flags()
+    hero2 = next(p for p in engine2.state.players if p.role == "hero" and not p.dead)
+    # 3 人局英雄数 <4 没有猫：把在场一只怪物改造成猫来构造抢徽章场景
+    cat = engine2.state.monsters[0]
+    cat.template_id = h2.CAT
+    hero2.items.append(h2.MEDALLION)
+    f2["medallion_holder"] = f"hero:{hero2.id}"
+    cat.room_key = hero2.room_key
+    with patch.object(engine2, "_roll_monster_attack", return_value=6), patch.object(
+        engine2, "_roll_attack", return_value=3
+    ):
+        assert h2.on_monster_turn_attack(engine2, cat) is True
+    assert f2["medallion_holder"] == f"monster:{cat.id}", "差值 ≥2 猫应抢走徽章"
+    assert h2.MEDALLION not in hero2.items
+    # 怪物带着徽章到塔楼结束回合 → 叛徒胜
+    tower = next((k for k, r in engine2.state.board.items() if r.template_id == "tower"), None)
+    assert tower is not None, "塔楼应在场（骨架保证）"
+    cat.room_key = tower
+    assert h2.check_victory(engine2) is True and engine2.state.winner == "traitor"
+
+    # p141：持徽章怪物被击败 → 徽章掉地上（英雄可拾取）
+    engine3 = _run_until_haunt(seed=137, players=3, haunt_id=59)
+    h3 = engine3._mode_handler()
+    f3 = engine3._haunt_flags()
+    cat3 = engine3.state.monsters[0]
+    cat3.template_id = h3.CAT
+    f3["medallion_holder"] = f"monster:{cat3.id}"
+    assert h3.on_monster_defeated(engine3, cat3, 2) is False
+    assert f3["medallion_holder"] is None
+    assert cat3.room_key in engine3.state.room_items and h3.MEDALLION in engine3.state.room_items[cat3.room_key]
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -6463,6 +6564,8 @@ def main():
     verify_haunt56_time_powers()
     verify_haunt58_nightfall_setup()
     verify_haunt58_torch_banish_haunting()
+    verify_haunt59_badge_setup()
+    verify_haunt59_medallion_flow()
     verify_haunt57_paint_setup()
     verify_haunt57_repaint_and_immunity()
     verify_haunt46_the_feast_setup()
