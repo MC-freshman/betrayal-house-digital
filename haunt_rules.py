@@ -2974,22 +2974,43 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [71, 142],
     },
     61: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'ghost_warrior',
-        "traitor_rule": 'revealer',
-        "hero_goal": '让幽灵战士安息。',
-        "traitor_goal": '说服幽灵战士重新战斗，或杀死所有英雄。',
-        "suggested_monsters": ['ghost'],
+        # 校准记录（2026-09-05，对照英雄手册 p72 / 叛徒手册 p143）：
+        #   机制落在 EternalGloryMode：
+        #   · 三遗物：雕像（画廊）/石棺（墓地）/古甲（酒窖）——强制入场
+        #   · 矛 token 放作祟房间；幽灵战士（Speed 3 Might 5）生成并拾矛
+        #   · 英雄拾矛 → 带到遗物房间 → 知识检定推 Track
+        #   · Track = 2× 英雄数 且在两个不同房间 → 英雄胜
+        #   · 矛离开遗物房间 → Track 归零
+        #   · 英雄胜：安息；叛徒胜：英雄全灭
+        #   简化：叛徒 incorporeal / 盾 / 偷矛需 3+ 伤害未建模。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "ghost_warrior",
+        "traitor_rule": "revealer",
+        "hero_goal": "带着长矛到遗物房间说服幽灵战士安息。",
+        "traitor_goal": "让幽灵战士杀死所有英雄。",
+        "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": ['gallery', 'graveyard', 'wine_cellar', 'chapel', 'crypt'],
-        "tokens": ['ghost_warrior', 'statue', 'sarcophagus', 'armor', 'shield'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：安抚幽灵战士', 'target': 1, 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：激励幽灵战士', 'target': 'player_count', 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'ghost', 'spawn': 'haunt_room', 'count': 'player_count'}],
-        "actions": [{'id': 'h61_hero_task', 'side': 'heroes', 'label': '安抚幽灵战士', 'detail': '在雕像、墓地或石棺相关房间完成安抚。', 'stat': ['sanity', 'knowledge'], 'target': 5, 'rooms': ['gallery', 'graveyard', 'wine_cellar', 'chapel', 'crypt'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h61_traitor_task', 'side': 'traitor', 'label': '激励幽灵战士', 'detail': '推进幽灵战士苏醒轨道。', 'stat': 'might', 'target': 5, 'rooms': ['gallery', 'graveyard', 'wine_cellar', 'chapel', 'crypt'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 1, 'reason': '让幽灵战士安息。'}, {'winner': 'traitor', 'type': 'all_heroes_dead', 'track': None, 'operator': '>=', 'target': 'player_count', 'reason': '说服幽灵战士重新战斗，或杀死所有英雄。'}],
+        "key_rooms": ["gallery", "graveyard", "wine_cellar"],
+        "tokens": ["spear", "statue_relic", "sarcophagus_relic", "ancient_armor", "ghost_warrior"],
+        "setup": {
+            "tracks": {
+                "persuasion_track": {"label": "说服进度", "target": 20, "side": "heroes"},
+            },
+            "flags": {
+                "rest_tokens_rooms": [], "spear_held_by": None,
+                "ghost_alive": True, "relic_rooms": {},
+            },
+        },
+        "monsters": [
+            {"template_id": "ghost", "name": "幽灵战士", "spawn": "deferred", "count": 1, "speed": 3, "might": 5, "sanity": 0},
+        ],
+        "actions": [
+            {"id": "persuade_ghost", "side": "heroes", "label": "说服幽灵", "detail": "持矛在遗物房间做知识检定推 Track（p72）。", "stat": "knowledge", "target": 5, "progress": "persuasion_track"},
+            {"id": "pick_up_spear", "side": "heroes", "label": "拾取长矛", "detail": "在同房间拾取幽灵战士掉落的长矛（p72）。"},
+        ],
+        "win_conditions": [],
         "source_pages": [72, 143],
     },
     62: {

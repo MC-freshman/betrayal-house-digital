@@ -14183,6 +14183,118 @@ class PortraitCurseMode(GenericModeHandler):
         ]
 
 
+
+class EternalGloryMode(GenericModeHandler):
+    """剧本 61 永恒荣耀（Eternal Glory）。"""
+
+    mode = "ghost_warrior"
+
+    RELICS = [
+        ("statue_relic", "gallery", "雕像"),
+        ("sarcophagus_relic", "graveyard", "石棺"),
+        ("ancient_armor", "wine_cellar", "古甲"),
+    ]
+
+    def setup(self, engine, haunt, room_key):
+        flags = engine._haunt_flags()
+        flags["rest_tokens_rooms"] = []
+        flags["spear_held_by"] = None
+        flags["ghost_alive"] = True
+        relic_rooms = flags.setdefault("relic_rooms", {})
+        for token_kind, template_id, label in self.RELICS:
+            key = next((k for k, r in engine.state.board.items() if r.template_id == template_id), None)
+            if key is None:
+                key = engine._ensure_room_in_play(template_id, room_key)
+            if key:
+                engine.spawn_token(token_kind, label=label, role="marker", room_key=key)
+                relic_rooms[token_kind] = key
+        engine.spawn_token("spear", label="命运之矛", role="marker", room_key=room_key)
+        spec = next((s for s in haunt.rule_data.get("monsters", []) if s.get("template_id") == "ghost"), {})
+        spec = dict(spec)
+        spec["name"] = "幽灵战士"
+        monster = engine._spawn_single_haunt_monster(spec, room_key)
+        if monster is not None:
+            spear = next((t for t in engine.state.tokens if t.kind == "spear"), None)
+            if spear:
+                engine.give_token(spear.uid, int(monster.id.split("_")[-1]))
+        engine._log('幽灵战士手持长矛现身——"谁能与我匹敌！"')
+
+    def _relic_room_for(self, engine, room_key):
+        relic_rooms = engine._haunt_flags().get("relic_rooms", {})
+        for token_kind, rk in relic_rooms.items():
+            if rk == room_key:
+                return token_kind
+        return None
+
+    def on_monster_move(self, engine, monster, rolled):
+        if getattr(monster, "name", "") != "幽灵战士":
+            return False
+        target = engine._find_monster_target(monster)
+        if target is None:
+            return True
+        path = engine._shortest_path(monster.room_key, target.room_key)
+        if len(path) > 1:
+            steps = engine.roll_dice(getattr(monster, "speed", 3), "幽灵移动")
+            monster.room_key = path[min(len(path) - 1, steps)]
+        if target.room_key == monster.room_key:
+            ghost_roll = engine._roll_monster_attack(monster, "might")
+            hero_roll = engine._roll_attack(target, "might")
+            if ghost_roll > hero_roll:
+                engine._deal_damage(target, "physical", ghost_roll - hero_roll, source="幽灵战士")
+        return True
+
+    def available_actions(self, engine, player):
+        actions = super().available_actions(engine, player)
+        result = []
+        for action in actions:
+            if action.id == "persuade_ghost" and not engine.tokens_held_by(player.id, "spear"):
+                continue
+            if action.id == "pick_up_spear":
+                if engine.tokens_held_by(player.id, "spear"):
+                    continue
+                if not engine.tokens_in_room(player.room_key, "spear"):
+                    continue
+            result.append(action)
+        return result
+
+    def perform_action(self, engine, player, action_id, data):
+        flags = engine._haunt_flags()
+        if action_id == "pick_up_spear":
+            token = next(iter(engine.tokens_in_room(player.room_key, "spear")), None)
+            if token is None:
+                return False
+            engine.give_token(token.uid, player.id)
+            flags["spear_held_by"] = player.id
+            engine._log(f"{player.name} 拾取了长矛。")
+            return True
+        if action_id == "persuade_ghost":
+            if not engine.tokens_held_by(player.id, "spear"):
+                return False
+            relic = self._relic_room_for(engine, player.room_key)
+            if not relic:
+                return False
+            ok = super().perform_action(engine, player, action_id, data)
+            if ok:
+                engine._advance_haunt_track("persuasion_track", 1)
+                new_track = engine._haunt_track_value("persuasion_track")
+                target_track = 2 * sum(1 for p in engine.state.players if p.role == "hero")
+                rooms = flags.setdefault("rest_tokens_rooms", [])
+                if player.room_key not in rooms:
+                    rooms.append(player.room_key)
+                engine._log(f"说服进度（{new_track}/{target_track}，房间 {len(rooms)}）。")
+                if new_track >= target_track and len(rooms) >= 2:
+                    engine._set_winner("heroes", "幽灵战士终于安息了。")
+                    engine.check_victory()
+            return ok
+        return super().perform_action(engine, player, action_id, data)
+
+    def check_victory(self, engine):
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "幽灵战士的最后一击命中了。")
+            return True
+        return False
+
+
 for _handler in (
     GenericModeHandler(),
     BanishmentEscortMode(),
@@ -14245,6 +14357,7 @@ for _handler in (
     ArkanokSkullMode(),
     KingsRoadsMode(),
     PortraitCurseMode(),
+    EternalGloryMode(),
 ):
 
     register_mode(_handler)
