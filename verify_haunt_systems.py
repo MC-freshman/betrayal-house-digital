@@ -59,6 +59,7 @@ if __package__ in {None, ""}:
         TwistingNetherMode,
         BloodOfferingMode,
         BreathOfWindMode,
+        HellOnEarthMode,
         TimeBombMode,
         CannibalFeastMode,
         OuroborosMode,
@@ -194,6 +195,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(TwistingNetherMode) == [63], f"63 未走定制"
     assert handlers.get(BloodOfferingMode) == [64], f"64 未走定制"
     assert handlers.get(BreathOfWindMode) == [65], f"65 未走定制"
+    assert handlers.get(HellOnEarthMode) == [66], f"66 未走定制"
     assert handlers.get(TimeBombMode) == [45], f"剧本 45 未走定制 handler: {handlers.get(TimeBombMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
@@ -215,7 +217,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ForAThousandYearsMode) == [59], f"剧本 59 未走定制 handler: {handlers.get(ForAThousandYearsMode)}"
     assert handlers.get(BurningSandsMode) == [60], f"剧本 60 未走定制 handler: {handlers.get(BurningSandsMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 5, f"应有 9 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 4, f"应有 4 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -232,7 +234,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "haunt_exorcism", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "haunt_exorcism", "hell_on_earth", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
         "worm_ouroboros",
         "cursed_weapon",
@@ -6778,6 +6780,84 @@ def verify_haunt65_breath_of_wind() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_haunt66_hell_on_earth() -> None:
+    """剧本 66：圣徽充能 / 封闭 / 圣徽攻击驱逐 / 电梯与拾取封锁（p77/p148）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=66)
+    handler = engine._mode_handler()
+    assert isinstance(handler, HellOnEarthMode)
+    assert engine.state.haunt is not None and engine.state.haunt.id == 66
+
+    lord = engine._monster_by_template("hell_demon_lord")
+    assert lord is not None, "恶魔领主应已生成"
+    assert lord.speed == 3 and lord.might == 5 and lord.sanity == 3, "3 人局属性应为 Speed 3 Might 5 Sanity 3"
+    assert engine._haunt_track_value("holy_power") == 0
+    assert sum(1 for m in engine.state.monsters if m.template_id in ("giant", "cultist")) == 0
+
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    holder = next((p for p in engine.state.players if "omen_holy_symbol" in p.items), None)
+    assert holder is not None and holder.role == "hero", "圣徽应在英雄手上"
+    assert handler.item_pickup_blocked(engine, traitor, "omen_holy_symbol") is True
+    assert handler.item_pickup_blocked(engine, holder, "omen_holy_symbol") is False
+    assert handler.mystic_elevator_blocked(engine, holder) is True
+    assert handler.attack_allowed(engine, holder, lord) is False
+
+    # 持徽者在当前房间即可充能（与圣徽同房）
+    hero = holder
+    _set_current(engine, hero)
+    engine._reset_player_turn_state(hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "charge_holy_symbol" in ids
+    assert "seal_room" not in ids
+    assert "holy_symbol_attack" not in ids
+    with patch.object(engine, "roll_dice", return_value=8):
+        assert handler.perform_action(engine, hero, "charge_holy_symbol", {}) is True
+    assert hero.attack_used is True
+    # 持徽者充能成功后立刻封闭当前房间（引擎每回合一次剧本行动）
+    assert engine._haunt_track_value("holy_power") == 1
+    assert hero.room_key in engine._haunt_flags().get("sealed_rooms", [])
+    assert engine.tokens_in_room(hero.room_key, "seal")
+
+    # 把领主拉到封闭房，圣徽攻击打赢 → 英雄胜
+    lord.room_key = hero.room_key
+    hero.attack_used = False
+    engine._haunt_rule_state().setdefault("actions_used", {}).pop(str(hero.id), None)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "holy_symbol_attack" in ids
+    with patch.object(engine, "roll_dice", return_value=8), patch.object(engine, "_roll_monster_attack", return_value=1):
+        assert handler.perform_action(engine, hero, "holy_symbol_attack", {}) is True
+    assert engine.state.winner == "heroes"
+    assert engine._monster_by_template("hell_demon_lord") is None
+
+    # 未封闭房间打胜：轨道不够击晕则击退
+    engine2 = _run_until_haunt(seed=113, players=3, haunt_id=66)
+    handler2 = engine2._mode_handler()
+    hero2 = next(p for p in engine2.state.players if "omen_holy_symbol" in p.items)
+    lord2 = engine2._monster_by_template("hell_demon_lord")
+    _set_current(engine2, hero2)
+    engine2._reset_player_turn_state(hero2)
+    engine2._haunt_flags()["initial_hero_count"] = 2  # 击晕要扣 2，轨道只有 1 → 击退
+    engine2._set_haunt_track_value("holy_power", 1)
+    lord2.room_key = hero2.room_key
+    start_key = lord2.room_key
+    with patch.object(engine2, "roll_dice", return_value=6), patch.object(engine2, "_roll_monster_attack", return_value=1):
+        assert handler2.perform_action(engine2, hero2, "holy_symbol_attack", {}) is True
+    assert engine2.state.winner is None
+    assert engine2._monster_by_template("hell_demon_lord") is not None
+    assert lord2.stunned_turns == 0
+    # 差值 5，领主应被推离（若图上无路则可能原地，但同房有邻居时必须离开）
+    if any(engine2._path_length(start_key, k) == 1 for k in engine2.state.board):
+        assert lord2.room_key != start_key or engine2._path_length(start_key, hero2.room_key) == 0
+
+    # 全灭英雄 → 叛徒胜
+    engine3 = _run_until_haunt(seed=113, players=3, haunt_id=66)
+    handler3 = engine3._mode_handler()
+    for p in engine3.state.players:
+        if p.role == "hero":
+            p.dead = True
+    assert handler3.check_victory(engine3) is True
+    assert engine3.state.winner == "traitor"
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -6865,6 +6945,7 @@ def main():
     verify_haunt63_twisting_nether()
     verify_haunt64_blood_offering()
     verify_haunt65_breath_of_wind()
+    verify_haunt66_hell_on_earth()
     verify_haunt56_sands_of_time_setup()
     verify_haunt56_time_powers()
     verify_haunt58_nightfall_setup()

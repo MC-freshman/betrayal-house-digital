@@ -3149,22 +3149,66 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [76, 147],
     },
     66: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'hell_on_earth',
-        "traitor_rule": 'revealer',
-        "hero_goal": '在封闭房间用圣徽成功攻击并驱逐恶魔领主。',
-        "traitor_goal": '让恶魔领主和叛徒杀死所有英雄。',
-        "suggested_monsters": ['giant', 'cultist'],
-        "required_cards": ['omen_holy_symbol'],
-        "key_rooms": ['chapel', 'library', 'pentagram_chamber', 'chasm', 'crypt'],
-        "tokens": ['demon_lord', 'seal', 'sanity_check', 'power'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：为圣徽充能并驱逐恶魔', 'target': 8, 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：召集恶魔', 'target': 'player_count', 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'giant', 'spawn': 'haunt_room', 'count': 'player_count'}, {'template_id': 'cultist', 'spawn': 'haunt_room', 'count': 1}],
-        "actions": [{'id': 'h66_hero_task', 'side': 'heroes', 'label': '为圣徽充能并驱逐恶魔', 'detail': '在小教堂、图书馆或圣徽所在房间完成充能，再进行驱逐。', 'stat': ['sanity', 'knowledge'], 'target': 5, 'rooms': ['chapel', 'library', 'pentagram_chamber', 'chasm', 'crypt'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h66_traitor_task', 'side': 'traitor', 'label': '召集恶魔', 'detail': '推进恶魔召集轨道。', 'stat': 'might', 'target': 5, 'rooms': ['chapel', 'library', 'pentagram_chamber', 'chasm', 'crypt'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 8, 'reason': '在封闭房间用圣徽成功攻击并驱逐恶魔领主。'}, {'winner': 'traitor', 'type': 'all_heroes_dead', 'track': None, 'operator': '>=', 'target': 'player_count', 'reason': '让恶魔领主和叛徒杀死所有英雄。'}],
+        # 校准记录（2026-09-09，对照英雄手册 p77 / 叛徒手册 p148）：
+        #   机制落在 HellOnEarthMode：
+        #   · 力量轨道从 0 起、上限 8；充能代替攻击（小教堂/图书馆/圣徽同房，理智 4–7 +1、8+ +2）
+        #   · 持徽者本回合充能后可封闭当前房间（轨道 ≥1 时 -1，放封印令牌）
+        #   · 只能用圣徽打恶魔领主：骰数 = 当前轨道，对方用理智防守；未胜过则无事发生
+        #   · 封闭房打胜 → 驱逐、英雄胜；未封闭则击退或击晕（击晕扣开局英雄数格轨道）
+        #   · 叛徒仍在场，不能拾取/偷窃圣徽；神秘电梯对双方都拒绝移动
+        #   · 恶魔领主属性随人数：3p 3/5/3，4p 4/5/4，5p 5/6/5，6p 6/6/6
+        #   已知简化：击退方向由 bot 固定策略（远离持徽英雄）；人类的击退/击晕选择未接 prompter；
+        #               引擎每回合一次剧本行动，持徽者充能成功且轨道仍 ≥1 时立刻封闭当前房间。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "hell_on_earth",
+        "traitor_rule": "revealer",
+        "hero_goal": "在封闭房间用圣徽成功攻击并驱逐恶魔领主。",
+        "traitor_goal": "让恶魔领主和叛徒杀死所有英雄。",
+        "suggested_monsters": ["hell_demon_lord"],
+        "required_cards": ["omen_holy_symbol"],
+        "key_rooms": [],
+        "tokens": ["seal"],
+        "setup": {
+            "tracks": {
+                "holy_power": {"label": "圣徽力量", "target": 8, "side": "heroes", "value": 0},
+            },
+            "flags": {
+                "sealed_rooms": [],
+                "prayed_this_turn": None,
+                "initial_hero_count": 0,
+            },
+        },
+        "monsters": [
+            {
+                "template_id": "hell_demon_lord",
+                "name": "恶魔领主",
+                "spawn": "deferred",
+                "count": 1,
+            }
+        ],
+        "actions": [
+            {
+                "id": "charge_holy_symbol",
+                "side": "heroes",
+                "label": "为圣徽充能",
+                "detail": "代替攻击：在小教堂、图书馆或圣徽所在房间做理智检定（p77）。4–7 +1，8+ +2，上限 8。",
+            },
+            {
+                "id": "seal_room",
+                "side": "heroes",
+                "label": "封闭房间",
+                "detail": "持徽者本回合已充能、轨道 ≥1 时，把当前房间封闭（p77）。",
+            },
+            {
+                "id": "holy_symbol_attack",
+                "side": "heroes",
+                "label": "用圣徽攻击恶魔领主",
+                "detail": "持徽、同房间、轨道 ≥1：掷轨道枚骰对领主理智。只有打赢才有效（p77）。",
+            },
+        ],
+        "win_conditions": [],
         "source_pages": [77, 148],
     },
     67: {

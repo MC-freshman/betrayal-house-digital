@@ -2075,7 +2075,7 @@ class GameEngine:
         if idx is None:
             return False
         target = targets[idx]
-        candidates = [card_id for card_id in target.items if self.catalog.cards[card_id].tradeable]
+        candidates = self._steal_candidates(player, target)
         if not candidates:
             self._log("对方没有可偷取的物品。")
             return False
@@ -2299,15 +2299,21 @@ class GameEngine:
             pass
         return total
 
+    def _steal_candidates(self, attacker: Player, target: Player) -> list[str]:
+        """可偷清单：可交易，且剧本没有挡住拾取（剧本 66：叛徒不能偷圣徽）。"""
+        return [
+            card_id
+            for card_id in target.items
+            if self.catalog.cards[card_id].tradeable
+            and not self._mode_handler().item_pickup_blocked(self, attacker, card_id)
+        ]
+
     def _can_steal(self, target: Player) -> bool:
-        for card_id in target.items:
-            card = self.catalog.cards[card_id]
-            if card.tradeable:
-                return True
-        return False
+        attacker = self.current_player
+        return bool(self._steal_candidates(attacker, target))
 
     def _steal_from_target(self, attacker: Player, target: Player) -> None:
-        candidates = [card_id for card_id in target.items if self.catalog.cards[card_id].tradeable]
+        candidates = self._steal_candidates(attacker, target)
         if not candidates:
             return
         idx = self.prompter.choose_from_list("偷窃", "要偷哪一件？", [self.catalog.cards[card_id].name for card_id in candidates])

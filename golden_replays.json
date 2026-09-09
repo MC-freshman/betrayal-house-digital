@@ -1804,6 +1804,23 @@
       "forced_haunt": 65
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "083621f9d20b14ed740cd535d85f2ac1b954a62cb9e8d4110858b07c2ea28316",
+      "turns": 34,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "最后的英雄也倒下了——人间成了地狱。",
+      "haunt": 66,
+      "haunt_name": "人间地狱",
+      "rooms": 27,
+      "monsters": 1,
+      "key": "seed113-3p-haunt66",
+      "forced_haunt": 66
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,

@@ -455,6 +455,24 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["medallion_escort", "steal_medallion", "statue_threshold"]},
     },
+    66: {
+        "hero": {
+            # p77：目标随圣徽位置变化，chapel/library 不能写进静态 target_rooms。
+            "target_rooms": [],
+            "needed_items": ["圣徽"],
+            "protect_items": ["圣徽"],
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "拿到圣徽后充能、封闭房间，再在封闭房用圣徽打赢恶魔领主",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "杀掉持徽英雄；自己不能碰圣徽",
+        },
+        "monster": {"mode": "hunt_holy_symbol"},
+        "scenario": {"special_rules": ["holy_symbol_charge", "seal_room", "banish_in_seal"]},
+    },
     60: {
         "hero": {
             # p71：解谜竞速——三条线索各自收集（力量/速度/理智 4+），集齐后

@@ -1987,6 +1987,16 @@ MONSTER_BASES = [
              "被击败只会暂时眩晕。",
         tags=("construct", "haunt_specific"),
     ),
+    monster_def(
+        monster_id="hell_demon_lord",
+        name="恶魔领主",
+        source_name="Demon Lord",
+        speed=4,
+        might=5,
+        sanity=4,
+        text="人间地狱的领主。只能被圣徽伤害；属性随玩家人数变化。",
+        tags=("demon", "haunt_specific"),
+    ),
 ]
 
 
