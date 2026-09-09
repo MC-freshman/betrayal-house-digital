@@ -57,6 +57,7 @@ if __package__ in {None, ""}:
         EternalGloryMode,
         BagOfTricksMode,
         TwistingNetherMode,
+        BloodOfferingMode,
         TimeBombMode,
         CannibalFeastMode,
         OuroborosMode,
@@ -190,6 +191,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(EternalGloryMode) == [61], f"61 未走定制"
     assert handlers.get(BagOfTricksMode) == [62], f"62 未走定制"
     assert handlers.get(TwistingNetherMode) == [63], f"63 未走定制"
+    assert handlers.get(BloodOfferingMode) == [64], f"64 未走定制"
     assert handlers.get(TimeBombMode) == [45], f"剧本 45 未走定制 handler: {handlers.get(TimeBombMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
@@ -211,7 +213,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ForAThousandYearsMode) == [59], f"剧本 59 未走定制 handler: {handlers.get(ForAThousandYearsMode)}"
     assert handlers.get(BurningSandsMode) == [60], f"剧本 60 未走定制 handler: {handlers.get(BurningSandsMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 7, f"应有 9 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 6, f"应有 9 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -228,7 +230,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
         "worm_ouroboros",
         "cursed_weapon",
@@ -6693,6 +6695,41 @@ def verify_haunt63_twisting_nether() -> None:
     assert engine.state.winner == "heroes"
 
 
+
+def verify_haunt64_blood_offering() -> None:
+    """剧本 64：女孩/邪教徒/蝙蝠/献祭/计时/胜利条件（p75/p146）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=64)
+    handler = engine._mode_handler()
+    assert isinstance(handler, BloodOfferingMode)
+    flags = engine._haunt_flags()
+
+    # 女孩 token 在作祟房间
+    girl = engine.tokens_of_kind("girl")
+    assert girl, "女孩 token 应已放置"
+    girl_room = flags.get("girl_room")
+    assert girl_room is not None
+
+    # 邪教徒和蝙蝠已布点
+    cultists = [m for m in engine.state.monsters if m.template_id == "cultist"]
+    assert len(cultists) >= 1, "应有邪教徒"
+
+    # 计时到 7 → 英雄胜
+    engine._set_haunt_track_value("demon_timer", 7)
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+    # 邪教徒到达女孩房间 → 叛徒胜
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    flags["girl_sacrificed"] = False
+    engine._set_haunt_track_value("demon_timer", 0)
+    cultist = cultists[0]
+    cultist.room_key = girl_room
+    handler.on_monster_turn_start(engine, cultist)
+    assert flags.get("girl_sacrificed") is True
+    assert engine.state.winner == "traitor"
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -6778,6 +6815,7 @@ def main():
     verify_haunt61_eternal_glory()
     verify_haunt62_bag_of_tricks()
     verify_haunt63_twisting_nether()
+    verify_haunt64_blood_offering()
     verify_haunt56_sands_of_time_setup()
     verify_haunt56_time_powers()
     verify_haunt58_nightfall_setup()

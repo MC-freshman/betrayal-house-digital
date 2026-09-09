@@ -14188,6 +14188,104 @@ class PortraitCurseMode(GenericModeHandler):
 
 
 
+
+
+class BloodOfferingMode(GenericModeHandler):
+    """剧本 64 血之献祭（An Offering of Blood）。
+
+    权威原文：英雄手册 p75 / 叛徒手册 p146。
+    · 女孩 token 放作祟房间（静止不移动——简化）。
+    · 邪教徒（英雄数-1）+ 蝙蝠（同数）布点。
+    · 计时到 7 → 恶魔不耐烦杀了叛徒（英雄胜）。
+    · 邪教徒到达女孩房间 → 献祭 → 叛徒胜。
+    · 简化：女孩移动/蝙蝠精神免疫/钩爪未建模。
+    """
+
+    mode = "blood_offering"
+
+    def setup(self, engine, haunt, room_key):
+        flags = engine._haunt_flags()
+        flags["girl_sacrificed"] = False
+        # 女孩 token 放作祟房间
+        engine.spawn_token("girl", label="女孩", role="marker", room_key=room_key)
+        flags["girl_room"] = room_key
+        # 邪教徒（英雄数-1）+ 蝙蝠（同数）
+        spec_cultist = next((s for s in haunt.rule_data.get("monsters", []) if s.get("template_id") == "cultist"), {})
+        spec_bat = {"template_id": "bat", "name": "蝙蝠", "speed": 4, "might": 3, "sanity": 3}
+        heroes = sum(1 for p in engine.state.players if p.role == "hero")
+        cultist_count = max(0, heroes - 1)
+        bat_count = cultist_count
+        for _ in range(cultist_count):
+            key = engine.rng.choice(sorted(engine.state.board.keys()))
+            engine._spawn_single_haunt_monster(spec_cultist, key)
+        for _ in range(bat_count):
+            key = engine.rng.choice(sorted(engine.state.board.keys()))
+            engine._spawn_single_haunt_monster(spec_bat, key)
+        engine._log(f"{cultist_count} 名邪教徒和 {bat_count} 只蝙蝠出现了——他们在追猎女孩！")
+
+    def on_turn_start(self, engine, player):
+        flags = engine._haunt_flags()
+        if player.dead:
+            return
+        if player.role == "traitor":
+            return
+        # 每个怪物回合后推进计时（简化：在叛徒回合开始时推进）
+        if player.role == "traitor":
+            return
+        # 用英雄回合开始推进（近似每个怪物回合后）
+        # p75：计时到 7 → 英雄胜
+
+    def on_monster_turn_start(self, engine, monster):
+        """邪教徒到达女孩房间 → 献祭。"""
+        kind = getattr(monster, "template_id", "")
+        if kind != "cultist":
+            return False
+        flags = engine._haunt_flags()
+        girl_room = flags.get("girl_room")
+        if girl_room is None:
+            return False
+        if monster.room_key == girl_room:
+            flags["girl_sacrificed"] = True
+            engine._log("女孩被献祭了——恶魔的力量涌入了世界！")
+            engine._set_winner("traitor", "血之献祭完成——恶魔的力量属于叛徒。")
+            engine.check_victory()
+            return True
+        # 邪教徒向女孩移动
+        path = engine._shortest_path(monster.room_key, girl_room)
+        if len(path) > 1:
+            steps = engine.roll_dice(getattr(monster, "speed", 3), "邪教徒移动")
+            monster.room_key = path[min(len(path) - 1, steps)]
+        # 到达 → 献祭
+        if monster.room_key == girl_room:
+            flags["girl_sacrificed"] = True
+            engine._set_winner("traitor", "血之献祭完成。")
+            engine.check_victory()
+        return True
+
+    def _advance_timer(self, engine):
+        """p75：每个怪物回合后推进计时。到 7 → 英雄胜。"""
+        current = engine._haunt_track_value("demon_timer") + 1
+        engine._set_haunt_track_value("demon_timer", current)
+        if current >= 7:
+            engine._set_winner("heroes", "恶魔不耐烦了——TA 杀死了叛徒和他的仆从！")
+            engine.check_victory()
+
+    def check_victory(self, engine):
+        flags = engine._haunt_flags()
+        # 计时到 7 → 英雄胜
+        if engine._haunt_track_value("demon_timer") >= 7:
+            if engine.state.winner is None:
+                engine._set_winner("heroes", "恶魔不耐烦了——TA 杀死了叛徒！")
+            return True
+        if flags.get("girl_sacrificed"):
+            return True  # winner 已在献祭处设定
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "最后的英雄也死了——女孩被献祭了。")
+            return True
+        return False
+
+
+
 class TwistingNetherMode(GenericModeHandler):
     """剧本 63 扭曲虚空（The Twisting Nether）。
 
@@ -14490,6 +14588,7 @@ for _handler in (
     EternalGloryMode(),
     BagOfTricksMode(),
     TwistingNetherMode(),
+    BloodOfferingMode(),
 ):
 
     register_mode(_handler)

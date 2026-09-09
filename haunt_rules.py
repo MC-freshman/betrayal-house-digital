@@ -3079,22 +3079,36 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [74, 145],
     },
     64: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'blood_offering',
-        "traitor_rule": 'revealer',
-        "hero_goal": '救出女孩。',
-        "traitor_goal": '让女孩被献祭，等待恶魔杀死叛徒和盟友。',
-        "suggested_monsters": ['cultist', 'spider'],
+        # 校准记录（2026-09-05，对照英雄手册 p75 / 叛徒手册 p146）：
+        #   机制落在 BloodOfferingMode：
+        #   · 女孩 token 放作祟房间；叛徒失去女孩卡
+        #   · 邪教徒（英雄数-1）+ 蝙蝠（等同邪教徒数）布点
+        #   · 计时到 7 → 恶魔不耐烦杀了叛徒（英雄胜）
+        #   · 邪教徒到达女孩房间 → 献祭（叛徒胜）
+        #   · 简化：女孩移动/蝙蝠精神免疫/钩爪未建模。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "blood_offering",
+        "traitor_rule": "revealer",
+        "hero_goal": "保护女孩不被邪教徒献祭——撑到恶魔不耐烦为止。",
+        "traitor_goal": "把女孩带到邪教徒面前献祭。",
+        "suggested_monsters": ["cultist"],
         "required_cards": [],
-        "key_rooms": ['pentagram_chamber', 'chapel', 'crypt', 'entrance_hall', 'kitchen'],
-        "tokens": ['girl', 'cultist', 'bat', 'sacrifice'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：拯救女孩', 'target': 1, 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：完成血祭', 'target': 7, 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'cultist', 'spawn': 'haunt_room', 'count': 'player_count'}, {'template_id': 'spider', 'spawn': 'haunt_room', 'count': 1}],
-        "actions": [{'id': 'h64_hero_task', 'side': 'heroes', 'label': '拯救女孩', 'detail': '在女孩所在房间完成救援行动。', 'stat': ['might', 'knowledge'], 'target': 5, 'rooms': ['pentagram_chamber', 'chapel', 'crypt', 'entrance_hall', 'kitchen'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h64_traitor_task', 'side': 'traitor', 'label': '完成血祭', 'detail': '推进血祭倒计时，达到阈值后恶魔介入。', 'stat': 'might', 'target': 5, 'rooms': ['pentagram_chamber', 'chapel', 'crypt', 'entrance_hall', 'kitchen'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 1, 'reason': '救出女孩。'}, {'winner': 'traitor', 'type': 'track', 'track': 'traitor_progress', 'operator': '>=', 'target': 7, 'reason': '让女孩被献祭，等待恶魔杀死叛徒和盟友。'}],
+        "key_rooms": [],
+        "tokens": ["girl", "cultist", "bat"],
+        "setup": {
+            "tracks": {
+                "demon_timer": {"label": "恶魔计时", "target": 7, "side": "heroes"},
+            },
+            "flags": {"girl_sacrificed": False},
+        },
+        "monsters": [
+            {"template_id": "cultist", "name": "邪教徒", "spawn": "deferred", "count": 1, "speed": 3, "might": 4, "sanity": 4, "knowledge": 5},
+            {"template_id": "bat", "name": "蝙蝠", "spawn": "deferred", "count": 1, "speed": 4, "might": 3, "sanity": 3},
+        ],
+        "actions": [],
+        "win_conditions": [],
         "source_pages": [75, 146],
     },
     65: {

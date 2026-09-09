@@ -1770,6 +1770,23 @@
       "forced_haunt": 63
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "e6e66c327235ea369af3dba02c213772f79be7d078d4fce817b8ccc0caa63667",
+      "turns": 36,
+      "phase": "GAME_OVER",
+      "winner": "traitor",
+      "winner_reason": "最后的英雄也死了——女孩被献祭了。",
+      "haunt": 64,
+      "haunt_name": "血之献祭",
+      "rooms": 27,
+      "monsters": 2,
+      "key": "seed113-3p-haunt64",
+      "forced_haunt": 64
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,
