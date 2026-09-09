@@ -1753,6 +1753,23 @@
       "forced_haunt": 62
     },
     {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "7850eb75c17843e571dd427f583d1fdaae8ca76a1f488915e793f40912f05088",
+      "turns": 33,
+      "phase": "GAME_OVER",
+      "winner": "heroes",
+      "winner_reason": "足够的房间被锚定了——房子回到了现实！",
+      "haunt": 63,
+      "haunt_name": "扭曲虚空",
+      "rooms": 28,
+      "monsters": 0,
+      "key": "seed113-3p-haunt63",
+      "forced_haunt": 63
+    },
+    {
       "seed": 109,
       "players": 4,
       "completed": true,

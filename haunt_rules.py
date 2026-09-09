@@ -3047,22 +3047,35 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [73, 144],
     },
     63: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'twisting_nether',
-        "traitor_rule": 'revealer',
-        "hero_goal": '锚定足够多的房间，使房屋回到物质层。',
-        "traitor_goal": '让房屋溶解进扭曲虚空，或杀死所有英雄。',
-        "suggested_monsters": ['shadow'],
+        # 校准记录（2026-09-05，对照英雄手册 p74 / 叛徒手册 p145）：
+        #   机制落在 TwistingNetherMode：
+        #   · 英雄锚定房间（知识 5+ 任意房间，每房一次）→ 玩家数个 → 英雄胜
+        #   · 叛徒每回合溶解一个未锚定房间
+        #   · 非锚定房间全溶 → 叛徒胜
+        #   简化：nether 穿行/随机落房/重连房间/怪物不可攻击未建模。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "twisting_nether",
+        "traitor_rule": "revealer",
+        "hero_goal": "锚定足够多的房间把房子拉回现实。",
+        "traitor_goal": "溶解整栋房子。",
+        "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": ['entrance_hall', 'foyer', 'grand_staircase', 'upper_landing', 'basement_landing', 'chapel', 'library'],
-        "tokens": ['anchor', 'astral_spirit', 'void'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：锚定房间', 'target': 'player_count', 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：溶解房间', 'target': 7, 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'shadow', 'spawn': 'haunt_room', 'count': 'player_count'}],
-        "actions": [{'id': 'h63_hero_task', 'side': 'heroes', 'label': '锚定房间', 'detail': '在仍有未探索门口的房间完成锚定检定。', 'stat': 'knowledge', 'target': 5, 'rooms': ['entrance_hall', 'foyer', 'grand_staircase', 'upper_landing', 'basement_landing', 'chapel', 'library'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h63_traitor_task', 'side': 'traitor', 'label': '溶解房间', 'detail': '推进虚空溶解轨道。', 'stat': 'might', 'target': 5, 'rooms': ['entrance_hall', 'foyer', 'grand_staircase', 'upper_landing', 'basement_landing', 'chapel', 'library'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 'player_count', 'reason': '锚定足够多的房间，使房屋回到物质层。'}, {'winner': 'traitor', 'type': 'track', 'track': 'traitor_progress', 'operator': '>=', 'target': 7, 'reason': '让房屋溶解进扭曲虚空，或杀死所有英雄。'}],
+        "key_rooms": [],
+        "tokens": [],
+        "setup": {
+            "tracks": {
+                "anchor_progress": {"label": "锚定进度", "target": "player_count", "side": "heroes"},
+                "dissolve_progress": {"label": "溶解进度", "target": 50, "side": "traitor"},
+            },
+            "flags": {"anchored_rooms": [], "dissolved_rooms": []},
+        },
+        "monsters": [],
+        "actions": [
+            {"id": "anchor_room", "side": "heroes", "label": "锚定房间", "detail": "知识 5+ 锚定当前房间（p74）。", "stat": "knowledge", "target": 5, "progress": "anchor_progress"},
+        ],
+        "win_conditions": [],
         "source_pages": [74, 145],
     },
     64: {

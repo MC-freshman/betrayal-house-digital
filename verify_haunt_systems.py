@@ -56,6 +56,7 @@ if __package__ in {None, ""}:
         KingsRoadsMode,
         EternalGloryMode,
         BagOfTricksMode,
+        TwistingNetherMode,
         TimeBombMode,
         CannibalFeastMode,
         OuroborosMode,
@@ -188,6 +189,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(KingsRoadsMode) == [55], f"55 未走定制"
     assert handlers.get(EternalGloryMode) == [61], f"61 未走定制"
     assert handlers.get(BagOfTricksMode) == [62], f"62 未走定制"
+    assert handlers.get(TwistingNetherMode) == [63], f"63 未走定制"
     assert handlers.get(TimeBombMode) == [45], f"剧本 45 未走定制 handler: {handlers.get(TimeBombMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
@@ -209,7 +211,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ForAThousandYearsMode) == [59], f"剧本 59 未走定制 handler: {handlers.get(ForAThousandYearsMode)}"
     assert handlers.get(BurningSandsMode) == [60], f"剧本 60 未走定制 handler: {handlers.get(BurningSandsMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 8, f"应有 9 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 7, f"应有 9 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -226,7 +228,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
         "worm_ouroboros",
         "cursed_weapon",
@@ -6657,6 +6659,40 @@ def verify_haunt62_bag_of_tricks() -> None:
     assert engine.state.winner == "heroes"
 
 
+
+def verify_haunt63_twisting_nether() -> None:
+    """剧本 63：锚定房间/溶解/胜负条件（p74/p145）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=63)
+    handler = engine._mode_handler()
+    assert isinstance(handler, TwistingNetherMode)
+    flags = engine._haunt_flags()
+
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # 锚定房间
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "anchor_room" in ids, "应能锚定当前房间"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "anchor_room", {}) is True
+    assert hero.room_key in flags.get("anchored_rooms", [])
+    # 同房不能再次锚定
+    engine._reset_player_turn_state(hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "anchor_room" not in ids, "已锚定房间不能再锚定"
+
+    # 叛徒溶解
+    dissolved_before = len(flags.get("dissolved_rooms", []))
+    handler.on_turn_start(engine, traitor)
+    assert len(flags.get("dissolved_rooms", [])) > dissolved_before, "叛徒应溶解房间"
+
+    # 锚定满 → 英雄胜
+    engine._set_haunt_track_value("anchor_progress", engine._haunt_track_target("anchor_progress"))
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -6741,6 +6777,7 @@ def main():
     verify_haunt55_kings_roads()
     verify_haunt61_eternal_glory()
     verify_haunt62_bag_of_tricks()
+    verify_haunt63_twisting_nether()
     verify_haunt56_sands_of_time_setup()
     verify_haunt56_time_powers()
     verify_haunt58_nightfall_setup()

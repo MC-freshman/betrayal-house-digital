@@ -14186,6 +14186,90 @@ class PortraitCurseMode(GenericModeHandler):
 
 
 
+
+
+class TwistingNetherMode(GenericModeHandler):
+    """剧本 63 扭曲虚空（The Twisting Nether）。
+
+    权威原文：英雄手册 p74 / 叛徒手册 p145。
+    · 英雄锚定房间（知识 5+ 任意房间，每房一次）→ 玩家数个 → 英雄胜。
+    · 叛徒每回合溶解一个未锚定房间。
+    · 非锚定房间全溶 → 叛徒胜。
+    · 简化：nether 穿行/怪物不可攻击未建模。
+    """
+
+    mode = "twisting_nether"
+
+    def setup(self, engine, haunt, room_key):
+        flags = engine._haunt_flags()
+        flags["anchored_rooms"] = []
+        flags["dissolved_rooms"] = []
+        engine._log("房子周围的现实扭曲了——房间正在被虚空吞噬！")
+
+    def on_turn_start(self, engine, player):
+        flags = engine._haunt_flags()
+        if player.role != "traitor" or player.dead:
+            return
+        anchored = set(flags.get("anchored_rooms", []))
+        dissolved = flags.get("dissolved_rooms", [])
+        # 溶解一个未锚定房间
+        candidates = [
+            k for k, r in engine.state.board.items()
+            if k not in anchored and k not in dissolved
+            and r.template_id not in ("entrance_hall", "foyer", "grand_staircase",
+                                       "upper_landing", "basement_landing")
+        ]
+        if candidates:
+            room = engine.rng.choice(sorted(candidates))
+            dissolved.append(room)
+            flags["dissolved_rooms"] = dissolved
+            engine._log(f"{engine.state.board[room].name} 被虚空溶解了！")
+        # 检查：非锚定房间全溶 → 叛徒胜
+        total_rooms = len(engine.state.board)
+        fixed_rooms = 5  # 入口大厅等不溶
+        non_fixed = total_rooms - fixed_rooms
+        if len(dissolved) >= max(1, non_fixed - len(anchored)):
+            engine._set_winner("traitor", "整栋房子被虚空吞噬了！")
+            engine.check_victory()
+
+    def available_actions(self, engine, player):
+        actions = super().available_actions(engine, player)
+        result = []
+        anchored = set(engine._haunt_flags().get("anchored_rooms", []))
+        for action in actions:
+            if action.id == "anchor_room":
+                if player.room_key in anchored:
+                    continue
+            result.append(action)
+        return result
+
+    def perform_action(self, engine, player, action_id, data):
+        if action_id == "anchor_room":
+            flags = engine._haunt_flags()
+            anchored = flags.setdefault("anchored_rooms", [])
+            if player.room_key in anchored:
+                engine._log("这个房间已经锚定了。")
+                return False
+            ok = super().perform_action(engine, player, action_id, data)
+            if ok:
+                anchored.append(player.room_key)
+                engine._log(f"{engine.state.board[player.room_key].name} 被锚定到了现实！")
+            return ok
+        return super().perform_action(engine, player, action_id, data)
+
+    def check_victory(self, engine):
+        flags = engine._haunt_flags()
+        anchored = engine._haunt_track_value("anchor_progress")
+        if anchored >= engine._haunt_track_target("anchor_progress"):
+            engine._set_winner("heroes", "足够的房间被锚定了——房子回到了现实！")
+            return True
+        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+            engine._set_winner("traitor", "最后的英雄也消失在虚空中。")
+            return True
+        return False
+
+
+
 class BagOfTricksMode(GenericModeHandler):
     """剧本 62 魔袋把戏（Bag of Tricks）。
 
@@ -14405,6 +14489,7 @@ for _handler in (
     PortraitCurseMode(),
     EternalGloryMode(),
     BagOfTricksMode(),
+    TwistingNetherMode(),
 ):
 
     register_mode(_handler)
