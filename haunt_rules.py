@@ -2780,22 +2780,69 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [68, 139],
     },
     58: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'nightfall_twilight',
-        "traitor_rule": 'revealer',
-        "hero_goal": '摧毁所有噩梦或驱逐全部暮光。',
-        "traitor_goal": '让暮光和噩梦吞没房屋，或杀死所有英雄。',
-        "suggested_monsters": ['shadow'],
+        # 校准记录（2026-09-09，对照英雄手册 p69 / 叛徒手册 p140）：
+        #   骨架原本是"驱散暮光与噩梦"假机制（h58_hero_task + 进度轨道）。
+        #   机制落在 NightfallMode：
+        #   · 开局（p69/p140）：熔炉房不在场则取牌放入（_ensure_room_in_play，
+        #     3/28 号先例）；噩梦 = 英雄数，铺在带事件图标且离最近英雄 ≥4 格
+        #     的房间，不够远则取尽可能远的房，尽量均匀分布。
+        #   · 暮色（p69/p140）：除熔炉房/花园/墓地/天井/阳台/塔楼外全屋皆暮色；
+        #     叛徒所在房间永远是暮色（即使已死）；已驱散的楼层与有火把的房间
+        #     不算暮色。朝外窗房间未建模（内容库无该标记）。
+        #   · 火把（p69）：熔炉房造火把代替攻击；抵消同房间暮色；叛徒同房时
+        #     只有持火把者受保护（已按原文实现）；每人限一支。
+        #   · 消灭噩梦（p69）：受 2 点以上伤害即摧毁，更少只击晕（阈值统一
+        #     按 2——on_monster_defeated 钩子不提供伤害类型，原文精神阈值为 3）。
+        #   · 驱散暮色（p69）：同房间 ≥2 名活英雄且至少一人持火把 → 发起者结算
+        #     同房全员各一次知识 4+ 或理智 4+，需两类各至少一次成功 → 该层
+        #     驱散；三层全驱散 → 英雄胜。做检定者本回合禁移动/攻击。
+        #   · 缠梦（p140）：噩梦造成 ≥2 精神伤害时改为缠住该英雄；被缠者回合
+        #     开始理智 5+ 挣脱，失败受 1 骰精神伤害；缠梦中的噩梦不行动、
+        #     不可被攻击。
+        #   · 暮色战斗（p69/p140）：暮色中不能力量/速度攻击，改用知识攻击
+        #     （attack_attr_override 覆盖），持火把者不受限。
+        #   · 胜负（p69/p140）：英雄胜 = 噩梦全灭或三层暮色全驱散；叛徒胜 =
+        #     英雄全灭。叛徒出局时噩梦照常行动，吸收兜底（7/8 号口径）。
+        #   已知简化：暮色"用 Sanity 代替 Speed 决定移动力"未建模（引擎无该
+        #     钩子）；墓色中禁用武器/左轮限制、蜡烛与水晶球加骰未建模；缠梦
+        #     英雄"被叛徒操控"未建模。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "nightfall_twilight",
+        "traitor_rule": "revealer",
+        "hero_goal": "在熔炉房点起火把，逐层驱散暮色（三层全清即胜），或直接消灭所有噩梦。",
+        "traitor_goal": "让噩梦与暮色吞没所有英雄。",
+        "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": ['furnace_room', 'garden', 'graveyard', 'patio', 'balcony', 'tower', 'chapel', 'library'],
-        "tokens": ['nightmare', 'torch', 'twilight'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：驱散暮光与噩梦', 'target': 'player_count', 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：扩大暮光', 'target': 7, 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'shadow', 'spawn': 'haunt_room', 'count': 'player_count'}],
-        "actions": [{'id': 'h58_hero_task', 'side': 'heroes', 'label': '驱散暮光与噩梦', 'detail': '在光照房间完成驱散行动。', 'stat': 'sanity', 'target': 5, 'rooms': ['furnace_room', 'garden', 'graveyard', 'patio', 'balcony', 'tower', 'chapel', 'library'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h58_traitor_task', 'side': 'traitor', 'label': '扩大暮光', 'detail': '推进暮光覆盖轨道。', 'stat': 'might', 'target': 5, 'rooms': ['furnace_room', 'garden', 'graveyard', 'patio', 'balcony', 'tower', 'chapel', 'library'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 'player_count', 'reason': '摧毁所有噩梦或驱逐全部暮光。'}, {'winner': 'traitor', 'type': 'track', 'track': 'traitor_progress', 'operator': '>=', 'target': 7, 'reason': '让暮光和噩梦吞没房屋，或杀死所有英雄。'}],
+        "key_rooms": ["furnace_room"],
+        "tokens": ["nightmare", "torch", "twilight"],
+        "setup": {
+            # 暮色驱散按层计（flags["banished_floors"]），轨道用于 UI 进度
+            "tracks": {"banished_floors": {"label": "已驱散楼层", "target": 3, "side": "heroes"}},
+            "flags": {
+                "banished_floors": [],
+                "torches": {},
+                "haunting": {},
+                "furnace_key": None,
+            },
+        },
+        "monsters": [
+            # spawn=deferred：只进 monster_specs，由 handler 按"远离英雄的事件房"布点
+            {"template_id": "nightmare", "spawn": "deferred", "name": "噩梦"},
+        ],
+        "actions": [
+            {"id": "create_torch", "side": "heroes", "label": "点燃火把",
+             "detail": "在熔炉房代替攻击点燃一支火把（每人限一支）：火把抵消同房间的"
+                       "暮色，持火把者永不受暮色影响（p69）。",
+             "stat": "sanity", "target": 0, "rooms": ["furnace_room"]},
+            {"id": "banish_twilight", "side": "heroes", "label": "驱散暮色",
+             "detail": "同房间至少 2 名英雄且至少一人持火把时：同房全员各做一次知识 4+ 或"
+                       "理智 4+，两类各至少一次成功即驱散该层暮色；参与检定者本回合"
+                       "不能移动或攻击（p69）。每回合一次。",
+             "stat": "knowledge", "target": 4},
+        ],
+        "win_conditions": [],
         "source_pages": [69, 140],
     },
     59: {

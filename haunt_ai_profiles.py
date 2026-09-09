@@ -431,6 +431,18 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["sands_of_time", "wall_phasing", "control_check"]},
     },
+    58: {
+        "hero": {
+            # p69：暮色中不能力量/速度攻击（自动转知识攻击）；先去熔炉房点
+            # 火把，再和同伴会合逐层驱散——三层清完就赢。
+            "victory_focus": "先到熔炉房点起火把，再与同伴会合逐层驱散暮色（或围杀噩梦）",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "让噩梦缠住英雄啃食精神，别让他们凑齐火把与人手",
+        },
+        "scenario": {"special_rules": ["twilight", "torches", "haunting", "knowledge_attacks"]},
+    },
     57: {
         "hero": {
             # p68/p139：叛徒不受伤害削减，正面围殴纯属白费——除非谁手里有

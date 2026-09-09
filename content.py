@@ -1923,6 +1923,17 @@ MONSTER_BASES = [
         text="记忆与命运的幽影；免疫力量攻击，只能以理智攻击，可在相邻房间间穿行。",
         tags=("spectral", "haunt_specific"),
     ),
+    monster_def(
+        monster_id="nightmare",
+        name="噩梦",
+        source_name="Nightmare",
+        speed=2,
+        might=2,
+        sanity=4,
+        knowledge=5,
+        text="夜幕降临时爬出梦魇的东西；受 2 点以上伤害即被摧毁，还能钻进英雄的梦里缠住他。",
+        tags=("spectral", "haunt_specific"),
+    ),
 ]
 
 

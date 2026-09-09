@@ -61,6 +61,7 @@ if __package__ in {None, ""}:
         AstralSpiritMode,
         NightMurderMode,
         SandsOfTimeMode,
+        NightfallMode,
         PortraitCurseMode,
         BuriedAliveMode,
         ShadowExorcismMode,
@@ -198,8 +199,9 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(NightMurderMode) == [50], f"剧本 50 未走定制 handler: {handlers.get(NightMurderMode)}"
     assert handlers.get(SandsOfTimeMode) == [56], f"剧本 56 未走定制 handler: {handlers.get(SandsOfTimeMode)}"
     assert handlers.get(PortraitCurseMode) == [57], f"剧本 57 未走定制 handler: {handlers.get(PortraitCurseMode)}"
+    assert handlers.get(NightfallMode) == [58], f"剧本 58 未走定制 handler: {handlers.get(NightfallMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 13, f"应有 13 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 12, f"应有 13 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), GenericModeHandler)
@@ -224,6 +226,7 @@ def verify_mode_dispatch() -> None:
         "night_survival",
         "time_sands",
         "portrait_curse",
+        "nightfall_twilight",
     }
 
 
@@ -5430,6 +5433,114 @@ def verify_haunt57_repaint_and_immunity() -> None:
     assert engine.state.winner == "heroes", "集满知识检定令牌即破除诅咒"
 
 
+def verify_haunt58_nightfall_setup() -> None:
+    """剧本 58：熔炉房/噩梦布点、暮色判定、暮色知识攻击（p69/p140）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=58)
+    handler = engine._mode_handler()
+    assert isinstance(handler, NightfallMode)
+    flags = engine._haunt_flags()
+
+    # p69：熔炉房必须在场（不在则从牌堆放进去）
+    furnace = flags.get("furnace_key")
+    assert furnace and engine.state.board[furnace].template_id == handler.FURNACE
+    # p140：噩梦 = 英雄数
+    hero_count = sum(1 for p in engine.state.players if p.role == "hero")
+    assert len(handler._nightmares(engine)) == hero_count
+
+    # p69：暮色判定——熔炉房不在暮色；叛徒所在房间永远是暮色
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    assert handler.in_twilight(engine, furnace) is False
+    assert handler.in_twilight(engine, traitor.room_key) is True
+    other = next(
+        (k for k, r in engine.state.board.items() if r.template_id not in handler.TWILIGHT_FREE),
+        None,
+    )
+    assert other is not None and handler.in_twilight(engine, other) is True
+    # 已驱散的楼层不算暮色
+    flags["banished_floors"] = [engine.state.board[other].floor]
+    assert handler.in_twilight(engine, other) is False
+    flags["banished_floors"] = []
+
+    # p69：暮色中力量/速度攻击改用知识；持火把者不受限
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    hero.room_key = other
+    assert handler.attack_attr_override(engine, hero, traitor, "might") == "knowledge"
+    flags["torches"] = {str(hero.id): True}
+    assert handler.attack_attr_override(engine, hero, traitor, "might") is None
+    # p69：火把抵消所在房间的暮色
+    assert handler.in_twilight(engine, other) is False
+    flags["torches"] = {}
+
+
+def verify_haunt58_torch_banish_haunting() -> None:
+    """剧本 58：火把、驱散暮色、噩梦摧毁阈值、缠梦（p69/p140）。"""
+    engine = _run_until_haunt(seed=137, players=3, haunt_id=58)
+    handler = engine._mode_handler()
+    assert isinstance(handler, NightfallMode)
+    flags = engine._haunt_flags()
+    # 驱散暮色要求同房间 ≥2 人：本局可能已有英雄阵亡，测试里先让他们都站起来
+    heroes = [p for p in engine.state.players if p.role == "hero"]
+    for p in heroes:
+        p.dead = False
+    assert len(heroes) >= 2
+
+    # p69：造火把只能在熔炉房
+    hero = heroes[0]
+    _set_current(engine, hero)
+    assert handler.perform_action(engine, hero, "create_torch", {}) is False
+    hero.room_key = flags["furnace_key"]
+    assert handler.perform_action(engine, hero, "create_torch", {}) is True
+    assert flags["torches"].get(str(hero.id)) is True
+
+    # p69：驱散暮色——需同房间 ≥2 人 + 火把，且知识/理智各至少一次成功
+    room_key = next(
+        k for k, r in engine.state.board.items() if r.template_id not in handler.TWILIGHT_FREE
+    )
+    for p in heroes:
+        p.room_key = room_key
+    assert handler._banish_allowed(engine, hero) is True
+    with patch.object(engine, "_resolve_check", return_value=False):
+        assert handler.perform_action(engine, hero, "banish_twilight", {}) is False
+    checks = iter([True, True, True])
+    with patch.object(engine, "_resolve_check", side_effect=lambda *a, **k: next(checks)):
+        assert handler.perform_action(engine, hero, "banish_twilight", {}) is True
+    assert engine.state.board[room_key].floor in flags["banished_floors"]
+    # p69：参与检定者本回合不能移动/攻击
+    assert hero.movement_stopped and hero.attack_used
+    # 三层全驱散 → 英雄胜
+    flags["banished_floors"] = list(handler.FLOORS)
+    assert handler.check_victory(engine) is True and engine.state.winner == "heroes"
+
+    # p69：噩梦受 2 点以上伤害即被摧毁，更少只击晕（留场）
+    engine2 = _run_until_haunt(seed=137, players=3, haunt_id=58)
+    h2 = engine2._mode_handler()
+    assert isinstance(h2, NightfallMode)
+    nm = h2._nightmares(engine2)[0]
+    assert h2.on_monster_defeated(engine2, nm, 1) is True
+    assert nm in h2._nightmares(engine2), "1 点伤害只应击晕，不该摧毁"
+    assert h2.on_monster_defeated(engine2, nm, 2) is True
+    assert nm not in h2._nightmares(engine2), "2 点伤害应摧毁噩梦"
+
+    # p140：噩梦造成 ≥2 精神伤害时改为缠梦；缠梦中的噩梦不可被攻击
+    engine3 = _run_until_haunt(seed=137, players=3, haunt_id=58)
+    h3 = engine3._mode_handler()
+    f3 = engine3._haunt_flags()
+    nm3 = h3._nightmares(engine3)[0]
+    target3 = next(p for p in engine3.state.players if p.role == "hero" and not p.dead)
+    nm3.room_key = target3.room_key
+    with patch.object(engine3, "_roll_monster_attack", return_value=9), patch.object(
+        engine3, "_roll_attack", return_value=2
+    ):
+        assert h3.on_monster_turn_attack(engine3, nm3) is True
+    assert f3["haunting"].get(nm3.id) == target3.id, "差值 ≥2 应改为缠梦"
+    assert h3.attack_allowed(engine3, target3, nm3) is False, "缠梦中的噩梦不可被攻击"
+    # p140：回合开始理智 5+ 挣脱 → 噩梦现身于英雄房间
+    with patch.object(engine3, "_resolve_check", return_value=True):
+        h3.on_turn_start(engine3, target3)
+    assert nm3.id not in f3["haunting"], "挣脱后不再被缠"
+    assert nm3.room_key == target3.room_key
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -6350,6 +6461,8 @@ def main():
     verify_haunt55_kings_roads()
     verify_haunt56_sands_of_time_setup()
     verify_haunt56_time_powers()
+    verify_haunt58_nightfall_setup()
+    verify_haunt58_torch_banish_haunting()
     verify_haunt57_paint_setup()
     verify_haunt57_repaint_and_immunity()
     verify_haunt46_the_feast_setup()

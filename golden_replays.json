@@ -1632,6 +1632,40 @@
       "monsters": 0,
       "key": "seed109-4p-haunt57",
       "forced_haunt": 57
+    },
+    {
+      "seed": 113,
+      "players": 3,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "0150f17b38604fef4ef0094b09fda4d8c96ffbd4faf5bf558e4c9ed241a7dc8b",
+      "turns": 31,
+      "phase": "GAME_OVER",
+      "winner": "heroes",
+      "winner_reason": "最后一只噩梦也散了——天亮了。",
+      "haunt": 58,
+      "haunt_name": "夜幕降临",
+      "rooms": 26,
+      "monsters": 0,
+      "key": "seed113-3p-haunt58",
+      "forced_haunt": 58
+    },
+    {
+      "seed": 109,
+      "players": 4,
+      "completed": true,
+      "stalled_no_room_cards": false,
+      "hash": "1a9b03523b71c396f46f2ed3379037b32f0a38fb153b73b998b0913e3ad8e3db",
+      "turns": 20,
+      "phase": "GAME_OVER",
+      "winner": "heroes",
+      "winner_reason": "最后一只噩梦也散了——天亮了。",
+      "haunt": 58,
+      "haunt_name": "夜幕降临",
+      "rooms": 17,
+      "monsters": 0,
+      "key": "seed109-4p-haunt58",
+      "forced_haunt": 58
     }
   ]
 }
