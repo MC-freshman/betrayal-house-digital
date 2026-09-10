@@ -72,6 +72,7 @@ if __package__ in {None, ""}:
         NightfallMode,
         ForAThousandYearsMode,
         BurningSandsMode,
+        WispCaptureMode,
         PortraitCurseMode,
         BuriedAliveMode,
         ShadowExorcismMode,
@@ -200,6 +201,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(HellOnEarthMode) == [66], f"66 未走定制"
     assert handlers.get(StorybookTwistsMode) == [67], f"67 未走定制"
     assert handlers.get(LabyrinthEscapeMode) == [68], f"68 未走定制"
+    assert handlers.get(WispCaptureMode) == [69], f"69 未走定制"
     assert handlers.get(TimeBombMode) == [45], f"剧本 45 未走定制 handler: {handlers.get(TimeBombMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
@@ -221,7 +223,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ForAThousandYearsMode) == [59], f"剧本 59 未走定制 handler: {handlers.get(ForAThousandYearsMode)}"
     assert handlers.get(BurningSandsMode) == [60], f"剧本 60 未走定制 handler: {handlers.get(BurningSandsMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 2, f"应有 2 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 1, f"应有 1 个剧本回落到通用规则，实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), LabyrinthEscapeMode)
@@ -238,7 +240,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "haunt_exorcism", "hell_on_earth", "storybook_twists", "labyrinth_escape", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "haunt_exorcism", "hell_on_earth", "storybook_twists", "labyrinth_escape", "wisp_capture", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
         "worm_ouroboros",
         "cursed_weapon",
@@ -5764,6 +5766,90 @@ def verify_haunt60_riddle_race() -> None:
     assert engine2.state.winner == "traitor"
 
 
+def verify_haunt69_wisp_setup() -> None:
+    """剧本 69：叛徒出局、小精灵布点、轨道起点、孢子留痕（p80/p151）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=69)
+    handler = engine._mode_handler()
+    assert isinstance(handler, WispCaptureMode)
+    flags = engine._haunt_flags()
+    haunt_room = engine.state.meta["haunt_rule"]["haunt_room"]
+
+    # p151：叛徒角色移出游戏（是设计不是失败——吸收兜底，不能判英雄胜）
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    assert traitor.dead, "p151 叛徒角色应被移出游戏"
+    assert handler.check_victory(engine) is True and engine.state.winner is None
+
+    # p151：小精灵放作祟房；轨道起点为 1（先手）
+    wisp = handler._wisp(engine)
+    assert wisp is not None and wisp.room_key == haunt_room
+    assert (wisp.speed, wisp.might, wisp.sanity) == (5, 6, 6)
+    assert flags["wisp_track"] == 1
+    # p151：地下室楼梯应在场
+    assert any(
+        r.template_id == handler.STAIRS for r in engine.state.board.values()
+    ), "地下室楼梯应被取出放好"
+
+    # p151：小精灵回合——轨道 +1、清除孢子、留痕、不能停在孢子房
+    flags["spore_rooms"] = []
+    before = wisp.room_key
+    handler.on_monster_turn_start(engine, wisp)
+    assert flags["wisp_track"] == 2
+    assert before in handler._spore_rooms(engine), "离开的房间应留下孢子"
+    assert wisp.room_key != before
+    assert wisp.room_key not in handler._spore_rooms(engine), "不能停在孢子房"
+
+
+def verify_haunt69_catch_and_escape() -> None:
+    """剧本 69：孢子检定三分支、捕捉胜利、轨道 6 逃脱（p80/p151）。"""
+    engine = _run_until_haunt(seed=137, players=3, haunt_id=69)
+    handler = engine._mode_handler()
+    assert isinstance(handler, WispCaptureMode)
+    flags = engine._haunt_flags()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    # p80：孢子迷雾三分支（6+ 免疫 / 2-5 多花 1 点 / 0-1 回合结束）
+    room_key = next(iter(sorted(engine.state.board)))
+    handler._set_spores(engine, [room_key])
+    hero.room_key = room_key
+    with patch.object(engine, "roll_dice", return_value=6):
+        assert handler.movement_cost_floor(engine, hero, room_key, None) == 0
+        assert flags["spore_state"][str(hero.id)] == "immune"
+    handler.on_turn_start(engine, hero)
+    with patch.object(engine, "roll_dice", return_value=3):
+        assert handler.movement_cost_floor(engine, hero, room_key, None) == 2
+        assert flags["spore_state"][str(hero.id)] == "slow"
+    handler.on_turn_start(engine, hero)
+    hero.movement_stopped = False
+    with patch.object(engine, "roll_dice", return_value=0):
+        assert handler.movement_cost_floor(engine, hero, room_key, None) == 0
+        assert hero.movement_stopped and hero.attack_used
+        assert flags["spore_state"][str(hero.id)] == "ended"
+
+    # p80：捕捉——知识 4+ 成功 +1 令牌，累计英雄数枚即英雄胜
+    engine2 = _run_until_haunt(seed=113, players=3, haunt_id=69)
+    h2 = engine2._mode_handler()
+    assert isinstance(h2, WispCaptureMode)
+    wisp2 = h2._wisp(engine2)
+    hero2 = next(p for p in engine2.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine2, hero2)
+    hero2.room_key = wisp2.room_key
+    needed = engine2._haunt_track_target("capture_tokens")
+    hero_count = sum(1 for p in engine2.state.players if p.role == "hero")
+    assert needed == hero_count
+    for _ in range(needed):
+        with patch.object(engine2, "_resolve_check", return_value=True):
+            assert h2.perform_action(engine2, hero2, "catch_wisp", {}) is True
+    assert engine2.state.winner == "heroes"
+
+    # p151：轨道到 6 → 小精灵逃脱 → 叛徒胜
+    engine3 = _run_until_haunt(seed=113, players=3, haunt_id=69)
+    h3 = engine3._mode_handler()
+    assert isinstance(h3, WispCaptureMode)
+    f3 = engine3._haunt_flags()
+    f3["wisp_track"] = 6
+    assert h3.check_victory(engine3) is True and engine3.state.winner == "traitor"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -7236,6 +7322,8 @@ def main():
     verify_haunt59_medallion_flow()
     verify_haunt60_burning_sands_setup()
     verify_haunt60_riddle_race()
+    verify_haunt69_wisp_setup()
+    verify_haunt69_catch_and_escape()
     verify_haunt57_paint_setup()
     verify_haunt57_repaint_and_immunity()
     verify_haunt46_the_feast_setup()

@@ -2038,6 +2038,16 @@ MONSTER_BASES = [
              "但打赢的目标会被弄糊涂（p150）。",
         tags=("human", "haunt_specific"),
     ),
+    monster_def(
+        monster_id="wisp",
+        name="小精灵",
+        source_name="Wisp",
+        speed=5,
+        might=6,
+        sanity=6,
+        text="叛徒化作的一缕光；它只想逃——沿途留下的孢子迷雾会绊住追兵。",
+        tags=("spectral", "haunt_specific"),
+    ),
 ]
 
 

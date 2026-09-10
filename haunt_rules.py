@@ -3327,22 +3327,62 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [79, 150],
     },
     69: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'wisp_capture',
-        "traitor_rule": 'revealer',
-        "hero_goal": '累计完成与英雄人数相等的捕捉检定，抓住小精灵。',
-        "traitor_goal": '让小精灵坚持到逃脱轨道终点，或杀死所有英雄。',
-        "suggested_monsters": ['ghost'],
+        # 校准记录（2026-09-10，对照英雄手册 p80 / 叛徒手册 p151）：
+        #   骨架原本是"捕捉小精灵"假机制（h69_hero_task/traitor_task 进度轨）。
+        #   机制落在 WispCaptureMode：
+        #   · 开局（p151）：叛徒角色**移出游戏**（是设计不是失败——handler
+        #     吸收"叛徒死→英雄胜"兜底）；小精灵（Speed 5 / Might 6 / Sanity 6）
+        #     放作祟房；地下室楼梯未发现则取出放好；**小精灵先手**（轨道起点 1）。
+        #   · 小精灵回合（p151）：回合开始轨道 +1 并清除全部孢子；然后不能
+        #     停止移动（耗尽 5 点或死路为止）；离开的房间留孢子；不能进入
+        #     已有孢子的房间；不主动攻击（防守反击照常）。
+        #   · 孢子迷雾（p80）：英雄每回合**第一次**离开有孢子的房间做理智
+        #     检定：6+ 本回合免疫、2-5 本回合剩余每次多花 1 点移动、0-1 回合
+        #     立即结束（实现在 movement_cost_floor 钩子）。
+        #   · 捕捉（p80）：与小精灵同房做知识 4+，成功 +1 枚捕捉令牌；累计
+        #     作祟开始时英雄数枚 → 抓住小精灵 → 英雄胜。
+        #   · 胜负（p80/p151）：轨道到 6 小精灵仍自由 → 叛徒胜；捕捉令牌满
+        #     → 英雄胜。
+        #   已知简化：小精灵探索新房间未建模；禁用神秘电梯/煤槽向上/坍塌房、
+        #     屏障房两侧留孢子、免疫左轮（按属性免疫会误伤徒手速度攻击）、
+        #     "先手"仅以轨道起点 1 体现（未改引擎回合顺序）。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "wisp_capture",
+        "traitor_rule": "revealer",
+        "hero_goal": "追上小精灵并累计英雄数枚捕捉令牌（各人知识 4+），在轨道到 6 前抓住它。",
+        "traitor_goal": "作为小精灵躲到逃脱轨道走到 6，或让英雄全灭。",
+        "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": ['entrance_hall', 'foyer', 'grand_staircase', 'chapel', 'library', 'garden', 'patio', 'tower'],
-        "tokens": ['wisp', 'spore', 'knowledge_check'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：捕捉小精灵', 'target': 'player_count', 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：让小精灵逃走', 'target': 6, 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
-        "monsters": [{'template_id': 'ghost', 'spawn': 'haunt_room', 'count': 1}],
-        "actions": [{'id': 'h69_hero_task', 'side': 'heroes', 'label': '捕捉小精灵', 'detail': '与小精灵同房间时完成知识检定。', 'stat': 'knowledge', 'target': 4, 'rooms': ['entrance_hall', 'foyer', 'grand_staircase', 'chapel', 'library', 'garden', 'patio', 'tower'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h69_traitor_task', 'side': 'traitor', 'label': '让小精灵逃走', 'detail': '推进小精灵逃脱轨道。', 'stat': 'might', 'target': 5, 'rooms': ['entrance_hall', 'foyer', 'grand_staircase', 'chapel', 'library', 'garden', 'patio', 'tower'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 'player_count', 'reason': '累计完成与英雄人数相等的捕捉检定，抓住小精灵。'}, {'winner': 'traitor', 'type': 'track', 'track': 'traitor_progress', 'operator': '>=', 'target': 6, 'reason': '让小精灵坚持到逃脱轨道终点，或杀死所有英雄。'}],
+        "key_rooms": [],
+        "tokens": ["wisp", "spore", "knowledge_check"],
+        "setup": {
+            # 逃脱轨道：flags["wisp_track"] 记真实值，此轨道封顶显示
+            "tracks": {
+                "capture_tokens": {"label": "捕捉进度", "target": 6, "side": "heroes"},
+                "escape_track": {"label": "逃脱轨道", "target": 6, "side": "traitor"},
+            },
+            "flags": {
+                "wisp_track": 1,
+                "spore_rooms": [],
+                "spore_state": {},
+                "traitor_removed": True,
+            },
+        },
+        "monsters": [
+            # spawn=deferred：只进 monster_specs，由 handler 放作祟房
+            {"template_id": "wisp", "spawn": "deferred", "name": "小精灵"},
+        ],
+        "actions": [
+            {"id": "catch_wisp", "side": "heroes", "label": "捕捉小精灵",
+             "detail": "与小精灵同房间时做知识 4+ 检定：每成功一次 +1 枚捕捉令牌，"
+                       "英雄们累计到作祟开始时的英雄数枚即抓住它、英雄获胜（p80）。"
+                       "每回合一次。",
+             "stat": "knowledge", "target": 4, "progress": "capture_tokens",
+             "requires": ["same_room:wisp"]},
+        ],
+        "win_conditions": [],
         "source_pages": [80, 151],
     },
     70: {

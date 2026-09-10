@@ -524,6 +524,20 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["riddle_race", "sphinx_toll", "clue_hunt"]},
     },
+    69: {
+        "hero": {
+            # p80：追上小精灵才是唯一胜利条件——打它毫无意义（它不攻击、
+            # 只会跑）。68 号踩过的坑：靠追击/搬运取胜的剧本必须显式关掉
+            # attack_monsters，否则 +100 常驻寻路目标压过 +95 剧本目标。
+            "attack_monsters": False,
+            "victory_focus": "一路追着那团光跑，追上就做知识 4+ 捕捉（别停下来打它）",
+        },
+        "traitor": {
+            "attack_heroes": False,
+            "victory_focus": "（叛徒已化为小精灵出局）跑满逃脱轨道 6 即胜",
+        },
+        "scenario": {"special_rules": ["wisp_escape", "spore_hazard", "traitor_removed"]},
+    },
     57: {
         "hero": {
             # p68/p139：叛徒不受伤害削减，正面围殴纯属白费——除非谁手里有

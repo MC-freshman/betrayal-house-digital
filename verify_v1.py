@@ -45,7 +45,12 @@ else:
 # 通用行动/轨道胜负回归样本：须为 fidelity=skeleton、hero_progress target>=2、
 # 无 required_cards/无 action requires、且不在当前精修批次队列内的剧本；
 # 精修到该号时必须同步把此常量搬迁到另一个仍满足条件的骨架剧本。
-_GENERIC_SAMPLE_HAUNT = 69  # 68 号已于 M10-12 精修，骨架样本顺延到 69（h69_hero_task 无 requires、rooms 含 foyer、target=player_count）
+# 样本顺延史：48 → 60 → 61 → 69 → 70。70 是最后一本骨架，精修它时本样本
+# 需要另找落点（届时可改为在测试内直接构造 catalog.haunts 条目）。
+# 70 的 required_cards 引擎并不读取，不影响触发；它的 rooms 里没有 chapel/foyer，
+# 所以落房用 _GENERIC_SAMPLE_ROOM。
+_GENERIC_SAMPLE_HAUNT = 70
+_GENERIC_SAMPLE_ROOM = "garden"
 
 
 def _configs(count: int = 4, bot_difficulty: str = "hard") -> list[dict]:
@@ -323,8 +328,8 @@ def verify_generic_haunt_action_and_victory() -> None:
     engine.start_new_game(_configs(4, "normal"))
     _trigger_specific_haunt(engine, sample)
     hero = next(player for player in engine.state.players if player.role == "hero")
-    # 该骨架剧本声明的房间列表里有保险库，用它做落房
-    room_key = _place_test_room(engine, "foyer", 66, 0)
+    # 用该骨架剧本声明的房间列表里存在的房间落房（70 号列表含 garden）
+    room_key = _place_test_room(engine, _GENERIC_SAMPLE_ROOM, 66, 0)
     hero.room_key = room_key
     engine.state.turn_order = [hero.id]
     engine.state.turn_index = 0
