@@ -3500,9 +3500,6 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
 }
 
-def get_haunt_rule_override(haunt_id: int) -> dict[str, Any]:
-    return deepcopy(HAUNT_RULE_OVERRIDES.get(haunt_id, {}))
-
 
 # ---------------------------------------------------------------------------
 # 11-70 号剧本的结构化规则
