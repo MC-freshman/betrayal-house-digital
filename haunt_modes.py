@@ -2038,15 +2038,26 @@ class ExorcismMode(GenericModeHandler):
         return [action for action in actions if action.id not in used]
 
     def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        """驱魔来源：只有检定【成功】才作废来源并在房间放检定令牌（p49/p90）。
+
+        底层 `_perform_generic_haunt_action` 只要行动执行过就返回 True，检定失败也是
+        True——所以"可执行"不等于"成功"，不能拿它当消耗来源的依据。这里改用
+        `exorcism_successes` 轨道的增量作为成功信号（来源行动全部声明
+        `progress: exorcism_successes`，轨道到 target 后行动本身就不再用）。
+        返回值仍是 `ok`：失败的尝试照样占掉"每人每回合一次剧本行动"的额度。
+        8/11/22 号共用这份实现；38 号另有等价覆盖，行为一致。
+        """
         if action_id not in self.ALL_SOURCES:
             return super().perform_action(engine, player, action_id, data)
         if action_id in set(engine._haunt_flags().get("used_exorcism_sources", [])):
             engine._log("这个驱魔来源已经成功用过，不能再用了。")
             return False
+        before = engine._haunt_track_value("exorcism_successes")
         ok = super().perform_action(engine, player, action_id, data)
-        if ok:
+        if ok and engine._haunt_track_value("exorcism_successes") > before:
             used = list(engine._haunt_flags().get("used_exorcism_sources", []))
-            used.append(action_id)
+            if action_id not in used:
+                used.append(action_id)
             engine._haunt_flags()["used_exorcism_sources"] = used
             kind = (
                 "sanity_check"
@@ -6150,13 +6161,19 @@ class BugSprayMode(GenericModeHandler):
             if len(pool) < 3:
                 engine._log("需要三枚配料在同一间房（不拘谁拿着）。")
                 return False
+            flags = engine._haunt_flags()
+            # 边沿触发：引擎只在检定成功时应用 set_flags(spray_mixed)，所以"跑过"不等于"配成"
+            flags["spray_mixed"] = False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and flags.get("spray_mixed"):
+                flags["spray_mixed"] = False
                 # 优先消耗放在地上的，再消耗英雄手里的；移出游戏
                 for token in pool[:3]:
                     engine.remove_token(token.uid)
                 spray = engine.spawn_token(self.SPRAY, label="杀虫剂", role="carried", holder=player.id)
                 engine._log(f"{player.name} 调配出了杀虫剂（{spray.label}）！对虫用速度攻击！")
+            elif ok:
+                engine._log("配方错了味——三枚配料还在，本回合的剧本行动已经用掉。")
             return ok
 
         if action_id == "destroy_ingredient":
@@ -7678,8 +7695,11 @@ class HellbeastMode(ExorcismMode):
         修法：绕过基类的无条件消耗——用 super(ExorcismMode, self) 直达祖父级
         GenericModeHandler → _perform_generic_haunt_action，以 exorcism_successes
         轨道增量作为"本次检定确实成功"的信号，仅在成功时复刻基类的全部成功副作用
-        （used 去重记账 + 令牌 kind 判定 + spawn_token）。刻意不改基类 ExorcismMode，
-        以保 8/11/22 号行为不变。
+        （used 去重记账 + 令牌 kind 判定 + spawn_token）。
+
+        M10-19 更新：基类 `ExorcismMode.perform_action` 已按同一信号修好，这份覆盖
+        与基类行为等价，保留只为留档；后续清理时**只删这份 perform_action 即可**，
+        本类 setup 不能一起删（它刻意不调 super，以避免生成 8 号的女妖令牌）。
         """
         # 非驱魔来源：交回基类处理（ExorcismMode → GenericModeHandler）
         if action_id not in self.ALL_SOURCES:

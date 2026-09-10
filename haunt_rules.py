@@ -817,7 +817,9 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         ],
         "actions": [
             {"id": "take_ingredient", "side": "any", "label": "拾取配料", "detail": "捡起本房间的一枚配料（叛徒至多背 3 枚，p99）。"},
-            {"id": "make_spray", "side": "heroes", "label": "调配杀虫剂", "detail": "在实验室或厨房集齐三枚配料（不拘谁拿着）后做知识 4+（p28）。", "stat": "knowledge", "target": 4, "rooms": ["research_laboratory", "kitchen"]},
+            # set_flags 只在检定成功时被引擎应用——BugSprayMode 用它区分"这次真的配成了"
+            # 与"执行过但知识 4+ 失败了"（_perform_generic_haunt_action 两种情况都返回 True）。
+            {"id": "make_spray", "side": "heroes", "label": "调配杀虫剂", "detail": "在实验室或厨房集齐三枚配料（不拘谁拿着）后做知识 4+（p28）。", "stat": "knowledge", "target": 4, "rooms": ["research_laboratory", "kitchen"], "set_flags": {"spray_mixed": True}},
             {"id": "destroy_ingredient", "side": "traitor", "label": "销毁配料", "detail": "在深坑/熔炉房/地下湖把背着的配料或杀虫剂毁掉（p99）。", "rooms": ["chasm", "furnace_room", "underground_lake"]},
             {"id": "break_webs", "side": "any", "label": "挣脱蛛网", "detail": "同房有被缚探险者时做力量 5+，解放并恢复其属性（p99）。", "stat": "might", "target": 5},
         ],

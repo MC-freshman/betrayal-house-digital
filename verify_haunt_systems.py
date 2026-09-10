@@ -1358,6 +1358,17 @@ def verify_haunt8_banshee_exorcism() -> None:
     ids = {a.id for a in handler.available_actions(engine, hero)}
     assert "chapel" not in ids, "成功用过的来源不应再出现"
 
+    # 失败路径（M10-19 修基类的直接回归）：知识 5+ 失败只算"执行过一次行动"，
+    # 来源不作废、不落检定令牌、轨道不推进——否则 9 个来源会被失败白白耗光（软锁）
+    hero.items.append("omen_book")
+    checks_before = len(engine.tokens_of_kind("knowledge_check"))
+    with patch.object(engine, "_resolve_check", return_value=False):
+        assert handler.perform_action(engine, hero, "omen_book", {}) is True, "失败也算执行过本回合的剧本行动"
+    assert engine._haunt_track_value("exorcism_successes") == 1, "检定失败不该推进轨道"
+    assert "omen_book" not in engine._haunt_flags()["used_exorcism_sources"], "检定失败不该作废来源（消除软锁）"
+    assert len(engine.tokens_of_kind("knowledge_check")) == checks_before, "检定失败不该放检定令牌"
+    assert "omen_book" in {a.id for a in handler.available_actions(engine, hero)}, "失败后来源仍可复用"
+
     # 哀嚎：理智检定低（0-2 档）→ 4 骰精神伤害；持灵应板的叛徒免疫
     hero.room_key = banshee.room_key
     sanity_before = hero.stats["sanity"]
@@ -1683,6 +1694,13 @@ def verify_haunt11_specter_invasion() -> None:
     with patch.object(engine, "_resolve_check", return_value=True):
         assert handler.perform_action(engine, hero, "omen_ring", {}) is True
     assert engine._haunt_track_value("exorcism_successes") == 1
+
+    # 11 号只覆盖了来源清单、行动处理仍继承基类 → 失败同样不该白吃来源（M10-19）
+    hero.items.append("omen_book")
+    with patch.object(engine, "_resolve_check", return_value=False):
+        assert handler.perform_action(engine, hero, "omen_book", {}) is True
+    assert engine._haunt_track_value("exorcism_successes") == 1, "检定失败不该推进轨道"
+    assert "omen_book" not in engine._haunt_flags()["used_exorcism_sources"], "检定失败不该作废来源（消除软锁）"
 
 
 def verify_haunt12_fleshwalkers() -> None:
@@ -2103,6 +2121,12 @@ def verify_haunt17_bugs() -> None:
     try:
         ids = {a.id for a in handler.available_actions(engine, hero)}
         assert "make_spray" in ids, "三枚配料同房应能合成"
+        # 失败路径（M10-19 同根因修复）：知识 4+ 失败只算执行过一次剧本行动，
+        # 三枚配料一枚都不能少、也不能凭空配出杀虫剂
+        with patch.object(engine, "_resolve_check", return_value=False):
+            assert handler.perform_action(engine, hero, "make_spray", {}) is True, "失败也算执行过本回合的剧本行动"
+        assert len(engine.tokens_of_kind("ingredient")) == ingredient_total_before, "检定失败不该吃掉配料"
+        assert not engine.tokens_held_by(hero.id, "bug_spray"), "检定失败不该配出杀虫剂"
         with patch.object(engine, "_resolve_check", return_value=True):
             assert handler.perform_action(engine, hero, "make_spray", {}) is True
     finally:
@@ -2576,6 +2600,14 @@ def verify_haunt22_abyss_exorcism() -> None:
     engine._reset_player_turn_state(hero)
     with patch.object(engine, "_resolve_check", return_value=True):
         assert handler.perform_action(engine, hero, "omen_ring", {}) is False, "同一来源只能成功用一次"
+
+    # 22 号的覆盖只处理"献出圣徽"，驱魔来源仍落回基类 → 失败不该白吃来源（M10-19）
+    hero.items.append("omen_book")
+    with patch.object(engine, "_resolve_check", return_value=False):
+        assert handler.perform_action(engine, hero, "omen_book", {}) is True
+    assert engine._haunt_track_value("exorcism_successes") == 1, "检定失败不该推进轨道"
+    assert "omen_book" not in flags["used_exorcism_sources"], "检定失败不该作废来源（消除软锁）"
+    assert "omen_book" in {a.id for a in handler.available_actions(engine, hero)}, "失败后来源仍可复用"
 
     # p33：圣徽拖延——必须站在深渊邻格，献出后弃卡并暂停坍塌
     holder = next(p for p in engine.state.players if p.role == "hero" and not p.dead and p is not hero)
