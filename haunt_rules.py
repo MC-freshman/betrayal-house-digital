@@ -251,9 +251,17 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
             {"template_id": "dog", "name": "狗", "spawn": "haunt_room", "speed": 6, "might": 4, "sanity": 3}
         ],
         "actions": [
-            {"id": "find_revolver", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["attic", "game_room", "junk_room", "master_bedroom", "vault"]},
-            {"id": "make_silver_bullets", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["research_laboratory", "furnace_room"]},
-            {"id": "shoot_werewolf", "side": "heroes", "requires": ["item_revolver", "silver_bullets"], "attack": "speed", "kills": "werewolf"},
+            # id 必须与 engine._available_haunt5_actions / _perform_haunt5_action
+            # 使用的 h5_ 前缀一致（这两条此前写成无前缀版本，成了永远不会被
+            # 执行到的死数据——M10-15 测试扩容时补 5 号专项测试才发现）。
+            {"id": "h5_find_revolver", "side": "heroes", "stat": "knowledge", "target": 5,
+             "rooms": ["attic", "game_room", "junk_room", "master_bedroom", "vault"]},
+            {"id": "h5_make_silver_bullets", "side": "heroes", "stat": "knowledge", "target": 5,
+             "rooms": ["research_laboratory", "furnace_room"]},
+            # 射杀狼人不生成行动对象：持左轮+银弹攻击狼人由通用攻击流程处理，
+            # 这条声明只用于 required_cards 与寻路提示。
+            {"id": "shoot_werewolf", "side": "heroes",
+             "requires": ["item_revolver", "silver_bullets"], "attack": "speed", "kills": "werewolf"},
         ],
         "source_pages": [16, 87],
     },

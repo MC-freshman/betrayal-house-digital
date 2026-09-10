@@ -5953,6 +5953,50 @@ def verify_haunt70_weapons_and_immunity() -> None:
     assert hero4.movement_stopped and hero4.attack_used, "检定失败应困住英雄"
 
 
+def verify_haunt5_werewolf_hunt() -> None:
+    """剧本 5：狗的布点、叛徒回合强化、找左轮/制银弹两条行动线（p16/p87）。
+
+    这个剧本此前只有 handler 注册断言与黄金回放，没有专属专项测试——
+    M10-15 测试扩容审计发现的唯一空白（与 44/47 曾漏黄金用例同类）。
+    """
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=5)
+    handler = engine._mode_handler()
+    assert isinstance(handler, WerewolfHuntMode)
+    flags = engine._haunt_flags()
+
+    # setup：狗在作祟房；两条进度 flag 初始为假
+    assert any(m.template_id == "dog" for m in engine.state.monsters), "狗应在场"
+    assert flags.get("revolver_found") is False
+    assert flags.get("silver_bullets_created") is False
+
+    # on_turn_start：叛徒在感染态里持续强化（力量/速度单调不减、至少一项上升）
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    before = (traitor.stats.get("might", 0), traitor.stats.get("speed", 0))
+    handler.on_turn_start(engine, traitor)
+    after = (traitor.stats.get("might", 0), traitor.stats.get("speed", 0))
+    assert after[0] >= before[0] and after[1] >= before[1]
+    assert after != before, "叛徒回合开始应获得强化"
+
+    # 英雄线：在场上存在的目标房间做知识检定 → 找左轮 / 制银弹
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine, hero)
+    room_of = {r.template_id: k for k, r in engine.state.board.items()}
+
+    revolver_rooms = [r for r in ("attic", "game_room", "junk_room", "master_bedroom", "vault") if r in room_of]
+    if revolver_rooms:
+        hero.room_key = room_of[revolver_rooms[0]]
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, hero, "h5_find_revolver", {}) is True
+        assert flags.get("revolver_found") is True, "检定成功应找到左轮"
+
+    bullet_rooms = [r for r in ("research_laboratory", "furnace_room") if r in room_of]
+    if bullet_rooms:
+        hero.room_key = room_of[bullet_rooms[0]]
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, hero, "h5_make_silver_bullets", {}) is True
+        assert flags.get("silver_bullets_created") is True, "检定成功应制成银弹"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -7352,6 +7396,7 @@ def main():
     verify_haunt2_no_attack_before_seance()
     verify_haunt3_witch_breath_and_frog_carry()
     verify_haunt4_spider_blank_reroll()
+    verify_haunt5_werewolf_hunt()
     verify_haunt4_setup_and_trapped()
     verify_haunt4_web_and_eggs_flow()
     verify_haunt4_timer_and_growth()

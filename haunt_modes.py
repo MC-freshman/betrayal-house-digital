@@ -36,6 +36,24 @@ from typing import Any, Protocol, runtime_checkable
 DIRECTION_DELTAS = {"north": (0, -1), "east": (1, 0), "south": (0, 1), "west": (-1, 0)}
 
 
+class HauntAction:
+    """与 engine.HauntAction 同构的轻量副本（避免 import engine 循环导入）。
+
+    46 号在"已逃出的英雄可以重新进门"时需要即时造一个行动对象追加到
+    可用列表里——过去直接写了 `HauntAction(...)`，但本模块从不 import
+    engine，于是这个分支一旦走到就 NameError。3/4 人局碰不到该分支，
+    直到 M10-15 的 5 人局扩容扫描才暴露出来。
+    """
+
+    __slots__ = ("id", "label", "detail", "data")
+
+    def __init__(self, action_id: str, label: str, detail: str = "", data: dict | None = None):
+        self.id = action_id
+        self.label = label
+        self.detail = detail
+        self.data = data if data is not None else {}
+
+
 class ExitOption:
     """与 engine.ExitOption 同构的轻量副本（避免 import engine 循环导入）。"""
 
