@@ -10246,9 +10246,12 @@ class LostDimensionMode(GenericModeHandler):
       后毒大气照常生效（老坑 21 号吸收者）。
 
     已知简化：
-        · p114「撤下所有非起始/非占用房间重新洗匀」未实现——本仓库没有
-          移除房间的能力（22 号房屋坍塌只是打标记，不真删），撤房会破坏
-          存档与寻路。简化为洗匀房间牌堆与弃牌堆，氛围用日志还原。
+        · 「占用」取保护性更宽的读法：房内有玩家/怪物/**地面令牌或卡牌**都算
+          占用（原版 p114 只提 figure）——避免把放在地上的道具连同板块一起被
+          收回牌堆。这是刻意取舍，不是遗漏。
+        · 「移除通往被撤房间的 Secret Passage / Secret Stairs / Wall Switch
+          令牌」：本仓库的密道/密梯建模为房间的双向 `links["secret"]`，撤牌时
+          由 `engine._detach_room` 自动清理；Wall Switch 没有对应组件、未建模。
         · 「爱好音乐 +2」未建模——角色数据没有 hobby 字段（同 24 号口径）。
         · 疯子与书的判定只看「持有人/房间物品在风琴房」，原版还要求
           疯子是有意识的同伴（引擎不区分同伴是否被控制）。
@@ -10278,18 +10281,75 @@ class LostDimensionMode(GenericModeHandler):
         flags.setdefault("clue_stars", False)
         flags.setdefault("sabotage_rooms", [])
         flags.setdefault("returned_home", False)
-        # p114 房屋重排：原文要把已放置的非起始/非占用房间撤下重新洗匀
-        # （简化见类文档：只洗匀牌堆与弃牌堆，房间留在场上）。
-        deck = engine.state.room_deck
-        deck.extend(engine.state.room_discard)
-        engine.state.room_discard = []
-        engine.rng.shuffle(deck)
-        engine._log("整栋房子在震颤中重排——走廊、楼梯和房间像牌一样被洗了一遍。")
-        placed = engine._ensure_room_in_play(self.ORGAN_ROOM, room_key)
+
+        # p114 第一步：Set aside all the room tiles that have been played in the
+        # house so far, except for the starting tiles and any occupied rooms.
+        # 「占用」取保护性更宽的读法（含地面上的令牌与卡牌，见
+        # engine._is_room_occupied）——避免把地上的道具连同板块一起收走。
+        # 撤牌时 `_detach_room` 会顺手清掉指向它的密道/密梯链接，正好对应
+        # 原文那句"Remove any Secret Passage / Secret Stairs ... tokens that
+        # lead to rooms that have been set aside"（本仓库的密道就是双向
+        # `links["secret"]`；Wall Switch 没有对应建模，见「已知简化」）。
+        set_aside: list[str] = []
+        for key in sorted(engine.state.board):
+            room = engine.state.board[key]
+            if room.template_id in engine.START_ROOM_IDS:
+                continue
+            if engine._is_room_occupied(key):
+                continue
+            set_aside.append(key)
+        for key in set_aside:
+            engine._detach_room(key, return_to_deck=True, force=True)
+        flags["set_aside_rooms"] = len(set_aside)
+
+        # p114：If the Organ Room isn't in the house, take it from the room stack
+        # and put it into the house attached to a starting tile of your choice.
+        organ_anchor = next(
+            (
+                k
+                for k in sorted(engine.state.board)
+                if engine.state.board[k].template_id in engine.START_ROOM_IDS
+                and engine.state.board[k].floor == 0
+            ),
+            room_key,
+        )
+        placed = engine._ensure_room_in_play(self.ORGAN_ROOM, organ_anchor)
+        if not placed:
+            placed = engine._attach_template_adjacent(self.ORGAN_ROOM, organ_anchor)
         if placed:
             engine._log(f"管风琴的低鸣从{engine.state.board[placed].name}传来——那是回家的钥匙。")
         else:
             engine._log("管风琴始终没能出现——这一局的回家之路被彻底堵死了。")
+
+        # p114：Shuffle together all the tiles you set aside and all the undrawn
+        # rooms from the room stack and discard stack.（撤下的牌已由
+        # `_detach_room(return_to_deck=True)` 放回牌堆，这里再把弃牌堆并进来一起洗。）
+        engine._shuffle_room_piles()
+        engine._log(
+            f"整栋房子在震颤中重排——{len(set_aside)} 块房间被卷回牌堆，像牌一样重新洗过。"
+        )
+
+        # p114：The occupied room tiles are still in the house. Move them next to
+        # the starting tiles of the appropriate floors.（原文是复数的 starting
+        # tiles——逐张起始牌试，直到门对门接上，保证人还能走出来。）
+        for key in sorted(engine.state.board):
+            room = engine.state.board.get(key)
+            if room is None or room.template_id in engine.START_ROOM_IDS:
+                continue
+            if not engine._is_room_occupied(key):
+                continue
+            anchors = [
+                k
+                for k in sorted(engine.state.board)
+                if engine.state.board[k].floor == room.floor
+                and engine.state.board[k].template_id in engine.START_ROOM_IDS
+            ]
+            for anchor in anchors:
+                if engine._place_room_adjacent(key, anchor, require_connection=True):
+                    engine._log(f"「{room.name}」连同里面的一切被挪到了起始牌旁边。")
+                    break
+            else:
+                engine._log(f"「{room.name}」四周没有能门对门接上的起始牌空位，留在原处。")
 
     # ------------------------------------------------------- 回合开始（毒大气）
     def on_turn_start(self, engine: Any, player: Any) -> None:
@@ -16660,10 +16720,15 @@ class LabyrinthEscapeMode(GenericModeHandler):
       因为死人而打开，迷宫也照样合得拢（引擎通用兜底在此吸收）。
 
     已知简化：
-        · "把剩余房间板块重排成叛徒喜欢的形状"未实现：本仓库没有搬动已放置
-          房间的能力（doors 是模板属性，搬了就对不上邻格），沿用既有结论。
-          地下墓穴的"移出本局"用塌方标记等价实现（连通图与移动选项都会排除
-          坍塌板块），里面的人与怪先搬到邻接房间、不走坠亡结算。
+        · 房间重排按**连通优先**实现（`engine._rearrange_floor`）：每层保留起始牌
+          作锚点，其余板块经"门兼容边"走成一棵生成树，硬约束"同层全连通"由构造
+          保证；原文的"任意配置"取该构造给出的那一种（不是唯一解，也不是让
+          玩家自选布局的交互界面）。地下墓穴现在是**真删除**
+          （`engine._detach_room`），不再是塌方标记近似；里面的人与怪先搬到邻接
+          房间、不走坠亡结算。
+        · 「可把方形令牌挪到同层任意合法位置」未建模：本仓库的钥匙/仆人是重排
+          **之后**才布点的（见下条），没有"先存在的方形令牌"需要挪；其余令牌
+          按原版随所在板块一起移动（`_relocate_room` 已实现）。
         · "万能钥匙可替代一把钥匙"未实现：本项目 80 张卡牌目录里没有骷髅钥匙
           （见 67 号同款说明），要落地得先扩卡池并同步后端的数量断言。
         · 迷乱者的那一格位移固定在"她的回合结束"执行（原文是"回合内任何时刻"），
@@ -16759,6 +16824,14 @@ class LabyrinthEscapeMode(GenericModeHandler):
         engine._set_haunt_track_value(self.TURN_TRACK, 0)
 
         self._retire_catacombs(engine)
+        # p150：Rearrange the remaining room tiles in the House into any
+        # configuration you like, keeping all rooms on the same floors and
+        # ensuring that all the rooms on a floor are connected together by valid
+        # movement routes. —— 逐层重排；连通性由 engine._rearrange_floor 的
+        # 贪心构造保证（锚点留给该层起始牌，其余经门兼容边走成一棵生成树）。
+        moved = sum(engine._rearrange_floor(floor) for floor in (-1, 0, 1))
+        if moved:
+            engine._log(f"石墙彼此碾过：{moved} 块房间被挪到了新位置，迷宫重新咬合。")
         rooms = self._stage_rooms(engine)
         if not rooms:
             rooms = [key for key, room in sorted(engine.state.board.items()) if room.revealed]
@@ -16778,23 +16851,24 @@ class LabyrinthEscapeMode(GenericModeHandler):
         )
 
     def _retire_catacombs(self, engine: Any) -> None:
-        """p150：把地下墓穴从房子里拿走。本仓库没有"撤房"能力，用塌方标记
-        等价实现——先把它里面的人与怪搬到邻接的已探索房间，再翻掉这块牌。"""
+        """p150：Remove the Catacombs from the House and set it aside; it will no
+        longer be used. —— 真删（`_detach_room`），不再用塌方标记近似。
+
+        里面的人与怪先搬到邻接的已探索房间（不走坠亡结算），板块随即摘除。
+        """
         key = next(
             (k for k, room in sorted(engine.state.board.items()) if room.template_id == self.CATACOMBS),
             "",
         )
-        if not key or engine._is_collapsed(key):
+        if not key:
             return
         refuge = self._catacomb_refuge(engine, key)
         if not refuge:
             engine._log("地下墓穴无处可撤（它被孤立在别处）：本局仍按原样使用它（已知简化）。")
             return
-        for player in [p for p in engine.state.players if not p.dead and p.room_key == key]:
-            engine._move_to_room(player, refuge, via_effect=False)
-        for monster in [m for m in engine.state.monsters if m.room_key == key]:
-            monster.room_key = refuge
-        engine._collapse_room(key, cause="迷宫重组后的黑暗里", consumes_monsters=False)
+        engine._evict_room(key, refuge)
+        engine._detach_room(key, return_to_deck=False, force=True)
+        engine._log("地下墓穴被整个从房子里摘了出去——它再也不会出现了。")
 
     def _catacomb_refuge(self, engine: Any, key: str) -> str:
         candidates = [

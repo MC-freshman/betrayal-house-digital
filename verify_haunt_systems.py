@@ -6028,6 +6028,94 @@ def verify_haunt56_mask_sanity_floor() -> None:
     assert traitor.stat_positions["sanity"] == 3, "理智充裕时应正常 -2"
 
 
+def verify_haunt32_house_reshuffle() -> None:
+    """剧本 32：p114 撤下非起始/非占用房间、占用房挪到起始牌旁、管风琴房在场。
+
+    回归 M10-18 新增的引擎能力（`_detach_room` / `_place_room_adjacent` /
+    `_shuffle_room_piles`）——此前这三条只做到"洗牌堆"的近似。
+    """
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=32)
+    handler = engine._mode_handler()
+    assert isinstance(handler, LostDimensionMode)
+    flags = engine._haunt_flags()
+
+    ids = {room.template_id for room in engine.state.board.values()}
+    for start_id in engine.START_ROOM_IDS:
+        assert start_id in ids, f"起始牌 {start_id} 不该被撤下"
+    assert handler.ORGAN_ROOM in ids, "管风琴房必须在场（p114 明文）"
+    assert flags["set_aside_rooms"] > 0, "本局应至少撤下过一块房间"
+    leftover = [
+        room.name
+        for key, room in engine.state.board.items()
+        if room.template_id not in engine.START_ROOM_IDS
+        and room.template_id != handler.ORGAN_ROOM
+        and not engine._is_room_occupied(key)
+    ]
+    assert not leftover, f"非起始/非占用房间应被撤下：{leftover}"
+    for key, room in engine.state.board.items():
+        if room.template_id in engine.START_ROOM_IDS or room.template_id == handler.ORGAN_ROOM:
+            continue
+        assert any(
+            engine.state.board[nb].template_id in engine.START_ROOM_IDS
+            for nb in engine._door_neighbors(key)
+        ), f"「{room.name}」应被挪到起始牌旁边并连通"
+    assert engine.state.room_discard == [], "弃牌堆应并入洗匀"
+    assert all(
+        engine.state.pos_index.get((r.floor, r.x, r.y)) == k
+        for k, r in engine.state.board.items()
+    )
+    assert all(p.room_key in engine.state.board for p in engine.state.players if not p.dead)
+    assert all(m.room_key in engine.state.board for m in engine.state.monsters)
+
+
+def verify_haunt68_tile_rearrange() -> None:
+    """剧本 68：p150 地下墓穴真删除、其余房间同层重排且每层全连通。
+
+    回归 M10-18 的 `_detach_room` + `_rearrange_floor`（此前是塌方标记 + 不重排）。
+    """
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=68)
+    handler = engine._mode_handler()
+    assert isinstance(handler, LabyrinthEscapeMode)
+
+    assert not any(
+        room.template_id == handler.CATACOMBS for room in engine.state.board.values()
+    ), "地下墓穴应被移出本局（真删除）"
+    assert all(p.room_key in engine.state.board for p in engine.state.players if not p.dead)
+    assert all(m.room_key in engine.state.board for m in engine.state.monsters)
+    assert all(
+        t.room_key in engine.state.board for t in engine.state.tokens if t.holder is None
+    )
+    graph = engine._build_graph()
+    for floor in (-1, 0, 1):
+        keys = sorted(
+            k
+            for k, r in engine.state.board.items()
+            if r.floor == floor and not r.data.get(engine.COLLAPSE_KEY)
+        )
+        if len(keys) <= 1:
+            continue
+        seen = {keys[0]}
+        stack = [keys[0]]
+        while stack:
+            current = stack.pop()
+            for neighbour in graph.get(current, []):
+                if neighbour in seen:
+                    continue
+                if engine.state.board[neighbour].floor != floor:
+                    continue
+                if engine.state.board[neighbour].data.get(engine.COLLAPSE_KEY):
+                    continue
+                seen.add(neighbour)
+                stack.append(neighbour)
+        assert len(seen) == len(keys), f"{floor} 层应全连通，实际 {len(seen)}/{len(keys)}"
+    assert all(
+        engine.state.pos_index.get((r.floor, r.x, r.y)) == k
+        for k, r in engine.state.board.items()
+    )
+    hero_count = int(engine._haunt_flags()["hero_count"])
+    assert len(engine.tokens_of_kind(handler.KEY)) == hero_count
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -7472,6 +7560,7 @@ def main():
     verify_haunt31_heart_brain_spear()
     verify_haunt31_antibody_wall_move()
     verify_haunt32_lost_dimension()
+    verify_haunt32_house_reshuffle()
     verify_haunt33_lake_rescue()
     verify_haunt34_mad_world()
     verify_haunt35_small_change()
@@ -7492,6 +7581,7 @@ def main():
     verify_haunt66_hell_on_earth()
     verify_haunt67_once_upon_a_time()
     verify_haunt68_setup_and_seal()
+    verify_haunt68_tile_rearrange()
     verify_haunt68_key_route_and_confusion()
     verify_haunt56_sands_of_time_setup()
     verify_haunt56_mask_sanity_floor()
