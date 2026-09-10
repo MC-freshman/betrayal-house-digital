@@ -538,6 +538,29 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["wisp_escape", "spore_hazard", "traitor_removed"]},
     },
+    70: {
+        "hero": {
+            # p81：叛徒几乎打不死——必须备克制武器（按形态）。但形态是秘密的，
+            # bot 只能按已暴露的线索（bot 局直接读 flags）备武器。
+            # 68 号教训：本剧本英雄目标是"备武器 + 打叛徒"，打怪寻路要保留，
+            # 但别为打叛徒浪费回合——寻路目标由 bot_goal_rooms 提供。
+            "attack_monsters": False,
+            "attack_traitor_players": True,
+            "victory_focus": "按叛徒暴露的线索备好克制武器（圣水武器/银弹左轮/杀虫剂），再围杀他",
+        },
+        "traitor": {
+            # 访房间是唯一胜利路径：追英雄的常驻目标（+130）会压过剧本目标
+            # （+125），导致叛徒一路追人却从不访房间。这里关掉追人（访完房间
+            # 后由 bot_goal_rooms 接管指路），并关掉攻击英雄的主动意图。
+            # 攻击意图保留（吸血鬼形态要靠打伤英雄吸血才能完成转变），
+            # 但"追人"要关：否则 +130 的常驻目标会压过 +125 的访点目标，
+            # 叛徒一路追人、从不访房间（实测 300 回合僵死）。
+            "attack_heroes": True,
+            "chase_heroes": False,
+            "victory_focus": "按选定形态访遍对应房间完成转变（吸血鬼还要吸一次血），访完再清场",
+        },
+        "scenario": {"special_rules": ["secret_form", "damage_immune", "weakness_weapons"]},
+    },
     57: {
         "hero": {
             # p68/p139：叛徒不受伤害削减，正面围殴纯属白费——除非谁手里有

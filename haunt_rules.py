@@ -3386,22 +3386,108 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [80, 151],
     },
     70: {
-        # supplemental → 显式覆盖（M8 批量转换，数据不变）
-        "version": 2,
-        "fidelity": 'skeleton',
-        "status": 'playable',
-        "mode": 'inhuman_transformation',
-        "traitor_rule": 'revealer',
-        "hero_goal": '根据叛徒的怪物本性准备正确武器并击败他。',
-        "traitor_goal": '完成吸血鬼、狼人或祸害蜘蛛的转变，或杀死所有英雄。',
+        # 校准记录（2026-09-10，对照英雄手册 p81 / 叛徒手册 p152）：
+        #   骨架原本是"准备正确武器"假机制（h70 任务 + 进度轨）。
+        #   机制落在 InhumanTransformationMode：
+        #   · 开局（p152）：叛徒丢弃全部物品/预兆（保留 Bite）、物理属性恢复
+        #     起始值；形态随机秘密选定（吸血鬼/狼人/蜘蛛），只写进 flags。
+        #   · 转变（p152）：吸血鬼访问墓穴/墓地/血腥房间 + 力量攻击造成 ≥1
+        #     物理伤害（吸血）；狼人访问阳台/塔楼/天井/花园/墓地；
+        #     蜘蛛访问炭化房/温室/吱呀走廊/雕像走廊/神秘电梯。进入即计入。
+        #   · 免疫（p81/p152）：叛徒只被克制武器伤害——attack_allowed 拦下
+        #     其余全部攻击（吸血鬼=蘸圣水的矛/斧/血匕首；狼人=银弹+左轮；
+        #     蜘蛛=杀虫剂，走行动免掷骰直接胜）。
+        #   · 英雄备武器（p81）：圣水（礼拜堂/酒窖/地下湖 + 圣徽/天使羽毛，
+        #     理智 ≥ 玩家人数）→ 蘸武器代替攻击；银弹（熔炉房/各实验室，
+        #     知识 ≥ 玩家人数，仅一次）+ 左轮（已开金库搜线索）；杀虫剂三
+        #     材料（醋/园艺工具/喷枪，搜索代替攻击）+ 知识 ≥ 玩家人数合成。
+        #   · 干扰令牌（p152）：叛徒用匹配形态能力（理智/知识/力量令牌），
+        #     英雄下回合对应属性 4+ 挣脱，否则回合立即结束。
+        #   · 胜负（p81/p152）：英雄胜 = 用克制武器击败叛徒（通用兜底）；
+        #     叛徒胜 = 完成转变或英雄全灭。
+        #   已知简化：德鲁伊符不在卡库（圣水需圣徽/天使羽毛）；左轮位置简化
+        #     为直接放 Vault；叛徒不可持物未在物品层拦截；物理属性恢复起始值
+        #     （原文对全场最低者另有提升）；令牌用 flags 记账。
+        "version": 3,
+        "fidelity": "refined",
+        "status": "playable",
+        "mode": "inhuman_transformation",
+        "traitor_rule": "revealer",
+        "hero_goal": "查明他正在变成什么，备好克制它的武器（圣水武器/银弹左轮/杀虫剂），"
+                     "在他完成转变前击败他。",
+        "traitor_goal": "秘密完成属于你的转变——访遍对应的房间（吸血鬼还要吸到血），"
+                        "或杀光所有英雄。",
         "suggested_monsters": [],
-        "required_cards": ['item_revolver', 'item_axe', 'item_blood_dagger'],
-        "key_rooms": ['crypt', 'graveyard', 'bloody_room', 'balcony', 'tower', 'garden', 'patio', 'charred_room', 'conservatory', 'statuary_corridor', 'mystic_elevator', 'kitchen', 'larder', 'attic', 'junk_room'],
-        "tokens": ['bite', 'holy_water', 'silver_bullets', 'bug_spray', 'strength_check', 'knowledge_check', 'sanity_check'],
-        "setup": {'tracks': {'hero_progress': {'label': '英雄：准备克制武器并阻止转变', 'target': 1, 'side': 'heroes'}, 'traitor_progress': {'label': '叛徒：完成怪物转变', 'target': 5, 'side': 'traitor'}}, 'flags': {'scenario_started': True, 'hero_sources_used': [], 'traitor_sources_used': []}},
+        "required_cards": ["item_revolver", "item_axe", "item_blood_dagger"],
+        "key_rooms": [
+            "crypt", "graveyard", "bloody_room", "balcony", "tower", "patio",
+            "garden", "charred_room", "conservatory", "creaky_hallway",
+            "statuary_corridor", "mystic_elevator", "chapel", "wine_cellar",
+            "underground_lake", "furnace_room", "research_laboratory",
+            "operating_laboratory", "kitchen", "larder", "attic", "junk_room",
+        ],
+        "tokens": ["holy_seal", "silver_bullets", "bug_spray"],
+        "setup": {
+            "tracks": {"form_visits": {"label": "转变访点", "target": 5, "side": "traitor"}},
+            "flags": {
+                "form": "vampire",
+                "visited": [],
+                "blood_drawn": False,
+                "holy_rooms": [],
+                "holy_weapons": [],
+                "silver_bullets": False,
+                "bug_spray": False,
+                "ingredients": [],
+                "tokens": {},
+                "transformed": False,
+            },
+        },
         "monsters": [],
-        "actions": [{'id': 'h70_hero_task', 'side': 'heroes', 'label': '准备克制武器并阻止转变', 'detail': '根据剧本提示制作圣水、银弹或杀虫剂，并在叛徒所在房间使用。', 'stat': ['knowledge', 'sanity'], 'target': 5, 'rooms': ['crypt', 'graveyard', 'bloody_room', 'balcony', 'tower', 'garden', 'patio', 'charred_room', 'conservatory', 'statuary_corridor', 'mystic_elevator', 'kitchen', 'larder', 'attic', 'junk_room'], 'progress': 'hero_progress', 'requires': []}, {'id': 'h70_traitor_task', 'side': 'traitor', 'label': '完成怪物转变', 'detail': '访问转变所需房间并推进转变轨道。', 'stat': 'might', 'target': 5, 'rooms': ['crypt', 'graveyard', 'bloody_room', 'balcony', 'tower', 'garden', 'patio', 'charred_room', 'conservatory', 'statuary_corridor', 'mystic_elevator', 'kitchen', 'larder', 'attic', 'junk_room'], 'progress': 'traitor_progress', 'requires': []}],
-        "win_conditions": [{'winner': 'heroes', 'type': 'track', 'track': 'hero_progress', 'operator': '>=', 'target': 1, 'reason': '根据叛徒的怪物本性准备正确武器并击败他。'}, {'winner': 'traitor', 'type': 'track', 'track': 'traitor_progress', 'operator': '>=', 'target': 5, 'reason': '完成吸血鬼、狼人或祸害蜘蛛的转变，或杀死所有英雄。'}],
+        "actions": [
+            {"id": "create_holy_water", "side": "heroes", "label": "制作圣水",
+             "detail": "在礼拜堂/酒窖/地下湖，且持有圣徽或天使羽毛时做理智检定："
+                       "结果 ≥ 玩家人数即成功，该房间出现圣水（p81）。每回合一次。",
+             "stat": "sanity", "target": 4,
+             "rooms": ["chapel", "wine_cellar", "underground_lake"]},
+            {"id": "dip_weapon", "side": "heroes", "label": "蘸水",
+             "detail": "在有圣水的房间持有矛/斧/血匕首时，把武器浸入圣水"
+                       "（代替攻击）：该武器从此可以伤害吸血鬼（p81）。",
+             "stat": "might", "target": 0},
+            {"id": "create_silver_bullets", "side": "heroes", "label": "铸造银弹",
+             "detail": "在熔炉房/研究实验室/手术实验室做知识检定：结果 ≥ 玩家人数"
+                       "即成功，造出银弹（全局仅一次，p81）。每回合一次。",
+             "stat": "knowledge", "target": 4,
+             "rooms": ["furnace_room", "research_laboratory", "operating_laboratory"]},
+            {"id": "search_revolver", "side": "heroes", "label": "搜寻左轮线索",
+             "detail": "在金库（须已开）搜出左轮——原文由叛徒从物品牌堆取出放置（p81）。",
+             "stat": "knowledge", "target": 0, "rooms": ["vault"]},
+            {"id": "search_ingredient", "side": "heroes", "label": "搜索材料",
+             "detail": "在厨房/储藏室（醋）、花园/天井（园艺工具）、阁楼/垃圾房"
+                       "（喷枪）搜索材料，代替攻击（p81）。",
+             "stat": "knowledge", "target": 0,
+             "rooms": ["kitchen", "larder", "garden", "patio", "attic", "junk_room"]},
+            {"id": "assemble_bug_spray", "side": "heroes", "label": "调配杀虫剂",
+             "detail": "集齐醋、园艺工具、喷枪后做知识检定：结果 ≥ 玩家人数即"
+                       "合成杀虫剂（p81）。每回合一次。",
+             "stat": "knowledge", "target": 4},
+            {"id": "spray_traitor", "side": "heroes", "label": "喷洒杀虫剂",
+             "detail": "持杀虫剂与叛徒同房间时使用，无需掷骰：若他是祸害蜘蛛，"
+                       "英雄立即获胜（p81）。每回合一次。",
+             "stat": "knowledge", "target": 0, "requires": ["same_room:traitor"]},
+            {"id": "token_hypnotize", "side": "traitor", "label": "催眠（吸血鬼）",
+             "detail": "吸血鬼形态专用：给同房英雄放一枚理智令牌（代替攻击），"
+                       "该英雄下回合理智 4+ 否则回合结束（p152）。",
+             "stat": "sanity", "target": 0},
+            {"id": "token_infect", "side": "traitor", "label": "感染（狼人）",
+             "detail": "狼人形态专用：给同房英雄放一枚知识令牌（代替攻击），"
+                       "该英雄下回合知识 4+ 否则回合结束（p152）。",
+             "stat": "knowledge", "target": 0},
+            {"id": "token_trap", "side": "traitor", "label": "结网（蜘蛛）",
+             "detail": "祸害蜘蛛形态专用：给同房英雄放一枚力量令牌（代替攻击），"
+                       "该英雄下回合力量 4+ 否则回合结束（p152）。",
+             "stat": "might", "target": 0},
+        ],
+        "win_conditions": [],
         "source_pages": [81, 152],
     },
 }

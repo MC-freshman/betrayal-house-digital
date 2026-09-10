@@ -398,6 +398,14 @@ class BotController:
         target_rooms = set(profile.get("target_rooms", []) or [])
         avoid_rooms = set(profile.get("avoid_rooms", []) or [])
         previous_room_key = self._previous_room_by_player.get(player.id)
+        # 剧本目标房间所在的楼层。换层惩罚（-18）原本无差别地压过一切，
+        # 导致"目标在别的楼层"的剧本里，机器人永远不下地下室/不上楼
+        # （70 号实测：吸血鬼形态差一间地下室的墓穴，叛徒在楼上打转 300 回合）。
+        haunt_goal_floors = {
+            engine.state.board[key].floor
+            for key in haunt_goals
+            if key in engine.state.board
+        }
 
         def score(option: ExitOption) -> int:
             value = 0
@@ -437,7 +445,9 @@ class BotController:
                     if changing_floor and not engine.has_remaining_room_cards(current_room.floor):
                         value += 95 if engine.has_remaining_room_cards(room.floor) else 15
                     elif changing_floor:
-                        value -= 18
+                        # 换层去剧本目标所在楼层时不再惩罚，反而加分——
+                        # 否则"目标在别的楼层"的剧本永远走不出去。
+                        value += 40 if room.floor in haunt_goal_floors else -18
             return value
 
         return sorted(options, key=score, reverse=True)
@@ -562,7 +572,15 @@ class BotController:
 
         if engine.state.phase == "HAUNT_PHASE":
             if player.role == "traitor":
-                targets.extend(other.room_key for other in engine.state.players if other.role == "hero" and not other.dead)
+                # 剧本可用 chase_heroes=False 关掉"追英雄"的常驻目标（+130），
+                # 让位给剧本目标（+125）——70 号实测：叛徒要访遍形态房间才能
+                # 完成转变，追人权重更高时它会一路追人、从不访点，全局僵死。
+                if profile.get("chase_heroes", True):
+                    targets.extend(
+                        other.room_key
+                        for other in engine.state.players
+                        if other.role == "hero" and not other.dead
+                    )
             elif profile.get("attack_monsters", True):
                 targets.extend(monster.room_key for monster in engine.state.monsters if monster.stunned_turns <= 0)
             if player.role == "hero" and player.bot_difficulty == "hard" and profile.get("protect_humans", True):

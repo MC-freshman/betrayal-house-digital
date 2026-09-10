@@ -73,6 +73,7 @@ if __package__ in {None, ""}:
         ForAThousandYearsMode,
         BurningSandsMode,
         WispCaptureMode,
+        InhumanTransformationMode,
         PortraitCurseMode,
         BuriedAliveMode,
         ShadowExorcismMode,
@@ -202,6 +203,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(StorybookTwistsMode) == [67], f"67 未走定制"
     assert handlers.get(LabyrinthEscapeMode) == [68], f"68 未走定制"
     assert handlers.get(WispCaptureMode) == [69], f"69 未走定制"
+    assert handlers.get(InhumanTransformationMode) == [70], f"70 未走定制"
     assert handlers.get(TimeBombMode) == [45], f"剧本 45 未走定制 handler: {handlers.get(TimeBombMode)}"
     assert handlers.get(BuriedAliveMode) == [40], f"剧本 40 未走定制 handler: {handlers.get(BuriedAliveMode)}"
     assert handlers.get(InvisibleTraitorMode) == [41], f"剧本  未走定制"
@@ -223,7 +225,7 @@ def verify_mode_dispatch() -> None:
     assert handlers.get(ForAThousandYearsMode) == [59], f"剧本 59 未走定制 handler: {handlers.get(ForAThousandYearsMode)}"
     assert handlers.get(BurningSandsMode) == [60], f"剧本 60 未走定制 handler: {handlers.get(BurningSandsMode)}"
     generic = handlers.get(GenericModeHandler, [])
-    assert len(generic) == 1, f"应有 1 个剧本回落到通用规则，实际 {len(generic)}"
+    assert len(generic) == 0, f"应有 0 个剧本回落到通用规则（70 本全部精修），实际 {len(generic)}"
 
     # 未注册的 mode 必须优雅降级，绝不能抛异常
     assert isinstance(get_mode_handler("labyrinth_escape"), LabyrinthEscapeMode)
@@ -240,7 +242,7 @@ def verify_mode_dispatch() -> None:
         "web_escape", "werewolf_hunt", "witch_and_frogs", "zombie_lord", "abyss_exorcism",
         "tentacled_horror", "bat_exodus", "voodoo_dolls", "rat_ritual", "blob_weakness",
         "demon_ring", "frankenstein_fire", "dracula_rising", "hellbeast_exorcism",
-        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "haunt_exorcism", "hell_on_earth", "storybook_twists", "labyrinth_escape", "wisp_capture", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
+        "living_house", "lost_dimension", "lake_rescue", "supernatural_aging", "darker_than_night", "ring_exorcism", "toxic_object_escape", "arkanok_skull", "kings_roads", "ghost_warrior", "bag_of_tricks", "twisting_nether", "blood_offering", "haunt_exorcism", "hell_on_earth", "storybook_twists", "labyrinth_escape", "wisp_capture", "inhuman_transformation", "time_bomb", "mad_world", "small_change_escape", "swamp_escape", "death_checkmate", "secret_heir", "buried_alive", "invisible_traitor", "hell_gate_hero", "shadow_exorcism",
         "cannibal_feast",
         "worm_ouroboros",
         "cursed_weapon",
@@ -5850,6 +5852,107 @@ def verify_haunt69_catch_and_escape() -> None:
     assert h3.check_victory(engine3) is True and engine3.state.winner == "traitor"
 
 
+def verify_haunt70_transformation_setup() -> None:
+    """剧本 70：叛徒清空物品、形态秘密选定、形态房间在场、免疫拦截（p81/p152）。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=70)
+    handler = engine._mode_handler()
+    assert isinstance(handler, InhumanTransformationMode)
+    flags = engine._haunt_flags()
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # p152：形态随机秘密选定（只在 flags 里），且三种之一
+    assert flags["form"] in handler.FORMS
+    # p152：叛徒丢弃全部物品/预兆，但保留 Bite
+    assert handler.BITE in traitor.items
+    assert all(c == handler.BITE for c in traitor.items)
+    # p152：物理属性不低于起始值
+    for stat in ("might", "speed"):
+        assert traitor.stats.get(stat, 0) >= traitor.stats_max.get(stat, 0)
+    # 形态房间与地下室通路都保证在场
+    on_board = {r.template_id for r in engine.state.board.values()}
+    assert handler._required_rooms(engine), "形态房间应至少有一间可达"
+    assert "entrance_hall" in on_board and "basement_landing" in on_board
+
+    # p81/p152：叛徒免疫普通攻击——英雄空手攻击被拦
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    hero.room_key = traitor.room_key
+    assert handler.attack_allowed(engine, hero, traitor) is False, "徒手攻击应被免疫拦下"
+    # 按形态给出克制武器后放行
+    form = handler._form(engine)
+    if form == "vampire":
+        hero.items.append(handler.TRAITOR_WEAPONS[0])
+        flags["holy_weapons"] = [handler.TRAITOR_WEAPONS[0]]
+        assert handler.attack_allowed(engine, hero, traitor) is True
+    elif form == "werewolf":
+        hero.items.append(handler.REVOLVER)
+        flags["silver_bullets"] = True
+        assert handler.attack_allowed(engine, hero, traitor) is True
+
+
+def verify_haunt70_weapons_and_immunity() -> None:
+    """剧本 70：圣水/银弹/杀虫剂三条武器线、净化即胜、干扰令牌（p81/p152）。"""
+    engine = _run_until_haunt(seed=137, players=3, haunt_id=70)
+    handler = engine._mode_handler()
+    assert isinstance(handler, InhumanTransformationMode)
+    flags = engine._haunt_flags()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine, hero)
+
+    # p81：圣水需要圣徽/天使羽毛 + 在礼拜堂/酒窖/地下湖
+    on_board = {r.template_id: k for k, r in engine.state.board.items()}
+    chapel = on_board.get("chapel")
+    if chapel:
+        hero.room_key = chapel
+        hero.items.append(handler.HOLY_TOOLS[0])
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, hero, "create_holy_water", {}) is True
+        assert chapel in flags["holy_rooms"]
+        # 蘸武器（代替攻击）
+        hero.items.append(handler.TRAITOR_WEAPONS[0])
+        assert handler.perform_action(engine, hero, "dip_weapon", {}) is True
+        assert handler.TRAITOR_WEAPONS[0] in flags["holy_weapons"]
+
+    # p81：杀虫剂三材料 + 合成（免掷骰的喷杀走单独行动）
+    engine2 = _run_until_haunt(seed=137, players=3, haunt_id=70)
+    h2 = engine2._mode_handler()
+    f2 = engine2._haunt_flags()
+    f2["ingredients"] = list(h2.INGREDIENTS)
+    hero2 = next(p for p in engine2.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine2, hero2)
+    with patch.object(engine2, "_resolve_check", return_value=True):
+        assert h2.perform_action(engine2, hero2, "assemble_bug_spray", {}) is True
+    assert f2["bug_spray"] is True and f2["ingredients"] == []
+
+    # p81：蜘蛛形态下喷杀虫剂 → 英雄立即获胜
+    engine3 = _run_until_haunt(seed=137, players=3, haunt_id=70)
+    h3 = engine3._mode_handler()
+    f3 = engine3._haunt_flags()
+    f3["form"] = "bane_spider"
+    f3["bug_spray"] = True
+    traitor3 = next(p for p in engine3.state.players if p.role == "traitor")
+    hero3 = next(p for p in engine3.state.players if p.role == "hero" and not p.dead)
+    hero3.room_key = traitor3.room_key
+    _set_current(engine3, hero3)
+    assert h3.perform_action(engine3, hero3, "spray_traitor", {}) is True
+    assert engine3.state.winner == "heroes"
+
+    # p152：叛徒的干扰令牌——英雄下回合对应属性 4+ 挣脱，否则回合立即结束
+    engine4 = _run_until_haunt(seed=137, players=3, haunt_id=70)
+    h4 = engine4._mode_handler()
+    f4 = engine4._haunt_flags()
+    f4["form"] = "vampire"
+    traitor4 = next(p for p in engine4.state.players if p.role == "traitor")
+    hero4 = next(p for p in engine4.state.players if p.role == "hero" and not p.dead)
+    traitor4.room_key = hero4.room_key
+    _set_current(engine4, traitor4)
+    assert h4.perform_action(engine4, traitor4, "token_hypnotize", {}) is True
+    assert f4["tokens"].get(str(hero4.id)) == "sanity"
+    hero4.movement_stopped = False
+    with patch.object(engine4, "roll_dice", return_value=1):
+        h4.on_turn_start(engine4, hero4)
+    assert hero4.movement_stopped and hero4.attack_used, "检定失败应困住英雄"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -7324,6 +7427,8 @@ def main():
     verify_haunt60_riddle_race()
     verify_haunt69_wisp_setup()
     verify_haunt69_catch_and_escape()
+    verify_haunt70_transformation_setup()
+    verify_haunt70_weapons_and_immunity()
     verify_haunt57_paint_setup()
     verify_haunt57_repaint_and_immunity()
     verify_haunt46_the_feast_setup()

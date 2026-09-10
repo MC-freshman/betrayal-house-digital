@@ -5,6 +5,7 @@ import sys
 from tempfile import TemporaryDirectory
 from pathlib import Path
 from unittest.mock import patch
+from copy import deepcopy
 
 # 桌面版依赖 tkinter。很多精简版 Python（含部分官方安装包与虚拟环境）
 # 不带 tkinter，直接用会抛 ModuleNotFoundError，看起来像"代码坏了"，
@@ -45,12 +46,12 @@ else:
 # 通用行动/轨道胜负回归样本：须为 fidelity=skeleton、hero_progress target>=2、
 # 无 required_cards/无 action requires、且不在当前精修批次队列内的剧本；
 # 精修到该号时必须同步把此常量搬迁到另一个仍满足条件的骨架剧本。
-# 样本顺延史：48 → 60 → 61 → 69 → 70。70 是最后一本骨架，精修它时本样本
-# 需要另找落点（届时可改为在测试内直接构造 catalog.haunts 条目）。
-# 70 的 required_cards 引擎并不读取，不影响触发；它的 rooms 里没有 chapel/foyer，
-# 所以落房用 _GENERIC_SAMPLE_ROOM。
-_GENERIC_SAMPLE_HAUNT = 70
-_GENERIC_SAMPLE_ROOM = "garden"
+# 样本顺延史：48 → 60 → 61 → 69 → 70 → **虚拟骨架**。
+# 70 号（最后一本真骨架）精修后，本测试不再依赖任何真实剧本：改为在
+# `_install_generic_sample` 里构造一份测试专用骨架 rule_data，注入
+# `engine.catalog.haunt_defs`，跑完即随 engine 一起丢弃，不碰仓库文件。
+_GENERIC_SAMPLE_HAUNT = 9001
+_GENERIC_SAMPLE_ROOM = "chapel"
 
 
 def _configs(count: int = 4, bot_difficulty: str = "hard") -> list[dict]:
@@ -319,13 +320,14 @@ def verify_supplemental_rooms_and_events() -> None:
 
 
 def verify_generic_haunt_action_and_victory() -> None:
-    # 用仍是模板骨架的 _GENERIC_SAMPLE_HAUNT 号剧本验证通用行动/轨道胜负
+    # 用测试内注入的虚拟骨架（_GENERIC_SAMPLE_HAUNT = 9001）验证通用行动/轨道胜负
     # （它是全库唯一验证“骨架剧本通用行动 + 轨道多次累加至 target 触发胜利”的回归网；
-    #   已精修剧本见 verify_haunt_systems 的对应专属用例）
+    #   已精修剧本见 verify_haunt_systems 的对应专属用例。70 号精修后不再借用真剧本）
     sample = _GENERIC_SAMPLE_HAUNT
     hero_task = f"h{sample}_hero_task"
     engine = GameEngine(seed=43)
     engine.start_new_game(_configs(4, "normal"))
+    _install_generic_sample(engine)
     _trigger_specific_haunt(engine, sample)
     hero = next(player for player in engine.state.players if player.role == "hero")
     # 用该骨架剧本声明的房间列表里存在的房间落房（70 号列表含 garden）
@@ -371,6 +373,59 @@ def verify_haunt_rule_init_and_privacy() -> None:
     hero_view = state_to_view_dict(engine.state, hero.id)
     assert hero_view["haunt"]["rule_data"] == {}
     assert "haunt_rule" not in hero_view["meta"]
+
+
+def _install_generic_sample(engine: GameEngine) -> None:
+    """把测试专用骨架注入 catalog（不依赖任何真实剧本，也绝不改仓库文件）。
+
+    以 70 号的 Haunt 对象为外壳（拿到合法的字段结构），替换 id / mode /
+    rule_data 后放进 `catalog.haunt_defs`；engine 触发作祟时按 id 取到它。
+    """
+    template = deepcopy(engine.catalog.haunt_defs[70])
+    template.id = _GENERIC_SAMPLE_HAUNT
+    template.name = "测试用骨架"
+    template.mode = "generic"  # 未注册 mode → 回落 GenericModeHandler
+    template.rule_data = {
+        "version": 2,
+        "fidelity": "skeleton",
+        "status": "playable",
+        "mode": "generic",
+        "traitor_rule": "revealer",
+        "setup": {
+            "tracks": {
+                "hero_progress": {
+                    "label": "测试进度",
+                    "target": "player_count",
+                    "side": "heroes",
+                }
+            },
+            "flags": {},
+        },
+        "monsters": [],
+        "actions": [
+            {
+                "id": f"h{_GENERIC_SAMPLE_HAUNT}_hero_task",
+                "side": "heroes",
+                "label": "测试任务",
+                "stat": "knowledge",
+                "target": 5,
+                "progress": "hero_progress",
+                "rooms": [_GENERIC_SAMPLE_ROOM],
+            }
+        ],
+        "win_conditions": [
+            {
+                "winner": "heroes",
+                "type": "track",
+                "track": "hero_progress",
+                "operator": ">=",
+                "target": "player_count",
+                "reason": "测试：轨道累加至玩家数即胜。",
+            }
+        ],
+        "source_pages": [1, 1],
+    }
+    engine.catalog.haunt_defs[_GENERIC_SAMPLE_HAUNT] = template
 
 
 def _trigger_specific_haunt(engine: GameEngine, haunt_id: int) -> None:
