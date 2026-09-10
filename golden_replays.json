@@ -2896,7 +2896,7 @@
       "players": 5,
       "completed": true,
       "stalled_no_room_cards": false,
-      "hash": "3f06a650af2e13576a01b8bdccbb34c175cc474bfa048786549acdd5cced7d44",
+      "hash": "ebead08c8273dde008308712a2e60c81afd737a8873c590f3d9da602418726de",
       "turns": 46,
       "phase": "GAME_OVER",
       "winner": "traitor",

@@ -5997,6 +5997,37 @@ def verify_haunt5_werewolf_hunt() -> None:
         assert flags.get("silver_bullets_created") is True, "检定成功应制成银弹"
 
 
+def verify_haunt56_mask_sanity_floor() -> None:
+    """剧本 56：面具 -2 理智的死亡保护方向（p138：会致死则停在骷髅上一格）。
+
+    回归 M10-16 修的反向 bug——旧实现判断的是**上界**（pos+2 > len-1）并把位置
+    上调，只有理智接近顶格时才触发、触发后反而把理智抬上去。
+    """
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=56)
+    handler = engine._mode_handler()
+    assert isinstance(handler, SandsOfTimeMode)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    track = engine._stat_track(traitor, "sanity")
+    assert track and len(track) >= 6 and track[0] > 0, "理智轨道应为递增且 >0"
+    haunt = engine.state.haunt
+
+    # 情形 A：理智在格位 1，-2 会跌到骷髅 → 保底格位 0（骷髅上一格）
+    traitor.stat_positions["sanity"] = 1
+    traitor.stats["sanity"] = track[1]
+    traitor.overflow["sanity"] = 0
+    handler.setup(engine, haunt, traitor.room_key)
+    assert traitor.stat_positions["sanity"] == 0, "会致死的 -2 应停在骷髅上一格"
+    assert traitor.stats["sanity"] == track[0]
+    assert not traitor.dead, "面具保护下不应死亡"
+
+    # 情形 B：理智充裕（格位 5）→ 正常 -2（落到格位 3）
+    traitor.stat_positions["sanity"] = 5
+    traitor.stats["sanity"] = track[5]
+    traitor.overflow["sanity"] = 0
+    handler.setup(engine, haunt, traitor.room_key)
+    assert traitor.stat_positions["sanity"] == 3, "理智充裕时应正常 -2"
+
+
 def verify_haunt4_setup_and_trapped() -> None:
     """剧本 4：被困者钉住、蛛网/检定令牌放置、3-4 人局叛徒被吃（p15/p86）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
@@ -7463,6 +7494,7 @@ def main():
     verify_haunt68_setup_and_seal()
     verify_haunt68_key_route_and_confusion()
     verify_haunt56_sands_of_time_setup()
+    verify_haunt56_mask_sanity_floor()
     verify_haunt56_time_powers()
     verify_haunt58_nightfall_setup()
     verify_haunt58_torch_banish_haunting()

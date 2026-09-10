@@ -12040,15 +12040,18 @@ class SandsOfTimeMode(GenericModeHandler):
             "time_track", {"label": "时之沙掌控（失控线）", "target": 10, "value": 0}
         )
         traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
-        # p138：立即戴上面具——+2 知识、-2 理智（理智死亡保护到骷髅上一格）
+        # p138：立即戴上面具——+2 知识、-2 理智（若这次损失会致死，理智停在骷髅上一格）
         if traitor is not None and not traitor.dead:
             engine._increase_stat(traitor, "knowledge", 2)
+            # 属性轨道一律递增（实测 sanity=[3,4,5,5,6,7,7,8]），格位 0 是最低值、
+            # 骷髅在 -1，所以「骷髅上一格」= 格位 0。旧实现判断的是**上界**
+            # （pos + 2 > len - 1）并把位置**上调**，方向整个反了——只有理智接近
+            # 顶格时才触发、触发后反而把理智抬上去（M10-16 实测探针修正）。
             track = engine._stat_track(traitor, "sanity") or []
-            floor_pos = max(0, len(track) - 2)  # 骷髅上一格（格位越大数值越小）
             pos = traitor.stat_positions.get("sanity", 0)
-            if track and pos + 2 > len(track) - 1:
-                traitor.stat_positions["sanity"] = min(floor_pos, pos + 2)
-                traitor.stats["sanity"] = track[traitor.stat_positions["sanity"]]
+            if track and pos - 2 < 0:
+                traitor.stat_positions["sanity"] = 0
+                traitor.stats["sanity"] = track[0]
                 engine._log(f"{traitor.name} 的理智坠到了崩溃边缘，但面具不容他死去。")
             else:
                 engine._apply_stat_loss(traitor, "sanity", 2)
