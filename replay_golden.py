@@ -272,10 +272,23 @@ def _configs(seed: int, player_count: int) -> list[dict[str, str]]:
     ]
 
 
+# 终局哈希只覆盖「行为状态」。haunt 的 name / hero_script / traitor_script 是
+# 纯展示文案（引擎与 bot 都不读，只有 ui.py 展示与 verify_v1.py 的角色隔离断言
+# 用得到），把它们剔出哈希载荷后，70 本剧本文案的润色/重译不会牵动这张回归网——
+# 文案与规则的分离，在回归层也落实到「哈希只认行为」。
+_PROSE_HAUNT_FIELDS = ("name", "hero_script", "traitor_script")
+
+
 def _fingerprint(engine: GameEngine) -> tuple[str, dict]:
-    """终局状态哈希 + 便于人工判断的摘要。"""
+    """终局状态哈希（仅行为字段） + 便于人工判断的摘要。"""
+    state = state_to_dict(engine.state)
+    haunt = state.get("haunt")
+    if isinstance(haunt, dict):
+        state["haunt"] = {
+            key: value for key, value in haunt.items() if key not in _PROSE_HAUNT_FIELDS
+        }
     payload = json.dumps(
-        state_to_dict(engine.state),
+        state,
         ensure_ascii=False,
         sort_keys=True,
         default=str,
