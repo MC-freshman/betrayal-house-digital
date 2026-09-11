@@ -2137,41 +2137,29 @@ class GameEngine:
                 targets.append(monster)
         return targets
 
-    def attack(self, attacker: Player, target: object, weapon_card_id: str | None = None, ranged: bool = False) -> bool:
-        if attacker.dead or attacker.attack_used or self.state.phase != "HAUNT_PHASE":
-            return False
-        if attacker.frog:
-            self._log("青蛙不能攻击。")
-            return False
-        # 剧本可禁止攻击（如剧本 2 p13：降灵会完成前谁都不许动手）。
-        if not self._mode_handler().attack_allowed(self, attacker, target):
-            self._log(f"{attacker.name} 此刻不能攻击。")
-            return False
-        attacker_room = self.current_room(attacker)
-        target_room_key = target.room_key
-        if not ranged and attacker_room.key != target_room_key:
-            return False
-        if ranged and not self._has_line_of_sight(attacker_room.key, target_room_key):
-            return False
-        if not isinstance(target, Player) and self._monster_invulnerable(target):
-            self._log(f"{target.name} 目前无法被攻击。")
-            return False
+    def _derive_attack_params(self, attacker: Player, target: object, weapon_card_id: str | None, ranged: bool):
+        """推导一次攻击的确定性参数（远程否 / 攻击属性 / 武器 / 加值）。
 
+        执行（attack）与合法性查询（_attack_gates_pass / attack_would_be_allowed）
+        共用本方法，保证"能不能打"的预测与真实执行走同一份推导，不会漂移。
+        返回 None 表示武器非法（不存在或未持有），闸门据此判否。
+        """
         attack_attr = "might"
         weapon: Card | None = None
         if weapon_card_id:
             weapon = self.catalog.cards.get(weapon_card_id)
             if weapon is None or weapon_card_id not in attacker.items:
-                return False
-            attack_bonus = self._attack_bonus_from_inventory(attacker, weapon_card_id)
+                return None
             if "ranged" in weapon.tags:
                 ranged = True
+            # 标签优先级与执行路径一致：knowledge → sanity → speed，后写覆盖。
             if "knowledge" in weapon.tags:
                 attack_attr = "knowledge"
             if "sanity" in weapon.tags:
                 attack_attr = "sanity"
             if "speed" in weapon.tags:
                 attack_attr = "speed"
+            attack_bonus = self._attack_bonus_from_inventory(attacker, weapon_card_id)
         else:
             attack_bonus = self._attack_bonus_from_inventory(attacker, None)
         # 剧本可覆盖攻击属性（剧本 11 雾中人影 / 剧本 19 持戒理智攻击驯兽师）。
@@ -2183,6 +2171,46 @@ class GameEngine:
         if not isinstance(target, Player):
             # 剧本可给攻击骰加值（剧本 15 p26：持矛对巨龙 +4）。
             attack_bonus += self._mode_handler().attack_roll_bonus(self, attacker, target)
+        return (ranged, attack_attr, weapon, attack_bonus)
+
+    def _attack_gates_pass(self, attacker: Player, target: object, weapon_card_id: str | None, ranged: bool = False, ignore_position: bool = False, log: bool = True) -> bool:
+        """攻击的确定性前置检查（与 attack 执行同源）。
+
+        所有"能不能打"的判定集中在此：phase/frog/attack_used、剧本 handler 的
+        attack_allowed 闸门、房间邻接或视线（LOS）、怪物无敌、武器合法性与
+        怪物免疫（immune_to）。bot 通过 attack_would_be_allowed 复用同一逻辑，
+        不再自己复刻一份会漂移的副本。
+        ignore_position=True 时跳过"邻接/LOS"闸门，用于"若该玩家与怪物同室能否
+        伤到它"这类不依赖当前位置的预判（追击 / 走位评分）。
+        log=False 时只做判定不写日志——bot 在决策阶段大量查询，必须避免污染
+        对局日志（真实执行路径 attack() 始终用 log=True）。
+        """
+        if attacker.dead or attacker.attack_used or self.state.phase != "HAUNT_PHASE":
+            return False
+        if attacker.frog:
+            if log:
+                self._log("青蛙不能攻击。")
+            return False
+        # 剧本可禁止攻击（如剧本 2 p13：降灵会完成前谁都不许动手）。
+        if not self._mode_handler().attack_allowed(self, attacker, target):
+            if log:
+                self._log(f"{attacker.name} 此刻不能攻击。")
+            return False
+        attacker_room = self.current_room(attacker)
+        target_room_key = target.room_key
+        if not ignore_position:
+            if not ranged and attacker_room.key != target_room_key:
+                return False
+            if ranged and not self._has_line_of_sight(attacker_room.key, target_room_key):
+                return False
+        if not isinstance(target, Player) and self._monster_invulnerable(target):
+            if log:
+                self._log(f"{target.name} 目前无法被攻击。")
+            return False
+        params = self._derive_attack_params(attacker, target, weapon_card_id, ranged)
+        if params is None:
+            return False
+        _ranged, attack_attr, weapon, attack_bonus = params
         # 怪物免疫：immune_to 列出的攻击属性对它无效（p17/p88：外星人免疫
         # 速度攻击如左轮；剧本 1 木乃伊同理；剧本 11 雾中人影免疫力量/速度）。
         if not isinstance(target, Player):
@@ -2191,8 +2219,29 @@ class GameEngine:
             )
             immune = set(specs.get("immune_to", []) or [])
             if attack_attr in immune or f"{attack_attr}_attack" in immune:
-                self._log(f"{target.name} 免疫{ {'might': '力量', 'speed': '速度', 'sanity': '理智', 'knowledge': '知识'}[attack_attr] }攻击。")
+                if log:
+                    self._log(f"{target.name} 免疫{ {'might': '力量', 'speed': '速度', 'sanity': '理智', 'knowledge': '知识'}[attack_attr] }攻击。")
                 return False
+        return True
+
+    def attack_would_be_allowed(self, attacker: Player, target: object, weapon_card_id: str | None = None, ignore_position: bool = False) -> bool:
+        """bot 用：预测"该玩家能否合法攻击该目标"，与真实执行同源。
+
+        不传 ranged —— 远程与否由武器标签决定，正好契合"用现有武器或空手
+        至少有一种方式合法"的判定需求。
+        """
+        return self._attack_gates_pass(attacker, target, weapon_card_id, ranged=False, ignore_position=ignore_position, log=False)
+
+    def attack(self, attacker: Player, target: object, weapon_card_id: str | None = None, ranged: bool = False) -> bool:
+        # 确定性前置检查与 bot 查询方法同源（见 _attack_gates_pass）。
+        if not self._attack_gates_pass(attacker, target, weapon_card_id, ranged):
+            return False
+        # 闸门已通过，重新推导执行所需参数；与闸门共用 _derive_attack_params，
+        # 保证攻击属性推导只有一份实现，不会与查询漂移。
+        _ranged, attack_attr, weapon, attack_bonus = self._derive_attack_params(
+            attacker, target, weapon_card_id, ranged
+        )
+        ranged = _ranged
         if isinstance(target, Player):
             # 剧本 6：被控英雄不能被外星人"攻击受伤"之外的手段打死这里不拦；
             # 但被控者可以被打（解救），见 _apply_attack_damage 的半伤解控。

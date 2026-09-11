@@ -263,19 +263,24 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
     24: {
         "hero": {
-            "objective_type": "escape_or_reach_room",
-            "target_rooms": ["入口大厅", "门厅", "大楼梯"],
+            # p35：英雄真实胜利 = 把蝙蝠封回窗外（bats_sealed 且场上无蝙蝠），
+            # 不是逃生。bot 的推进点由 handler.bot_goal_rooms 动态给管风琴房，
+            # 这里只兜底把管风琴房列为目标房间，并保留避开高危房间的习惯。
+            "objective_type": "exorcise_seal",
+            "target_rooms": ["organ_room"],
             "avoid_rooms": ["深渊", "坍塌的房间", "血房间"],
+            "attack_monsters": True,
             "protect_humans": True,
-            "victory_focus": "向出口和安全路线移动",
+            "victory_focus": "去管风琴房启动并奏响驱蝠之音，封死入口后清掉贴附的蝙蝠",
         },
         "traitor": {
+            # 叛徒开局即死，traitor bot 不参与（吸收兜底），保留攻击意图无害。
             "objective_type": "block_escape",
-            "target_rooms": ["入口大厅", "门厅", "大楼梯"],
+            "target_rooms": [],
             "attack_heroes": True,
-            "victory_focus": "守住出口路线并拖延英雄",
+            "victory_focus": "叛徒已死，bot 不行动",
         },
-        "scenario": {"special_rules": ["escape"]},
+        "scenario": {"special_rules": ["exorcise_seal"]},
     },
     25: {
         "hero": {
@@ -407,6 +412,25 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["soul_out_of_body", "ritual_possession", "mental_only"]},
     },
+    38: {
+        "hero": {
+            # p49：英雄胜 = 驱魔成功次数满员；火蝠不可被攻击（monster invulnerable，
+            # 见 haunt_modes.py 7542 注释），追它纯浪费。bot 由 handler.bot_goal_rooms
+            # 动态去仍可用的房间类驱魔来源（教堂/地窖/五芒星室/图书馆/研究实验室）。
+            "objective_type": "exorcise_seal",
+            "target_rooms": ["chapel", "crypt", "pentagram_chamber", "library", "research_laboratory"],
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "去驱魔来源房做驱魔检定，满员即放逐火蝠；绝不追打不可伤的火蝠",
+        },
+        "traitor": {
+            # 叛徒存活操控火蝠，靠怪物回合灼烧英雄；不主动肉搏。
+            "objective_type": "burn_heroes",
+            "attack_heroes": True,
+            "victory_focus": "把火蝠聚到英雄所在房间，靠灼烧磨死英雄",
+        },
+        "scenario": {"special_rules": ["exorcise_seal", "invulnerable_firebats"]},
+    },
     50: {
         "hero": {
             # p61：没有别的胜利条件——活到日出即可。仆人夜越深越强，
@@ -418,6 +442,45 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
             "victory_focus": "让仆人在第 10 回合之前杀光所有英雄；叛徒死了也不影响胜利",
         },
         "scenario": {"special_rules": ["survive_until_dawn", "growing_monsters"]},
+    },
+    53: {
+        "hero": {
+            # p64：英雄胜 = 半数逃出前门 或 净化死亡之物(熔炉房/地下湖)+半数存活。
+            # bot 由 handler.bot_goal_rooms 动态给目标（去拿死亡之物→熔炉房/地下湖净化，
+            # 或前门解锁后逃生）。这里把关键路线房兜底列上。
+            "objective_type": "cleanse_or_escape",
+            "target_rooms": ["furnace_room", "underground_lake", "entrance_hall"],
+            "attack_monsters": True,
+            "protect_humans": True,
+            "victory_focus": "拿死亡之物去熔炉房/地下湖净化，或前门解锁后半数逃生",
+        },
+        "traitor": {
+            # 叛徒靠狗带死亡之物 + 毒云磨英雄；攻击意图保留。
+            "objective_type": "spread_poison",
+            "attack_heroes": True,
+            "victory_focus": "让狗带着死亡之物游荡扩散毒云，拖死英雄",
+        },
+        "scenario": {"special_rules": ["cleanse_or_escape", "poison_cloud"]},
+    },
+    54: {
+        "hero": {
+            # p65：英雄胜 = 持颅到遗骸房净化（ritual_progress 满）。
+            # 注：分析员原本建议 attack_traitor_players:True，但实测开启后英雄会
+            # 放弃净化去追叛徒，ritual_progress 始终到不了满——反而 0% 惨败。
+            # 故保持默认 False，靠 handler.bot_goal_rooms 把持颅英雄引去遗骸房净化，
+            # 不主动追叛徒（不追也不会阻碍净化）。
+            "objective_type": "ritual_then_hunt",
+            "attack_monsters": True,
+            "attack_traitor_players": False,
+            "victory_focus": "持颅找到遗骸房净化；追叛徒会贻误净化，故不主动追，只管推进仪式",
+        },
+        "traitor": {
+            # 叛徒靠僵尸群磨英雄；攻击意图保留。
+            "objective_type": "raise_zombies",
+            "attack_heroes": True,
+            "victory_focus": "用僵尸群拖住英雄，阻止其净化骷髅",
+        },
+        "scenario": {"special_rules": ["ritual_progress", "zombie_horde"]},
     },
     56: {
         "hero": {

@@ -335,8 +335,12 @@ class BotController:
                 ranged = "ranged" in weapon.tags
                 bonus = weapon.bonus.get("attack", 0)
             targets = engine.available_attack_targets(player, ranged=ranged)
-            for target in self._filter_attack_targets(player, targets, profile):
-                score = self._target_score(player, target, profile) + bonus
+            for target in self._filter_attack_targets(engine, player, targets, profile):
+                # 同源查询：剔除该 (目标, 武器) 组合本身不合法的情形
+                # （如怪物免疫此属性、剧本 handler 闸门），避免白送攻击/白跑。
+                if not engine.attack_would_be_allowed(player, target, weapon_id):
+                    continue
+                score = self._target_score(engine, player, target, profile) + bonus
                 if ranged:
                     score += 3
                 choices.append((score, target, weapon_id, ranged))
@@ -345,34 +349,59 @@ class BotController:
         score, target, weapon_id, ranged = max(choices, key=lambda item: item[0])
         if player.bot_difficulty == "easy" and score < 95:
             return False
-        return engine.execute_command(
+        ok = engine.execute_command(
             ActionCommand(
                 "attack",
                 player.id,
                 {"target": target, "weapon_card_id": weapon_id, "ranged": ranged},
             )
         )
+        if ok:
+            # 集火：记录本玩家实际攻击的目标，供 _target_score 后续集中火力。
+            # 只存不可变的标识（怪物 template_id / 玩家 id），不存对象引用，
+            # 因为 bot_focus 会进 haunt_rule 存档。
+            focus = engine._haunt_rule_state().setdefault("bot_focus", {})
+            if isinstance(target, Monster):
+                focus[player.role] = target.template_id
+            elif isinstance(target, Player):
+                focus[player.role] = target.id
+        return ok
 
-    def _filter_attack_targets(self, player: Player, targets: list[object], profile: dict) -> list[object]:
+    def _filter_attack_targets(self, engine: GameEngine, player: Player, targets: list[object], profile: dict) -> list[object]:
         filtered: list[object] = []
+        # 英雄默认不主动攻击同阵营玩家（除非 profile 允许）。
+        hero_attacks_traitor = profile.get("attack_traitor_players", False)
+        weapon_ids = [None] + engine.available_attack_weapons(player)
         for target in targets:
-            if isinstance(target, Player) and player.role == "hero" and not profile.get("attack_traitor_players", False):
+            if isinstance(target, Player) and player.role == "hero" and not hero_attacks_traitor:
                 continue
-            filtered.append(target)
+            # 同源查询：该玩家用空手或任一武器至少有一种合法攻击方式才保留，
+            # 顺带挡掉剧本 handler 闸门（如剧本 26 五芒星室叛徒）。
+            if any(engine.attack_would_be_allowed(player, target, wid) for wid in weapon_ids):
+                filtered.append(target)
         return filtered
 
-    def _target_score(self, player: Player, target: object, profile: dict) -> int:
+    def _target_score(self, engine: GameEngine, player: Player, target: object, profile: dict) -> int:
         style_bonus = 12 if player.bot_style == "aggressive" else 0
         caution_penalty = 20 if player.bot_style == "cautious" and min(player.stats.get("speed", 0), player.stats.get("might", 0)) <= 2 else 0
         difficulty_bonus = {"easy": -18, "normal": 0, "hard": 18}.get(player.bot_difficulty, 0)
         if isinstance(target, Monster):
-            return 90 + max(target.might, target.sanity, target.knowledge) + style_bonus + difficulty_bonus - caution_penalty
-        if isinstance(target, Player):
+            score = 90 + max(target.might, target.sanity, target.knowledge) + style_bonus + difficulty_bonus - caution_penalty
+        elif isinstance(target, Player):
             weakness = 12 - (target.stats.get("speed", 0) + target.stats.get("might", 0))
             if player.role == "traitor" and profile.get("prefer_weak_targets", True):
-                return 85 + weakness + style_bonus + difficulty_bonus - caution_penalty
-            return 70 + style_bonus + difficulty_bonus - caution_penalty
-        return 0
+                score = 85 + weakness + style_bonus + difficulty_bonus - caution_penalty
+            else:
+                score = 70 + style_bonus + difficulty_bonus - caution_penalty
+        else:
+            return 0
+        # 集火：英雄对与 bot_focus 一致的目标集中火力（+25）。
+        if player.role == "hero":
+            focus = engine._haunt_rule_state().get("bot_focus", {})
+            marker = target.template_id if isinstance(target, Monster) else (target.id if isinstance(target, Player) else None)
+            if marker is not None and focus.get(player.role) == marker:
+                score += 25
+        return score
 
     def _choose_move_option(self, engine: GameEngine, player: Player, options: list[ExitOption]) -> ExitOption | None:
         if not options:
@@ -437,6 +466,40 @@ class BotController:
                 if room.name in avoid_rooms or room.template_id in avoid_rooms:
                     value -= 90 if player.bot_difficulty == "hard" else 55
                 value -= self._danger_penalty(player, room.effect_id)
+                # 英雄走位三项扣分（均为新增情形，系数均小于追击 +100 / 剧本
+                # 目标 +95 的正分，不会压过取胜主线）：
+                if player.role == "hero":
+                    # 分散：目标房间已有 ≥2 名存活同阵营英雄 → −40
+                    same_heroes = sum(
+                        1
+                        for p in engine.state.players
+                        if p.role == "hero" and not p.dead and p.id != player.id and p.room_key == option.target_key
+                    )
+                    if same_heroes >= 2:
+                        value -= 40
+                    room_monsters = [
+                        m
+                        for m in engine.state.monsters
+                        if m.room_key == option.target_key and m.stunned_turns <= 0
+                    ]
+                    if room_monsters:
+                        weapon_ids = [None] + engine.available_attack_weapons(player)
+                        # 打不动怪所在房：本英雄空手/任一武器都打不动的非眩晕怪 → −60
+                        unbeatable = any(
+                            not any(
+                                engine.attack_would_be_allowed(player, m, wid, ignore_position=True)
+                                for wid in weapon_ids
+                            )
+                            for m in room_monsters
+                        )
+                        if unbeatable:
+                            value -= 60
+                        # 力量悬殊：怪 might > 英雄 might+speed 之和 → −25
+                        if any(
+                            m.might > player.stats.get("might", 0) + player.stats.get("speed", 0)
+                            for m in room_monsters
+                        ):
+                            value -= 25
             if option.is_special:
                 value += 4
                 if option.direction in {"up", "down"}:
@@ -582,11 +645,37 @@ class BotController:
                         if other.role == "hero" and not other.dead
                     )
             elif profile.get("attack_monsters", True):
-                targets.extend(monster.room_key for monster in engine.state.monsters if monster.stunned_turns <= 0)
-            if player.role == "hero" and player.bot_difficulty == "hard" and profile.get("protect_humans", True):
-                for human in engine.state.players:
-                    if human.control == "human" and human.role == "hero" and not human.dead:
-                        targets.append(human.room_key)
+                # 英雄追怪的两道闸门：
+                # (i) 持有关键牌或剧本令牌时，优先去交付/会合而非盲目追怪；
+                # (ii) 打不动的怪（免疫当前所有可用攻击属性）不值得追，省得白跑送死。
+                rule = (engine.state.haunt.rule_data or {}) if engine.state.haunt else {}
+                required = {str(card_id) for card_id in rule.get("required_cards", [])}
+                holds_required = bool(required & {str(item) for item in player.items})
+                holds_token = bool(engine.tokens_held_by(player.id))
+                if not (holds_required or holds_token):
+                    weapon_ids = [None] + engine.available_attack_weapons(player)
+                    for monster in engine.state.monsters:
+                        if monster.stunned_turns > 0:
+                            continue
+                        # 同源查询（忽略位置）：空手或任一武器都打不动就不追。
+                        can_hurt = any(
+                            engine.attack_would_be_allowed(player, monster, wid, ignore_position=True)
+                            for wid in weapon_ids
+                        )
+                        if can_hurt:
+                            targets.append(monster.room_key)
+            if player.role == "hero":
+                # 保护作祟揭示者（存活英雄）：其房间作为寻路目标，与 protect_humans 同档。
+                revealer = next(
+                    (p for p in engine.state.players if p.id == engine.state.haunt_revealer_id),
+                    None,
+                )
+                if revealer is not None and not revealer.dead and revealer.role == "hero":
+                    targets.append(revealer.room_key)
+                if player.bot_difficulty == "hard" and profile.get("protect_humans", True):
+                    for human in engine.state.players:
+                        if human.control == "human" and human.role == "hero" and not human.dead:
+                            targets.append(human.room_key)
 
         wanted_rooms = set(profile.get("target_rooms", []) or [])
         if wanted_rooms:

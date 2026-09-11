@@ -7523,6 +7523,24 @@ class BatSwarmMode(GenericModeHandler):
             return True
         return True  # 叛徒开局即死：吸收引擎兜底
 
+    # ------------------------------------------------------------- bot 寻路
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p35：英雄真实胜利 = 把蝙蝠封回窗外（bats_sealed 且场上无蝙蝠），
+        不是逃生。封印链两步都在管风琴房（力量5+启动管风琴、知识6+奏驱蝠之音），
+        之后才是清掉仍贴在人身上的蝙蝠。故 bot 唯一推进点 = 管风琴房；封印
+        完成前一直把它当寻路目标，封印后再去打贴附的蝙蝠（由 attack_monsters 处理）。"""
+        flags = engine._haunt_flags()
+        if flags.get("bats_sealed"):
+            return []  # 封印已成，去杀仍贴附的蝙蝠（任意房间，靠 attack_monsters）
+        organ = next(
+            (k for k, r in engine.state.board.items()
+             if r.template_id == "organ_room" and not engine._is_collapsed(k)),
+            "",
+        )
+        if organ:
+            return [organ]
+        return []
+
 
 class HellbeastMode(ExorcismMode):
     """剧本 38 火蝠（Hellbeasts）。
@@ -7739,6 +7757,28 @@ class HellbeastMode(ExorcismMode):
             engine._set_winner("traitor", "最后一名英雄在火蝠的烈焰里倒下，屋里只剩噼啪的火光。")
             return True
         return True  # 叛徒存活操控火蝠；吸收引擎"叛徒死亡即英雄胜"兜底
+
+    # ------------------------------------------------------------- bot 寻路
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p49：英雄胜 = 驱魔成功次数满员；火蝠不可被攻击（monster invulnerable，
+        见 7542 注释），追它纯浪费。引导英雄去还【没用过】的房间类驱魔来源
+        （教堂/地窖/五芒星室/图书馆/研究实验室）；道具类来源（圣徽/戒指/古书/
+        水晶球）英雄随身带着，在任意房间即可使用，无需专门寻路。"""
+        flags = engine._haunt_flags()
+        used = set(flags.get("used_exorcism_sources", []))
+        goals: list[str] = []
+        room_sources = self.SANITY_ROOM_SOURCES + self.KNOWLEDGE_ROOM_SOURCES
+        for template_id in room_sources:
+            if template_id in used:
+                continue
+            key = next(
+                (k for k, r in engine.state.board.items()
+                 if r.template_id == template_id and not engine._is_collapsed(k)),
+                "",
+            )
+            if key:
+                goals.append(key)
+        return goals
 
     # ------------------------------------------------------------- 进度摘要
     def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
@@ -14311,7 +14351,7 @@ class KingsRoadsMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "影子附身了最后的英雄。")
             return True
-        return False
+        return True  # 吸收引擎"叛徒死亡即英雄胜"兜底（p66：叛徒死不触发英雄胜）
 
 
 
@@ -14355,6 +14395,20 @@ class ArkanokSkullMode(GenericModeHandler):
             key = engine.rng.choice(sorted(engine.state.board.keys()))
             engine._spawn_single_haunt_monster(spec, key)
         engine._log("墙壁长出了腐肉——僵尸在房子里游荡！")
+
+    def on_enter_room(self, engine, player, room):
+        # p65：探险者进入骷髅所在房间即可拾起（捡令牌不耗行动，与尸体令牌
+        # 等既有先例一致）。bot 局实测必要：骷髅是 marker 令牌，
+        # bot 的 _pickup_room_items 只捡卡牌，英雄到房也永远拿不到颅骨，
+        # detect_remains/exorcise 的"持骷髅"前置永假，ritual_progress 恒 0/1
+        # （探针 113/3p：remains_found=True 而 holder=None，整局死锁）。
+        if player.dead or player.role == "traitor":
+            return
+        for token in engine.tokens_in_room(room.key, "skull"):
+            if engine.give_token(token.uid, player.id):
+                flags = engine._haunt_flags()
+                flags["skull_picked"] = True
+                engine._log(f"{player.name} 拾起了 Ar'Kanok 之颅。")
 
     def _object_room(self, engine):
         for t in engine.state.tokens:
@@ -14437,7 +14491,32 @@ class ArkanokSkullMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "僵尸撕碎了最后的英雄。")
             return True
-        return False
+        return True  # 吸收引擎"叛徒死亡即英雄胜"兜底（p136：叛徒死不触发英雄胜）
+
+    # ------------------------------------------------------------- bot 寻路
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p65：英雄胜 = 持颅到遗骸房净化（ritual_progress 满）。引导：
+        ① 本英雄持颅→遗骸已定位则去遗骸房净化，否则在本房侦测（返回空）；
+        ② 骷髅还是松散令牌→去骷髅令牌房间拾取；
+        ③ 别人持颅且遗骸已定位→陪去遗骸房就近保护。"""
+        flags = engine._haunt_flags()
+        skull = next((t for t in engine.state.tokens if t.kind == "skull"), None)
+        if skull is None:
+            return []
+        if engine.tokens_held_by(player.id, "skull"):
+            if flags.get("remains_found"):
+                remains_key = flags.get("remains_room")
+                if remains_key:
+                    return ["__room__" + remains_key]
+            return []  # 持颅但遗骸未定位，本房即可侦测
+        # 没持颅：先去拾取（若松散令牌）；若别人持颅且遗骸已定位→陪去遗骸房
+        if skull.holder is None and skull.room_key:
+            return ["__room__" + skull.room_key]
+        if skull.holder is not None and flags.get("remains_found"):
+            remains_key = flags.get("remains_room")
+            if remains_key:
+                return ["__room__" + remains_key]
+        return []
 
 
 
@@ -14571,7 +14650,39 @@ class ToxicObjectEscapeMode(GenericModeHandler):
         if heroes_alive == 0:
             engine._set_winner("traitor", "毒气吞噬了最后的生命。")
             return True
-        return False
+        return True  # 吸收引擎"叛徒死亡即英雄胜"兜底（p135：叛徒死不触发英雄胜）
+
+    # ------------------------------------------------------------- bot 寻路
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p64：英雄胜 = 半数逃出前门 或 净化死亡之物(熔炉房/地下湖)+半数存活。
+        引导（动态）：
+        ① 已净化→无需再移动，返回空（靠存活凑半数）；
+        ② 本英雄持死亡之物→去熔炉房/地下湖净化（最稳的取胜线）；
+        ③ 否则强化逃生路线（正门）——与 rule_data 的 flee 行动一致，不主动
+           追狗（狗速 6，追它纯浪费回合；逃生前门更稳，且顺路也可能捡到掉落物）。
+        注：实测 53 号此前靠"半数逃生"就能赢约六成，故 bot 寻路以逃生为基线、
+        持物净化为加成，不强行改走更难的净化线。"""
+        flags = engine._haunt_flags()
+        if flags.get("object_cleansed"):
+            return []
+        # 持死亡之物→去熔炉房/地下湖净化
+        if engine.tokens_held_by(player.id, "deathly_object"):
+            for template_id in ("furnace_room", "underground_lake"):
+                key = next(
+                    (k for k, r in engine.state.board.items()
+                     if r.template_id == template_id and not engine._is_collapsed(k)),
+                    "",
+                )
+                if key:
+                    return ["__room__" + key]
+            return []
+        # 否则：强化逃生路线（正门）
+        front = next(
+            (k for k, r in engine.state.board.items()
+             if r.template_id == "entrance_hall" and not engine._is_collapsed(k)),
+            "",
+        )
+        return ["__room__" + front] if front else []
 
 
 
