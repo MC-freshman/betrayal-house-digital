@@ -1924,28 +1924,42 @@ def verify_haunt15_here_there_be_dragons() -> None:
         assert tokens, f"{kind} 应已放置"
         assert flags[flag] is not None
         assert engine.state.board[flags[flag]].template_id in basement_ids, f"{kind} 应在地下室"
-    # 矛：若开局没有第三个地下室房间则处于待放状态，模拟发现即补放
-    if not engine.tokens_of_kind("spear"):
+    # 矛：omen_spear 预兆卡（p26 明确为 "the Spear card"，与剧本 19 统一）；
+    # 开局尚无人握矛时摆在剩余的地下室房间供拾取
+    spear_in_room = any(
+        "omen_spear" in cards for cards in engine.state.room_items.values()
+    )
+    spear_held = any("omen_spear" in p.items for p in engine.state.players)
+    if spear_in_room:
+        assert flags["spear_room"] is not None
+        assert engine.state.board[flags["spear_room"]].template_id in basement_ids, "矛应在地下室"
+    elif not spear_held:
         assert flags["spear_room"] is None, "未放置的矛应处于待放状态"
         target_room = next(
-            r for r in engine.state.board.values()
-            if r.template_id in DragonSiegeMode.BASEMENT_ROOMS
-            and r.key not in {flags["armor_room"], flags["shield_room"]}
-        ) if any(
-            r.template_id in DragonSiegeMode.BASEMENT_ROOMS
-            and r.key not in {flags["armor_room"], flags["shield_room"]}
-            for r in engine.state.board.values()
-        ) else next(iter(engine.state.board.values()))
+            (
+                r for r in engine.state.board.values()
+                if r.template_id in DragonSiegeMode.BASEMENT_ROOMS
+                and r.key not in {flags["armor_room"], flags["shield_room"]}
+            ),
+            next(iter(engine.state.board.values())),
+        )
         if target_room.template_id not in DragonSiegeMode.BASEMENT_ROOMS:
             target_room.template_id = "catacombs"
         handler.on_room_discovered(engine, hero, target_room)
-        assert engine.tokens_of_kind("spear"), "发现地下室房间后应补放矛"
+        assert any(
+            "omen_spear" in cards for cards in engine.state.room_items.values()
+        ), "发现地下室房间后应补放矛"
 
-    # 免疫速度攻击；持戒指徒手改理智；持矛攻击 +4
+    # 免疫速度攻击；持戒指徒手改理智
     dragon_id = dragon.id
     assert handler.attack_attr_override(engine, hero, dragon, "might") is None, "无戒指不触发理智覆盖"
     hero.items.append("omen_ring")
     assert handler.attack_attr_override(engine, hero, dragon, "might") == "sanity"
+    # 持矛（omen_spear）对巨龙攻击骰 +4（旧版仅测属性覆盖，此处补骰值加值）
+    if "omen_spear" not in hero.items:
+        assert handler.attack_roll_bonus(engine, hero, dragon) == 0, "未持矛不应加值"
+    engine._grant_card_to_player(hero, "omen_spear")
+    assert handler.attack_roll_bonus(engine, hero, dragon) == 4, "持矛对龙攻击应 +4"
 
     # 韧性：击败一次 5 点伤害实扣 3（-2），不击晕
     engine._active_player_id = hero.id
@@ -2297,9 +2311,9 @@ def verify_haunt19_beastmaster() -> None:
     traitor = next(p for p in engine.state.players if p.role == "traitor")
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
 
-    # 布点：矛在驯兽师手上；狼在门厅；熊在某个英雄房间；种类映射齐全
-    spear = handler._spear_token(engine)
-    assert spear is not None and spear.holder == traitor.id, "长矛应在驯兽师手上"
+    # 布点：矛（omen_spear 卡）在驯兽师手上；狼在门厅；熊在某个英雄房间；种类映射齐全
+    assert "omen_spear" in traitor.items, "长矛（omen_spear 卡）应在驯兽师手上"
+    assert handler._spear_holder(engine) is traitor
     entrance = next(k for k, r in engine.state.board.items() if r.template_id == "entrance_hall")
     kinds = set(flags.get("beast_kind", {}).values())
     assert "wolf" in kinds and "bear" in kinds and "crocodile" in kinds, "狼/熊/鳄鱼应已布点"
@@ -2339,7 +2353,8 @@ def verify_haunt19_beastmaster() -> None:
     ):
         assert engine.attack(hero, traitor) is True
     assert flags.get("spear_stolen") is True, "高伤应触发偷矛"
-    assert engine.tokens_held_by(hero.id, "spear"), "矛应到英雄手上"
+    assert "omen_spear" in hero.items, "长矛应到英雄手上"
+    assert "omen_spear" not in traitor.items, "长矛应已从驯兽师手上夺走"
     assert handler.check_victory(engine) is True
     assert engine.state.winner == "heroes"
 

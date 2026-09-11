@@ -2645,6 +2645,33 @@ class GameEngine:
         self._log(f"{player.name} 获得了 {card.name}。")
         return True
 
+    def _place_card_in_room(self, room_key: str, card_id: str) -> bool:
+        """把一张牌摆到指定房间的地面（先摘离牌堆/弃牌堆/他人手上）。
+
+        与 `_grant_card_to_player` 互为反向：剧本要把某件预定装备（例如
+        p26 的长矛）预先放在某个房间供人拾取时用它，落点是 `state.room_items`，
+        之后由通用的 `pickup_item`（人类按钮 / bot 自动）拾起。
+        """
+        card = self.catalog.cards.get(card_id)
+        if card is None or room_key not in self.state.board:
+            return False
+        for deck in self.state.card_decks.values():
+            if card_id in deck:
+                deck.remove(card_id)
+        for discards in self.state.card_discards.values():
+            if card_id in discards:
+                discards.remove(card_id)
+        for other in self.state.players:
+            if card_id in other.items:
+                other.items.remove(card_id)
+            if card_id in other.companions:
+                other.companions.remove(card_id)
+        for room_cards in self.state.room_items.values():
+            if card_id in room_cards:
+                room_cards.remove(card_id)
+        self.state.room_items.setdefault(room_key, []).append(card_id)
+        return True
+
     def _monster_by_template(self, template_id: str) -> Monster | None:
         return next((monster for monster in self.state.monsters if monster.template_id == template_id), None)
 

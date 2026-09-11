@@ -5745,8 +5745,9 @@ class BeastmasterMode(GenericModeHandler):
         traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
         if traitor is None:
             return
-        # 长矛在驯兽师手上（英雄的目标）
-        engine.spawn_token("spear", label="驯兽师长矛", role="carried", holder=traitor.id)
+        # 长矛 = 预兆牌 omen_spear（p101 "the spear you found"），在驯兽师手上
+        # （英雄的目标）——与剧本 15 统一走真卡；英雄用 special_steal 夺走它。
+        engine._grant_card_to_player(traitor, "omen_spear")
 
         spec_source = haunt.rule_data.get("monsters", [])
         players = len(engine.state.players)
@@ -5807,8 +5808,9 @@ class BeastmasterMode(GenericModeHandler):
     def _kind_of(self, engine: Any, monster: Any) -> str:
         return str(engine._haunt_flags().get("beast_kind", {}).get(str(getattr(monster, "id", "")), ""))
 
-    def _spear_token(self, engine: Any) -> Any | None:
-        return next((t for t in engine.state.tokens if t.kind == "spear"), None)
+    def _spear_holder(self, engine: Any) -> Any | None:
+        """当前握有长矛（omen_spear 卡）的玩家。"""
+        return next((p for p in engine.state.players if "omen_spear" in p.items), None)
 
     # ------------------------------------------------------------- 攻击规则
     def attack_attr_override(self, engine: Any, attacker: Any, target: Any, default_attr: str) -> str | None:
@@ -5828,10 +5830,10 @@ class BeastmasterMode(GenericModeHandler):
             attack_attr == "sanity" and "omen_ring" in attacker.items
         ):
             return False
-        spear = self._spear_token(engine)
-        if spear is None or spear.holder != getattr(target, "id", None):
+        spear = self._spear_holder(engine)
+        if spear is None or spear is not target:
             return False
-        engine.give_token(spear.uid, attacker.id)
+        engine._grant_card_to_player(attacker, "omen_spear")
         engine._haunt_flags()["spear_stolen"] = True
         engine._log(f"{attacker.name} 夺下了长矛——驯兽师的眼里恢复了神智！")
         return True
@@ -6424,9 +6426,11 @@ class DragonSiegeMode(GenericModeHandler):
       持矛者防御 +4）。
     · 装备三件套（地下室，p97）：古董护甲（墓穴/地下湖——穿整回合、
       非火焰物理 -5、移动 -1、不可被偷）；盾（深坑/地窖——携带者免疫
-      火焰、移动 -1、同房英雄也免疫龙焰）；矛（原版为物品牌，项目
-      22 件物品无此牌，改为令牌放在剩余的地下室房间——偏差已注明）。
-      房间未被发现时等发现即补放（on_room_discovered）。
+      火焰、移动 -1、同房英雄也免疫龙焰）；矛（原版 p26 明确为
+      "the Spear card"，即预兆牌 `omen_spear`——与剧本 19 统一）。
+      三件都摆在剩余的地下室房间供拾取（矛的摆位是可玩性补充，原文只
+      指定护甲/盾的位置）；房间未被发现时等发现即补放（on_room_discovered）。
+      长矛若开局已被某位探险者拿在手上，则不重摆（保留手握状态）。
     · 英雄胜：龙受到的伤害攒满玩家人数即斩杀；叛徒胜：英雄全灭。
       巨龙由 bot 驱动（叛徒无法微操），叛徒阵亡不结束游戏。
     · 已知简化：穿甲/脱甲的"交给他人"未建模；护甲与盔甲卡不可同穿未拦；
@@ -6476,13 +6480,17 @@ class DragonSiegeMode(GenericModeHandler):
         )
         flags["armor_room"] = armor_room
         flags["shield_room"] = shield_room
-        flags["spear_room"] = spear_room
-        labels = {"antique_armor": "古董护甲", "shield": "盾", "spear": "矛"}
-        for kind, key in (
-            ("antique_armor", armor_room), ("shield", shield_room), ("spear", spear_room)
-        ):
+        labels = {"antique_armor": "古董护甲", "shield": "盾"}
+        for kind, key in (("antique_armor", armor_room), ("shield", shield_room)):
             if key:
                 engine.spawn_token(kind, label=labels[kind], role="marker", room_key=key)
+        # 长矛 = 预兆牌 omen_spear（p26 原文 "the Spear card"），与剧本 19 统一
+        # 走真卡。若开局尚无人握矛，则摆到剩余的地下室房间，之后由通用
+        # pickup_item（人类按钮 / bot 自动）拾取；已有人握矛则保持现状。
+        held = any("omen_spear" in p.items for p in engine.state.players)
+        flags["spear_room"] = spear_room if (spear_room and not held) else None
+        if flags["spear_room"]:
+            engine._place_card_in_room(spear_room, "omen_spear")
 
     def on_room_discovered(self, engine: Any, player: Any, room: Any) -> None:
         """p97：装备所在的地下室房间未被探索时，发现即补放。"""
@@ -6492,7 +6500,6 @@ class DragonSiegeMode(GenericModeHandler):
         pending = [
             ("antique_armor", "armor_room", "古董护甲"),
             ("shield", "shield_room", "盾"),
-            ("spear", "spear_room", "矛"),
         ]
         for kind, flag, label in pending:
             if flags.get(flag) is None:
@@ -6500,6 +6507,13 @@ class DragonSiegeMode(GenericModeHandler):
                 flags[flag] = room.key
                 engine._log(f"{room.name}里躺着一件装备：{label}。")
                 return
+        # 长矛（omen_spear 预兆卡）：尚未摆放且无人握持时，发现地下室即补放
+        if flags.get("spear_room") is None and not any(
+            "omen_spear" in p.items for p in engine.state.players
+        ):
+            engine._place_card_in_room(room.key, "omen_spear")
+            flags["spear_room"] = room.key
+            engine._log(f"{room.name}里躺着一件装备：长矛。")
 
     # ------------------------------------------------------------- 内部
     def _door_adjacent(self, engine: Any, key_a: str, key_b: str) -> bool:
@@ -6602,7 +6616,7 @@ class DragonSiegeMode(GenericModeHandler):
         victim = victims[0]
         dragon_roll = engine._roll_monster_attack(monster, "might")
         hero_roll = engine._roll_attack(victim, "might")
-        if engine.tokens_held_by(victim.id, "spear"):
+        if "omen_spear" in victim.items:
             hero_roll += 4  # p26：持矛对龙防御 +4
             engine._log(f"{victim.name} 挥矛格挡（+4）。")
         engine._log(f"巨龙撕咬 {victim.name}：{dragon_roll} 对 {hero_roll}。")
@@ -6619,8 +6633,8 @@ class DragonSiegeMode(GenericModeHandler):
         return None
 
     def attack_roll_bonus(self, engine: Any, attacker: Any, target: Any) -> int:
-        """p26：持矛对巨龙的攻击骰 +4。"""
-        if _monster_id(target) == self.DRAGON and engine.tokens_held_by(attacker.id, "spear"):
+        """p26：持矛（omen_spear）对巨龙的攻击骰 +4。"""
+        if _monster_id(target) == self.DRAGON and "omen_spear" in attacker.items:
             return 4
         return 0
 
@@ -6660,8 +6674,6 @@ class DragonSiegeMode(GenericModeHandler):
                     continue
             if action.id == "take_shield" and not engine.tokens_in_room(player.room_key, "shield"):
                 continue
-            if action.id == "take_spear" and not engine.tokens_in_room(player.room_key, "spear"):
-                continue
             result.append(action)
         return result
 
@@ -6684,14 +6696,6 @@ class DragonSiegeMode(GenericModeHandler):
                 return False
             engine.give_token(token.uid, player.id)
             engine._log(f"{player.name} 扛起了沉重的盾。")
-            return True
-        if action_id == "take_spear":
-            token = next(iter(engine.tokens_in_room(player.room_key, "spear")), None)
-            if token is None:
-                engine._log("这里没有矛。")
-                return False
-            engine.give_token(token.uid, player.id)
-            engine._log(f"{player.name} 握紧了长矛。")
             return True
         return super().perform_action(engine, player, action_id, data)
 

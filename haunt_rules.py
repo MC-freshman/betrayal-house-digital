@@ -691,8 +691,9 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         #     物品减 2 点——bot 自动弃）与咬（力量对决，同房）
         #   · 装备三件套（地下室）：古董护甲（墓穴/地下湖，穿上整回合，
         #     非火焰物理 -5，移动 -1，不可被偷）、盾（深坑/地窖，携带者
-        #     免火，移动 -1，同房英雄也免火息）、矛（项目无此卡，改为
-        #     令牌放剩余地下室房间；对龙攻击/防御 +4）
+        #     免火，移动 -1，同房英雄也免火息）、矛（原版 p26 明确为
+        #     "the Spear card"，即 omen_spear 预兆卡，与 19 号统一；
+        #     摆在剩余的地下室房间供拾取；对龙攻击/防御 +4）
         #   简化：穿甲/脱甲的"交给他人"未建模；护甲与盔甲卡不可同穿未拦。
         "version": 3,
         "fidelity": "refined",
@@ -704,7 +705,7 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "suggested_monsters": ["beast"],
         "required_cards": ["omen_ring"],
         "key_rooms": ["entrance_hall", "catacombs", "underground_lake", "chasm", "crypt"],
-        "tokens": ["dragon", "antique_armor", "shield", "spear"],
+        "tokens": ["dragon", "antique_armor", "shield"],
         "setup": {
             "tracks": {
                 "dragon_damage": {"label": "巨龙受到的伤害", "target": "player_count", "side": "heroes"},
@@ -717,7 +718,6 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "actions": [
             {"id": "don_armor", "side": "heroes", "label": "穿上古董护甲", "detail": "花整回穿上（本回合不能移动）：非火焰物理伤害 -5，移动 -1（p26）。"},
             {"id": "take_shield", "side": "heroes", "label": "拿起盾", "detail": "携带者免疫火与热，移动 -1；同房英雄也免疫龙焰（p26）。"},
-            {"id": "take_spear", "side": "heroes", "label": "拿起矛", "detail": "对巨龙攻击/防御骰 +4（p26）。"},
         ],
         "win_conditions": [],
         "source_pages": [26, 97],
@@ -873,8 +873,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
     19: {
         # 校准记录（2026-09-02，对照英雄手册 p30 / 叛徒手册 p101）：
         #   机制落在 BeastmasterMode：
-        #   · 叛徒即驯兽师，持长矛（项目无矛卡，用令牌承载——与剧本 15
-        #     同一处理）；五只动物随从按 p101 顺序布点（熊在任一其他
+        #   · 叛徒即驯兽师，持长矛（即 omen_spear 预兆卡，与剧本 15 统一）；
+        #     五只动物随从按 p101 顺序布点（熊在任一其他
         #     探险者所在房间；狼进门厅，6 人局两只；鳄鱼进地下湖或地下室
         #     门厅；鼬进花园/墓地/阳台否则叛徒房间；鹰进阳台/塔楼/朝外窗
         #     房间，都没有则不出现）
@@ -896,7 +896,7 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "suggested_monsters": ["beast", "wolf", "giant", "cat"],
         "required_cards": ["omen_ring"],
         "key_rooms": ["entrance_hall", "underground_lake", "basement_landing", "garden", "graveyard", "patio", "balcony", "tower"],
-        "tokens": ["spear", "bear", "wolf", "crocodile", "weasel", "hawk"],
+        "tokens": ["bear", "wolf", "crocodile", "weasel", "hawk"],
         "setup": {
             "tracks": {
                 "minions_slain": {"label": "已斩杀的随从", "target": "player_count", "side": "heroes"},
