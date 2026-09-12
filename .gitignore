@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.pyo
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+
+# build_exe.py 的中间产物
+build/
+
+saves/
+*.log
+*.tmp
