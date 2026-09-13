@@ -433,6 +433,19 @@ class BotController:
             return ranked[1]
         return ranked[0]
 
+    def _bot_wants_explore(self, engine: GameEngine, player: Player) -> bool:
+        """剧本声明"现在必须去翻新房间找牌"（duck-typed `bot_wants_explore`）。
+
+        39 号实测（seed109/4p）：戒指还压在预兆牌堆里，而作祟阶段机器人几乎
+        不去探索（探索只在 EXPLORE 阶段有大额加分），继承人在王座前干等到
+        400 回合。钩子返回 True 时，探索选项的权重抬到与剧本目标同档之上。
+        """
+        handler = engine._mode_handler()
+        wants = getattr(handler, "bot_wants_explore", None)
+        if not callable(wants):
+            return False
+        return bool(wants(engine, player))
+
     def _rank_move_options(self, engine: GameEngine, player: Player, options: list[ExitOption]) -> list[ExitOption]:
         profile = self._side_profile(engine, player)
         next_targets = self._next_steps_toward_objectives(engine, player, profile)
@@ -446,6 +459,7 @@ class BotController:
         )
         target_rooms = set(profile.get("target_rooms", []) or [])
         avoid_rooms = set(profile.get("avoid_rooms", []) or [])
+        wants_explore = self._bot_wants_explore(engine, player)
         previous_room_key = self._previous_room_by_player.get(player.id)
         # 剧本目标房间所在的楼层。换层惩罚（-18）原本无差别地压过一切，
         # 导致"目标在别的楼层"的剧本里，机器人永远不下地下室/不上楼
@@ -469,6 +483,9 @@ class BotController:
                 value += {"easy": 45, "normal": 80, "hard": 95}.get(player.bot_difficulty, 80)
             if option.is_new_room:
                 value += 15
+                if wants_explore:
+                    # 剧情目标牌还没露面 → 翻新房间比"去王座干等"更接近胜利
+                    value += 120
             room = engine.state.board.get(option.target_key)
             if room:
                 if option.target_key == previous_room_key:

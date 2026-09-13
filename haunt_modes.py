@@ -4802,6 +4802,14 @@ class HeirAssassinMode(GenericModeHandler):
         if player.id != heir.id:
             return [f"__room__{heir.room_key}"]
         if "omen_spear" not in player.items:
+            # 矛可能已经被队友捡走——目标跟着"矛现在在哪"走（队友身上/地上），
+            # 写死初始房间会让继承人对着一间空屋子来回跑（seed101/5p 实测）。
+            for other in engine.state.players:
+                if other.id != player.id and not other.dead and "omen_spear" in other.items:
+                    return [f"__room__{other.room_key}"]
+            for room_key, items in engine.state.room_items.items():
+                if "omen_spear" in items:
+                    return [f"__room__{room_key}"]
             spear_room = flags.get("spear_room")
             return [f"__room__{spear_room}"] if spear_room else []
         if "omen_ring" not in player.items:
@@ -4813,9 +4821,42 @@ class HeirAssassinMode(GenericModeHandler):
                     return [f"__room__{room_key}"]
         return [f"__room__{throne}"] if throne else []
 
+    def bot_wants_explore(self, engine: Any, player: Any) -> bool:
+        """p50：矛与戒都是"要在牌堆里找出来"的卡——凑不齐时得去翻新房间。
+
+        39 号实测（seed109/4p）：戒指还压在预兆牌堆里、没人在探索，继承人在
+        王座前干等到 400 回合。这里声明"该去探索了"，bot 会给探索选项大幅加分；
+        只要还有一件既不在任何人手上、也不在地上，就必须靠抽牌拿到。
+        """
+        if player.dead or player.role != "hero":
+            return False
+        flags = engine._haunt_flags()
+        if player.id != flags.get("heir_id"):
+            return False
+        if "omen_spear" in player.items and "omen_ring" in player.items:
+            return False
+        for card_id in ("omen_spear", "omen_ring"):
+            if card_id in player.items:
+                continue
+            if any(card_id in other.items for other in engine.state.players if not other.dead):
+                continue
+            if any(card_id in items for items in engine.state.room_items.values()):
+                continue
+            return True
+        return False
+
     # ------------------------------------------------------------- 刺客暴露
     def on_enter_room(self, engine: Any, player: Any, room: Any) -> None:
-        """p121：英雄进入刺客房间 → 暴露并 sneak attack。"""
+        """p121：英雄进入刺客房间 → 暴露并 sneak attack。
+
+        已知简化：原文是"叛徒**可以选择**揭出刺客"，这里是进房即自动揭出。
+        原因：揭出发生在**英雄的移动过程中**（常常是机器人回合），而引擎的
+        prompt 通道是单实例——机器人回合里它由 BotDecisionProvider 接管
+        （confirm 一律 True），人类叛徒的确认框根本递不到；热座局里还可能
+        把提示弹给正在移动的英雄玩家本人（等于泄露叛徒的抉择）。
+        代价：挂机的叛徒也会靠刺客偷袭伤人（实测叛徒完全不行动时，继承人
+        仍可能在途中被打死）。属"叛徒侧人类自选界面"这一已知简化类。
+        """
         flags = engine._haunt_flags()
         if player.role != "hero" or player.dead:
             return

@@ -2036,7 +2036,11 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "suggested_monsters": [],
         # 矛与戒指都必须交到继承人手上（quest_carrier 钩子 + bot 寻路目标）。
         "required_cards": ["omen_spear", "omen_ring"],
-        "key_rooms": ["statuary_corridor", "basement_landing"],
+        # 机器人目标必须留空：继承人的目标随"手里缺哪件、东西在谁手上"变化，
+        # 静态 key_rooms（原来是 statue 走廊 + 地下室平台）与真实目标同档竞争，
+        # 会让继承人在楼上楼下反复横跳（seed101/5p 实测 400 回合不终局）。
+        # 全部交给 HeirAssassinMode.bot_goal_rooms 动态给出。
+        "key_rooms": [],
         "tokens": ["spear", "assassin"],
         "setup": {
             "tracks": {

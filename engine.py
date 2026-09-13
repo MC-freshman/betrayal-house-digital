@@ -1213,7 +1213,13 @@ class GameEngine:
         effect = room.effect_id
         if effect == "none":
             return
-        if effect == "room_start_hall" or effect == "room_start_foyer" or effect == "room_start_stairs":
+        # 起始 / 楼梯房间：它们的规则就是楼梯连接本身（links 已实现），
+        # 没有可结算的房间文字。过去只认 hall/foyer/stairs 三个，另外三间
+        # 落到兜底分支报"[规则缺口]…尚未实现"，玩家（实测反馈）会以为坏了。
+        if effect in {
+            "room_start_hall", "room_start_foyer", "room_start_stairs",
+            "room_start_above", "room_start_below", "room_stairs_from_basement",
+        }:
             return
         if self.state.phase == "HAUNT_PHASE" and player.role == "traitor" and effect in {"room_bloody_room", "room_charred_room", "room_furnace_room"}:
             self._log("叛徒无视了这个房间的负面效果。")
