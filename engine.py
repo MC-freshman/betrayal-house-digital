@@ -201,6 +201,10 @@ class GameEngine:
         self._next_monster_id = 1
         # 当前正在执行操作的玩家 id（供 DecisionRouter 路由决策用，None=无）
         self._active_player_id: int | None = None
+        # 最近一次通用剧本行动的检定结果。"行动是否执行"与"检定是否成功"是
+        # 两件事（检定失败同样消耗行动），handler 包装 super().perform_action
+        # 时要靠它判断该不该发奖励，见 last_haunt_action_succeeded()。
+        self._last_haunt_action_success = False
 
     # ------------------------------------------------------------------
     # Save / load
@@ -369,15 +373,22 @@ class GameEngine:
         return deck
 
     def _draw_card_id(self, kind: str) -> str:
+        """抽一张牌；牌堆与弃牌堆都空时返回 ""（这一类牌已经抽光了）。
+
+        弃牌堆回收是规则（p2「If the entire stack is used, shuffle the
+        discard pile; it becomes the new stack.」），但"从零重建一整副"不是：
+        它会把已经拿在玩家手里的牌再复制一份（实测 seed101/4p：4 名机器人
+        攒出 150 张物品，同一张道具重复出现十几次）。牌全在场上时，这一类
+        牌就是抽不出来了，调用方按"没抽到"处理。
+        """
         deck = self.state.card_decks.setdefault(kind, [])
         discards = self.state.card_discards.setdefault(kind, [])
         if not deck:
-            if discards:
-                deck.extend(discards)
-                discards.clear()
-                self.rng.shuffle(deck)
-            else:
-                deck.extend(self._build_deck(kind))
+            if not discards:
+                return ""
+            deck.extend(discards)
+            discards.clear()
+            self.rng.shuffle(deck)
         return deck.pop()
 
     def _draw_room_template(self, floor: int) -> RoomTemplate | None:
@@ -496,6 +507,11 @@ class GameEngine:
                 break
             self._advance_turn()
         else:
+            # 全员已死还要判一次胜负。叛徒开局就出局的剧本（10/24/47 等）
+            # 若英雄随后也全灭，这里若不判，就会永远停在死者回合上
+            # （47 号 seed109/4p 实测卡在 27 回合 HAUNT_PHASE）。
+            if self.state.phase == "HAUNT_PHASE":
+                self.check_victory()
             return
         self._reset_player_turn_state(player)
         self.state.turn_count += 1
@@ -980,7 +996,12 @@ class GameEngine:
                     return True
         return False
 
-    def _ensure_room_in_play(self, template_id: str, origin_room_key: str | None = None) -> str | None:
+    def _ensure_room_in_play(
+        self,
+        template_id: str,
+        origin_room_key: str | None = None,
+        farthest_from_key: str | None = None,
+    ) -> str | None:
         """确保指定模板的房间在场上；不在就从房间牌堆取出并放下。
 
         有些剧本依赖特定房间：剧本 3 的温室/储藏室/厨房长着曼德拉草，剧本 2
@@ -989,6 +1010,10 @@ class GameEngine:
         （seed=109 实测：三间房一间都没出现，曼德拉草一株都没生成）。
         原版对此有先例（p84："If the Pentagram Chamber isn't in the house,
         search the room stack for it and put it ..."），这里做成通用能力。
+
+        farthest_from_key：给出房间 key 时，在全部合法落位里选**离它最远**的
+        那个（p84 后半句："距你至少五格远；若没有，就尽量远"）。不给则维持
+        原行为（第一个合法位）。
 
         返回房间 key；已存在则直接返回；牌堆里没有或实在放不下则返回 None
         （此时会把牌还回牌堆，绝不让它凭空消失）。
@@ -1006,15 +1031,26 @@ class GameEngine:
         else:
             return None
 
-        # 只在该模板所属楼层找空位，避免把地面层房间塞进地下室
+        # 只在该模板所属楼层找空位，避免把地面层房间塞进地下室。
+        # 锚点还必须是**同层**房间：跨层锚点会把 (x, y) 直接搬到另一层去，
+        # 而那个位置在那层往往四面皆空，房间会变成永远走不到的孤岛。
+        # （70 号实测：地下室房间 -1:0:-3 的东门算出坐标 (1, -3)，温室按自己
+        #  的楼层落到一层 (1, -3)，三个邻居位全空，形态房间永远访不到。）
+        # 先把全部合法落位收集完再决定：试放会改变棋盘，边收边放会污染
+        # 后续候选的 _placement_keeps_frontier 判断。
         origin_keys: list[str] = []
-        if origin_room_key and origin_room_key in self.state.board:
+        if (
+            origin_room_key
+            and origin_room_key in self.state.board
+            and self.state.board[origin_room_key].floor == template.floor
+        ):
             origin_keys.append(origin_room_key)
         origin_keys.extend(
             key
             for key in sorted(self.state.board)
             if key != origin_room_key and self.state.board[key].floor == template.floor
         )
+        candidates: list[tuple[tuple[int, int, int], dict]] = []
         for origin_key in origin_keys:
             origin = self.state.board[origin_key]
             for direction in sorted(origin.doors):
@@ -1027,14 +1063,78 @@ class GameEngine:
                 placements = self._compute_explore_placements(template, direction, pos)
                 if not placements:
                     continue
-                placement = placements[0]
-                rotated = self._build_rotated_template(template, placement["rotation"])
-                room = self._place_room(rotated, pos[1], pos[2], placement["rotation"])
-                self._log(f"「{room.name}」被强行拉进了这栋房子。")
-                return room.key
+                candidates.append((pos, placements[0]))
+        if not candidates:
+            self.state.room_deck.insert(0, template_id)
+            return None
 
-        self.state.room_deck.insert(0, template_id)
-        return None
+        # 连通性优先：剧本关键房间必须落在**玩家走得到**的位置。传送房
+        # （神秘电梯）进入即被送走，不能当作中转，`avoid_transit=True` 的
+        # 路径会把"只能经电梯进入"的落位判成不可达（剧本 2 实测：五芒星室
+        # 被放到电梯西侧，进电梯就被传送走，降灵会永远开不起来）。
+        walkable = self._walkable_candidates(template, candidates)
+        if walkable:
+            candidates = walkable
+
+        chosen: tuple[tuple[int, int, int], dict] | None = None
+        distance = -1
+        if farthest_from_key and farthest_from_key in self.state.board:
+            for pos, placement in candidates:
+                rotated = self._build_rotated_template(template, placement["rotation"])
+                probe = self._place_room(rotated, pos[1], pos[2], placement["rotation"])
+                measured = self._path_length(farthest_from_key, probe.key, avoid_transit=True)
+                del self.state.board[probe.key]
+                del self.state.pos_index[pos]
+                if measured == 9999:
+                    # 走不到的落位不是"远"，是把房间藏起来；只在全不可达时才退而求其次。
+                    continue
+                if measured > distance:
+                    distance = measured
+                    chosen = (pos, placement)
+        if chosen is None:
+            chosen = candidates[0]
+            distance = -1
+
+        pos, placement = chosen
+        rotated = self._build_rotated_template(template, placement["rotation"])
+        room = self._place_room(rotated, pos[1], pos[2], placement["rotation"])
+        if distance >= 0:
+            self._log(f"「{room.name}」被拉进了这栋房子（距叛徒 {distance} 格）。")
+        else:
+            self._log(f"「{room.name}」被强行拉进了这栋房子。")
+        return room.key
+
+    def _walkable_candidates(
+        self,
+        template: RoomTemplate,
+        candidates: list[tuple[tuple[int, int, int], dict]],
+    ) -> list[tuple[tuple[int, int, int], dict]]:
+        """筛出"放上去之后玩家走得到"的落位（试放临时板块测路径）。
+
+        判定用 `avoid_transit=True`：传送房（神秘电梯）进入即被送走，不能
+        当作中转，所以"只能靠电梯到达"的落位会被算成不可达。入口大厅不在场
+        时无从判定，返回空表表示"不筛"。
+        """
+        root = next(
+            (
+                key
+                for key, room in self.state.board.items()
+                if room.template_id == "entrance_hall"
+            ),
+            None,
+        )
+        if root is None:
+            return []
+        result: list[tuple[tuple[int, int, int], dict]] = []
+        for pos, placement in candidates:
+            rotated = self._build_rotated_template(template, placement["rotation"])
+            probe = self._place_room(rotated, pos[1], pos[2], placement["rotation"])
+            reachable = self._path_length(root, probe.key, avoid_transit=True) != 9999
+            self.state.board.pop(probe.key, None)
+            self.state.pos_index.pop((probe.floor, probe.x, probe.y), None)
+            if reachable:
+                result.append((pos, placement))
+        return result
 
     def _place_room(self, template: RoomTemplate, x: int, y: int, rotation: int) -> PlacedRoom:
         # 注意：调用方（move_player / _choose_room_rotation）传入的 template 已经是旋转后的，
@@ -1163,8 +1263,42 @@ class GameEngine:
             player.movement_stopped = True
             player.steps_remaining = 0
 
+    def _search_deck_for_required_card(self, kind: str) -> str | None:
+        """剧本关键牌还在牌堆里时，允许"直接搜牌堆取走它"代替正常抽牌。
+
+        p15（剧本 4 医疗包）："若「医疗包」卡尚未被发现，任何有机会抽物品卡的
+        英雄都可以在牌堆中搜寻并直接取走医疗包，以代替正常抽牌。"
+        p12（剧本 1 古书）对预兆牌有同样的写法（1 号已在自己的 handler 里实现）。
+
+        rule_data 用 `searchable_cards` 显式声明哪些牌可以这样取——只有声明过的
+        才生效，其它剧本的 required_cards 行为完全不变。已被别人拿走、或已流落
+        在房间里的牌不在牌堆中，自然搜不到，按正常规则继续抽。
+
+        取走时必须**从牌堆移除**：只报告不删除的话，同一张关键牌还能被再抽到
+        一次，等于凭空复制（回归测试 verify_searchable_required_cards 抓到过）。
+        """
+        haunt = self.state.haunt
+        if haunt is None:
+            return None
+        declared = [str(card_id) for card_id in (haunt.rule_data or {}).get("searchable_cards", [])]
+        deck = self.state.card_decks.get(kind, [])
+        for card_id in declared:
+            card = self.catalog.cards.get(card_id)
+            if card is None or card.kind != kind:
+                continue
+            if card_id in deck:
+                deck.remove(card_id)
+                return card_id
+        return None
+
     def _draw_omen(self, player: Player) -> None:
-        card_id = self._draw_card_id("omen")
+        searched = self._search_deck_for_required_card("omen")
+        card_id = searched or self._draw_card_id("omen")
+        if not card_id:
+            # 13 张预兆全在场上：作祟检定的"最后一次"规则（_has_future_omen_source）
+            # 保证游戏已经或即将进入作祟，这里只需如实记录。
+            self._log("预兆牌已经全部出现过了，抽不到新的预兆。")
+            return
         card = self.catalog.cards[card_id]
         player.items.append(card_id)
         if card_id not in player.companions and "companion" in card.tags:
@@ -1172,18 +1306,31 @@ class GameEngine:
         self.state.omens_drawn += 1
         self.state.last_omen_id = card_id
         self.state.haunt_pending = True
-        self._log(f"{player.name} 抽到预兆：{card.name}。")
+        if searched:
+            self._log(f"{player.name} 在预兆牌堆里搜出了{card.name}（剧本关键牌）。")
+        else:
+            self._log(f"{player.name} 抽到预兆：{card.name}。")
         self.prompter.notify(f"抽到预兆：{card.name}", card.text or "（无说明）")
 
     def _draw_item(self, player: Player) -> None:
-        card_id = self._draw_card_id("item")
+        searched = self._search_deck_for_required_card("item")
+        card_id = searched or self._draw_card_id("item")
+        if not card_id:
+            self._log("物品牌已经全部散落在房子里，没有新的物品可抽。")
+            return
         card = self.catalog.cards[card_id]
         player.items.append(card_id)
-        self._log(f"{player.name} 抽到物品：{card.name}。")
+        if searched:
+            self._log(f"{player.name} 在物品牌堆里搜出了{card.name}（剧本关键牌）。")
+        else:
+            self._log(f"{player.name} 抽到物品：{card.name}。")
         self.prompter.notify(f"获得物品：{card.name}", card.text or "（无说明）")
 
     def _draw_event(self, player: Player) -> None:
         card_id = self._draw_card_id("event")
+        if not card_id:
+            self._log("事件牌堆已经空了，这次没有事件发生。")
+            return
         card = self.catalog.cards[card_id]
         self._log(f"{player.name} 抽到事件：{card.name}。")
         self.prompter.notify(f"触发事件：{card.name}", card.text or "（无说明）")
@@ -2503,12 +2650,18 @@ class GameEngine:
             return True
         if requirement.startswith("same_room:"):
             target = requirement.split(":", 1)[1]
-            if target in {"player", "hero"}:
+            if target in {"player", "hero", "frog"}:
                 return any(
                     other.id != player.id
                     and not other.dead
                     and other.room_key == player.room_key
-                    and (target == "player" or other.role == "hero")
+                    and (
+                        target == "player"
+                        or (target == "hero" and other.role == "hero")
+                        # 青蛙是玩家身上的一种状态，不是令牌（剧本 3 p14：
+                        # 复原青蛙必须先有一只同房间的青蛙可复原）。
+                        or (target == "frog" and other.frog)
+                    )
                     for other in self.state.players
                 )
             if target == "revealer":
@@ -2544,7 +2697,12 @@ class GameEngine:
             return False
         rooms = action.get("rooms", [])
         if rooms and self._current_room_template_id(player) not in rooms:
-            return False
+            # 剧本可豁免地点要求（剧本 2 p84：叛徒持有通灵板时可以在任何地方
+            # 举行降灵会，不必回到五芒星室）。默认不豁免。
+            handler = self._mode_handler()
+            override = getattr(handler, "action_room_override", None)
+            if not (callable(override) and override(self, player, action)):
+                return False
         if any(not self._haunt_requirement_met(player, str(item)) for item in action.get("requires", [])):
             return False
         for flag_id, expected in dict(action.get("requires_flags", {})).items():
@@ -2601,6 +2759,9 @@ class GameEngine:
             self._set_winner(str(action["winner"]), str(action.get("win_reason", action.get("label", "完成剧本目标。"))))
 
     def _perform_generic_haunt_action(self, player: Player, action_id: str, data: dict) -> bool:
+        # 先清零：行动不可用或检定失败时，绝不能让上一次的成功残留下来，
+        # 被 handler 的 last_haunt_action_succeeded() 误读成"这次成功了"。
+        self._last_haunt_action_success = False
         action = next((item for item in self._generic_haunt_actions() if item.get("id") == action_id), None)
         if not action or not self._haunt_action_available(player, action):
             return False
@@ -2624,12 +2785,24 @@ class GameEngine:
             attack_roll = self._roll_attack(player, attack_attr)
             success = attack_roll > defense
             self._log(f"{player.name} 攻击{label}：{attack_roll} 对 {defense}。")
+        self._last_haunt_action_success = bool(success)
         if success:
             self._apply_generic_haunt_success(player, action)
             self._log(f"{player.name} 完成了剧本行动：{action.get('label', action_id)}。")
         else:
             self._log(f"{player.name} 未完成剧本行动：{action.get('label', action_id)}。")
         return True
+
+    def last_haunt_action_succeeded(self) -> bool:
+        """最近一次通用剧本行动的**检定**是否成功（handler 包装 super() 时用）。
+
+        `_perform_generic_haunt_action` 的返回值是"行动是否执行"——检定失败时
+        它同样返回 True（这一回合的行动已经用掉）。handler 想"只在成功时发奖励/
+        消耗资源"必须查这里，不能拿返回值当成功标志：旧写法
+        `ok = super().perform_action(...)` + `if ok:` 在 31 处把失败也当成了成功
+        （剧本 4 的蛛卵与前门、剧本 3 的曼德拉草都因此白送）。
+        """
+        return bool(self._last_haunt_action_success)
 
     def _haunt_rule_state(self) -> dict:
         return self.state.meta.setdefault("haunt_rule", {})
@@ -3120,6 +3293,9 @@ class GameEngine:
         不调用 _draw_card_id 的重建逻辑：预兆在本游戏中是一次性资源，
         已耗尽的预兆牌不能因为牌堆为空而凭空重新生成。
         """
+        if not self.state.card_decks.get("omen") and not self.state.card_discards.get("omen"):
+            # 牌都没了：就算还有预兆房间也抽不出预兆，别再假装有未来来源。
+            return False
         for room in self.state.board.values():
             if not room.revealed and room.symbol == "omen":
                 return True
@@ -3455,6 +3631,11 @@ class GameEngine:
     # 房屋坍塌 / 深渊（剧本 22 p33/p104；剧本 2 的"房屋坍塌"待补复用同一套）
     # ------------------------------------------------------------------
     COLLAPSE_KEY = "abyss_collapsed"
+
+    # 「进入即传送」的房间：可以特意走进去（那是目的地或逃生手段），但绝不能
+    # 当作去别处的通路——神秘电梯一进去就被送到随机房间，站在里面不可能。
+    # 煤导槽不在此列：它的落点是固定的地下室大厅，属于可预期的一向捷径。
+    NON_TRANSIT_TEMPLATES = ("mystic_elevator",)
 
     def _is_collapsed(self, room_key: str) -> bool:
         room = self.state.board.get(room_key)
@@ -3944,16 +4125,23 @@ class GameEngine:
     # ------------------------------------------------------------------
     # Graph/path helpers
     # ------------------------------------------------------------------
-    def _build_graph(self) -> dict[str, set[str]]:
+    def _build_graph(self, avoid_transit: bool = False) -> dict[str, set[str]]:
         # 邻接表必须是有序结构。若用 set，BFS 遍历顺序会随 PYTHONHASHSEED
         # 变化，导致同一种子在不同进程得到不同的最短路径——种子回放、
         # 存档复现、联机重放都会失效。这里用 dict 做有序去重，再输出排序列表。
+        #
+        # avoid_transit=True：把"进入即传送"的房间（神秘电梯）的**出边**去掉。
+        # 它仍是合法终点（可以特意走进电梯），但不能被当作去别处的通路——
+        # 玩家一进去就被送到随机房间，站在里面是不可能的。默认 False 保持
+        # 原有行为（怪物不触发房间效果，仍可穿行）。
         adjacency: dict[str, dict[str, None]] = {
             key: {} for key, room in self.state.board.items() if not room.data.get(self.COLLAPSE_KEY)
         }
         for room in self.state.board.values():
             if room.data.get(self.COLLAPSE_KEY):
                 continue  # 塌进深渊的板块既不是节点也不是通路
+            if avoid_transit and room.template_id in self.NON_TRANSIT_TEMPLATES:
+                continue
             for direction in room.doors:
                 if direction not in DIRECTION_DELTAS:
                     continue
@@ -3973,7 +4161,15 @@ class GameEngine:
                 if target_key and not self.state.board[target_key].data.get(self.COLLAPSE_KEY):
                     adjacency[room.key][target_key] = None
                     adjacency[target_key][room.key] = None
-        return {key: sorted(neighbors) for key, neighbors in adjacency.items()}
+        graph = {key: sorted(neighbors) for key, neighbors in adjacency.items()}
+        if avoid_transit:
+            # 传送房的**出边**要最后统一清掉：邻居房间遍历时会做对称补边，
+            # 只在自己那一趟跳过（上面的 continue）挡不住它们把出边加回来。
+            # 清掉之后：进得去（别人到它的边还在，可作为终点），出不来（不能当中转）。
+            for key, room in self.state.board.items():
+                if room.template_id in self.NON_TRANSIT_TEMPLATES:
+                    graph[key] = []
+        return graph
 
     def _reachable_nodes(self, start_key: str, graph: dict[str, list[str]]) -> set[str]:
         visited = {start_key}
@@ -3986,7 +4182,7 @@ class GameEngine:
                     queue.append(neighbor)
         return visited
 
-    def _path_length(self, start_key: str, target_key: str) -> int:
+    def _path_length(self, start_key: str, target_key: str, avoid_transit: bool = False) -> int:
         """两房间之间的步数（相邻为 1，同房间为 0，不可达返回 9999）。
 
         修正说明：_shortest_path 返回的是**包含起点**的节点序列，所以步数
@@ -3997,18 +4193,22 @@ class GameEngine:
         与"同房间"无法区分，于是不可达的房间被算成距离 1——比真正相邻的
         房间（2）还要近，9999 这个哨兵值从来没生效过。后果是怪物会优先
         追那些根本走不到的目标。
+
+        avoid_transit=True：不把传送房（神秘电梯）当中转，见 _build_graph。
         """
         if start_key == target_key:
             return 0
-        path = self._shortest_path(start_key, target_key)
+        path = self._shortest_path(start_key, target_key, avoid_transit=avoid_transit)
         if len(path) < 2:
             return 9999
         return len(path) - 1
 
-    def _shortest_path(self, start_key: str, target_key: str) -> list[str]:
+    def _shortest_path(
+        self, start_key: str, target_key: str, avoid_transit: bool = False
+    ) -> list[str]:
         if start_key == target_key:
             return [start_key]
-        graph = self._build_graph()
+        graph = self._build_graph(avoid_transit=avoid_transit)
         queue = deque([(start_key, [start_key])])
         visited = {start_key}
         while queue:

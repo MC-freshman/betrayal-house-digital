@@ -112,6 +112,18 @@ class BotController:
         self._previous_room_by_player: dict[int, str] = {}
         self._last_exploration_floor_by_player: dict[int, int] = {}
 
+        # 作祟目标承诺：玩家 id → (目标房间 key, 承诺到期回合)。
+        # 剧本目标房间往往不止一间（22 号 6 个驱魔来源、44 号 7 个仪式房间），
+        # 每步都重挑最近的那个会让机器人在两三个房间之间来回打转：
+        # 走了两步、目标换了、又折回来。seed23/5p 的 22 号实测 400 回合里
+        # 第 5 次驱魔始终差一步，英雄在门厅一带空转。像人一样"认准一间先走到"
+        # 才能推进。
+        self._goal_commitment_by_player: dict[int, tuple[str, int]] = {}
+
+    # 目标承诺的有效回合数：够走完一段长路（速度 3-5），又不至于锁死在
+    # 已经变得不划算的目标上。
+    GOAL_COMMITMENT_TURNS = 8
+
     def take_turn(self, engine: GameEngine) -> bool:
         if not engine.state.players or engine.state.phase == "GAME_OVER":
             return False
@@ -161,6 +173,12 @@ class BotController:
             options = engine.available_move_options(player)
             if not options:
                 break
+            if engine.state.phase == "HAUNT_PHASE":
+                stay = getattr(engine._mode_handler(), "bot_stay_in_room", None)
+                if callable(stay) and stay(engine, player):
+                    # 剧本声明"人已经站对了、在等队友"（36 号小艇到了阳台/
+                    # 塔楼、其余英雄还在路上）：离开是把集合点拆掉。
+                    break
             if (
                 engine.state.phase == "HAUNT_PHASE"
                 and engine._haunt_action_used(player)
@@ -244,6 +262,24 @@ class BotController:
     def _monster_in_room(self, engine: GameEngine, player: Player) -> bool:
         return any(monster.room_key == player.room_key and monster.stunned_turns <= 0 for monster in engine.state.monsters)
 
+    def _bot_haunt_actions(self, engine: GameEngine, player: Player) -> list:
+        """机器人眼里的剧本行动：模式层声明"现在别做"的从列表里拿掉。
+
+        `bot_action_blocked` 原先只挡寻路目标。18 号屏息没有 rooms 字段，
+        挡不到，于是它成了"无孢子房间里唯一可点的行动"——机器人每回合
+        先屏息，再被 `_pending_haunt_action_here` 判成"下回合还能在这儿做"，
+        整个人就钉在原地（seed113/3p 实测屏息 359 次，削弱 0/3）。
+        """
+        actions = list(engine.available_haunt_actions(player))
+        blocked = getattr(engine._mode_handler(), "bot_action_blocked", None)
+        if not callable(blocked):
+            return actions
+        return [
+            action
+            for action in actions
+            if not blocked(engine, player, str(getattr(action, "id", "")))
+        ]
+
     def _pending_haunt_action_here(self, engine: GameEngine, player: Player) -> bool:
         """本房间是否还有一次"这回合已用完、下回合还能做"的剧本行动。
 
@@ -255,7 +291,7 @@ class BotController:
         saved = used.get(key)
         used[key] = False
         try:
-            return bool(engine.available_haunt_actions(player))
+            return bool(self._bot_haunt_actions(engine, player))
         finally:
             if saved is None:
                 used.pop(key, None)
@@ -263,7 +299,7 @@ class BotController:
                 used[key] = saved
 
     def _try_haunt_action(self, engine: GameEngine, player: Player) -> bool:
-        actions = engine.available_haunt_actions(player)
+        actions = self._bot_haunt_actions(engine, player)
         if not actions:
             return False
         if player.bot_difficulty == "easy" and engine.rng.random() < 0.3:
@@ -448,19 +484,48 @@ class BotController:
 
     def _rank_move_options(self, engine: GameEngine, player: Player, options: list[ExitOption]) -> list[ExitOption]:
         profile = self._side_profile(engine, player)
+        wants_explore = self._bot_wants_explore(engine, player)
         next_targets = self._next_steps_toward_objectives(engine, player, profile)
         # 剧本层面的目标（该去哪个房间完成剧本任务）。权重刻意低于"追杀"：
         # 先顾眼前的战斗，再顾剧本推进，但也明显高于单纯探索，避免被探索
         # 加分盖过去。
-        haunt_goals = (
-            self._haunt_goal_rooms(engine, player)
+        haunt_targets = (
+            self._haunt_goal_targets(engine, player)
             if engine.state.phase == "HAUNT_PHASE"
+            else set()
+        )
+        haunt_goals = self._next_steps_toward(engine, player, haunt_targets)
+        # 认准的那一间：它压过通用目标房间表（+130）——那张表里混着阁楼、
+        # 卧室之类的"通用宝地"，会把真正的剧本目标挤掉（2 号实测：英雄被
+        # 楼上房间牵着走，五芒星室就在三层外也不去，降灵会开不起来）。
+        # 缺关键牌（wants_explore）时不承诺：那时目标是"翻遍房子找牌"。
+        committed_target = (
+            self._commit_haunt_goal(engine, player, haunt_targets)
+            if haunt_targets and not wants_explore
+            else None
+        )
+        committed_steps = (
+            self._next_steps_toward(engine, player, {committed_target})
+            if committed_target
             else set()
         )
         target_rooms = set(profile.get("target_rooms", []) or [])
         avoid_rooms = set(profile.get("avoid_rooms", []) or [])
-        wants_explore = self._bot_wants_explore(engine, player)
+        if wants_explore:
+            # 剧本明说"关键牌还压在牌堆里、必须去翻出来"时，目标房间的吸引力
+            # 必须先让路：圣徽没到手时，五芒星室是间空屋子，站在那儿干等不是
+            # 人的打法——去翻新房间抽预兆牌才是。9 号实测：英雄在五芒星室
+            # 空站 351 次，圣徽始终留在预兆牌堆里。
+            target_rooms = set()
         previous_room_key = self._previous_room_by_player.get(player.id)
+        # 探索阶段：站在"该探索的楼层"上时，就地翻门要压过"走去别的待探索房间"。
+        # 缺这一条时，前沿寻路的 +130 永远高于探索的 +110（hard），机器人会在
+        # 全屋各个待探索房间之间来回跑、却一间也不翻——seed101/4p 实测 300 回合
+        # 只探到 26 间房、预兆只出了 2 张，作祟永远不开始，四个剧本全卡在探索期。
+        explore_floor = (
+            self._exploration_target_floor(engine, player) if engine.state.phase == "EXPLORE" else None
+        )
+        current_floor = engine.current_room(player).floor if explore_floor is not None else None
         # 剧本目标房间所在的楼层。换层惩罚（-18）原本无差别地压过一切，
         # 导致"目标在别的楼层"的剧本里，机器人永远不下地下室/不上楼
         # （70 号实测：吸血鬼形态差一间地下室的墓穴，叛徒在楼上打转 300 回合）。
@@ -469,9 +534,28 @@ class BotController:
             for key in haunt_goals
             if key in engine.state.board
         }
+        if wants_explore:
+            # 缺关键牌：剧本行动房（如还没拿到圣徽时的五芒星室）这时是间空屋子，
+            # 站在那儿干等不是人的打法；目标是"去还没翻开的门前翻牌"。所以先把
+            # 剧本目标房间的吸引力撤下来（否则 2 号那种 next+haunt 叠到 255 的
+            # 房间永远压着探索的 135，而通往其它前沿的最短路又恰好穿过它，
+            # 机器人就在它和邻居之间来回——9 号实测空站 351 次）。
+            haunt_goals = set()
+            # 但"去别的楼层的前沿"不能被换层惩罚挡住，把有待翻门位的楼层
+            # 一并算进"该去的楼层"。
+            haunt_goal_floors |= {
+                floor
+                for floor in (-1, 0, 1)
+                if engine.exploration_frontier_keys(floor)
+            }
 
         def score(option: ExitOption) -> int:
             value = 0
+            if option.target_key in committed_steps:
+                # 认准的剧本目标：高于一切常驻目标，机器人才会"一条路走到底"。
+                value += {"easy": 100, "normal": 130, "hard": 165}.get(
+                    player.bot_difficulty, 130
+                )
             if option.target_key in next_targets:
                 value += 130 if player.bot_difficulty == "hard" else 100
             if option.target_key in haunt_goals:
@@ -481,11 +565,18 @@ class BotController:
                 value += 125 if player.bot_difficulty == "hard" else 95
             if engine.state.phase == "EXPLORE" and option.is_new_room:
                 value += {"easy": 45, "normal": 80, "hard": 95}.get(player.bot_difficulty, 80)
+                if explore_floor == current_floor:
+                    # 就站在该探的楼层上：翻门（+45 → 155）优先于"走去别的前沿"
+                    # （+130），否则整局都在前沿之间打转，见上方 explore_floor 注释。
+                    value += 45
             if option.is_new_room:
                 value += 15
                 if wants_explore:
-                    # 剧情目标牌还没露面 → 翻新房间比"去王座干等"更接近胜利
-                    value += 120
+                    # 剧情目标牌还没露面 → 翻新房间比"去王座干等"更接近胜利。
+                    # +140（合计 155）要压过"走向剧本目标房"的 +125 和常驻
+                    # 追杀/护送目标的 +130——钩子的语义就是"探索优先"，
+                    # 之前 +120（合计 135）从来没压住过，9 号就卡在这儿。
+                    value += 140
             room = engine.state.board.get(option.target_key)
             if room:
                 if option.target_key == previous_room_key:
@@ -558,7 +649,7 @@ class BotController:
 
         return sorted(options, key=score, reverse=True)
 
-    def _haunt_goal_rooms(self, engine: GameEngine, player: Player) -> set[str]:
+    def _haunt_goal_targets(self, engine: GameEngine, player: Player) -> set[str]:
         """作祟阶段：剧本要求机器人去哪里，而不只是"追人/追怪"。
 
         过去作祟阶段的寻路目标只有敌对玩家与怪物，导致机器人完全不知道
@@ -568,6 +659,7 @@ class BotController:
             · 剧本 3：书掉在已故英雄脚边，bot 不知道要去捡，永远施不出
               凡人形态，女巫始终无敌
         这里把三类剧本目标一并算出来，交由 _rank_move_options 分层加分。
+        返回的是**目标房间本身**，下一步由 `_next_steps_toward` 换算。
         """
         haunt = engine.state.haunt
         rule = (haunt.rule_data or {}) if haunt else {}
@@ -588,8 +680,17 @@ class BotController:
 
         # 1) 有房间要求的剧本行动：挖曼德拉草要去温室/储藏室/厨房，
         #    降灵会要去五芒星室……
+        action_blocked = getattr(handler, "bot_action_blocked", None)
         for action in rule.get("actions", []):
             if not engine._haunt_side_allowed(player, str(action.get("side", "both"))):
+                continue
+            # 模式层已经作废的行动不再是目标。22 号"每个驱魔来源只能用一次"
+            # 记在 used_exorcism_sources 里（不是 set_flags），bot 看不见就
+            # 一直往用过的房间跑——实测 3/5 时三名英雄在五芒星室/花园之间
+            # 空转到 400 回合。
+            if callable(action_blocked) and action_blocked(
+                engine, player, str(action.get("id", ""))
+            ):
                 continue
             # 该行动的产出已经拿到了就不必再去（例如已经挖到草）
             set_flags = action.get("set_flags", {})
@@ -645,9 +746,14 @@ class BotController:
                 if other.role == player.role and engine.tokens_held_by(other.id):
                     goals.add("__room__" + other.room_key)
 
-        # 3) 剧本关键房间作为保底目标
-        for key_room in rule.get("key_rooms", []):
-            goals.add(str(key_room))
+        # 3) 剧本关键房间作为**保底**目标：只有前面几类具体目标（剧本行动房间、
+        #    关键牌、令牌会合）都算不出来时才启用。以前是无条件并入，70 号实测
+        #    受害最重——它的 key_rooms 有 22 间"形态可能用到的房间"，叛徒的目标
+        #    集合被稀释成 19 间，承诺机制只能在最近的保底房里打转（地窖 ⇄ 地下湖），
+        #    真正的形态房（雕像走廊 3 格、温室 6 格）永远排不上，转变停在 0/5。
+        if not goals:
+            for key_room in rule.get("key_rooms", []):
+                goals.add(str(key_room))
 
         # 把模板 id / 房间名解析成实际房间 key
         room_keys: set[str] = set()
@@ -659,17 +765,66 @@ class BotController:
                 if room.template_id == goal or room.name == goal:
                     room_keys.add(key)
 
-        # 关键一步：打分比较的是"下一步走哪个房间"，所以这里要像
-        # _next_steps_toward_objectives 那样换算成路径的第二格。
+        # 关键一步：打分比较的是"下一步走哪个房间"，所以这里换算成路径的第二格。
         # 直接返回目标房间的话，只有一步能抵达时才会加分，等于没引导。
+        return room_keys
+
+    def _next_steps_toward(self, engine: GameEngine, player: Player, room_keys: set[str]) -> set[str]:
+        """把目标房间集合换算成"下一步该走进哪间"的集合。"""
         next_steps: set[str] = set()
         for room_key in room_keys:
-            if room_key not in engine.state.board:
+            if room_key not in engine.state.board or room_key == player.room_key:
                 continue
-            path = engine._shortest_path(player.room_key, room_key)
+            path = engine._shortest_path(player.room_key, room_key, avoid_transit=True)
             if len(path) > 1:
                 next_steps.add(path[1])
         return next_steps
+
+    def _commit_haunt_goal(
+        self, engine: GameEngine, player: Player, targets: set[str]
+    ) -> str | None:
+        """在一堆剧本目标里**认准一间**，并在若干回合内不换（像人一样先走到）。
+
+        没有承诺时挑"走得通且最近"的那间（距离并列时按 key 排序取第一个，
+        保证同种子可复现）；玩家已站在目标房间、目标消失或承诺过期时清掉。
+
+        返回承诺的目标房间 key（没有可用目标时返回 None）。
+        """
+        turn = engine.state.turn_count
+        committed = self._goal_commitment_by_player.get(player.id)
+        if committed is not None:
+            target_key, expires = committed
+            if (
+                expires > turn
+                and target_key in engine.state.board
+                and target_key != player.room_key
+                and target_key in targets
+            ):
+                return target_key
+            # 目标已达成/已消失/承诺过期：换一个（`target_key in targets` 这条
+            # 很关键——访到形态房后它就不再是目标，死守承诺只会白站几回合）。
+            self._goal_commitment_by_player.pop(player.id, None)
+
+        reachable: list[tuple[int, str]] = []
+        for key in sorted(targets):
+            if key not in engine.state.board or key == player.room_key:
+                continue
+            distance = engine._path_length(player.room_key, key, avoid_transit=True)
+            if distance == 9999:
+                continue
+            reachable.append((distance, key))
+        if not reachable:
+            return None
+        _distance, target_key = min(reachable)
+        self._goal_commitment_by_player[player.id] = (
+            target_key,
+            turn + self.GOAL_COMMITMENT_TURNS,
+        )
+        return target_key
+
+    def _haunt_goal_rooms(self, engine: GameEngine, player: Player) -> set[str]:
+        """剧本目标房间的**下一步**集合（`_haunt_goal_targets` 的路径换算）。"""
+        return self._next_steps_toward(engine, player, self._haunt_goal_targets(engine, player))
 
     def _next_steps_toward_objectives(self, engine: GameEngine, player: Player, profile: dict) -> set[str]:
         targets: list[str] = []
@@ -683,6 +838,14 @@ class BotController:
                 targets.extend(self._floor_anchor_keys(engine, target_floor))
 
         if engine.state.phase == "HAUNT_PHASE":
+            if self._bot_wants_explore(engine, player):
+                # 缺关键牌：把**每一层**还能翻门的房间都当成目标，让机器人先
+                # 走到前沿再翻牌（跨层由 BFS 自动经过楼梯/平台）。缺这条，
+                # 身边没有可翻门的机器人只会在几间屋子之间来回晃——9 号实测：
+                # 圣徽还压在 8 张预兆牌里，英雄在一层小教堂那一带空转 180 次，
+                # 永远不去楼上的前沿。
+                for floor in (-1, 0, 1):
+                    targets.extend(engine.exploration_frontier_keys(floor))
             if player.role == "traitor":
                 # 剧本可用 chase_heroes=False 关掉"追英雄"的常驻目标（+130），
                 # 让位给剧本目标（+125）——70 号实测：叛徒要访遍形态房间才能
@@ -727,7 +890,8 @@ class BotController:
                             targets.append(human.room_key)
 
         wanted_rooms = set(profile.get("target_rooms", []) or [])
-        if wanted_rooms:
+        if wanted_rooms and not self._bot_wants_explore(engine, player):
+            # 缺关键牌时目标房间不再是目的地（见 _rank_move_options 的同款判断）
             for key, room in engine.state.board.items():
                 if room.name in wanted_rooms or room.template_id in wanted_rooms:
                     targets.append(key)

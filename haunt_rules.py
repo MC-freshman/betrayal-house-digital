@@ -36,6 +36,12 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "traitor_goal": "让木乃伊带着女孩和戒指或圣徽回到石棺房，或杀光英雄。",
         "suggested_monsters": ["mummy"],
         "required_cards": ["omen_book", "omen_girl", "omen_ring", "omen_holy_symbol"],
+        # p12："若「书」尚未进入游戏，则下一位发现带预兆符号房间的英雄应当搜索
+        # 预兆牌堆并抽出它。"handler 的 on_room_discovered 只覆盖"作祟后新翻出
+        # 预兆房"这一条路；实测 seed101/113 里触发作祟的那次发现发生在 handler
+        # 生效之前，之后再无预兆房可翻，书整局没进场、英雄卡在第二步。
+        # 官方引擎的通用搜牌通道（抽预兆时直接取走它）把这条路补全。
+        "searchable_cards": ["omen_book"],
         "key_rooms": ["catacombs", "research_laboratory", "library", "chapel", "entrance_hall"],
         # 与 BanishmentEscortMode.setup 实际生成的令牌保持一致
         "tokens": ["sarcophagus", "mummy_marker", "girl", "knowledge_check"],
@@ -116,7 +122,10 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
             {"id": "seance_check", "side": "both", "stat": ["knowledge", "sanity"], "target": 5, "rooms": ["pentagram_chamber"]},
             # p13：找骨头/安葬都是"If You Summon the Ghost First"之后的任务，
             # 必须英雄先完成降灵并持有幽灵控制权。
-            {"id": "find_bones", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["attic", "bedroom", "master_bedroom"], "requires": ["flag:ghost_summoned", "flag:ghost_control=heroes"], "set_flags": {"bones_found": True}},
+            # not_flag:bones_found 是必需的：找到骨头后这条行动若还留在
+            # 可用列表里，机器人会站在原地反复"再找一次"而永不启程去墓地
+            # （seed113/4p 实测 find_bones×239、骨头早已找到 300 回合不结束）。
+            {"id": "find_bones", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["attic", "bedroom", "master_bedroom"], "requires": ["flag:ghost_summoned", "flag:ghost_control=heroes", "not_flag:bones_found"], "set_flags": {"bones_found": True}},
             {"id": "bury_bones", "side": "heroes", "stat": "knowledge", "target": 5, "rooms": ["crypt", "graveyard"], "requires": ["flag:ghost_summoned", "flag:ghost_control=heroes", "flag:bones_found"], "set_flags": {"bones_buried": True}},
         ],
         "win_conditions": [
@@ -166,7 +175,11 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "actions": [
             {"id": "dig_root", "side": "heroes", "stat": "knowledge", "target": 4, "set_flags": {"root_found": True}},
             {"id": "cast_mortal_form", "side": "heroes", "stat": "knowledge", "target": 6, "requires": ["omen_book", "same_room:witch"], "progress": "mortal_form", "set_flags": {"witch_vulnerable": True}},
-            {"id": "restore_frog", "side": "heroes", "stat": "knowledge", "target": 4, "requires": ["omen_book"]},
+            # same_room:frog 不可省：青蛙是"玩家身上的状态"，房间列表表达不了。
+            # 缺它时机器人在没有青蛙的房间里也会反复尝试复原（seed109/4p 实测
+            # restore_frog×104、原地往返 100 次），因为行动一执行它就当本回合
+            # 完事、不再移动。
+            {"id": "restore_frog", "side": "heroes", "stat": "knowledge", "target": 4, "requires": ["omen_book", "same_room:frog"]},
             {"id": "carry_frog", "side": "heroes", "label": "背起青蛙", "detail": "把同房间一只没被背着的青蛙像物品一样背起来（p14）。"},
             {"id": "drop_frog", "side": "heroes", "label": "放下青蛙", "detail": "把背着的青蛙放在当前房间（p14）。"},
         ],
@@ -198,6 +211,10 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "traitor_goal": "保护蛛卵直到第 9 回合孵化，或杀光英雄。",
         "suggested_monsters": ["giant_spider"],
         "required_cards": ["omen_bite", "item_medical_kit", "item_healing_salve"],
+        # p15 原文："若「医疗包」卡尚未被发现，任何有机会抽物品卡的英雄都可以在
+        # 牌堆中搜寻并直接取走医疗包，以代替正常抽牌。" 没有它，英雄的"毁卵"
+        # 一步只能靠随机抽到医疗包——抽不到就永远打不出英雄胜利线。
+        "searchable_cards": ["item_medical_kit"],
         "key_rooms": ["entrance_hall"],
         "tokens": ["web", "might_check", "eggs", "spider_timer"],
         "setup": {

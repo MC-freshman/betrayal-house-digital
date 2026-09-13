@@ -651,20 +651,26 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
     36: {
         "hero": {
-            "objective_type": "cooperate_and_collect",
-            "needed_items": ["圣徽", "书", "铃铛", "蜡烛"],
-            "target_rooms": ["小教堂", "图书馆", "研究实验室"],
+            # p47：真实胜利是把小艇扛到阳台/塔楼全员乘艇。静态教堂/图书馆
+            # 会把人钉在错误房间（seed101/5p 实测钉在二楼平台 351 次）。
+            # 寻路交给 SwampEscapeMode.bot_goal_rooms。
+            "objective_type": "escape_with_boat",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_monsters": False,
+            "attack_traitor_players": False,
             "protect_humans": True,
-            "victory_focus": "抱团交换关键物品并完成检定",
+            "victory_focus": "去阁楼扛起小艇，送到阳台或塔楼，等全员到齐再乘艇逃离",
         },
         "traitor": {
-            "objective_type": "deny_items",
-            "needed_items": ["圣徽", "书", "铃铛", "蜡烛"],
+            "objective_type": "sink_the_house",
+            "needed_items": [],
+            "target_rooms": [],
             "attack_heroes": True,
-            "prefer_weak_targets": False,
-            "victory_focus": "抢夺或阻止英雄使用关键物品",
+            "prefer_weak_targets": True,
+            "victory_focus": "拖延并打散英雄，不让他们带着小艇在阳台/塔楼会合",
         },
-        "scenario": {"tokens": ["任务", "仪式"], "special_rules": ["cooperation", "item_objective"]},
+        "scenario": {"tokens": ["小艇"], "special_rules": ["flood", "rowboat_escape"]},
     },
     40: {
         "hero": {

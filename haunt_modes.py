@@ -308,6 +308,10 @@ class GenericModeHandler:
         """
         return []
 
+    def bot_stay_in_room(self, engine: Any, player: Any) -> bool:
+        """True = 机器人这回合不要离开当前房间（等人、等下一步检定）。"""
+        return False
+
     def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
         """剧本进度摘要（可选，duck-typed，桌面 UI 面板会探测）。
 
@@ -338,6 +342,14 @@ class GenericModeHandler:
 
     def item_use_blocked(self, engine: Any, player: Any, card_id: str) -> bool:
         """该玩家是否禁止主动使用物品（剧本 67：入定的叛徒不能用物品）。"""
+        return False
+
+    def action_room_override(self, engine: Any, player: Any, action: dict) -> bool:
+        """剧本行动的地点豁免。返回 True = 忽略该行动的 rooms 要求。
+
+        剧本 2 p84：叛徒持有通灵板时可以在任何地方举行降灵会。默认不豁免，
+        未实现该钩子的剧本行为完全不变。
+        """
         return False
 
 
@@ -583,12 +595,41 @@ class SeanceRaceMode(GenericModeHandler):
         """p13：降灵会完成（任一方召出幽灵）之前，谁都不能攻击。"""
         return bool(engine._haunt_flags().get("ghost_summoned"))
 
+    # ------------------------------------------------------------- 地点豁免
+    def action_room_override(self, engine: Any, player: Any, action: dict) -> bool:
+        """p84：叛徒持有通灵板时，可以在**任何地方**举行降灵会。
+
+        rule_data 的 rooms 对双方一视同仁（五芒星室），但叛徒手册写得清楚：
+        "当你持有通灵板时，可以尝试知识检定或理智检定"——地点不受限。
+        没有这条豁免，叛徒被锁死在五芒星室里、英雄则因为房间里降不了灵
+        原地打转（seed101/4p 实测：五芒星室没被探出，零剧本行动）。
+        """
+        return (
+            str(action.get("id")) == "seance_check"
+            and player.role == "traitor"
+            and "omen_spirit_board" in player.items
+        )
+
     # ------------------------------------------------------------- setup
     def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
         # 英雄手册 p13：知识与神志检定令牌各"玩家数"枚，另有幽灵与尸体令牌
         count = len(engine.state.players)
         engine.spawn_tokens("knowledge_check", count, label="知识检定", role="check")
         engine.spawn_tokens("sanity_check", count, label="神志检定", role="check")
+        # 叛徒手册 p84：若五芒星室不在屋内，叛徒要在房间牌堆里找出它放进屋，
+        # "放在距你至少五格远的地方（若没有，就尽量远）"。缺这条时英雄永远
+        # 无法举行降灵会——seed101/4p 实测五芒星室整局没出现、零剧本行动、
+        # 机器人在内庭原地打转 133 次，300 回合打不完。
+        # 简化：原版要求"地下室门口旁"，引擎按模板楼层（地面层）挑空位，
+        # 只保留"尽量远离叛徒"这一半。
+        revealer_id = engine.state.haunt_revealer_id
+        origin = room_key
+        if revealer_id is not None and 0 <= int(revealer_id) < len(engine.state.players):
+            origin = engine.state.players[int(revealer_id)].room_key
+        if engine._ensure_room_in_play(
+            "pentagram_chamber", origin_room_key=None, farthest_from_key=origin
+        ) is None:
+            engine._log("房间牌堆里已经找不到五芒星室了，降灵会只能另想办法。")
 
     # ------------------------------------------------------------- 行动
     def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
@@ -668,12 +709,41 @@ class SeanceRaceMode(GenericModeHandler):
                 engine._set_haunt_track_value("ghost_rest_timer", 0)
 
     # ------------------------------------------------------------- 计时器
+    def _is_last_alive_hero_of_round(self, engine: Any, player: Any) -> bool:
+        """当前玩家是不是"本轮最后一位存活英雄"（判定方式与引擎怪物回合代理一致）。
+
+        turn_order 是循环队列：往后找下一个活人，如果位置绕回了开头，
+        说明当前玩家就是本轮末尾。
+        """
+        order = engine.state.turn_order
+        if not order:
+            return True
+        alive = {p.id for p in engine.state.players if not p.dead and p.role == "hero"}
+        if player.id not in alive:
+            return False
+        total = len(order)
+        index = engine.state.turn_index
+        for step in range(1, total + 1):
+            next_index = (index + step) % total
+            if order[next_index] in alive:
+                return next_index <= index
+        return True
+
     def on_turn_start(self, engine: Any, player: Any) -> None:
         flags = engine._haunt_flags()
         if flags.get("ghost_control") != "heroes" or flags.get("bones_buried"):
             return
         owner = flags.get("seance_owner_id")
-        if owner is None or player.id != owner:
+        if owner is None:
+            return
+        owner_alive = any(p.id == int(owner) and not p.dead for p in engine.state.players)
+        if owner_alive:
+            if player.id != int(owner):
+                return
+        elif not self._is_last_alive_hero_of_round(engine, player):
+            # 降灵主人已经死了：倒计时改由"本轮最后一位存活英雄"代跑，
+            # 每轮推进一次。不代理的话它会永久冻结（seed113/4p 实测停在
+            # 1/5），英雄没有时间压力、叛徒也永远等不到"逾期夺权"。
             return
         current = engine._haunt_track_value("ghost_rest_timer")
         engine._set_haunt_track_value("ghost_rest_timer", current + 1)
@@ -893,7 +963,9 @@ class WitchAndFrogsMode(GenericModeHandler):
                 engine._log("这个房间里没有曼德拉草可挖。")
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            # super() 的返回值是"行动已执行"（检定失败也是 True），
+            # 奖励必须按检定结果发。
+            if engine.last_haunt_action_succeeded():
                 root = next(iter(engine.tokens_in_room(player.room_key, "root")), None)
                 if root:
                     engine.give_token(root.uid, player.id)
@@ -905,7 +977,7 @@ class WitchAndFrogsMode(GenericModeHandler):
                 engine._log("施放凡人形态需要一株曼德拉草。")
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if engine.last_haunt_action_succeeded():
                 # rule_data 的 set_flags 已置 witch_vulnerable；这里消耗草
                 root = next(iter(engine.tokens_held_by(player.id, "root")), None)
                 if root:
@@ -922,11 +994,14 @@ class WitchAndFrogsMode(GenericModeHandler):
             if not frogs:
                 engine._log("这个房间里没有青蛙。")
                 return False
-            ok = super().perform_action(engine, player, action_id, data)
-            if ok:
-                engine._restore_from_frog(frogs[0])
-                self._sync_carried(engine)  # 复原的蛙解除"被背着"绑定
-            return ok
+            # 必须自己判检定结果：super().perform_action 的返回值是"行动是否
+            # 执行"，检定失败时它同样返回 True——照抄 old 写法会让"失败也复原
+            # 青蛙"，等于把 p14 的 4+ 知识检定变成白送。
+            if not engine._resolve_check(player, "knowledge", 4, "复原青蛙"):
+                return True
+            engine._restore_from_frog(frogs[0])
+            self._sync_carried(engine)  # 复原的蛙解除"被背着"绑定
+            return True
 
         if action_id == "carry_frog":
             carried = self._carried_map(engine)
@@ -1266,7 +1341,7 @@ class WebEscapeMode(GenericModeHandler):
             if flags.get("web_destroyed"):
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok and engine._haunt_track_value("web_damage") >= engine._haunt_track_target("web_damage"):
+            if engine.last_haunt_action_succeeded() and engine._haunt_track_value("web_damage") >= engine._haunt_track_target("web_damage"):
                 flags["web_destroyed"] = True
                 # 解困
                 trapped = next(
@@ -1295,13 +1370,13 @@ class WebEscapeMode(GenericModeHandler):
                 engine.check_victory()
                 return True
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if engine.last_haunt_action_succeeded():
                 flags["eggs_destroyed"] = True
             return ok
 
         if action_id == "open_front_door":
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if engine.last_haunt_action_succeeded():
                 engine._haunt_flags()["front_door_open"] = True
             return ok
 
@@ -2044,6 +2119,14 @@ class ExorcismMode(GenericModeHandler):
         used = set(engine._haunt_flags().get("used_exorcism_sources", []))
         return [action for action in actions if action.id not in used]
 
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        """给 bot 判寻路目标用：成功用过的驱魔来源不再是目的地（p49/p90 一次性）。
+
+        与 available_actions 的区别是**不看位置**——机器人必须能算出"该去哪间
+        还没用过的来源房"，而不是等站进去了才发现行动不可用。8/11/22/38 共用。
+        """
+        return action_id in set(engine._haunt_flags().get("used_exorcism_sources", []))
+
     def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
         """驱魔来源：只有检定【成功】才作废来源并在房间放检定令牌（p49/p90）。
 
@@ -2197,6 +2280,34 @@ class DeathDanceMode(GenericModeHandler):
                 engine._log(
                     f"被魔音牵引的{player.name}身不由己地走向{engine.state.board[player.room_key].name}。"
                 )
+
+    HOLY_SYMBOL = "omen_holy_symbol"
+
+    def _holy_symbol_in_play(self, engine: Any) -> bool:
+        """圣徽是否已经进入对局（有人拿着，或掉在某间房里）。"""
+        if any(
+            self.HOLY_SYMBOL in p.items for p in engine.state.players if not p.dead
+        ):
+            return True
+        return any(
+            self.HOLY_SYMBOL in items for items in engine.state.room_items.values()
+        )
+
+    def bot_wants_explore(self, engine: Any, player: Any) -> bool:
+        """圣徽还压在预兆牌堆里时，英雄必须继续探索去把它抽出来。
+
+        p20 原文没有"搜牌堆"条款：圣徽只能靠正常抽预兆牌入手。缺了这条，
+        英雄访到五芒星室就干等（seed113/3p 实测在五芒星室空站 351 次，
+        圣徽整局留在牌堆里），放逐永远是 0/3。谁都可以去抽，所以这里对
+        全体英雄放行。
+        """
+        if player.dead or player.role != "hero":
+            return False
+        if engine._haunt_flags().get("holy_symbol_destroyed"):
+            return False
+        if self._holy_symbol_in_play(engine):
+            return False
+        return self.HOLY_SYMBOL in engine.state.card_decks.get("omen", [])
 
     def available_actions(self, engine: Any, player: Any) -> list[Any]:
         actions = super().available_actions(engine, player)
@@ -3355,6 +3466,15 @@ class OffspringMode(GenericModeHandler):
             engine.spawn_token(self.SPORE, label="孢子", role="marker", room_key=plant_room)
         flags["breath_active"] = {}
         flags["catching_breath"] = []
+        # 寻花房间必须在场：探索阶段未必翻到温室/花园/墓地，缺了就整局
+        # 找不到花（weaken_count 永远 0）。
+        if not any(
+            room.template_id in ("conservatory", "garden", "graveyard")
+            for room in engine.state.board.values()
+        ):
+            engine._ensure_room_in_play("garden", room_key) or engine._ensure_room_in_play(
+                "conservatory", room_key
+            ) or engine._ensure_room_in_play("graveyard", room_key)
         engine._log(
             f"一株扭曲的藤蔓盘踞在{engine.state.board[plant_room].name}，"
             f"{players} 团孢子在它周围浮动。"
@@ -3460,8 +3580,32 @@ class OffspringMode(GenericModeHandler):
             if action.id == "hold_breath":
                 if player.role != "hero" or self._in_spores(engine, player):
                     continue  # p29：在无孢子房间才能屏息
+                if str(player.id) in engine._haunt_flags().get("breath_active", {}):
+                    continue  # 已经在屏息，不必再点一次
             result.append(action)
         return result
+
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        """屏息是过孢子房的可选防护，不是推进手段。
+
+        机器人每回合先点它，就会被「本房间下回合还能做剧本行动」钉在原地
+        （seed113/3p 实测屏息 359 次，削弱 0/3）。真人玩家仍可手动屏息。
+        """
+        return action_id == "hold_breath"
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """没找到花就去温室/花园/墓地；找到了就把花带进毒藤房间削弱。"""
+        if player.dead or player.role != "hero":
+            return []
+        flags = engine._haunt_flags()
+        if flags.get("flower_found"):
+            plant = flags.get("plant_room")
+            return [f"__room__{plant}"] if plant else []
+        return [
+            f"__room__{key}"
+            for key, room in engine.state.board.items()
+            if room.template_id in ("conservatory", "garden", "graveyard")
+        ]
 
     def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
         flags = engine._haunt_flags()
@@ -4318,6 +4462,12 @@ class SwampEscapeMode(GenericModeHandler):
         flags["boat_room"] = attic
         if attic:
             engine.spawn_token(self.BOAT, label="小艇", role="marker", room_key=attic)
+        # p47 逃生点是阳台或塔楼：探索阶段未必翻到，缺了就只能扛着艇空转
+        # （seed101/5p 实测：小艇扛起后英雄钉在二楼平台 351 次）。
+        if not any(room.template_id in self.ESCAPE_ROOMS for room in engine.state.board.values()):
+            engine._ensure_room_in_play("balcony", attic or room_key) or engine._ensure_room_in_play(
+                "tower", attic or room_key
+            )
         engine._log("地下室传来水声——房子正在沉入地下沼泽！")
 
     # ------------------------------------------------------------- 洪水
@@ -4353,24 +4503,33 @@ class SwampEscapeMode(GenericModeHandler):
             return 4
         return 0
 
-    def on_turn_start(self, engine: Any, player: Any) -> None:
+    def _advance_flood(self, engine: Any) -> None:
         flags = engine._haunt_flags()
+        if flags.get("medallion_pause"):
+            flags["medallion_pause"] = False
+            engine._log("勋章的力量暂时压制了洪水——本轮不推进。")
+            return
+        current = int(engine._haunt_track_value("flood_timer"))
+        if current >= 6:
+            return
+        engine._set_haunt_track_value("flood_timer", current + 1)
+        level = self._flood_level(engine)
+        desc = {
+            1: "地下室部分淹",
+            2: "地下室全淹",
+            3: "地下室全淹+一楼部分淹",
+            4: "地下室+一楼全淹",
+            5: "全屋部分淹",
+            6: "全屋全淹",
+        }.get(level, "")
+        engine._log(f"洪水上涨！（{level}/6：{desc}）")
+
+    def on_turn_start(self, engine: Any, player: Any) -> None:
         if player.role == "traitor":
             if player.dead:
                 return
             # p118：回合结束推进 → 用下一回合开始近似
-            if flags.get("medallion_pause"):
-                flags["medallion_pause"] = False
-                engine._log("勋章的力量暂时压制了洪水——本轮不推进。")
-                return
-            current = int(engine._haunt_track_value("flood_timer"))
-            if current >= 6:
-                return  # 全淹稳定，不再推进
-            engine._set_haunt_track_value("flood_timer", current + 1)
-            level = self._flood_level(engine)
-            desc = {1: "地下室部分淹", 2: "地下室全淹", 3: "地下室全淹+一楼部分淹",
-                    4: "地下室+一楼全淹", 5: "全屋部分淹", 6: "全屋全淹"}.get(level, "")
-            engine._log(f"洪水上涨！（{level}/6：{desc}）")
+            self._advance_flood(engine)
             return
         # 英雄：全淹伤害
         if player.dead:
@@ -4380,6 +4539,38 @@ class SwampEscapeMode(GenericModeHandler):
             engine._log(f"{player.name} 在齐胸的洪水中挣扎（2 骰不可防物理伤害）。")
             engine._deal_damage(player, "physical", amount, source="洪水")
             engine.check_victory()
+
+    def on_turn_end(self, engine: Any, player: Any) -> None:
+        """叛徒死后洪水仍按"一整轮一次"上涨（p47 沉屋不因叛徒倒下而停）。"""
+        if any(p.role == "traitor" and not p.dead for p in engine.state.players):
+            return
+        alive_ids = {p.id for p in engine.state.players if not p.dead}
+        if player.id not in alive_ids:
+            return
+        order = list(engine.state.turn_order or [])
+        if not order:
+            self._advance_flood(engine)
+            return
+        try:
+            idx = order.index(player.id)
+        except ValueError:
+            self._advance_flood(engine)
+            return
+        next_alive = None
+        for offset in range(1, len(order) + 1):
+            candidate = order[(idx + offset) % len(order)]
+            if candidate in alive_ids:
+                next_alive = candidate
+                break
+        if next_alive is None:
+            return
+        # 下一个活人的下标不大于当前 → 本轮即将绕回，当前是本轮末尾
+        try:
+            next_idx = order.index(next_alive)
+        except ValueError:
+            return
+        if next_idx <= idx:
+            self._advance_flood(engine)
 
     def movement_cost_floor(self, engine: Any, player: Any, from_key: str | None = None, to_key: str | None = None) -> int:
         """p47：部分淹 -2 / 全淹 -4 移动——等效为抬高费用下限。"""
@@ -4419,7 +4610,7 @@ class SwampEscapeMode(GenericModeHandler):
                 room_id = engine._current_room_template_id(player)
                 if room_id not in self.ESCAPE_ROOMS:
                     continue
-                if not engine.tokens_in_room(player.room_key, self.BOAT):
+                if not self._boat_here(engine, player):
                     continue
                 # p47：不能留下活着的英雄
                 if any(p.role == "hero" and not p.dead and p.room_key != player.room_key
@@ -4427,6 +4618,76 @@ class SwampEscapeMode(GenericModeHandler):
                     continue
             result.append(action)
         return result
+
+    def _boat_here(self, engine: Any, player: Any) -> bool:
+        """小艇在本房间：地上、自己扛着、或同房队友扛着。
+
+        give_token 会把令牌的 room_key 清掉，只查 tokens_in_room 会在扛起后
+        永远找不到艇，逃生行动从此不再出现。
+        """
+        if engine.tokens_in_room(player.room_key, self.BOAT):
+            return True
+        return any(
+            not p.dead
+            and p.room_key == player.room_key
+            and engine.tokens_held_by(p.id, self.BOAT)
+            for p in engine.state.players
+        )
+
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        flags = engine._haunt_flags()
+        if action_id == "take_rowboat":
+            # 艇已经被人扛走：阁楼不再是寻路目标，否则扛艇的人会折回去。
+            return flags.get("boat_carrier") is not None or bool(flags.get("boat_destroyed"))
+        return False
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """没人扛艇 → 去艇所在房间；扛着的人去阳台/塔楼；其余人去会合。"""
+        if player.dead or player.role != "hero":
+            return []
+        flags = engine._haunt_flags()
+        if flags.get("boat_destroyed"):
+            return []
+        escape_keys = [
+            f"__room__{key}"
+            for key, room in engine.state.board.items()
+            if room.template_id in self.ESCAPE_ROOMS
+        ]
+        carrier_id = flags.get("boat_carrier")
+        if carrier_id is None:
+            boat = next(iter(engine.tokens_of_kind(self.BOAT)), None)
+            if boat is not None and boat.room_key:
+                return [f"__room__{boat.room_key}"]
+            return ["attic"]
+        if player.id == carrier_id:
+            return escape_keys or ["balcony", "tower"]
+        carrier = next((p for p in engine.state.players if p.id == carrier_id), None)
+        if carrier is not None and not carrier.dead:
+            return [f"__room__{carrier.room_key}"]
+        return escape_keys
+
+    def bot_stay_in_room(self, engine: Any, player: Any) -> bool:
+        """艇已经到了阳台/塔楼：先在这儿等其余活人到齐，再一起乘艇。"""
+        if player.dead or player.role != "hero":
+            return False
+        if engine._current_room_template_id(player) not in self.ESCAPE_ROOMS:
+            return False
+        if not self._boat_here(engine, player):
+            return False
+        return any(
+            p.role == "hero" and not p.dead and p.room_key != player.room_key
+            for p in engine.state.players
+        )
+
+    def on_player_died(self, engine: Any, player: Any) -> None:
+        flags = engine._haunt_flags()
+        if flags.get("boat_carrier") != player.id:
+            return
+        token = next(iter(engine.tokens_held_by(player.id, self.BOAT)), None)
+        if token is not None and player.room_key:
+            engine.place_token(token.uid, player.room_key)
+        flags["boat_carrier"] = None
+        engine._log("小艇从倒下的人身上滑落到地上。")
 
     def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
         flags = engine._haunt_flags()
@@ -4457,7 +4718,7 @@ class SwampEscapeMode(GenericModeHandler):
             if room_id not in self.ESCAPE_ROOMS:
                 engine._log("需要在阳台或塔楼才能乘艇逃离。")
                 return False
-            if not engine.tokens_in_room(player.room_key, self.BOAT):
+            if not self._boat_here(engine, player):
                 engine._log("小艇不在你的房间。")
                 return False
             escaped = flags.setdefault("escaped", [])
@@ -5952,17 +6213,37 @@ class GhostBrideMode(GenericModeHandler):
             engine._log(f"{player.name} 扛起了新郎的尸体。")
 
     # ------------------------------------------------------------- 新娘
+    def _groom_is_dead(self, engine: Any) -> bool:
+        """新郎是否已死——按棋盘事实查询，而不是只认一次性事件标记。
+
+        `groom_dead` 过去只在新娘的攻击杀死新郎那一处置位。新郎是英雄玩家，
+        完全可能死于别的来源（英雄内斗、事件、其它怪物），那时婚礼线永远不
+        触发：新娘继续追人、叛徒的胜利路线静默失效。这里按事实补正。
+        """
+        flags = engine._haunt_flags()
+        if flags.get("groom_dead"):
+            return True
+        groom = self._groom(engine)
+        if groom is not None and groom.dead:
+            flags["groom_dead"] = True
+            engine._log(f"{groom.name} 死了——他的魂魄被婚礼的誓言缚住了……")
+            return True
+        return False
+
     def on_monster_move(self, engine: Any, monster: Any, rolled: int) -> bool:
         if _monster_id(monster) != self.BRIDE:
             return False
         flags = engine._haunt_flags()
-        if flags.get("groom_dead"):
+        if self._groom_is_dead(engine):
             # 新郎已死：新娘去教堂开婚
             chapel = self._chapel(engine)
-            if chapel and monster.room_key != chapel:
-                monster.room_key = chapel
-                engine._log("新娘飘进了教堂——婚礼开始了！")
-                flags["wedding_started"] = True
+            if chapel:
+                if monster.room_key != chapel:
+                    monster.room_key = chapel
+                    engine._log("新娘飘进了教堂——婚礼开始了！")
+                if not flags.get("wedding_started"):
+                    flags["wedding_started"] = True
+                    engine._log("婚礼开始了——誓言将在第三回合完成。")
             return True
         groom = self._groom(engine)
         target = groom if (groom is not None and not groom.dead) else engine._find_monster_target(monster)
@@ -7454,6 +7735,33 @@ class TentacledHorrorMode(CarnivorousIvyMode):
             placed += 1
         flags["pairs_placed"] = placed
         engine._log(f"{placed} 条触手从墙里探出来，每一条都连着自己的根。")
+
+    CRYSTAL_BALL_OMEN = "omen_crystal_ball"
+
+    def bot_wants_explore(self, engine: Any, player: Any) -> bool:
+        """水晶球还压在预兆牌堆里时，英雄必须继续探索去把它抽出来。
+
+        p34：只有持水晶球做知识 4+ 才能定位头颅，而水晶球只能靠正常抽预兆牌
+        入手（原文没有搜牌堆条款）。缺了这条，英雄会在触手房里站到天荒地老
+        ——头颅永不露面，`creature_destroyed` 永远是 False。任何英雄拿到都能
+        凝视，所以对全体英雄放行。
+        """
+        if player.dead or player.role != "hero":
+            return False
+        if engine._haunt_flags().get("head_found"):
+            return False
+        if any(
+            self.CRYSTAL_BALL_OMEN in p.items
+            for p in engine.state.players
+            if not p.dead
+        ):
+            return False
+        if any(
+            self.CRYSTAL_BALL_OMEN in items
+            for items in engine.state.room_items.values()
+        ):
+            return False
+        return self.CRYSTAL_BALL_OMEN in engine.state.card_decks.get("omen", [])
 
     def _tip_spec(self, engine: Any) -> dict:
         specs = engine._haunt_rule_state().get("monster_specs", {})
@@ -9803,8 +10111,15 @@ class DraculaRisingMode(GenericModeHandler):
             self._boost(engine, traitor)
             self._mark_vampire(engine, traitor)
             engine._log(f"{traitor.name} 的獠牙长了出来——他也成了吸血鬼。")
-        # p112：德古拉 → 地窖或墓地；都不在场 → 无人房 ≥4 格，否则最远
+        # p112：德古拉 → 地窖或墓地。两者都不在场时不能退而求其次去"任意远房"：
+        # 巢穴是剧本机制的一部分（长矛钉杀、阳光烧毁都以"德古拉在巢穴"为前提，
+        # 测试与黄金基准也按地窖/墓地断言）。用引擎能力把房间拉进场——与 2 号
+        # 五芒星室、3 号温室同一做法；实在拉不进来（牌堆耗尽/放不下）才退回远房。
         drac_key = self._first_in_play(engine, ("crypt", "graveyard"))
+        if not drac_key:
+            drac_key = engine._ensure_room_in_play("crypt") or engine._ensure_room_in_play(
+                "graveyard"
+            )
         if not drac_key:
             drac_key = self._far_unoccupied(engine)
         specs = engine._haunt_rule_state().get("monster_specs", {})
@@ -11857,8 +12172,16 @@ class CrimsonJackMode(GenericModeHandler):
         if engine.state.phase != "HAUNT_PHASE" or player.dead:
             return
         flags = engine._haunt_flags()
-        # p130：叛徒回合开始时，被击败的杰克回到门厅且全属性 +1
-        if player.role == "traitor" and flags.get("jack_banished"):
+        # p130：叛徒回合开始时，被击败的杰克回到门厅且全属性 +1。
+        # 叛徒已死时改由任意玩家的回合开始带回：杰克只在叛徒回合回归的话，
+        # 叛徒一死、杰克又恰好被放逐，他就永远回不来，"用诅咒武器永久杀死
+        # 杰克"这条英雄胜利线随之断裂，整局烂在 400 回合（seed101/5p 实测：
+        # 研究进度 5/5、武器已理解，英雄却无杰克可杀）。这也符合本模式既有的
+        # "叛徒倒下后杰克继续行动"口径。
+        traitor_alive = any(
+            p.role == "traitor" and not p.dead for p in engine.state.players
+        )
+        if flags.get("jack_banished") and (player.role == "traitor" or not traitor_alive):
             flags["jack_bonus"] = int(flags.get("jack_bonus", 0)) + 1
             flags["jack_banished"] = False
             self._return_jack(engine, player)
@@ -13115,9 +13438,21 @@ class NightfallMode(GenericModeHandler):
         knowledge_ok = False
         sanity_ok = False
         for hero in here:
-            stat = "knowledge" if hero.stats.get("knowledge", 0) >= hero.stats.get(
-                "sanity", 0
-            ) else "sanity"
+            # p69：每位英雄各做一次知识 4+ 或理智 4+，团队需要"两类各至少一次成功"。
+            # 过去每人都挑自己更强的那一项：全员偏知识就会清一色知识检定，
+            # 理智那类永远凑不齐，驱散永远失败——而"驱散三层暮色"是英雄的
+            # 胜利线之一，等于整条线静默失效（seed137 三人局实测）。
+            # 真人团队会分工补缺口：先挑自己的强项，之后缺哪类就补哪类。
+            prefer = (
+                "knowledge"
+                if hero.stats.get("knowledge", 0) >= hero.stats.get("sanity", 0)
+                else "sanity"
+            )
+            if knowledge_ok and not sanity_ok:
+                prefer = "sanity"
+            elif sanity_ok and not knowledge_ok:
+                prefer = "knowledge"
+            stat = prefer
             if engine._resolve_check(hero, stat, self.BANISH_TARGET, "驱散暮色"):
                 if stat == "knowledge":
                     knowledge_ok = True
@@ -13630,6 +13965,11 @@ class BurningSandsMode(GenericModeHandler):
         flags.setdefault("clues", {})
         flags.setdefault("riddle_solved", False)
         hall_key = engine._ensure_room_in_play(self.HALL, room_key) or room_key
+        # p71：三条线索分别在杂物间/游戏室/风琴房。缺任何一间，英雄的
+        # "集齐三线索→解谜"胜利线就永远走不通（同 2 号五芒星室、3 号温室），
+        # 开局按引擎能力把三间房拉进场。
+        for template_id in self.CLUE_ROOMS.values():
+            engine._ensure_room_in_play(template_id, room_key)
         hero_count = sum(1 for p in engine.state.players if p.role == "hero")
         spec = dict(
             engine._haunt_rule_state()
@@ -13782,7 +14122,11 @@ class BurningSandsMode(GenericModeHandler):
         # 缺哪条线索就去哪个房间；集齐三枚直奔作祟房
         for stat in self.ROLL_TOKENS:
             if stat not in mine:
-                return [f"__room__{self.CLUE_ROOMS[stat]}"]
+                # 返回**模板 id**：bot 侧的 _haunt_goal_rooms 会按 template_id
+                # 换算成房间 key 再取下一步。写成 "__room__<模板 id>" 是错的——
+                # 那个前缀只接受真正的棋盘 key，模板 id 会被静默丢弃，
+                # 结果机器人永远不去线索房（#60 实测：三线索从没被 bot 拿过）。
+                return [self.CLUE_ROOMS[stat]]
         haunt_room = engine.state.meta["haunt_rule"].get("haunt_room")
         return [f"__room__{haunt_room}"] if haunt_room else []
 

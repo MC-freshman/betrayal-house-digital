@@ -424,6 +424,25 @@ def _set_current(engine: GameEngine, player: Any) -> None:
         engine.state.turn_index = order.index(player.id)
 
 
+def _buff_heroes_to_max(engine: GameEngine) -> None:
+    """把存活英雄的四项属性抬到轨道上限。
+
+    机制类测试常用"制造一次对决再看后果"的写法，而作祟是从真实对局中途接上的：
+    英雄可能已经带着探索阶段的损耗，一记反击就被打死。阵亡会掉落全部物品、
+    并让行动列表清空，后面的断言会全线崩掉（剧本 11/16 都踩过——一次攻击
+    把英雄打到速度 0，第二次攻击直接被闸门拒掉）。测试验的是机制不是伤害数值，
+    先把血量抬满，保证断言只和被测逻辑有关。
+    """
+    for player in engine.state.players:
+        if player.role != "hero" or player.dead:
+            continue
+        for stat in ("speed", "might", "sanity", "knowledge"):
+            track = engine._stat_track(player, stat)
+            if track:
+                player.stat_positions[stat] = len(track) - 1
+                player.stats[stat] = track[-1]
+
+
 def verify_haunt1_tokens() -> None:
     """剧本 1 的令牌链路：放置、距离、set aside、拾取。
 
@@ -687,8 +706,18 @@ def verify_haunt2_bones_require_summon() -> None:
     ids = {a.id for a in actions}
     assert "bury_bones" not in ids, "不在地窖/墓地时不应能安葬"
     grave_room = next(
-        key for key, room in engine.state.board.items() if room.template_id in {"crypt", "graveyard"}
+        (
+            key
+            for key, room in engine.state.board.items()
+            if room.template_id in {"crypt", "graveyard"}
+        ),
+        None,
     )
+    if grave_room is None:
+        # 棋盘布局随探索行为变化而变：地窖/墓地未必已翻出。这里验的是
+        # "安葬要求站在地窖/墓地"，用引擎能力把房间拉进场即可。
+        grave_room = engine._ensure_room_in_play("graveyard") or engine._ensure_room_in_play("crypt")
+    assert grave_room is not None, "需要地窖或墓地在场上才能验证安葬"
     hero.room_key = grave_room
     actions = handler.available_actions(engine, hero)
     ids = {a.id for a in actions}
@@ -837,12 +866,23 @@ def verify_haunt3_frog_lifecycle() -> None:
     assert engine.room_items(before_room), "掉落的物品应留在原房间"
     assert not engine.available_attack_targets(hero), "青蛙不能攻击"
 
-    # 复原：属性回到角色卡初始值
+    # 复原：属性回到起始值（p14"恢复后的英雄，其各项属性回到起始值"）。
+    # 注意不能直接比 face.stats：角色卡的印刷起始值未必落在轨道上
+    # （card_1_0 的起始力量写 3，而力量轨道是 [1,2,2,4,4,5,5,7]），
+    # 引擎在开局与复原时都会把它吸附到最接近的格子——两处必须一致。
     engine._restore_from_frog(hero)
     assert not hero.frog
     for stat in ("might", "knowledge"):
-        initial = face.stats[stat]
-        assert hero.stats[stat] == initial, f"{stat} 应回到初始值 {initial}，实际 {hero.stats[stat]}"
+        track = engine._stat_track(hero, stat)
+        printed = face.stats[stat]
+        if track:
+            index = min(range(len(track)), key=lambda i: abs(track[i] - printed))
+            expected = track[index]
+        else:
+            expected = printed
+        assert hero.stats[stat] == expected, (
+            f"{stat} 应回到起始值 {expected}（卡面 {printed}），实际 {hero.stats[stat]}"
+        )
 
 
 def verify_haunt3_root_tokens() -> None:
@@ -1009,6 +1049,10 @@ def verify_bot_holds_position_for_next_step() -> None:
     handler = engine._mode_handler()
     controller = BotController()
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    # 风琴房里有蝙蝠：机器人先出手攻击，若英雄属性见底会被一击打死（实测
+    # 速度 2→0 直接倒下），"该继续移动"的断言就变成"英雄死了"的假失败。
+    # 本测试验的是行动链与机动决策，先把英雄抬到属性上限。
+    _buff_heroes_to_max(engine)
     organ_key = next(k for k, room in engine.state.board.items() if room.template_id == "organ_room")
     hero.room_key = organ_key
     _set_current(engine, hero)
@@ -1414,12 +1458,17 @@ def verify_haunt9_dance_of_death() -> None:
     assert hero.role == "traitor" and engine.state.traitor_id == hero.id, "舞厅诱惑失败应堕落"
     assert not hero.dead
 
-    # 叛徒回合开始：力量检定 0-2 → 不能移动 + 力量轨道下移一格
-    might_pos_before = hero.stat_positions.get("might")
+    # 叛徒回合开始：力量检定 0-2 → 不能移动 + 力量轨道下移一格。
+    # 注意断言的是"有效力量少一格"：引擎的 _apply_stat_loss 会先消耗临时加成
+    # （overflow），角色身上带加值时轨位本身不会动，直接比轨位会假失败。
+    might_before = hero.stat_positions.get("might", 0) + hero.overflow.get("might", 0)
     with patch.object(engine, "_roll_attack", return_value=1):
         handler.on_turn_start(engine, hero)
     assert hero.movement_stopped, "跳舞检定失败应钉住本回合"
-    assert hero.stat_positions.get("might", 0) < might_pos_before, "跳舞检定失败应 -1 力量（轨道下移一格）"
+    might_after = hero.stat_positions.get("might", 0) + hero.overflow.get("might", 0)
+    assert might_after == might_before - 1, (
+        "跳舞检定失败应 -1 力量（轨道下移一格或消耗临时加成）"
+    )
 
     # 剩余英雄在五芒星室放逐（理智 5+）：进度 +1、房间放理智令牌
     pentagram_key = next(k for k, r in engine.state.board.items() if r.template_id == "pentagram_chamber")
@@ -1642,6 +1691,11 @@ def verify_haunt11_specter_invasion() -> None:
     assert (madman.speed, madman.might, madman.sanity) == (7, 7, 7)
 
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    # 本测试验的是"布点/开窗/放逐/来源清单"这套机制，不是伤害数值。
+    # 人影在 _release_specter 里会立刻行动并攻击最近的英雄，探索阶段累积的
+    # 损耗会让英雄在断言之前就阵亡（阵亡会掉落全部物品，后面的戒指来源断言
+    # 跟着假失败）。先把属性抬到上限，保证伤害不致死。
+    _buff_heroes_to_max(engine)
 
     # 疯子自动开最近的窗并放入人影（放入当回合即可行动）
     before = int(engine._haunt_flags()["specters_activated"])
@@ -1739,15 +1793,24 @@ def verify_haunt12_fleshwalkers() -> None:
     )
     assert hero_twin is not None, "应能找到该英雄的双胞胎"
     hero_twin.room_key = hero.room_key
-    before = dict(hero.stat_positions)
+    # 注意"临时加成（overflow）会先被消耗"：断言的必须是**有效属性**少一格，
+    # 否则角色身上带加值时轨位不动、测试假失败。
+    before = {
+        stat: hero.stat_positions.get(stat, 0) + hero.overflow.get(stat, 0)
+        for stat in ("speed", "might", "sanity", "knowledge")
+    }
     engine._active_player_id = hero.id
     with patch.object(engine, "_roll_attack", return_value=9), patch.object(
         engine, "_roll_monster_attack", side_effect=lambda m, a, reroll_blanks=False: 1
     ):
         assert engine.attack(hero, hero_twin) is True
     for stat in ("speed", "might", "sanity", "knowledge"):
-        if before.get(stat) is not None and before[stat] > 0:
-            assert hero.stat_positions[stat] < before[stat], f"无球对本体交手应掉 {stat}"
+        if before[stat] <= 0:
+            continue
+        after = hero.stat_positions.get(stat, 0) + hero.overflow.get(stat, 0)
+        assert after == before[stat] - 1, (
+            f"无球对本体交手应掉 {stat}（轨道一格或临时加成：{before[stat]}→{after}）"
+        )
     assert hero_twin in engine.state.monsters and hero_twin.stunned_turns > 0, "无球只能击晕"
 
     # 昏迷双胞胎只有持球者能攻击；持球击败自己的双胞胎 → 杀死
@@ -2014,6 +2077,9 @@ def verify_haunt16_phantoms_embrace() -> None:
     assert not any("omen_girl" in deck for deck in engine.state.card_decks.values()), "女孩卡应被移出牌堆"
 
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    # 幻影的"防御成功→反击"要真的打出伤害（本测试的第一步），但 7 点反击
+    # 足以把带伤英雄直接打死；先抬满属性，保证第二步的"击败幻影"还能进行。
+    _buff_heroes_to_max(engine)
 
     # 幻影在带符号的地下室房间出现，并抑制该次抽牌
     room_a = next(r for r in engine.state.board.values() if r.floor == -1)
@@ -2299,6 +2365,20 @@ def verify_haunt18_offspring() -> None:
     spores_before = len(engine.tokens_of_kind("spore"))
     handler.on_turn_start(engine, traitor)
     assert len(engine.tokens_of_kind("spore")) >= spores_before + 2, "叛徒回合应补充孢子"
+
+    # 寻花房间必须在场；机器人不能把屏息当推进手段
+    assert any(
+        room.template_id in ("conservatory", "garden", "graveyard")
+        for room in engine.state.board.values()
+    ), "温室/花园/墓地至少一间应在场"
+    assert handler.bot_action_blocked(engine, hero, "hold_breath") is True
+    assert handler.bot_action_blocked(engine, hero, "find_flower") is False
+    flags["flower_found"] = False
+    flower_goals = handler.bot_goal_rooms(engine, hero)
+    assert flower_goals, "没找到花时应去寻花房间"
+    flags["flower_found"] = True
+    plant_goals = handler.bot_goal_rooms(engine, hero)
+    assert plant_goals == [f"__room__{plant_room}"], "找到花后应把花带进毒藤房间"
 
 
 def verify_haunt19_beastmaster() -> None:
@@ -3220,7 +3300,12 @@ def verify_haunt25_deferred_draw() -> None:
     engine.state.turn_index = 0
 
     # 实际走一步探索：强制抽到厨房（物品符号房），移动不应被强制打断
-    frontier = "0:0:0"
+    # 起点不能写死入口大厅：它的三个门位在部分轨迹下已被占满，next() 会
+    # StopIteration。测试验的是"探索不再强制停"，与具体是哪间房无关；
+    # 挑一间地面层还有空门位的房间即可（厨房是地面层模板，抽牌补丁只对 0 层生效）。
+    frontier_options = engine.exploration_frontier_keys(0)
+    assert frontier_options, "地面层应还有可探索的房间牌（否则本测试无法进行）"
+    frontier = frontier_options[0]
     hero.room_key = frontier
     option = next(o for o in engine.available_move_options(hero) if o.is_new_room)
     hero.steps_remaining = 5
@@ -4221,11 +4306,14 @@ def verify_haunt36_swamp_escape() -> None:
     assert isinstance(handler, SwampEscapeMode)
     flags = engine._haunt_flags()
 
-    # 阁楼在场；小艇在阁楼
+    # 阁楼在场；小艇在阁楼；阳台或塔楼必须在场（否则无处逃生）
     attic = next((k for k, r in engine.state.board.items() if r.template_id == "attic"), None)
     assert attic is not None, "阁楼应被强制入场"
     boat = engine.tokens_of_kind("rowboat")
     assert boat and boat[0].room_key == attic, "小艇应在阁楼"
+    assert any(
+        room.template_id in ("balcony", "tower") for room in engine.state.board.values()
+    ), "阳台或塔楼应被强制入场"
 
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
     traitor = next(p for p in engine.state.players if p.role == "traitor")
@@ -4240,12 +4328,18 @@ def verify_haunt36_swamp_escape() -> None:
         assert handler.movement_cost_floor(engine, hero) >= 3, "部分淹应有移动惩罚"
         assert handler._flood_desc(engine, handler._floor_for_room(engine, basement)) == "partial"
 
-    # 扛小艇：×2 移动
+    # 扛小艇：×2 移动；令牌离房后仍算"艇在这里"
     hero.room_key = attic
     _set_current(engine, hero)
     assert handler.perform_action(engine, hero, "take_rowboat", {}) is True
     assert flags.get("boat_carrier") == hero.id
     assert handler.movement_cost_multiplier(engine, hero) == 2, "背小艇应 ×2"
+    assert not engine.tokens_in_room(attic, "rowboat"), "扛起后令牌应离房"
+    assert engine.tokens_held_by(hero.id, "rowboat")
+    assert handler._boat_here(engine, hero)
+    assert handler.bot_action_blocked(engine, hero, "take_rowboat") is True
+    carrier_goals = handler.bot_goal_rooms(engine, hero)
+    assert carrier_goals, "扛艇的人应去阳台/塔楼"
 
     # 勋章暂停（需在淹水房间——把英雄暂时放到地下室）
     hero.items.append("omen_medallion")
@@ -4347,6 +4441,10 @@ def verify_haunt39_heir() -> None:
         (p for p in engine.state.players if p.role == "hero" and not p.dead and p.id != heir.id),
         heir,  # 非继承人英雄可能已死——用继承人测试
     )
+    # 这条轨迹下可能只剩继承人一名英雄：他被选作刺客伏击目标时会被偷袭打死，
+    # 而后面还要用他验证"持矛+戒登雕像走廊"的英雄胜利线。先把存活英雄属性
+    # 抬满，保证伏击不致死（本段验的是刺客机制，不是伤害数值）。
+    _buff_heroes_to_max(engine)
     assassin_room = flags["assassin_rooms"][0]
     hero.room_key = assassin_room
     monsters_before = len(engine.state.monsters)
@@ -4609,8 +4707,16 @@ def verify_haunt46_the_feast_setup() -> None:
     victims = [m for m in engine.state.monsters if m.template_id == "victim"]
     freaks = [m for m in engine.state.monsters if m.template_id == "cannibal_freak"]
     assert len(victims) == hero_count and len(freaks) == hero_count
-    assert all(v.room_key == attic.key for v in victims), "受害者应全在阁楼"
-    assert all(f.room_key == dining.key for f in freaks), "狂徒应全在餐厅"
+    # 开局布点（受害者在阁楼、狂徒在餐厅）要用 _force_haunt 验证：
+    # 受害者带"漫游"规则，触发作祟的那一回合结束时就会离开阁楼
+    # （seed113 实测走到了卧室），拿跑完一回合的状态断言"开局位置"必然假失败。
+    forced = _force_haunt(seed=113, players=3, haunt_id=46)
+    f_attic = next(r for r in forced.state.board.values() if r.template_id == "attic")
+    f_dining = next(r for r in forced.state.board.values() if r.template_id == "dining_room")
+    f_victims = [m for m in forced.state.monsters if m.template_id == "victim"]
+    f_freaks = [m for m in forced.state.monsters if m.template_id == "cannibal_freak"]
+    assert f_victims and all(v.room_key == f_attic.key for v in f_victims), "受害者开局应在阁楼"
+    assert f_freaks and all(f.room_key == f_dining.key for f in f_freaks), "狂徒开局应在餐厅"
     assert flags["victims_total"] == hero_count
     assert len(flags["victim_facing"]) == hero_count
 
@@ -4807,6 +4913,13 @@ def verify_haunt47_spell_and_bodies() -> None:
     h3 = engine3._mode_handler()
     assert h3.check_victory(engine3) is True and engine3.state.winner is None
 
+    # 英雄随后也全灭时，start_turn 扫过一圈死者必须判出叛徒胜
+    # （否则永远停在 HAUNT_PHASE，seed109/4p 实测卡在 27 回合）。
+    for p in engine3.state.players:
+        p.dead = True
+    engine3.start_turn()
+    assert engine3.state.winner == "traitor"
+
 
 def verify_haunt48_crimson_jack_setup() -> None:
     """剧本 48：杰克布点、恐惧光环掉点、打不死→回归且强化（p59/p130）。"""
@@ -4827,11 +4940,19 @@ def verify_haunt48_crimson_jack_setup() -> None:
     # p59/p130：恐惧光环——与杰克同房间的英雄，理智检定失败则各掉 1 点
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
     hero.room_key = jack.room_key
-    before = dict(hero.stat_positions)
+    # 注意"临时加成（overflow）先被消耗"：按有效属性（轨位+加成）计量，
+    # 否则英雄带加值时轨位不动、掉点数会算成 0 而假失败。
+    affected = (*handler.MENTAL, *handler.PHYSICAL)
+    before = {
+        s: hero.stat_positions.get(s, 0) + hero.overflow.get(s, 0) for s in affected
+    }
     with patch.object(engine, "_resolve_check", return_value=False):
         handler.on_turn_start(engine, hero)
-    lost_mental = sum(before[s] - hero.stat_positions[s] for s in handler.MENTAL)
-    lost_physical = sum(before[s] - hero.stat_positions[s] for s in handler.PHYSICAL)
+    after = {
+        s: hero.stat_positions.get(s, 0) + hero.overflow.get(s, 0) for s in affected
+    }
+    lost_mental = sum(before[s] - after[s] for s in handler.MENTAL)
+    lost_physical = sum(before[s] - after[s] for s in handler.PHYSICAL)
     assert lost_mental == 1 and lost_physical == 1, "掉点应为 1 精神 + 1 物理"
 
     # p130：不是诅咒武器击败 → 暂时消散（不入晕、不死）
@@ -5554,9 +5675,16 @@ def verify_haunt58_torch_banish_haunting() -> None:
         p.dead = False
     assert len(heroes) >= 2
 
-    # p69：造火把只能在熔炉房
+    # p69：造火把只能在熔炉房。先把英雄挪出熔炉房——这条轨迹下第一位英雄
+    # 恰好就站在熔炉房里，负向断言会假失败。
     hero = heroes[0]
     _set_current(engine, hero)
+    if engine.state.board[hero.room_key].template_id == handler.FURNACE:
+        hero.room_key = next(
+            key
+            for key, room in engine.state.board.items()
+            if room.template_id != handler.FURNACE
+        )
     assert handler.perform_action(engine, hero, "create_torch", {}) is False
     hero.room_key = flags["furnace_key"]
     assert handler.perform_action(engine, hero, "create_torch", {}) is True
@@ -6252,17 +6380,20 @@ def verify_haunt4_timer_and_growth() -> None:
     engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
     handler = engine._mode_handler()
     flags = engine._haunt_flags()
-    # 3 人局叛徒已死 → 用"首位存活玩家回合"推进
+    # p86：倒计时"随叛徒回合推进"。3-4 人局叛徒通常已被蜘蛛吃掉，此时改用
+    # "本轮首位存活玩家"代跑；但若叛徒恰好是作祟揭示者则会留场（setup 的例外），
+    # 这时必须由叛徒本人推进——写死"首位存活玩家"会在这种情况下永不推进。
+    traitor = next((p for p in engine.state.players if p.role == "traitor" and not p.dead), None)
     alive = [p for p in engine.state.players if not p.dead]
-    first = alive[0]
+    ticker = traitor if traitor is not None else alive[0]
 
     deadline = engine._haunt_track_target("spider_timer")
     for i in range(deadline - 1):
-        handler.on_turn_start(engine, first)
+        handler.on_turn_start(engine, ticker)
         assert engine.state.winner is None, f"第 {i + 1} 轮不应判负"
     assert engine._haunt_track_value("spider_timer") == deadline - 1
 
-    handler.on_turn_start(engine, first)
+    handler.on_turn_start(engine, ticker)
     assert engine.state.winner == "traitor", "第 9 回合应判叛徒胜"
     assert "蛛卵" in engine.state.winner_reason
 
@@ -6878,13 +7009,20 @@ def verify_haunt32_lost_dimension() -> None:
     assert handler._needed(engine) == 15, "3 人局需要 15+"
 
     # ---- 毒大气（p43）：英雄回合开始掷 2 骰扣属性；叛徒不受影响
-    before = {st: hero.stat_positions[st] for st in ("might", "speed", "sanity", "knowledge")}
-    traitor_before = {st: traitor.stat_positions[st] for st in before}
+    # 注意"临时加成（overflow）先被消耗"：按**有效属性**（轨位+加成）计量，
+    # 否则英雄身上带加值时轨位不动，合计差会小于 2 而假失败。
+    stats4 = ("might", "speed", "sanity", "knowledge")
+    before = {
+        st: hero.stat_positions.get(st, 0) + hero.overflow.get(st, 0) for st in stats4
+    }
+    traitor_before = dict(traitor.stat_positions)
     with patch.object(engine, "roll_dice", return_value=2):
         handler.on_turn_start(engine, hero)
         handler.on_turn_start(engine, traitor)
-    after = {st: hero.stat_positions[st] for st in before}
-    assert sum(before[st] - after[st] for st in before) == 2, "掷出 2 → 合计掉 2 格"
+    after = {
+        st: hero.stat_positions.get(st, 0) + hero.overflow.get(st, 0) for st in stats4
+    }
+    assert sum(before[st] - after[st] for st in stats4) == 2, "掷出 2 → 合计掉 2 格（含临时加成）"
     assert traitor.stat_positions == traitor_before, "p43：叛徒不受毒大气影响"
     assert not hero.dead
 
@@ -8227,6 +8365,234 @@ def verify_all_haunts_win_branches_and_action_reachability() -> None:
             )
 
 
+# ---------------------------------------------------------------------------
+# M10-38（批次 1 审计）：引擎新增能力 + 剧本 1-5 修复的回归测试
+# ---------------------------------------------------------------------------
+
+
+def verify_haunt_action_success_flag() -> None:
+    """`last_haunt_action_succeeded()`：行动"已执行"与检定"成功"必须分开。
+
+    `_perform_generic_haunt_action` 检定失败时也返回 True（本回合行动已用掉），
+    所以 handler 里 `ok = super().perform_action(...)` + `if ok:` 的老写法会把
+    失败当成功发奖励——剧本 3 的曼德拉草、剧本 4 的蛛卵与前门都因此白送过。
+    """
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=3)
+    assert engine.state.phase == "HAUNT_PHASE"
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    with patch.object(engine, "_resolve_check", return_value=False):
+        executed = engine._perform_generic_haunt_action(hero, "dig_root", {})
+    assert executed is True, "检定失败也应算行动已执行（否则机器人会重复尝试）"
+    assert engine.last_haunt_action_succeeded() is False, "检定失败不能标记为成功"
+
+    with patch.object(engine, "_resolve_check", return_value=True):
+        engine._perform_generic_haunt_action(hero, "dig_root", {})
+    assert engine.last_haunt_action_succeeded() is True, "检定成功必须标记为成功"
+
+    # 行动不可用（找不到 id）时不得残留上一次的成功标记
+    engine._perform_generic_haunt_action(hero, "no_such_action", {})
+    assert engine.last_haunt_action_succeeded() is False, "不可用的行动必须清掉成功标记"
+
+
+def verify_haunt3_dig_root_needs_success() -> None:
+    """p14：挖曼德拉草是 4+ 知识检定，失败不能白送令牌。"""
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=3)
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine, hero)
+    engine.spawn_token("root", label="曼德拉草", role="carrier", room_key=hero.room_key)
+    handler = engine._mode_handler()
+    hero.items.append("omen_book")
+
+    with patch.object(engine, "_resolve_check", return_value=False):
+        handler.perform_action(engine, hero, "dig_root", {})
+    assert not engine.tokens_held_by(hero.id, "root"), "检定失败不能拿到曼德拉草"
+
+    with patch.object(engine, "_resolve_check", return_value=True):
+        handler.perform_action(engine, hero, "dig_root", {})
+    assert engine.tokens_held_by(hero.id, "root"), "检定成功必须拿到曼德拉草"
+
+
+def verify_haunt3_restore_frog_gating() -> None:
+    """p14：房间里没有青蛙不能复原；检定失败也不能复原（两条都曾缺失）。"""
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=3)
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    other = next(
+        p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead
+    )
+    _set_current(engine, hero)
+    hero.items.append("omen_book")
+
+    assert "restore_frog" not in {a.id for a in engine.available_haunt_actions(hero)}, (
+        "同房间没有青蛙时不该出现「复原青蛙」"
+    )
+
+    other.room_key = hero.room_key
+    engine._turn_into_frog(other)
+    assert "restore_frog" in {a.id for a in engine.available_haunt_actions(hero)}, (
+        "同房间有青蛙时应可尝试复原"
+    )
+
+    handler = engine._mode_handler()
+    with patch.object(engine, "_resolve_check", return_value=False):
+        handler.perform_action(engine, hero, "restore_frog", {})
+    assert other.frog is True, "检定失败不能复原青蛙（旧实现会白送）"
+
+    with patch.object(engine, "_resolve_check", return_value=True):
+        handler.perform_action(engine, hero, "restore_frog", {})
+    assert other.frog is False, "检定成功应复原青蛙"
+
+
+def verify_haunt4_failed_checks_do_not_advance() -> None:
+    """p15：毁卵/开门的检定失败不能置 flag（旧实现白送过胜利进度）。"""
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=4)
+    flags = engine._haunt_flags()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine, hero)
+    handler = engine._mode_handler()
+
+    # 毁卵：需要医疗包 + 与作祟揭示者同房间
+    revealer = next(p for p in engine.state.players if p.id == engine.state.haunt_revealer_id)
+    hero.room_key = revealer.room_key
+    hero.items.append("item_medical_kit")
+    flags["eggs_destroyed"] = False
+    with patch.object(engine, "_resolve_check", return_value=False):
+        handler.perform_action(engine, hero, "destroy_eggs_medical_kit", {})
+    assert flags.get("eggs_destroyed") is False, "检定失败不能销毁蛛卵"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        handler.perform_action(engine, hero, "destroy_eggs_medical_kit", {})
+    assert flags.get("eggs_destroyed") is True, "检定成功必须销毁蛛卵"
+
+    # 开前门：需在入口大厅，6+ 知识/力量
+    entrance = next(
+        (r for r in engine.state.board.values() if r.template_id == "entrance_hall"), None
+    )
+    assert entrance is not None, "入口大厅应当在场上（起始房间）"
+    hero.room_key = entrance.key
+    flags["front_door_open"] = False
+    with patch.object(engine, "_resolve_check", return_value=False):
+        handler.perform_action(engine, hero, "open_front_door", {})
+    assert flags.get("front_door_open") is False, "检定失败不能开门"
+    with patch.object(engine, "_resolve_check", return_value=True):
+        handler.perform_action(engine, hero, "open_front_door", {})
+    assert flags.get("front_door_open") is True, "检定成功必须开门"
+
+
+def verify_searchable_required_cards() -> None:
+    """p15：剧本关键牌（医疗包）还在牌堆里时，抽物品卡的英雄可以直接搜出来。"""
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=4)
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    # 把医疗包放回牌堆，复现"尚未被发现"
+    for deck in engine.state.card_decks.values():
+        while "item_medical_kit" in deck:
+            deck.remove("item_medical_kit")
+    for player in engine.state.players:
+        while "item_medical_kit" in player.items:
+            player.items.remove("item_medical_kit")
+    for items in engine.state.room_items.values():
+        while "item_medical_kit" in items:
+            items.remove("item_medical_kit")
+    engine.state.card_decks.setdefault("item", []).append("item_medical_kit")
+
+    engine._draw_item(hero)
+    assert "item_medical_kit" in hero.items, "抽物品卡时应把剧本关键牌搜出来"
+    assert "item_medical_kit" not in engine.state.card_decks.get("item", []), (
+        "搜出来的牌必须从牌堆移除，不能复制"
+    )
+
+
+def verify_seance_traitor_anywhere() -> None:
+    """p84：叛徒持通灵板可在任意房间降灵；英雄仍限五芒星室。"""
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=2)
+    traitor = next(p for p in engine.state.players if p.role == "traitor" and not p.dead)
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    room = next(
+        r for r in engine.state.board.values() if r.template_id != "pentagram_chamber"
+    )
+    traitor.room_key = room.key
+    hero.room_key = room.key
+    if "omen_spirit_board" not in traitor.items:
+        traitor.items.append("omen_spirit_board")
+
+    _set_current(engine, traitor)
+    assert "seance_check" in {a.id for a in engine.available_haunt_actions(traitor)}, (
+        "叛徒持通灵板应能在任意房间举行降灵会"
+    )
+    _set_current(engine, hero)
+    assert "seance_check" not in {a.id for a in engine.available_haunt_actions(hero)}, (
+        "英雄仍必须在五芒星室才能降灵"
+    )
+
+
+def verify_haunt2_setup_places_pentagram() -> None:
+    """p84：五芒星室不在屋内时，叛徒开局要把它拉进屋，且离自己尽量远。"""
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=2)
+    pentagram = next(
+        (r for r in engine.state.board.values() if r.template_id == "pentagram_chamber"),
+        None,
+    )
+    assert pentagram is not None, "2 号剧本的 setup 必须保证五芒星室在场"
+    traitor = next((p for p in engine.state.players if p.role == "traitor" and not p.dead), None)
+    if traitor is None:
+        return
+    distance = engine._path_length(traitor.room_key, pentagram.key)
+    assert distance != 9999, "五芒星室必须可达（否则先放进屋也没用）"
+
+
+def verify_haunt2_burial_timer_not_frozen() -> None:
+    """降灵主人死亡后，安葬倒计时由"本轮最后一位存活英雄"代跑，不能冻结。"""
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=2)
+    flags = engine._haunt_flags()
+    flags["ghost_summoned"] = True
+    flags["ghost_control"] = "heroes"
+    flags["bones_buried"] = False
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    assert heroes, "需要一个存活英雄"
+    flags["seance_owner_id"] = heroes[0].id
+    heroes[0].dead = True
+    engine._set_haunt_track_value("ghost_rest_timer", 0)
+
+    handler = engine._mode_handler()
+    ticked = 0
+    for hero in heroes[1:]:
+        engine.state.turn_index = engine.state.turn_order.index(hero.id)
+        before = engine._haunt_track_value("ghost_rest_timer")
+        handler.on_turn_start(engine, hero)
+        if engine._haunt_track_value("ghost_rest_timer") > before:
+            ticked += 1
+    assert ticked == 1, f"主人死后每轮应恰好推进一次倒计时（实际 {ticked} 次）"
+
+
+def verify_ensure_room_in_play_farthest() -> None:
+    """p84：`farthest_from_key` 选的落位不该比默认落位更近。"""
+    engine = _new_engine(seed=131, players=4)
+    on_board = {r.template_id for r in engine.state.board.values()}
+    candidate = next(
+        (
+            template_id
+            for template_id in engine.catalog.room_templates
+            if template_id not in on_board and template_id in engine.state.room_deck
+        ),
+        None,
+    )
+    if candidate is None:
+        return
+    origin = next(iter(engine.state.board))
+    far_key = engine._ensure_room_in_play(candidate, farthest_from_key=origin)
+    assert far_key is not None
+    far_distance = engine._path_length(origin, far_key)
+    assert far_distance not in (0, 9999), "应放在可达、且不与起点重合的位置"
+
+    engine2 = _new_engine(seed=131, players=4)
+    default_key = engine2._ensure_room_in_play(candidate)
+    assert default_key is not None
+    default_distance = engine2._path_length(origin, default_key)
+    assert far_distance >= default_distance, (
+        f"最远落位 {far_distance} 不该比默认落位 {default_distance} 更近"
+    )
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -8371,6 +8737,16 @@ def main():
     verify_haunt33_fresh_tile_and_explore_gate()
     verify_haunt39_spear_flow()
     verify_all_haunts_win_branches_and_action_reachability()
+    # M10-38：批次 1（剧本 1-5）审计新增的引擎能力与修复
+    verify_haunt_action_success_flag()
+    verify_haunt3_dig_root_needs_success()
+    verify_haunt3_restore_frog_gating()
+    verify_haunt4_failed_checks_do_not_advance()
+    verify_searchable_required_cards()
+    verify_seance_traitor_anywhere()
+    verify_haunt2_setup_places_pentagram()
+    verify_haunt2_burial_timer_not_frozen()
+    verify_ensure_room_in_play_farthest()
     print("verify_haunt_systems: ok")
 
 
