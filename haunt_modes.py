@@ -4157,6 +4157,11 @@ class SupernaturalAgingMode(GenericModeHandler):
     def check_victory(self, engine: Any) -> bool:
         flags = engine._haunt_flags()
         # p55：仪式成功次数 = 玩家数 → 英雄胜
+        # 注意：本轨道的**声明名**必须与 action 的 "progress" 字段一致
+        # （rule_data.setup.tracks 里写 ritual_progress，target=player_count）。
+        # 旧版 tracks 写的是 "progress"、这里读 "ritual_progress"，而
+        # engine._haunt_track_target(未声明轨道) 返回 0，于是 0 >= 0 恒真，
+        # 作祟触发的第一个玩家回合就判英雄胜（实测 6/6 局）。
         if engine._haunt_track_value("ritual_progress") >= engine._haunt_track_target("ritual_progress"):
             engine._set_winner("heroes", "仪式完成了——超自然衰老停止了！")
             return True
@@ -8267,8 +8272,12 @@ class RatRitualMode(GenericModeHandler):
                 if engine._spawn_single_haunt_monster(spec, target) is None:
                     break
                 placed += 1
-        flags["rats_placed"] = True
+        # 零放置不能置真：check_victory 用「已布置 且 场上无老鼠」判英雄胜，
+        # 若所有有符号房间都被占据/塌陷，0 只老鼠会被误判成「杀光老鼠」。
+        flags["rats_placed"] = placed > 0
         engine._log(f"{placed} 只老鼠从墙缝与踢脚板下涌了出来。")
+        if placed == 0:
+            engine._log("没有可用的房间安置老鼠——它们仍在墙里蠢动。")
 
     def _boost_traitor(self, engine: Any, traitor: Any) -> None:
         face = engine.catalog.characters.get(traitor.character_id)
@@ -14800,7 +14809,9 @@ class CracklingAuraMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "恶魔的嚎叫淹没 了最后的呼救。")
             return True
-        return False
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p63/p134 要求「叛徒死 **且** 无恶魔在场」。
+        # 恶魔领主还活着时叛徒死亡不算英雄胜（旧实现 return False 会让兜底误判）。
+        return True
 
 
 
@@ -16715,7 +16726,10 @@ class BagOfTricksMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "最后的英雄也消失了。")
             return True
-        return False
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p73 里叛徒角色是**按规则从游戏中移除**的，
+        # 不是被英雄打倒的，所以它"死亡"绝不代表英雄达成目标。旧实现 return False
+        # 会让兜底在作祟触发的第一个玩家回合就判英雄胜（实测 6/6 局触发即结束）。
+        return True
 
 
 

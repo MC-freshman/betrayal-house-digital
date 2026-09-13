@@ -831,6 +831,66 @@ def verify_ui_buttons_have_responses() -> None:
         app.destroy()
 
 
+def verify_haunt_reveal_flow() -> None:
+    """作祟触发必须主动展示手册，且阅读期间机器人不再推进。
+
+    复现口径：默认本地开局 = 1 人类（玩家1）+ 3 机器人，正是用户报障的场景——
+    旧行为里「剧本」按钮要求"当前回合玩家不是机器人"，人类一旦在拿到回合前出局、
+    或对局很快结束，就全程读不到剧本；而且弹窗期间机器人照常行动。
+    """
+    app = GameApp()
+    text_dialogs: list[tuple[str, str]] = []
+    try:
+        app.update()
+        app.btn_local_start.invoke()
+        app.update()
+        state = app.engine.state
+        humans = [player for player in state.players if player.control != "bot"]
+        assert len(humans) == 1, "默认本地开局应为 1 人类 + 机器人"
+
+        _trigger_specific_haunt(app.engine, 25)
+        assert state.phase == "HAUNT_PHASE"
+        assert state.winner is None, "作祟触发瞬间不该已经分出胜负"
+
+        # 单人热座局：允许看自己（而不是"当前回合玩家"）的手册
+        assert app._script_viewer() is humans[0], "单人局应始终允许人类读自己的手册"
+        payload = app._haunt_text_for_player(humans[0])
+        assert payload is not None and payload[1].strip(), "人类视角必须有可读手册"
+
+        class _FakeTextDialog:
+            def __init__(self, root, title, text) -> None:
+                text_dialogs.append((title, text))
+                self.top = None
+
+        app.wait_window = lambda _top: None  # type: ignore[method-assign]
+        with patch.object(ui_module, "_TextDialog", _FakeTextDialog):
+            app._maybe_show_haunt_briefing()
+        assert len(text_dialogs) == 1, "作祟触发应主动弹出手册（这正是旧版缺的）"
+        assert "作祟开始了" in text_dialogs[0][1]
+        assert app._reading_paused is False, "阅读窗关闭后必须解除机器人暂停"
+
+        with patch.object(ui_module, "_TextDialog", _FakeTextDialog):
+            app._maybe_show_haunt_briefing()
+        assert len(text_dialogs) == 1, "同一本作祟只主动展示一次"
+
+        # 阅读期间机器人不得继续推进
+        bot = next(player for player in state.players if player.control == "bot")
+        state.turn_order = [bot.id]
+        state.turn_index = 0
+        turns_before = state.turn_count
+        app._reading_paused = True
+        app._maybe_run_bot_turn()
+        assert state.turn_count == turns_before, "阅读期间机器人不该继续行动"
+        app._reading_paused = False
+
+        # 机器人回合里「剧本」按钮依然可用（单人局）
+        app.engine.prompter = _ScriptedPrompter()
+        app._refresh_ui()
+        assert app.btn_script["state"] == "normal", "单人局的剧本按钮不该被机器人回合禁用"
+    finally:
+        app.destroy()
+
+
 def main() -> None:
     verify_start_and_bots()
     verify_bots_explore_upper_floor()
@@ -849,6 +909,7 @@ def main() -> None:
     verify_direct_room_click()
     verify_exploration_slots()
     verify_ui_buttons_have_responses()
+    verify_haunt_reveal_flow()
     print("verify_v1: ok")
 
 

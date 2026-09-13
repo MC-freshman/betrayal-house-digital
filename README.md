@@ -23,7 +23,7 @@ python launcher.py
 
 ```bash
 python replay_golden.py            # 185 条端到端种子回放（黄金基准）
-python verify_haunt_systems.py     # 141 项剧本系统专项断言
+python verify_haunt_systems.py     # 133 项剧本系统专项断言
 python check_core_drift.py         # 双端规则内核单源校验
 python verify_v1.py                # 桌面 UI 层回归（需 tkinter）
 ```

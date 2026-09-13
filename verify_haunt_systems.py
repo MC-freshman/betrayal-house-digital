@@ -7536,6 +7536,147 @@ def verify_haunt68_key_route_and_confusion() -> None:
     assert other.stat_positions == other_positions, "仆人不该在理智对决中吃亏"
 
 
+def _force_haunt(seed: int, players: int, haunt_id: int) -> GameEngine:
+    """零进度直接触发作祟（不复现探索过程），用于"触发瞬间"类断言。
+
+    与 `_run_until_haunt` 的区别：这里棋盘上只有起始房间，所有剧本都在最贫瘠的
+    状态下着手 setup——正是这种状态最容易暴露"读到默认值 0 就判胜"的 bug。
+    """
+    engine = _new_engine(seed=seed, players=players)
+    engine._select_haunt_id = lambda room_id, omen_id, _h=haunt_id: _h
+    engine.state.last_omen_id = next(
+        card_id for card_id, card in engine.catalog.cards.items() if card.kind == "omen"
+    )
+    engine.state.haunt_pending = True
+    engine._trigger_haunt(engine.current_player)
+    return engine
+
+
+def verify_haunt_script_visible_to_both_roles() -> None:
+    """70 本剧本在英雄 / 叛徒两个视角都必须有可读文本。
+
+    复刻 `ui._haunt_text_for_viewer` 的回退链（script → goal）。任何一本为空，
+    玩家点「剧本」只会看到"当前视角没有可查看的剧本文本"，等于作祟没有内容。
+    """
+    for haunt_id, haunt in sorted(build_catalog(113).haunt_defs.items()):
+        hero_text = (haunt.hero_script or haunt.hero_goal or "").strip()
+        traitor_text = (haunt.traitor_script or haunt.traitor_goal or "").strip()
+        assert hero_text, f"#{haunt_id} {haunt.name}：英雄视角没有任何可读文本"
+        assert traitor_text, f"#{haunt_id} {haunt.name}：叛徒视角没有任何可读文本"
+
+
+def verify_no_instant_verdict_on_trigger() -> None:
+    """作祟触发的瞬间，任何一本剧本都不允许已经分出胜负。
+
+    典型踩坑：`engine._haunt_track_target(未声明的轨道)` 返回 0，而判定写的是
+    `value >= target`，于是 `0 >= 0` 恒真——作祟刚开始就判英雄胜（#44 实测 6/6 局）；
+    或者 handler 在 setup 里按规则移除叛徒、check_victory 又 `return False`，
+    让引擎的「叛徒死亡→英雄胜」兜底在第一个玩家回合就触发（#62 实测 6/6 局）。
+    """
+    for haunt_id in range(1, 71):
+        engine = _force_haunt(seed=113, players=4, haunt_id=haunt_id)
+        assert engine.state.phase == "HAUNT_PHASE", f"#{haunt_id} 触发作祟后阶段不是 HAUNT_PHASE"
+        engine.check_victory()
+        assert engine.state.winner is None, (
+            f"#{haunt_id} {engine.state.haunt.name} 在作祟触发瞬间就判了 "
+            f"{engine.state.winner}：{engine.state.winner_reason}"
+        )
+
+
+def verify_haunt_track_targets_nonzero() -> None:
+    """handler 用 `_haunt_track_target(X)` 读到的轨道，X 必须真的被声明且 target > 0。
+
+    这是 #44 的构建期红灯：rule_data 声明了 "progress"、handler 读 "ritual_progress"，
+    `engine._haunt_track_target` 对未声明轨道返回 0，任何 `value >= target` 判定都会
+    零进度即成立。target == 0 在引擎里表示"无上限轨道"，不该参与判胜比较。
+    """
+    import inspect  # noqa: PLC0415
+    import re  # noqa: PLC0415
+
+    for haunt_id in range(1, 71):
+        engine = _force_haunt(seed=113, players=4, haunt_id=haunt_id)
+        handler = engine._mode_handler()
+        source = inspect.getsource(type(handler))
+        names = set(re.findall(r'_haunt_track_target\("([A-Za-z0-9_]+)"\)', source))
+        for name in sorted(names):
+            declared = engine._haunt_tracks().get(name)
+            assert declared is not None, (
+                f"#{haunt_id} handler={type(handler).__name__} 读取了未声明的轨道 {name!r}"
+                f"（_haunt_track_target 会返回 0，判胜会零进度成立）"
+            )
+            assert engine._haunt_track_target(name) > 0, (
+                f"#{haunt_id} handler={type(handler).__name__} 的轨道 {name!r} target="
+                f"{engine._haunt_track_target(name)}，参与判胜会零进度即胜"
+            )
+
+
+def verify_fixed_haunt_semantics() -> None:
+    """钉住本轮修复的 4 本剧本语义，防止再被静默改回。
+
+    · #44：仪式轨道名 = action 的 progress 字段，target = 玩家数；0 进度不判胜。
+    · #62：叛徒按 p73 从游戏移除，判负权必须由 handler 自己接管（不落引擎兜底）。
+    · #52：p63/p134 要求「叛徒死 **且** 无恶魔在场」，恶魔存活时叛徒死亡不算英雄胜。
+    · #26：零只老鼠被安置时不得置 rats_placed，否则「杀光老鼠」被误判成立。
+    """
+    import types  # noqa: PLC0415
+
+    # ---- #44 死亡终将寻来 ----
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=44)
+    handler = engine._mode_handler()
+    assert isinstance(handler, SupernaturalAgingMode)
+    assert engine._haunt_track_target("ritual_progress") == len(engine.state.players), (
+        "p55：仪式检定成功次数应等于玩家人数"
+    )
+    engine._set_haunt_track_value("ritual_progress", 0)
+    engine.state.winner = None
+    engine.check_victory()
+    assert engine.state.winner is None, "仪式进度为 0 时不该判胜"
+    engine._set_haunt_track_value("ritual_progress", engine._haunt_track_target("ritual_progress"))
+    engine.check_victory()
+    assert engine.state.winner == "heroes", "仪式进度满 → 英雄胜"
+
+    # ---- #62 魔袋把戏 ----
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=62)
+    handler = engine._mode_handler()
+    assert isinstance(handler, BagOfTricksMode)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    assert traitor.dead, "p73：叛徒角色应从游戏中移除"
+    engine._set_haunt_track_value("trinket_progress", 0)
+    engine.state.winner = None
+    assert handler.check_victory(engine) is True, "必须由 handler 接管判定（吸收引擎兜底）"
+    assert engine.state.winner is None, "叛徒被移除 ≠ 英雄达成目标，不该判英雄胜"
+    engine.check_victory()
+    assert engine.state.winner is None, "引擎整体判定下也不该在零进度判胜"
+
+    # ---- #52 噼啪光环中 ----
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=52)
+    handler = engine._mode_handler()
+    assert isinstance(handler, CracklingAuraMode)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    traitor.dead = True
+    demon = types.SimpleNamespace(name="恶魔领主", template_id="giant", room_key="0:0:0")
+    engine.state.monsters.append(demon)  # type: ignore[arg-type]
+    engine.state.winner = None
+    assert handler.check_victory(engine) is True, "恶魔在场时不该交给引擎兜底"
+    assert engine.state.winner is None, "恶魔领主还活着时叛徒死亡不算英雄胜"
+    engine.check_victory()
+    assert engine.state.winner is None, "引擎整体判定下也必须保持未结束"
+    engine.state.monsters.remove(demon)  # type: ignore[arg-type]
+    engine.check_victory()
+    assert engine.state.winner == "heroes", "叛徒死 + 无恶魔 → 英雄胜"
+
+    # ---- #26 吹笛人的代价：零放置守卫 ----
+    engine = _force_haunt(seed=113, players=4, haunt_id=26)
+    handler = engine._mode_handler()
+    assert isinstance(handler, RatRitualMode)
+    if not handler._rats(engine):
+        assert not engine._haunt_flags().get("rats_placed"), (
+            "0 只老鼠被安置时不得置 rats_placed，否则「杀光老鼠」恒真"
+        )
+        engine.check_victory()
+        assert engine.state.winner is None, "没有安置过老鼠时不该判英雄胜"
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -7666,6 +7807,10 @@ def main():
     verify_collapse_subsystem()
     verify_bot_quest_goal_rooms()
     verify_bot_holds_position_for_next_step()
+    verify_haunt_script_visible_to_both_roles()
+    verify_no_instant_verdict_on_trigger()
+    verify_haunt_track_targets_nonzero()
+    verify_fixed_haunt_semantics()
     print("verify_haunt_systems: ok")
 
 

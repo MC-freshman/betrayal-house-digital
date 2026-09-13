@@ -2165,7 +2165,7 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "key_rooms": ["catacombs", "charred_room", "crypt", "gallery", "kitchen", "pentagram_chamber", "tower"],
         "tokens": [],
         "setup": {
-            "tracks": {"progress": {"label": "supernatural_aging", "target": 10, "side": "heroes"}},
+            "tracks": {"ritual_progress": {"label": "复活仪式", "target": "player_count", "side": "heroes"}},
             "flags": {"aging_tokens": {}, "ritual_rooms_used": []},
         },
         "monsters": [],

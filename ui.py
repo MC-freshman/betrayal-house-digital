@@ -951,6 +951,10 @@ class GameApp(tk.Tk):
         self.bot_controller = BotController()
         self._exploration_slots: dict[str, dict] = {}
         self._exploration_hover_tag: str | None = None
+        # 已主动展示过手册的作祟号（换局/读档时随"无作祟"状态自动清空）。
+        self._haunt_briefed_id: int | None = None
+        # 弹出阅读窗期间暂停机器人推进，避免"边读边被机器人跳过"。
+        self._reading_paused = False
 
         self._build_ui()
         self._build_start_screen()
@@ -1454,8 +1458,24 @@ class GameApp(tk.Tk):
             return None
         return self.engine.state.players[viewer_id]
 
+    def _human_players(self) -> list[Player]:
+        return [player for player in self.engine.state.players if player.control != "bot"]
+
     def _should_confirm_private_view(self) -> bool:
-        return True
+        # 单人热座局（1 人类 + N 机器人）屏幕前只有一个人，没有需要防的偷看者。
+        return len(self._human_players()) > 1
+
+    def _script_viewer(self) -> Player | None:
+        """现在允许翻开谁的手册。
+
+        单人热座局：永远是那位人类玩家。旧行为里按钮要求"当前回合玩家不是机器人"，
+        于是作祟触发后只要轮不到人类（或人类在拿到回合前就出局），全程读不到手册。
+        多人热座 / 联机：仍然只认当前回合玩家（联机的 `ClientApp` 另有视角覆写）。
+        """
+        humans = self._human_players()
+        if len(humans) == 1:
+            return humans[0]
+        return self._viewer_player()
 
     def _role_label_for_viewer(self, player: Player) -> str:
         state = self.engine.state
@@ -1466,10 +1486,9 @@ class GameApp(tk.Tk):
             return _role_text(player.role)
         return "未知"
 
-    def _haunt_text_for_viewer(self) -> tuple[str, str] | None:
+    def _haunt_text_for_player(self, viewer: Player | None) -> tuple[str, str] | None:
         state = self.engine.state
         haunt = state.haunt
-        viewer = self._viewer_player()
         if not haunt or viewer is None:
             return None
         if state.winner:
@@ -1482,6 +1501,9 @@ class GameApp(tk.Tk):
             text = haunt.hero_script or haunt.hero_goal
             return f"#{haunt.id} {haunt.name} · 英雄手册", text
         return None
+
+    def _haunt_text_for_viewer(self) -> tuple[str, str] | None:
+        return self._haunt_text_for_player(self._viewer_player())
 
     def _begin_game_from_form(self) -> None:
         configs = []
@@ -2265,9 +2287,12 @@ class GameApp(tk.Tk):
         self._show_info("读取成功", "存档已载入。")
 
     def _action_view_haunt_script(self) -> None:
-        payload = self._haunt_text_for_viewer()
-        viewer = self._viewer_player()
-        if payload is None or viewer is None:
+        viewer = self._script_viewer()
+        if viewer is None or viewer.control == "bot":
+            self._show_info("剧本", "当前视角不能查看剧本。")
+            return
+        payload = self._haunt_text_for_player(viewer)
+        if payload is None:
             self._show_info("剧本", "作祟开始后才能查看对应剧本。")
             return
         title, text = payload
@@ -2278,8 +2303,18 @@ class GameApp(tk.Tk):
             ok = self.engine.prompter.confirm("查看剧本", f"请确认现在屏幕前是 {viewer.name}。")
             if not ok:
                 return
-        dialog = _TextDialog(self, title, text)
-        self.wait_window(dialog.top)
+        self._open_script_dialog(title, text)
+
+    def _open_script_dialog(self, title: str, text: str) -> None:
+        """弹出手册。阅读期间暂停机器人推进：旧行为里弹窗不挡机器人，
+        玩家还在读的时候机器人已经把回合走完了。"""
+        was_paused = self._reading_paused
+        self._reading_paused = True
+        try:
+            dialog = _TextDialog(self, title, text)
+            self.wait_window(dialog.top)
+        finally:
+            self._reading_paused = was_paused
 
     def _action_move(self) -> None:
         player = self.engine.current_player
@@ -2565,7 +2600,7 @@ class GameApp(tk.Tk):
             f"  事件 {len(state.card_decks.get('event', []))} / 弃牌 {len(state.card_discards.get('event', []))}",
         ]
         if state.haunt:
-            viewer = self._viewer_player()
+            viewer = self._script_viewer()
             viewer_role = self._role_label_for_viewer(viewer) if viewer else "未知"
             lines.extend([
                 "",
@@ -2667,8 +2702,10 @@ class GameApp(tk.Tk):
             is_human_turn and has_haunt_action and not is_over,
             base_reason or "当前没有可执行的剧本行动。",
         )
-        viewer = self._viewer_player()
-        can_view_script = bool(state.haunt and viewer is not None and viewer.control != "bot")
+        script_viewer = self._script_viewer()
+        can_view_script = bool(
+            state.haunt and script_viewer is not None and script_viewer.control != "bot"
+        )
         self._set_action_button(
             self.btn_script,
             can_view_script,
@@ -2713,6 +2750,7 @@ class GameApp(tk.Tk):
     def _idle_poll(self) -> None:
         if getattr(self, "_closing", False):
             return
+        self._maybe_show_haunt_briefing()
         self._maybe_run_bot_turn()
         if hasattr(self, "board_canvas"):
             fp = self._state_fingerprint()
@@ -2721,9 +2759,41 @@ class GameApp(tk.Tk):
                 self._refresh_ui()
         self._idle_after = self.after(300, self._idle_poll)
 
+    def _maybe_show_haunt_briefing(self) -> None:
+        """作祟第一次开始时，主动把屏幕前玩家的手册摆出来。
+
+        旧行为只在日志里写一句"请使用剧本按钮查看"，而那个按钮在机器人回合是禁用的，
+        于是单人局里很容易"作祟触发 → 一次都没读到 → 机器人一路跑到结束"。
+        这里改为：作祟一进入 HAUNT_PHASE 就弹一次手册；换局/读档（无作祟）时清标记。
+        """
+        state = self.engine.state
+        if not state.players or state.winner:
+            return
+        if state.haunt is None or state.phase != "HAUNT_PHASE":
+            self._haunt_briefed_id = None
+            return
+        if self._haunt_briefed_id == state.haunt.id:
+            return
+        viewer = self._script_viewer()
+        if viewer is None or viewer.control == "bot":
+            # 多人热座里轮到机器人时不越权展示；等人类自己的回合再弹。
+            return
+        payload = self._haunt_text_for_player(viewer)
+        if payload is None:
+            return
+        self._haunt_briefed_id = state.haunt.id
+        title, text = payload
+        header = (
+            f"作祟开始了：#{state.haunt.id} {state.haunt.name}\n"
+            f"你是：{_role_text(viewer.role)}\n"
+            f"（这是只有你能看到的内容，读完点「确定」后继续）\n\n"
+        )
+        self.engine._log(f"已为 {viewer.name} 打开手册：#{state.haunt.id} {state.haunt.name}。")
+        self._open_script_dialog(title, header + text)
+
     def _maybe_run_bot_turn(self) -> None:
         state = self.engine.state
-        if self._bot_busy or not state.players or state.phase == "GAME_OVER":
+        if self._bot_busy or self._reading_paused or not state.players or state.phase == "GAME_OVER":
             return
         current = self.engine.current_player
         if current.control != "bot" or current.dead:
