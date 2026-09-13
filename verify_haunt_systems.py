@@ -8149,6 +8149,84 @@ def verify_haunt39_spear_flow() -> None:
     assert engine.state.winner == "heroes"
 
 
+def verify_all_haunts_win_branches_and_action_reachability() -> None:
+    """每本剧本都要同时具备英雄胜/叛徒胜分支，且声明的行动真实可达。
+
+    这是"机制没实现、只能靠引擎兜底判胜"的构建期红灯：
+      · 缺英雄胜利分支 → 英雄只可能靠"叛徒死亡"通用兜底赢（#62 那类跳过）；
+      · 缺叛徒胜利分支 → 只可能靠"英雄全灭"兜底（多数剧本合法，但必须显式）；
+      · rule_data 声明了 action id、而覆盖了 perform_action 的 handler 既不处理
+        也不回落 super() → 该行动永远执行不到（M10-15 抓到的 5 号死数据同款）。
+
+    统计口径：handler 继承链源码 + 引擎 `_haunt<N>_/_perform_haunt<N>_/
+    _available_haunt<N>_` 系列 + 该剧本自己声明的 win_conditions / goal 文案，
+    合起来算"这本剧本自己的实现"（#1 的英雄胜利点就在引擎的 `h1_banish_mummy`
+    行动里，所以必须把引擎侧也算进来）。
+    """
+    import inspect  # noqa: PLC0415
+    import json  # noqa: PLC0415
+
+    catalog = build_catalog(113)
+    mode_module = sys.modules[type(get_mode_handler("generic")).__module__]
+    engine_module = sys.modules[GameEngine.__module__]
+    mode_source = inspect.getsource(mode_module)
+    engine_source = inspect.getsource(engine_module)
+    # 豁免：5 号 shoot_werewolf——注释明说它只用于 required_cards 与寻路提示，
+    # 实际射杀由通用攻击流程处理（M10-15 已确认属有意声明，非死数据）。
+    whitelist = {5: {"shoot_werewolf"}}
+    for haunt_id in range(1, 71):
+        rule = catalog.haunt_defs[haunt_id].rule_data or {}
+        handler = get_mode_handler(rule.get("mode"))
+        handler_cls = type(handler)
+        text = json.dumps(rule, ensure_ascii=False)
+        for cls in handler_cls.__mro__:
+            try:
+                text += inspect.getsource(cls)
+            except (OSError, TypeError):  # object 等内建类拿不到源码
+                pass
+        for pattern in (
+            f"def _haunt{haunt_id}_",
+            f"def _perform_haunt{haunt_id}_",
+            f"def _available_haunt{haunt_id}_",
+        ):
+            start = 0
+            while True:
+                idx = engine_source.find(pattern, start)
+                if idx < 0:
+                    break
+                nxt = engine_source.find("\n    def ", idx)
+                text += engine_source[idx: nxt if nxt > 0 else idx + 4000]
+                start = idx + 1
+        assert (
+            '_set_winner("heroes"' in text
+            or '"winner": "heroes"' in text
+            or 'winner = "heroes"' in text
+        ), f"#{haunt_id} 找不到英雄胜利分支——英雄难道只能靠引擎兜底赢？"
+        assert (
+            '_set_winner("traitor"' in text
+            or '"winner": "traitor"' in text
+            or 'winner = "traitor"' in text
+        ), f"#{haunt_id} 找不到叛徒胜利分支——叛徒难道只能靠'英雄全灭'兜底？"
+        handler_source = inspect.getsource(handler_cls)
+        for action in rule.get("actions") or []:
+            action_id = str(action.get("id") or "")
+            if not action_id or action_id in whitelist.get(haunt_id, set()):
+                continue
+            if action_id in mode_source or action_id in engine_source:
+                continue
+            # 未覆盖 perform_action（或回落到 super()）的 handler 走 rule_data
+            # 通用执行（stat 检定 / attack 对决 / progress / set_flags），
+            # 行动 id 不必出现在代码里。
+            if (
+                "def perform_action" not in handler_source
+                or "super().perform_action" in handler_source
+            ):
+                continue
+            raise AssertionError(
+                f"#{haunt_id} 行动 {action_id} 既不被 handler 处理、也不回落通用路径（死数据）"
+            )
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -8292,6 +8370,7 @@ def main():
     verify_character_interaction_matrix()
     verify_haunt33_fresh_tile_and_explore_gate()
     verify_haunt39_spear_flow()
+    verify_all_haunts_win_branches_and_action_reachability()
     print("verify_haunt_systems: ok")
 
 
