@@ -237,6 +237,13 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "traitor_rule": "highest_might",
         "hero_goal": "找到左轮手枪并制作银弹，用银弹射杀所有狼人。",
         "traitor_goal": "感染英雄，把所有英雄杀死或变成狼人。",
+        # p17/p99：英雄胜利 = 杀死所有狼人（狗不必杀）。被咬转化的英雄 role 会
+        # 改成 traitor（engine._haunt5_convert_to_werewolf），所以"场上没有存活
+        # 的 traitor"恰好等价于"狼人全灭"。显式声明，不依赖隐藏默认。
+        "win_conditions": [
+            {"winner": "heroes", "type": "traitor_dead", "reason": "所有狼人都倒下了——诅咒终止在这一代。"},
+            {"winner": "traitor", "type": "all_heroes_dead", "reason": "所有英雄或死或变，小屋外再没人记得他们。"},
+        ],
         "suggested_monsters": ["dog"],
         "required_cards": ["item_revolver", "omen_dog"],
         "key_rooms": ["attic", "game_room", "junk_room", "master_bedroom", "vault", "research_laboratory", "furnace_room"],
@@ -1790,15 +1797,14 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         #     0-3 每砖 3 格），结果存 flags 供本回合移动费用下限
         #     （movement_cost_floor 新增 to_key 参数）
         #   · 搜索表（p115）：回合开始在湖面砖上掷 4 骰 + 距离加值
-        #     （与地下湖间隔砖数含所在砖）+ 水晶球 +2，按表结算
-        #     （19+ 救出女孩；10/17-18 湖怪 Might 5/6；14 触手 Speed 5；
-        #     12-13 大浪 Might 5+；6-7/15-16 理智 4+；11 累计 +3 再掷；
-        #     5 向深处挪 1 格再掷），迭代上限 8 段防死循环
+        #     （与地下湖间隔砖数含所在砖）+ 水晶球 +2 + 本回合新铺砖 +3，
+        #     按表结算（19+ 救出女孩；10/17-18 湖怪 Might 5/6；14 触手
+        #     Speed 5；12-13 大浪 Might 5+；6-7/15-16 理智 4+；11 累计 +3
+        #     再掷；5 向深处挪 1 格再掷），迭代上限 8 段防死循环
         #   · 溺水：叛徒回合开始推进计时并掷等量骰，3-4 人局 10+ /
         #     5-6 人局 9+ 女孩溺亡 → 叛徒胜
         #   简化：湖面丢弃即沉没（on_item_dropped）；湖面死亡掉落也沉没
-        #     未建模；"本回合铺设的砖 +3"不适用（砖按需即时铺设）；
-        #     女孩卡 set aside、属性微调未建模（同 16/18 号口径）；
+        #     未建模；女孩卡 set aside、属性微调未建模（同 16/18 号口径）；
         #     叛徒入湖可战不搜索（bot 自然满足）。
         "version": 3,
         "fidelity": "refined",
@@ -1809,7 +1815,11 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "traitor_goal": "让女孩溺亡，或让湖怪吃掉所有英雄。",
         "suggested_monsters": [],
         "required_cards": [],
-        "key_rooms": ["underground_lake", "basement_landing"],
+        # 机器人目标必须留空：地下湖靠门走不到（_path_length=9999），而
+        # basement_landing 一旦作为常驻目标，会把英雄永久拽回岸上——
+        # seed101/5p 实测："游出去又走回来"，400 回合不终局。下水方向改由
+        # bot_ai 对"剧本给出的非棋盘目标（lake: 选项）"加分引导。
+        "key_rooms": [],
         "tokens": ["lake_tile"],
         "setup": {
             "tracks": {
@@ -2011,9 +2021,11 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         #     英雄进入即暴露并 sneak attack（Might 2，无防御），攻击后服毒死亡
         #   · 计时：叛徒回合结束推进；第 3/6 回合各补一批新刺客
         #   · 胜利：继承人在雕像走廊持矛+戒指 → 英雄胜；继承人死 → 叛徒胜
-        #   简化：矛用令牌承载（项目无矛卡，与 15/19 同处理），放随机
-        #     房间；叛徒不知道继承人是谁（bot 也不针对性攻击）；
+        #   简化：叛徒不知道继承人是谁（bot 也不针对性攻击）；
         #     继承人死亡的"诚实回答"机制不需要（bot 直接查 flags）。
+        #   M10-35 修：矛改用项目已有的 omen_spear 卡（p50 原文就是
+        #     "the Spear card"）放进随机已探明房间——旧版用 marker 令牌，
+        #     而引擎没有令牌拾取机制，继承人永远拿不到矛 = 英雄线不可达。
         "version": 3,
         "fidelity": "refined",
         "status": "playable",
@@ -2022,7 +2034,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "hero_goal": "保护继承人，让TA拿着矛与戒指登上雕像走廊的王座。",
         "traitor_goal": "让隐藏的刺客杀死继承人。",
         "suggested_monsters": [],
-        "required_cards": ["omen_ring"],
+        # 矛与戒指都必须交到继承人手上（quest_carrier 钩子 + bot 寻路目标）。
+        "required_cards": ["omen_spear", "omen_ring"],
         "key_rooms": ["statuary_corridor", "basement_landing"],
         "tokens": ["spear", "assassin"],
         "setup": {
@@ -2041,24 +2054,33 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [50, 121],
     },
     40: {
-        # 校准记录（2026-09-05，对照英雄手册 p51 / 叛徒手册 p122）：
-        #   骨架 rule_data 已足够（buried_alive 模式， Monsters: none），
-        #   本剧本的专属行为只有"被活埋的英雄挣脱"与"叛徒挖坑"两条——
-        #   考虑到第三批时间，留为 fidelity=refined + generic 兜底，
-        #   在 M8 批次专项精修。
+        # 校准记录（2026-09-05，初版；2026-09-12 M10-35 补齐实现）：
+        #   机制落在 BuriedAliveMode：
+        #   · 埋人：叛徒在"作祟前已发现的地下室房间"里秘密选一间（不足 5 间
+        #     先补地下室房间，含楼梯平台）
+        #   · 计时：叛徒回合结束轨位 +1，掷等于轨位的骰子，被埋者累计伤害；
+        #     12 点死亡 → 叛徒胜
+        #   · 搜查：英雄在地下室房间知识 3+ → 找到/排除埋葬室
+        #   · 挖掘：埋葬室内力量 4+，进度 = 开局玩家人数 → 英雄胜
+        #   · 通灵板：理智 7+ 得知埋葬室；5-6 回复 2 骰伤害
+        #   旧版（M7 批次）是 stub：只有"英雄全灭→叛徒胜"，英雄唯一的胜利
+        #   路径是杀叛徒后落引擎兜底——与 p51 完全不符，M10-35 补齐。
         "version": 3,
         "fidelity": "refined",
         "status": "playable",
         "mode": "buried_alive",
         "traitor_rule": "revealer",
-        "hero_goal": "在被活埋之前逃出棺材并阻止叛徒。",
-        "traitor_goal": "把所有英雄活埋。",
+        "hero_goal": "在地下室找到埋葬室，挖出被活埋的朋友。",
+        "traitor_goal": "让被埋的人在泥土下死去。",
         "suggested_monsters": [],
         "required_cards": [],
         "key_rooms": [],
         "tokens": [],
         "setup": {
-            "tracks": {"buried_count": {"label": "被活埋人数", "target": "player_count", "side": "traitor"}},
+            "tracks": {
+                "burial_damage": {"label": "被埋朋友的伤害（12 点死亡）", "target": 12, "side": "traitor"},
+                "dig_progress": {"label": "挖出朋友", "target": "player_count", "side": "heroes"},
+            },
             "flags": {},
         },
         "monsters": [],
@@ -3672,14 +3694,14 @@ def get_haunt_rule_override(haunt_id: int) -> dict[str, Any]:
     if normalized:
         normalized.setdefault("version", 2)
         normalized.setdefault("status", "playable")
+        # 只补「英雄全灭→叛徒胜」这一条通用兜底。**不补**「叛徒死亡→英雄胜」：
+        # 基础规则是"先完成剧本目标的一方获胜；即使叛徒死亡，只要怪物还能完成
+        # 目标就照常行动"，叛徒死并不自动等于英雄达成目标。这条隐藏默认历史上
+        # 让 #1 木乃伊（叛徒死后木乃伊照常行动）在叛徒阵亡时误判英雄胜。
+        # 需要"叛徒死→英雄胜"的剧本必须在自己 handler / win_conditions 里显式声明。
         normalized.setdefault(
             "win_conditions",
             [
-                {
-                    "winner": "heroes",
-                    "type": "traitor_dead",
-                    "reason": normalized.get("hero_goal", "叛徒已被击败。"),
-                },
                 {
                     "winner": "traitor",
                     "type": "all_heroes_dead",

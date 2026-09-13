@@ -285,6 +285,21 @@ class BotController:
             ActionCommand("haunt_action", player.id, {"action_id": action.id, "data": action.data})
         )
 
+    def _quest_carrier_id(self, engine: GameEngine) -> int | None:
+        """剧本指定的"关键牌该交给谁"（duck-typed `quest_carrier` 钩子）。
+
+        39 号：英雄胜利要求**继承人本人**持矛与戒登上王座，队友捡到必须交给
+        他；而通用的"交给持令牌队友"启发在这里不适用（继承人身上没有令牌，
+        用令牌标记继承人还会在 UI 上泄露身份）。未实现该钩子的剧本返回 None，
+        行为保持原样。
+        """
+        handler = engine._mode_handler()
+        carrier = getattr(handler, "quest_carrier", None)
+        if not callable(carrier):
+            return None
+        value = carrier(engine)
+        return int(value) if value is not None else None
+
     def _try_share_quest_items(self, engine: GameEngine, player: Player) -> bool:
         """同房间时，把剧本关键牌交给正在执行任务（持有剧本令牌）的队友。
 
@@ -302,13 +317,18 @@ class BotController:
         held = required & {str(item) for item in player.items}
         if not held:
             return False
+        # 剧本指定的收牌人（39 号：继承人）优先于"持令牌队友"这一通用启发。
+        carrier_id = self._quest_carrier_id(engine)
         for other in engine.state.players:
             if other.id == player.id or other.dead or other.frog:
                 continue
             if other.role != player.role or other.room_key != player.room_key:
                 continue
+            if carrier_id is not None:
+                if other.id != carrier_id:
+                    continue
             # 队友手里有本剧本的令牌，说明他才是执行者
-            if not engine.tokens_held_by(other.id):
+            elif not engine.tokens_held_by(other.id):
                 continue
             for card_id in sorted(held):
                 if card_id in other.items:
@@ -500,6 +520,12 @@ class BotController:
                             for m in room_monsters
                         ):
                             value -= 25
+            if option.target_key and option.target_key not in engine.state.board:
+                # 剧本给出的"非棋盘目标"（目前只有 33 号划入湖面的 "lake:" 选项）：
+                # 这是剧本明说可以走的路线，不能因为普通房间的小加分或
+                # "回上一个房间"的惩罚而被永远压着不选——seed101/5p 实测过
+                # 400 回合在岸上与湖面之间来回打转。
+                value += 20
             if option.is_special:
                 value += 4
                 if option.direction in {"up", "down"}:
@@ -589,9 +615,15 @@ class BotController:
 
         # 3) 自己拿着关键牌、队友持有令牌（正在执行任务）时，去和他会合。
         #    令牌不能交易，所以只能让持牌方走过去（见 _try_share_quest_items）。
+        #    剧本也可以直接指定"该把牌交给谁"（39 号继承人，quest_carrier）。
         if required & {str(item) for item in player.items}:
+            carrier_id = self._quest_carrier_id(engine)
             for other in engine.state.players:
                 if other.id == player.id or other.dead or other.frog:
+                    continue
+                if carrier_id is not None:
+                    if other.id == carrier_id:
+                        goals.add("__room__" + other.room_key)
                     continue
                 if other.role == player.role and engine.tokens_held_by(other.id):
                     goals.add("__room__" + other.room_key)

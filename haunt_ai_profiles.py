@@ -666,6 +666,24 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"tokens": ["任务", "仪式"], "special_rules": ["cooperation", "item_objective"]},
     },
+    40: {
+        "hero": {
+            # p51：埋葬室在地下室、逐间排除，目标随"找到没有 / 挖到几格"变化——
+            # 静态 target_rooms 会把人钉死，全交给 BuriedAliveMode.bot_goal_rooms
+            # 动态给出（见 handoff §6 第 6 条）。
+            "target_rooms": [],
+            "attack_monsters": False,
+            # 杀叛徒不算赢（p51 只认"挖出朋友"）——别把回合浪费在追打叛徒上。
+            "attack_traitor_players": False,
+            "victory_focus": "逐间搜查地下室找到埋葬室，再轮流力量 4+ 挖掘——杀死叛徒不算赢",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "拖时间：每回合结束被埋者都会多挨一次伤害，别让英雄安心挖土",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["活埋伤害", "挖出朋友"], "special_rules": ["hidden_room", "dig_timer"]},
+    },
 }
 
 

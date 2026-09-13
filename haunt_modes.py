@@ -524,7 +524,14 @@ class BanishmentEscortMode(GenericModeHandler):
         if mummy and engine._haunt1_mummy_ready_to_win(mummy):
             engine._set_winner("traitor", "木乃伊带着女孩和仪式物回到了石棺房。")
             return True
-        return engine._check_generic_haunt_victory()
+        if engine._check_generic_haunt_victory():
+            return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p12/p83 的英雄条件是放逐木乃伊，
+        # 叛徒死后木乃伊照常行动（基础规则 Even if the Traitor dies…they still
+        # get their turn），不构成英雄胜利。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
+            return True
+        return False
 
 
 class WerewolfHuntMode(GenericModeHandler):
@@ -3755,6 +3762,10 @@ class MadWorldMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "Veni, vidi, vici——疯王 Caesar 征服了最后的元老院议员。")
             return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p45/p116 要求"随从全部被锁 + 叛徒被锁或死"，
+        # 随从还在时叛徒单独死亡不算英雄胜利。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
+            return True
         return False
 
 
@@ -3766,7 +3777,7 @@ class InvisibleTraitorMode(GenericModeHandler):
     · 隐形：叛徒不可见。sneak attack = 掷 ceil(原始英雄数/2) 骰的
       物理伤害，无防御（p123 "Your opponent can't defend against this"）。
     · 侦测：被偷袭幸存后知识 3+ 探知叛徒所在房间（detect_traitor 行动）。
-    · 胜利：叛徒死亡 → 英雄胜（引擎兜底 traitor_dead → heroes 自动处理）。
+    · 胜利：叛徒死亡 → 英雄胜（handler 显式接管，不再依赖引擎通用兜底）。
     · 简化：叛徒攻击仍走引擎 attack()（不做无防御 FlatDamage——引擎
       player-vs-player 伤害公式不可 hook）；骷髅/灵应板追踪/偷窃未建模。
     """
@@ -3781,8 +3792,15 @@ class InvisibleTraitorMode(GenericModeHandler):
         return False  # 无怪物
 
     def check_victory(self, engine: Any) -> bool:
-        # p52：叛徒死 → 英雄胜（引擎兜底已覆盖，这里只处理英雄全灭）
-        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+        heroes_alive = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        traitor_alive = any(p.role == "traitor" and not p.dead for p in engine.state.players)
+        # p52：英雄胜利条件 = 叛徒死亡（"You Win When … the traitor is dead."）。
+        # 显式接管判定，不再依赖引擎「叛徒死亡→英雄胜」的通用兜底。
+        if heroes_alive and not traitor_alive:
+            engine._set_winner("heroes", "隐形的杀手终于现形了——他的尸体说明了一切。")
+            return True
+        # p123：英雄全灭 → 叛徒胜
+        if not heroes_alive:
             engine._set_winner("traitor", "隐形的杀手收割了最后的猎物。")
             return True
         return False
@@ -3909,7 +3927,14 @@ class HellGateHeroMode(GenericModeHandler):
 
     # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:
-        if not any(p.role == "hero" and not p.dead for p in engine.state.players):
+        heroes_alive = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        traitor_alive = any(p.role == "traitor" and not p.dead for p in engine.state.players)
+        # p53：英雄胜利条件 = 叛徒死亡（"You Win When … the traitor is dead."）。
+        # 显式接管判定，不再依赖引擎「叛徒死亡→英雄胜」的通用兜底。
+        if heroes_alive and not traitor_alive:
+            engine._set_winner("heroes", "雕像手中的圣物开始发光——地狱之门缓缓合拢。")
+            return True
+        if not heroes_alive:
             engine._set_winner("traitor", "地狱之门打开了。")
             return True
         return super().check_victory(engine)
@@ -4023,6 +4048,10 @@ class ShadowExorcismMode(GenericModeHandler):
             return True
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "所有的影子都找到了它们的主人——在五芒星室里。")
+            return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p54/p125 只认"光明仪式完成"，
+        # 影子不随叛徒死亡停下。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
             return True
         return False
 
@@ -4167,6 +4196,10 @@ class SupernaturalAgingMode(GenericModeHandler):
             return True
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "Death doth find us all——除了叛徒。")
+            return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p55/p126 只认"仪式完成"，
+        # 衰老由房子驱动，不随叛徒死亡停下。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
             return True
         return False
 
@@ -4477,6 +4510,10 @@ class SwampEscapeMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "最后的英雄也沉入了冰冷的水中。")
             return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p47/p118 只认"半数英雄乘船逃生"，
+        # 叛徒死后沉屋与水鬼照常行动。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
+            return True
         return False
 
 
@@ -4635,6 +4672,10 @@ class DeathCheckmateMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "最后一个棋子也被将死了。")
             return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p48/p119 只认"知识检定将死死神"，
+        # 死神是独立怪物，叛徒死后照常下棋。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
+            return True
         return False
 
 
@@ -4650,7 +4691,9 @@ class HeirAssassinMode(GenericModeHandler):
       占用房/雕像走廊）；英雄进入即暴露 → sneak attack（Might 2 无
       防御）→ 攻击后服毒死亡。
     · 计时：叛徒回合结束推进；第 3/6 回合各补一批新刺客。
-    · 矛：令牌承载（项目无矛卡），放随机已探明房间。
+    · 矛：p50 原文是 "the Spear card"——直接用项目卡表里的 omen_spear
+      （长矛）放进随机已探明房间（旧版写成 marker 令牌 → 无人能拾取、
+      英雄胜利线不可达；M10-35 改为卡牌，走引擎常规拾取/交易通道）。
     · 胜利：继承人在雕像走廊持矛 + 戒指 → 英雄胜；继承人死 → 叛徒胜。
     · 简化：叛徒不知道继承人是谁（bot 不针对性攻击）；刺客 bot 追
       最近英雄（引擎默认——隐藏刺客被暴露后才能移动，隐藏状态
@@ -4701,11 +4744,25 @@ class HeirAssassinMode(GenericModeHandler):
                     assassin_rooms.append(key)
                     hidden_ids.append(str(monster.id))
         flags["assassin_rooms"] = assassin_rooms
-        # 矛令牌放随机已探明房间（非雕像走廊）
+        # p50 原文是 "the Spear card"——项目卡表里本来就有 omen_spear（长矛），
+        # 这里直接用它、放进随机已探明房间（非雕像走廊），走引擎常规"拾取"
+        # 通道。旧版写成 marker 令牌，而引擎没有任何令牌拾取机制，继承人
+        # 永远拿不到矛 = 英雄胜利线根本不可达（54 号骷髅同款死锁，M10-35 修）。
         spear_rooms = [k for k in hidden_rooms if k != corridor]
         spear_room = engine.rng.choice(spear_rooms) if spear_rooms else room_key
         flags["spear_room"] = spear_room
-        engine.spawn_token("spear", label="罗马尼斯库之矛", role="marker", room_key=spear_room)
+        for deck in engine.state.card_decks.values():
+            while "omen_spear" in deck:
+                deck.remove("omen_spear")
+        for discard in engine.state.card_discards.values():
+            while "omen_spear" in discard:
+                discard.remove("omen_spear")
+        for key in list(engine.state.room_items.keys()):
+            engine.state.room_items[key] = [
+                card_id for card_id in engine.state.room_items[key] if card_id != "omen_spear"
+            ]
+        engine.state.room_items.setdefault(spear_room, []).append("omen_spear")
+        engine._log("一把古老的长矛静静躺在某个房间里，等着它真正的主人。")
         engine._log(f"雕像走廊的王座在等待真正的继承人……（刺客在暗处潜伏）")
 
     # ------------------------------------------------------------- 内部
@@ -4715,6 +4772,46 @@ class HeirAssassinMode(GenericModeHandler):
 
     def _throne_room(self, engine: Any) -> str | None:
         return engine._haunt_flags().get("throne_room")
+
+    def quest_carrier(self, engine: Any) -> int | None:
+        """剧本关键牌应该交给谁（供 bot_ai._try_share_quest_items 探测）。
+
+        p50 的英雄胜利要求"继承人本人"持矛与戒登王座——队友捡到矛/戒指
+        必须交给他，而通用的"交给持令牌队友"启发在这里不适用（继承人身上
+        没有令牌，令牌化还会在 UI 上泄露继承人身份）。返回继承人的 player id。
+        """
+        heir = self._heir(engine)
+        if heir is None or heir.dead:
+            return None
+        return heir.id
+
+    # ------------------------------------------------------------- 机器人
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p50：继承人先取矛与戒指，再登上王座；队友去和继承人会合。
+
+        缺哪件、东西在谁手上都随对局变化，静态 key_rooms 表达不了
+        （见 handoff §6 第 6 条）。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        flags = engine._haunt_flags()
+        throne = self._throne_room(engine)
+        heir = self._heir(engine)
+        if heir is None or heir.dead:
+            return []
+        if player.id != heir.id:
+            return [f"__room__{heir.room_key}"]
+        if "omen_spear" not in player.items:
+            spear_room = flags.get("spear_room")
+            return [f"__room__{spear_room}"] if spear_room else []
+        if "omen_ring" not in player.items:
+            for other in engine.state.players:
+                if other.id != player.id and not other.dead and "omen_ring" in other.items:
+                    return [f"__room__{other.room_key}"]
+            for room_key, items in engine.state.room_items.items():
+                if "omen_ring" in items:
+                    return [f"__room__{room_key}"]
+        return [f"__room__{throne}"] if throne else []
 
     # ------------------------------------------------------------- 刺客暴露
     def on_enter_room(self, engine: Any, player: Any, room: Any) -> None:
@@ -4797,7 +4894,7 @@ class HeirAssassinMode(GenericModeHandler):
             return True
         if heir is not None:
             throne = self._throne_room(engine)
-            has_spear = engine.tokens_held_by(heir.id, "spear")
+            has_spear = "omen_spear" in heir.items
             has_ring = "omen_ring" in heir.items
             if heir.room_key == throne and has_spear and has_ring:
                 engine._set_winner("heroes", "戒指化为王冠，长矛缩成钥匙——继承人知道了……一切。")
@@ -4805,30 +4902,232 @@ class HeirAssassinMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "再没有人能继承罗马尼斯库的遗产了。")
             return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p50/p121 只认"继承人持矛与戒登上王座"，
+        # 刺客们不随叛徒死亡停下。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
+            return True
         return False
 
 
 class BuriedAliveMode(GenericModeHandler):
-    """剧本 40 活埋（Buried Alive）——简化实现。
+    """剧本 40 活埋（Buried Alive）。
 
     权威原文：英雄手册 p51 / 叛徒手册 p122。
 
-    核心机制：叛徒把英雄逐个活埋，英雄须在窒息前挣脱。
-    电子版简化为：叛徒力量攻击击败英雄 → 英雄被"活埋"（movement_stopped
-    + 每回合 1 骰物理伤害）；被埋英雄力量 4+ 挣脱。全部英雄被埋 → 叛徒胜。
-    简化标注：棺材/挖土/钉子等原始机制大量简化，M8 批次专项精修。
+    核心机制（M10-35 由 stub 补全为真实实现）：
+    · 埋人（p122）：叛徒在"作祟开始前已发现的地下室房间"里秘密选一间埋下
+      朋友；地下室不足 5 间时先把地下室房间补进场（含楼梯平台）再选。
+    · 计时（p122）：叛徒回合结束时 Turn/Damage 轨 +1，掷等于轨位的骰子，
+      被埋者累计受到等量物理伤害；累计 12 点即死亡 → 叛徒胜。
+    · 搜查（p51）：英雄在地下室房间里做知识 3+ 搜查——成功且正好是埋葬室
+      则找到；成功但不是则排除该房间；失败可换个回合再来。
+    · 挖掘（p51）：找到埋葬室后，房内英雄力量 4+ 挖掘，成功 +1 进度；
+      进度 = 作祟开始时玩家人数 → 英雄胜。
+    · 通灵板（p51）：持通灵板的英雄可行动使用：理智 7+ 直接得知埋葬室；
+      5-6 让被埋者回复 2 骰伤害；3-4 / 0-2 无效果。
+
+    已知简化：
+        · 原版"每回合可以搜查多间房"收窄为引擎的"每人每回合一次剧本行动"。
+        · 通灵板 3-4 段（移动任意探险者 3 格）未建模；"不能主动交出/丢弃"
+          未在物品层拦截；叛徒"造成 2+ 伤害可抢通灵板"未建模。
+        · 被埋者伤害用引擎轨道记账（原版是叛徒纸笔记录），数字对双方可见。
+        · 已排除的地下室房间不再重复提供搜查（原版允许，但再搜没有意义）。
     """
 
     mode = "buried_alive"
 
-    def on_monster_attack(self, engine: Any, monster: Any, target: Any, amount: int) -> bool:
-        return False  # 无怪物
+    SPIRIT_BOARD = "omen_spirit_board"
+    BASEMENT_FLOOR = -1
+    BASEMENT_MIN = 5
 
+    # ------------------------------------------------------------- 地形
+    def _basement_rooms(self, engine: Any) -> list[Any]:
+        return [room for room in engine.state.board.values() if room.floor == self.BASEMENT_FLOOR]
+
+    def _ensure_basement(self, engine: Any, anchor: str) -> None:
+        """p122：地下室不足 5 间时，先把地下室房间补进场再选埋葬室。
+
+        优先用 `_attach_template_adjacent` 接到楼梯平台旁边（门对门连通）——
+        `_ensure_room_in_play` 有时会把房间放成"挨着但没有门"的孤岛（实测
+        seed=113 的吱呀走廊），那样补出来的房间英雄根本走不到。
+        """
+        candidates = sorted(
+            template.id
+            for template in engine.catalog.room_templates.values()
+            if template.floor == self.BASEMENT_FLOOR and template.id != "basement_landing"
+        )
+        engine.rng.shuffle(candidates)
+        landing = next(
+            (
+                room.key
+                for room in self._basement_rooms(engine)
+                if room.template_id == "basement_landing"
+            ),
+            anchor,
+        )
+        for template_id in candidates:
+            if len(self._basement_rooms(engine)) >= self.BASEMENT_MIN:
+                break
+            if engine._attach_template_adjacent(template_id, landing) is None:
+                engine._ensure_room_in_play(template_id, anchor)
+
+    def _reachable_basement_rooms(self, engine: Any, anchor: str) -> list[Any]:
+        """过滤掉孤立板块——埋人处必须走得到，否则英雄永远挖不出来。"""
+        rooms = self._basement_rooms(engine)
+        reachable = [
+            room
+            for room in rooms
+            if room.key == anchor or engine._path_length(anchor, room.key) < 9999
+        ]
+        reachable = reachable or rooms
+        # 楼梯平台算地下室房间（计入 5 间），但埋人处优先选别的房间。
+        return [room for room in reachable if room.template_id != "basement_landing"] or reachable
+
+    # ------------------------------------------------------------- 开局
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
+        flags = engine._haunt_flags()
+        self._ensure_basement(engine, room_key)
+        candidates = self._reachable_basement_rooms(engine, room_key)
+        burial = engine.rng.choice(candidates) if candidates else None
+        flags["burial_room"] = burial.key if burial is not None else ""
+        flags["burial_found"] = False
+        flags["ruled_out"] = []
+        flags["bury_timer"] = 0
+        # 不记录房间位置（日志会泄密）；英雄靠搜查或通灵板找出埋葬室。
+        engine._log("叛徒数着泥土下的呼吸声——没有人知道那间屋子在哪。")
+
+    # ------------------------------------------------------------- 回合结束
+    def on_turn_end(self, engine: Any, player: Any) -> None:
+        """p122：叛徒回合结束时推进 Turn/Damage 轨并结算被埋者的伤害。"""
+        if player.dead or player.role != "traitor":
+            return
+        flags = engine._haunt_flags()
+        timer = int(flags.get("bury_timer", 0)) + 1
+        flags["bury_timer"] = timer
+        rolled = engine.roll_dice(timer, f"活埋伤害（轨位 {timer}）")
+        engine._advance_haunt_track("burial_damage", rolled)
+        engine._log(f"泥土下面传来沉闷的声响——被埋的人挨过了 {rolled} 点伤害。")
+
+    # ------------------------------------------------------------- 行动
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        if player.dead or player.role != "hero":
+            return []
+        flags = engine._haunt_flags()
+        actions: list[Any] = []
+        room = engine.state.board.get(player.room_key)
+        found = bool(flags.get("burial_found"))
+        if (
+            room is not None
+            and room.floor == self.BASEMENT_FLOOR
+            and not found
+            and room.key not in set(flags.get("ruled_out", []))
+        ):
+            actions.append(
+                HauntAction("h40_search", "搜查房间", "知识 3+：成功即可确认这里是不是埋葬室。")
+            )
+        if found and flags.get("burial_room") == player.room_key:
+            actions.append(
+                HauntAction(
+                    "h40_dig",
+                    "挖出朋友",
+                    "力量 4+：每成功一次推进一格，集满开局玩家人数即救出朋友。",
+                )
+            )
+        if self.SPIRIT_BOARD in player.items and not found:
+            actions.append(
+                HauntAction(
+                    "h40_spirit_board",
+                    "使用通灵板",
+                    "理智 7+ 直接得知埋葬室；5-6 让朋友回复 2 骰伤害。",
+                )
+            )
+        return actions
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        flags = engine._haunt_flags()
+        if action_id == "h40_search":
+            room = engine.state.board.get(player.room_key)
+            if (
+                player.role != "hero"
+                or room is None
+                or room.floor != self.BASEMENT_FLOOR
+                or flags.get("burial_found")
+                or room.key in set(flags.get("ruled_out", []))
+            ):
+                return False
+            if engine._resolve_check(player, "knowledge", 3, "搜查埋葬室"):
+                if flags.get("burial_room") == room.key:
+                    flags["burial_found"] = True
+                    engine._log("挪开最后一块松动的石板——下面真的有人！")
+                else:
+                    ruled = list(flags.get("ruled_out", []))
+                    ruled.append(room.key)
+                    flags["ruled_out"] = ruled
+                    engine._log("地面是实心的——朋友不在这里。")
+            return True
+        if action_id == "h40_dig":
+            if not flags.get("burial_found") or flags.get("burial_room") != player.room_key:
+                return False
+            if engine._resolve_check(player, "might", 4, "挖开泥土"):
+                engine._advance_haunt_track("dig_progress", 1)
+                engine._log(f"{player.name} 又挖深了一尺——土下的敲击声更近了。")
+            return True
+        if action_id == "h40_spirit_board":
+            if self.SPIRIT_BOARD not in player.items or flags.get("burial_found"):
+                return False
+            total = engine.roll_dice(engine._effective_stat(player, "sanity"), "通灵板")
+            if total >= 7:
+                flags["burial_found"] = True
+                engine._log("指针疯狂旋转，最后死死停在一个方向——找到那间屋子了。")
+            elif total >= 5:
+                heal = engine.roll_dice(2, "通灵板安抚")
+                engine._advance_haunt_track("burial_damage", -heal)
+                engine._log(f"灵板传来微弱的回应——朋友还活着，伤痛减轻了 {heal} 点。")
+            return True
+        return super().perform_action(engine, player, action_id, data)
+
+    # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:
+        # p51：挖出朋友（进度 = 作祟开始时玩家人数）→ 英雄胜
+        if engine._haunt_track_value("dig_progress") >= engine._haunt_track_target("dig_progress"):
+            engine._set_winner("heroes", "指尖触到木板的裂缝——朋友被拖出了黑暗。")
+            return True
+        # p122：被埋者累计 12 点伤害 → 死亡，叛徒胜
+        if engine._haunt_track_value("burial_damage") >= engine._haunt_track_target("burial_damage"):
+            engine._set_winner("traitor", "最后一铲泥土落下——房子又多了一个沉默的住户。")
+            return True
+        # p122：英雄全灭 → 叛徒胜
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "没有人能从冰冷的泥土中回来了。")
             return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p51 只认"挖出朋友"。
+        # （叛徒死后伤害轨不再推进，但挖掘仍须完成。）
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
+            return True
         return False
+
+    # ------------------------------------------------------------- 机器人
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        if player.dead or player.role != "hero":
+            return []
+        flags = engine._haunt_flags()
+        if flags.get("burial_found"):
+            key = flags.get("burial_room")
+            return [f"__room__{key}"] if key else []
+        ruled = set(flags.get("ruled_out", []))
+        return [
+            f"__room__{room.key}"
+            for room in self._basement_rooms(engine)
+            if room.key not in ruled
+        ]
+
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        flags = engine._haunt_flags()
+        damage = engine._haunt_track_value("burial_damage")
+        digs = engine._haunt_track_value("dig_progress")
+        need = engine._haunt_track_target("dig_progress")
+        where = "埋葬室已找到" if flags.get("burial_found") else "埋葬室尚未找到"
+        return [f"{where}；挖掘进度 {digs}/{need}，被埋朋友的伤害 {damage}/12。"]
 
 
 class SmallChangeMode(GenericModeHandler):
@@ -5014,6 +5313,10 @@ class SmallChangeMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "最后的英雄也成了猫的玩具。")
             return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p46/p117 只认"半数英雄飞出窗"，
+        # 叛徒死后猫照常吃人。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
+            return True
         return False
 
 
@@ -5046,9 +5349,8 @@ class LakeRescueMode(GenericModeHandler):
     · 湖面丢弃即沉没（on_item_dropped，p44 "those items are lost"）；
       湖面死亡掉落同样沉没未建模（低频边界）。
     · 简化汇总：搜索从"回合末"近似为"回合开始"（同 16 号口径，
-      节奏等价）；"本回合铺设的砖 +3"不适用（砖按需即时铺设后立即
-      进入，加值并入距离语义，已注明）；女孩卡属性微调未建模；叛徒
-      入湖可战不搜索（bot 自然满足）；湖怪不作为常驻怪物实体。
+      节奏等价）；女孩卡属性微调未建模；叛徒入湖可战不搜索
+      （bot 自然满足）；湖怪不作为常驻怪物实体。
     """
 
     mode = "lake_rescue"
@@ -5056,6 +5358,7 @@ class LakeRescueMode(GenericModeHandler):
     LAKE_PREFIX = "lake:"
     LAKE_NAME = "湖面"
     SEARCH_BONUS_CRYSTAL = 2
+    SEARCH_BONUS_FRESH_TILE = 3
 
     # ------------------------------------------------------------- setup
     def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
@@ -5282,6 +5585,7 @@ class LakeRescueMode(GenericModeHandler):
                 engine._log("房间砖已经用完了，湖面无法继续延伸。")
                 return False
             target_key = room.key
+            engine._haunt_flags().setdefault("fresh_tiles", {})[str(player.id)] = target_key
         player.room_key = target_key
         player.steps_remaining = max(0, player.steps_remaining - swim)
         player.moved_this_turn = True
@@ -5323,6 +5627,10 @@ class LakeRescueMode(GenericModeHandler):
         flags = engine._haunt_flags()
         if player.dead:
             return
+        # "本回合铺设的砖 +3"只在本回合有效：跨回合先清掉自己的记录。
+        fresh = flags.get("fresh_tiles")
+        if isinstance(fresh, dict):
+            fresh.pop(str(player.id), None)
         if player.role == "traitor":
             # p115：溺水计时
             current = int(engine._haunt_track_value("drown_timer")) + 1
@@ -5344,9 +5652,15 @@ class LakeRescueMode(GenericModeHandler):
             self._search_roll(engine, player)
 
     def _search_bonus(self, engine: Any, player: Any) -> int:
+        flags = engine._haunt_flags()
         bonus = self._lake_distance(engine, player)
         if "omen_crystal_ball" in player.items:
             bonus += self.SEARCH_BONUS_CRYSTAL
+        # p44："Add 3 to the result if you are on a lake tile that was placed on
+        # your current turn." 本回合刚铺下的砖再 +3（M10-35 补；缺这条会把
+        # 救出所需的距离从 6 格外抬到 11 格外）。
+        if flags.get("fresh_tiles", {}).get(str(player.id)) == player.room_key:
+            bonus += self.SEARCH_BONUS_FRESH_TILE
         return bonus
 
     def _search_roll(self, engine: Any, player: Any) -> None:
@@ -5462,6 +5776,7 @@ class LakeRescueMode(GenericModeHandler):
                 if room is None:
                     return
                 key = room.key
+                engine._haunt_flags().setdefault("fresh_tiles", {})[str(player.id)] = key
             player.room_key = key
             engine._log(f"{player.name} 在湖面{'向外' if away else '向回'}挪动，来到{engine.state.board[key].name}。")
             if key == lake:
@@ -5492,6 +5807,10 @@ class LakeRescueMode(GenericModeHandler):
             return True  # winner 已在溺水处设定
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "湖面恢复了平静——再没有人来打扰湖怪的进食了。")
+            return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p44/p115 只认"救出女孩"，
+        # 叛徒死后湖怪照常拖人下水。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
             return True
         return False
 
@@ -5704,6 +6023,10 @@ class GhostBrideMode(GenericModeHandler):
                 return True
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "再没有人能打断这场婚礼了。")
+            return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p31/p102 只认"戒指与尸骨在教堂"，
+        # 叛徒死后幽灵新娘照常完婚。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
             return True
         return False
 
@@ -14858,6 +15181,10 @@ class DarkerThanNightMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "最后的英雄也被黑暗吞噬了。")
             return True
+        # p62：英雄胜利条件之二 = 杀死叛徒（"…or you kill the traitor."），显式接管判定。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
+            engine._set_winner("heroes", "黑暗的祭主被斩除了——仪式失去了主人。")
+            return True
         return False
 
 
@@ -14892,7 +15219,8 @@ class PortraitCurseMode(GenericModeHandler):
     · 销毁颜料（p139）：手持颜料时可以销毁一枚**代替一次攻击**——所以销毁后
       本回合不能再出刀（`attack_allowed`），且已攻击后不能再销毁。毁满 3 枚即胜。
     · 胜负（p68/p139）：英雄胜 = 集满知识检定令牌，或叛徒死亡；叛徒胜 =
-      销毁 3 枚颜料，或英雄全灭。后两条中"死亡"类判定由引擎通用规则兜底。
+      销毁 3 枚颜料，或英雄全灭。其中"叛徒死亡→英雄胜"由 handler 显式接管，
+      "英雄全灭→叛徒胜"仍走引擎通用规则。
 
     已知简化：
         · "颜料不能被狗携带"自动满足——本项目同伴卡不占物品栏、无法持物。
@@ -14918,6 +15246,16 @@ class PortraitCurseMode(GenericModeHandler):
         "statuary_corridor", "larder", "wine_cellar",
     )
     STAT_ORDER = ("speed", "might", "sanity", "knowledge")
+
+    # ------------------------------------------------------------- 胜负
+    def check_victory(self, engine: Any) -> bool:
+        heroes_alive = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        # p68：英雄胜利条件之二 = 叛徒死亡（"…or the Traitor is dead."）。
+        # 显式接管判定，不再依赖引擎「叛徒死亡→英雄胜」的通用兜底。
+        if heroes_alive and not any(p.role == "traitor" and not p.dead for p in engine.state.players):
+            engine._set_winner("heroes", "肖像的力量彻底熄灭了——它再也护不住任何人。")
+            return True
+        return super().check_victory(engine)
 
     # ------------------------------------------------------------- 开局
     def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
@@ -15375,6 +15713,10 @@ class BreathOfWindMode(GenericModeHandler):
             return True
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "骚灵的狂笑回荡在空荡的房子里。")
+            return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p76/p147 只认"驱魔完成"，
+        # 骚灵不随叛徒死亡停止作祟。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
             return True
         return False
 
@@ -16600,6 +16942,10 @@ class BloodOfferingMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "最后的英雄也死了——女孩被献祭了。")
             return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p75/p146 的英雄胜 = 计时轨到 7
+        # （恶魔不耐烦、杀死叛徒），叛徒提前死亡不等于英雄达成目标。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
+            return True
         return False
 
 
@@ -16681,6 +17027,10 @@ class TwistingNetherMode(GenericModeHandler):
             return True
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "最后的英雄也消失在虚空中。")
+            return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p74/p145 只认"锚定足够房间"，
+        # 虚空不随叛徒死亡停止扩张。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
             return True
         return False
 
@@ -16840,6 +17190,10 @@ class EternalGloryMode(GenericModeHandler):
     def check_victory(self, engine):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "幽灵战士的最后一击命中了。")
+            return True
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p72/p143 只认"让幽灵战士安息"，
+        # 幽灵战士是独立怪物，叛徒死后照常挥剑。
+        if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
             return True
         return False
 

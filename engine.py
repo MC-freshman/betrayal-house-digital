@@ -630,6 +630,11 @@ class GameEngine:
             return []
         room = self.current_room(player)
         options: list[ExitOption] = []
+        # 剧本可以关掉探索（33 号 p44/p115："没有进地下室的已探明通路前不能
+        # 探索新房间"）。这里必须同步过滤，否则引擎会给出一个"走的时候才被
+        # 拒绝"的假选项——机器人会整局死循环在上面（seed101/5p 实测：400 回合
+        # 全是"无法发现新房间"，一步没动）。
+        can_discover = self._mode_handler().can_discover_rooms(self, player)
 
         for direction in room.doors:
             if direction not in DIRECTION_DELTAS:
@@ -657,7 +662,7 @@ class GameEngine:
                     )
                 continue
 
-            if self._floor_has_room_capacity(room.floor):
+            if can_discover and self._floor_has_room_capacity(room.floor):
                 options.append(
                     ExitOption(
                         label=f"向{self._direction_cn(direction)}探索新房间",

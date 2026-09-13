@@ -4357,13 +4357,20 @@ def verify_haunt39_heir() -> None:
     ), "刺客应已服毒死亡"
 
     # 继承人 + 矛 + 戒指在雕像走廊 → 英雄胜
+    # p50 原文是 "the Spear card"：矛必须走卡牌通道（旧版 marker 令牌
+    # 谁都无法拾取，英雄胜利线不可达——M10-35 修）。
     heir.room_key = throne
-    heir.items.append("omen_ring")
-    spear_token = engine.tokens_of_kind("spear")
-    if spear_token:
-        engine.give_token(spear_token[0].uid, heir.id)
-    else:
-        engine.spawn_token("spear", label="矛", role="carried", holder=heir.id)
+    if "omen_ring" not in heir.items:
+        heir.items.append("omen_ring")
+    spear_room = flags.get("spear_room")
+    assert "omen_spear" in engine.state.room_items.get(spear_room, []), (
+        "矛（omen_spear 卡）应摆在随机已探明房间里"
+    )
+    assert "omen_spear" not in engine.tokens_of_kind("spear"), "不应再生成矛令牌"
+    # 走引擎常规拾取通道：搬到矛房间把它捡起来
+    heir.room_key = spear_room
+    assert engine.pickup_item(heir, "omen_spear"), "继承人应能正常拾取矛卡"
+    heir.room_key = throne
     assert handler.check_victory(engine) is True
     assert engine.state.winner == "heroes"
 
@@ -4373,16 +4380,6 @@ def verify_haunt39_heir() -> None:
     heir.dead = True
     assert handler.check_victory(engine) is True
     assert engine.state.winner == "traitor"
-
-
-def verify_haunt40_buried_alive() -> None:
-    """剧本 40：活埋——最小 handler 冒烟（p51/p122，简化版）。"""
-    engine = _run_until_haunt(seed=113, players=3, haunt_id=40)
-    handler = engine._mode_handler()
-    assert isinstance(handler, BuriedAliveMode)
-    # 无怪物实体，无专属行动——验证不崩溃 + 分派正确即可
-    assert engine.state.haunt is not None and engine.state.haunt.id == 40
-    assert not engine.state.winner  # 游戏未结束
 
 
 def verify_haunt41_invisible_traitor() -> None:
@@ -7677,6 +7674,481 @@ def verify_fixed_haunt_semantics() -> None:
         assert engine.state.winner is None, "没有安置过老鼠时不该判英雄胜"
 
 
+# ---------------------------------------------------------------------------
+# M10-35 测试扩容：70 本剧本 x（道具使用 / 角色交互 / 剧本机制）
+# ---------------------------------------------------------------------------
+
+
+def verify_all_haunts_data_integrity() -> None:
+    """70 本剧本的静态数据必须自洽（卡牌 / 房间 / 怪物 / 行动）。
+
+    这是"引用了不存在的 id"与"数据写了引擎不读"两类问题的构建期红灯：
+    required_cards 不在卡表里 → 英雄永远拿不到（39 号矛写成令牌就是这么
+    把英雄线锁死的）、key_rooms 写了不存在的房间 → bot 目标解析不出来、
+    monsters 模板缺失 → 延迟生成少一只、action.stat 拼错 → 检定按 0 属性算。
+    """
+    catalog = build_catalog(113)
+    valid_cards = set(catalog.cards)
+    valid_rooms = set(catalog.room_templates)
+    valid_monsters = set(catalog.monsters)
+    valid_stats = {"might", "speed", "sanity", "knowledge"}
+    valid_sides = {"heroes", "traitor", "both", "any"}
+    valid_spawns = {"deferred", "haunt_room", "omen_rooms", "room_id"}
+    for haunt_id in range(1, 71):
+        rule = catalog.haunt_defs[haunt_id].rule_data or {}
+        assert rule, f"#{haunt_id} 缺少 rule_data"
+        assert rule.get("mode"), f"#{haunt_id} 未声明 mode"
+        assert rule.get("fidelity") == "refined", f"#{haunt_id} fidelity 不是 refined"
+        assert rule.get("source_pages"), f"#{haunt_id} 未标注 source_pages"
+        for card_id in rule.get("required_cards", []) or []:
+            assert card_id in valid_cards, (
+                f"#{haunt_id} required_cards 引用了不存在的卡 {card_id}"
+            )
+        for room_id in rule.get("key_rooms", []) or []:
+            assert room_id in valid_rooms, (
+                f"#{haunt_id} key_rooms 引用了不存在的房间 {room_id}"
+            )
+        for track_id, spec in ((rule.get("setup", {}) or {}).get("tracks", {}) or {}).items():
+            target = spec.get("target", 0)
+            if isinstance(target, int):
+                assert target >= 0, f"#{haunt_id} 轨道 {track_id} target 非法：{target}"
+        for spec in rule.get("monsters", []) or []:
+            template_id = spec.get("template_id")
+            assert template_id in valid_monsters, (
+                f"#{haunt_id} monsters 引用了不存在的模板 {template_id}"
+            )
+            assert spec.get("spawn") in valid_spawns, (
+                f"#{haunt_id} {template_id} 的 spawn 非法：{spec.get('spawn')}"
+            )
+        for action in rule.get("actions", []) or []:
+            assert action.get("id"), f"#{haunt_id} 存在没有 id 的 action"
+            stat = action.get("stat")
+            stats = stat if isinstance(stat, (list, tuple)) else ([stat] if stat is not None else [])
+            for one in stats:
+                assert one in valid_stats, (
+                    f"#{haunt_id} action {action.get('id')} 的 stat 非法：{one}"
+                )
+            assert str(action.get("side", "both")) in valid_sides, (
+                f"#{haunt_id} action {action.get('id')} 的 side 非法"
+            )
+
+
+def verify_all_haunts_handler_smoke() -> None:
+    """70 本 handler 的两侧接口在"零进度直接触发"下都不许抛异常。
+
+    逐个覆盖：英雄 / 叛徒两侧的可用行动（id 唯一、label 非空）、未知
+    action_id 必须安全返回 False、bot 寻路目标与进度摘要（两侧视角）不得
+    崩溃；实现了 quest_carrier 的剧本要返回合法 player id。
+    """
+    for haunt_id in range(1, 71):
+        engine = _force_haunt(seed=113, players=4, haunt_id=haunt_id)
+        handler = engine._mode_handler()
+        valid_ids = {player.id for player in engine.state.players}
+        for player in engine.state.players:
+            actions = handler.available_actions(engine, player)
+            ids = [action.id for action in actions]
+            assert len(ids) == len(set(ids)), f"#{haunt_id} 同一玩家行动 id 重复：{ids}"
+            for action in actions:
+                assert isinstance(action.label, str) and action.label, (
+                    f"#{haunt_id} 行动 {action.id} 缺少 label"
+                )
+            assert handler.perform_action(engine, player, "__no_such_action__", {}) is False, (
+                f"#{haunt_id} 未知 action_id 未安全返回 False"
+            )
+            goals = handler.bot_goal_rooms(engine, player)
+            assert isinstance(goals, list), f"#{haunt_id} bot_goal_rooms 未返回 list"
+            assert all(isinstance(goal, str) and goal for goal in goals), (
+                f"#{haunt_id} bot_goal_rooms 含非法项：{goals}"
+            )
+            summary = handler.progress_summary(engine, player)
+            assert isinstance(summary, list) and all(isinstance(line, str) for line in summary), (
+                f"#{haunt_id} progress_summary 非法：{summary!r}"
+            )
+        carrier = getattr(handler, "quest_carrier", None)
+        if callable(carrier):
+            value = carrier(engine)
+            assert value is None or value in valid_ids, (
+                f"#{haunt_id} quest_carrier 返回了非法 player id：{value}"
+            )
+
+
+def verify_traitor_death_semantics_sweep() -> None:
+    """叛徒死亡到底算不算英雄胜——按 p2 基础规则逐本定性后钉住。
+
+    基础规则："先完成剧本目标的一方获胜；即使叛徒死亡，只要怪物还能完成
+    目标就照常行动"。所以只有当原文把"叛徒死亡"写进英雄胜利条件时，
+    叛徒阵亡才算英雄胜；其余剧本必须继续打到目标完成。
+    """
+    # 原文把"叛徒死亡"写进英雄胜利条件（p44/p115 等）→ 判英雄胜
+    hero_win_on_traitor_death = (5, 41, 42, 45, 51, 52, 56, 57, 70)
+    # 原文另有条件、叛徒死不等于结束 → 绝不判英雄胜
+    keeps_playing = (1, 20, 33, 34, 35, 36, 37, 39, 43, 44, 61, 63, 64, 65)
+    for haunt_id in hero_win_on_traitor_death:
+        engine = _force_haunt(seed=113, players=4, haunt_id=haunt_id)
+        traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+        assert traitor is not None, f"#{haunt_id} 作祟开始时应有叛徒"
+        traitor.dead = True
+        engine.state.winner = None
+        engine.check_victory()
+        assert engine.state.winner == "heroes", (
+            f"#{haunt_id} 原文把叛徒死亡算作英雄胜利，实际判了 {engine.state.winner}"
+        )
+    for haunt_id in keeps_playing:
+        engine = _force_haunt(seed=113, players=4, haunt_id=haunt_id)
+        traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+        assert traitor is not None, f"#{haunt_id} 作祟开始时应有叛徒"
+        traitor.dead = True
+        engine.state.winner = None
+        engine.check_victory()
+        assert engine.state.winner is None, (
+            f"#{haunt_id} 叛徒死亡不构成英雄胜利（须完成剧本目标），"
+            f"实际判了 {engine.state.winner}"
+        )
+    # 反向：英雄全灭必须是叛徒胜（70 本全量）
+    for haunt_id in range(1, 71):
+        engine = _force_haunt(seed=113, players=4, haunt_id=haunt_id)
+        for player in engine.state.players:
+            if player.role == "hero":
+                player.dead = True
+        engine.state.winner = None
+        engine.check_victory()
+        assert engine.state.winner == "traitor", (
+            f"#{haunt_id} 英雄全灭却没有判叛徒胜（实际 {engine.state.winner}）"
+        )
+
+
+def verify_item_use_matrix() -> None:
+    """道具 / 预兆逐张过交互通道：拾取 → 使用 → 丢弃 → 交易（p2-p3）。
+
+    通用物品规则（无剧本沙盒，避免剧本专属闸门干扰）：
+      · 同伴卡（疯子 / 女孩 / 狗）tradeable=False：可拾取、不可丢弃、不可交易；
+      · 盔甲 / 咬痕这类不可交易卡：可拾取、可丢弃、但不能交易；
+      · 武器类 use_item 应提示"攻击时选择使用"而不是报错或生效；
+      · 其余卡牌丢弃后落在房间、可再拾取、可与同房间队友来回交易。
+    """
+    engine = _new_engine(seed=113, players=4)
+    player = engine.state.players[0]
+    other = engine.state.players[1]
+    other.room_key = player.room_key
+    room_key = player.room_key
+    companions: list[str] = []
+    untradeable: list[str] = []
+    weapons: list[str] = []
+    tradable: list[str] = []
+    for card_id, card in sorted(engine.catalog.cards.items()):
+        if card.kind == "event":
+            continue
+        player.items = [c for c in player.items if c != card_id]
+        player.item_used = False
+        engine.state.room_items.setdefault(room_key, []).append(card_id)
+        assert engine.pickup_item(player, card_id), f"{card_id} 无法拾取"
+        result = engine.use_item(player, card_id)
+        assert isinstance(result, bool), f"{card_id} use_item 未返回 bool"
+        if "weapon" in card.tags:
+            weapons.append(card_id)
+            assert result is False, f"{card_id} 是武器：use_item 应提示攻击时选择"
+        if card_id not in player.items:  # 一次性 / 用后弃置的卡补回来继续测交互
+            player.items.append(card_id)
+        if not card.tradeable and "companion" in card.tags:
+            companions.append(card_id)
+            assert engine.drop_item(player, card_id) is False, f"{card_id} 同伴不应可丢弃"
+            assert engine.trade_item(player, other, card_id) is False, (
+                f"{card_id} 同伴不应可交易"
+            )
+            continue
+        assert engine.drop_item(player, card_id), f"{card_id} 应可丢弃"
+        assert card_id in engine.state.room_items.get(room_key, []), (
+            f"{card_id} 丢弃后应落在房间里"
+        )
+        assert engine.pickup_item(player, card_id), f"{card_id} 丢弃后应能再拾取"
+        if not card.tradeable:
+            untradeable.append(card_id)
+            assert engine.trade_item(player, other, card_id) is False, (
+                f"{card_id} 声明 tradeable=False，不应可交易"
+            )
+            continue
+        tradable.append(card_id)
+        assert engine.trade_item(player, other, card_id), f"{card_id} 应可交给同房间队友"
+        assert card_id in other.items, f"{card_id} 交易后应在队友手里"
+        assert engine.trade_item(other, player, card_id), f"{card_id} 应可换回来"
+    assert len(companions) >= 3, f"应至少识别出疯子 / 女孩 / 狗三张同伴卡：{companions}"
+    assert len(untradeable) >= 2, f"盔甲 / 咬痕应不可交易：{untradeable}"
+    assert len(tradable) >= 20, f"可交易卡过少：{len(tradable)}"
+    assert len(weapons) >= 5, f"武器卡过少，请检查标签：{weapons}"
+
+
+def verify_weapon_cards_attack_paths() -> None:
+    """每张武器卡都要能被识别为可用攻击武器（含 ranged / speed 标签）。"""
+    engine = _force_haunt(seed=113, players=4, haunt_id=1)
+    player = engine.state.players[0]
+    target = next(p for p in engine.state.players if p.role != player.role)
+    target.room_key = player.room_key
+    checked = 0
+    for card_id, card in sorted(engine.catalog.cards.items()):
+        if "weapon" not in card.tags:
+            continue
+        player.items = [card_id]
+        player.attack_used = False
+        weapons = engine.available_attack_weapons(player)
+        assert card_id in weapons, f"{card_id} 未被识别为可用武器：{weapons}"
+        verdict = engine.attack_would_be_allowed(player, target, card_id)
+        assert isinstance(verdict, bool), f"{card_id} attack_would_be_allowed 未返回 bool"
+        checked += 1
+    assert checked >= 5, f"武器卡过少：{checked}"
+
+
+def verify_character_interaction_matrix() -> None:
+    """角色交互主通道：同房间限制、死亡掉落、可偷清单（p2-p3）。"""
+    engine = _new_engine(seed=113, players=4)
+    first, second = engine.state.players[0], engine.state.players[1]
+
+    # 交易要求同房间，且只能交出手里有的卡
+    second.room_key = first.room_key
+    first.items = ["item_axe"]
+    assert engine.trade_item(first, second, "item_axe") is True
+    assert engine.trade_item(first, second, "item_axe") is False, "自己手里没有的卡不能交易"
+    other_room = next(key for key in engine.state.board if key != first.room_key)
+    second.room_key = other_room
+    assert engine.trade_item(second, first, "item_axe") is False, "不同房间不能交易"
+
+    # 死亡掉落：物品与同伴都落在房间，进房者可拾取
+    victim = engine.state.players[2]
+    victim.items = ["omen_madman", "item_axe"]
+    victim.companions = ["omen_madman"]
+    victim.room_key = first.room_key
+    victim.stats["might"] = 0
+    engine._check_player_death(victim)
+    assert victim.dead, "力量归零应死亡"
+    assert not victim.items and not victim.companions, "死亡应清空物品与同伴"
+    dropped = engine.state.room_items.get(victim.room_key, [])
+    assert "item_axe" in dropped and "omen_madman" in dropped, (
+        f"死亡掉落应留在房间：{dropped}"
+    )
+    first.room_key = victim.room_key
+    assert engine.pickup_item(first, "omen_madman"), "同伴应能被进房者拾取"
+    assert "omen_madman" in first.companions, "拾取同伴后应进入 companions"
+
+    # 可偷清单：可交易物品可偷，同伴（tradeable=False）不可被偷
+    victim.items = ["item_lucky_stone", "omen_girl"]
+    victim.companions = ["omen_girl"]
+    candidates = engine._steal_candidates(first, victim)
+    assert "item_lucky_stone" in candidates, f"可交易物品应可被偷：{candidates}"
+    assert "omen_girl" not in candidates, "同伴不可被偷"
+
+
+def verify_haunt40_buried_alive() -> None:
+    """剧本 40：活埋——埋人 / 搜查 / 挖掘 / 计时四条链路（p51/p122）。"""
+    engine = _force_haunt(seed=113, players=4, haunt_id=40)
+    handler = engine._mode_handler()
+    assert isinstance(handler, BuriedAliveMode)
+    flags = engine._haunt_flags()
+
+    # 埋人：埋葬室在地下室、必经之路可达、不在楼梯平台（能避则避）
+    burial = flags.get("burial_room")
+    assert burial and burial in engine.state.board, "必须选出埋葬室"
+    assert engine.state.board[burial].floor == -1, "p122：朋友埋在地下室房间"
+    basement = handler._basement_rooms(engine)
+    assert len(basement) >= 2, f"p122：地下室房间应先补几间进场：{len(basement)}"
+    anchor = engine.state.meta["haunt_rule"]["haunt_room"]
+    assert engine._path_length(anchor, burial) < 9999, (
+        "埋葬室必须可达——否则英雄永远挖不出来（70 号孤岛同款坑）"
+    )
+    assert engine.state.board[burial].template_id != "basement_landing", (
+        "有其他地下室房间时不应把朋友埋在楼梯平台"
+    )
+    assert engine._haunt_track_target("burial_damage") == 12, "p122：12 点伤害即死亡"
+    assert engine._haunt_track_target("dig_progress") == len(engine.state.players), (
+        "p51：挖出朋友所需成功次数 = 作祟开始时玩家人数"
+    )
+
+    # 搜查：成功且非埋葬室 → 排除；成功且是埋葬室 → 找到
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    others = [room.key for room in basement if room.key != burial]
+    hero.room_key = others[0]
+    assert "h40_search" in {action.id for action in handler.available_actions(engine, hero)}
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "h40_search", {}) is True
+    assert others[0] in flags.get("ruled_out", []), "成功搜查非埋葬室应排除该房间"
+    assert not flags.get("burial_found"), "排除的房间不该被当成埋葬室"
+    hero.room_key = burial
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "h40_search", {}) is True
+    assert flags.get("burial_found") is True, "搜查埋葬室成功应找到朋友的位置"
+
+    # 挖掘：只在埋葬室提供，成功后进度 +1；集满 → 英雄胜
+    assert "h40_dig" in {action.id for action in handler.available_actions(engine, hero)}
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "h40_dig", {}) is True
+    assert engine._haunt_track_value("dig_progress") == 1, "挖掘成功应推进一格"
+    engine._set_haunt_track_value("dig_progress", engine._haunt_track_target("dig_progress"))
+    engine.state.winner = None
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes", "挖出朋友 → 英雄胜"
+
+    # 通灵板（p51）：理智 7+ 直接得知埋葬室
+    engine.state.winner = None
+    flags["burial_found"] = False
+    hero.items.append("omen_spirit_board")
+    hero.room_key = others[0]
+    with patch.object(engine, "roll_dice", return_value=8):
+        assert handler.perform_action(engine, hero, "h40_spirit_board", {}) is True
+    assert flags.get("burial_found") is True, "通灵板 7+ 应直接得知埋葬室"
+
+    # 计时：叛徒回合结束轨位 +1 并结算伤害；12 点 → 叛徒胜
+    engine.state.winner = None
+    engine._set_haunt_track_value("dig_progress", 0)
+    engine._set_haunt_track_value("burial_damage", 0)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    handler.on_turn_end(engine, traitor)
+    assert engine._haunt_track_value("burial_damage") > 0, "叛徒回合结束应结算被埋者伤害"
+    assert int(flags.get("bury_timer", 0)) >= 1, "Turn/Damage 轨位应 +1"
+    engine._set_haunt_track_value("burial_damage", 12)
+    engine.state.winner = None
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "traitor", "被埋者 12 点伤害 → 叛徒胜"
+
+    # 吸收兜底：叛徒死亡不构成英雄胜利（p51 只认"挖出朋友"）
+    engine.state.winner = None
+    engine._set_haunt_track_value("dig_progress", 0)
+    engine._set_haunt_track_value("burial_damage", 0)
+    traitor.dead = True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner is None, "叛徒死后英雄仍须把朋友挖出来"
+
+    # 机器人目标：未找到 → 未排除的地下室房间；已找到 → 埋葬室
+    flags["burial_found"] = False
+    goals = handler.bot_goal_rooms(engine, hero)
+    assert goals and all(goal.startswith("__room__") for goal in goals), (
+        f"未找到时应搜索地下室：{goals}"
+    )
+    flags["burial_found"] = True
+    assert handler.bot_goal_rooms(engine, hero) == [f"__room__{burial}"], (
+        "找到后应直奔埋葬室"
+    )
+
+
+def verify_haunt33_fresh_tile_and_explore_gate() -> None:
+    """剧本 33：p44 本回合新铺砖 +3；探索被关闭时不得给出必失败的探索选项。"""
+    engine = _run_until_haunt(seed=101, players=5, haunt_id=33)
+    handler = engine._mode_handler()
+    assert isinstance(handler, LakeRescueMode)
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    landing = next(
+        (key for key, room in engine.state.board.items() if room.template_id == "basement_landing"),
+        None,
+    )
+    assert landing, "33 号应保证地下室平台在场"
+    hero.room_key = landing
+    # _run_until_haunt 在回合中途停下，当前英雄可能带着 movement_stopped；
+    # 这里复位成"刚轮到他、可自由移动"的最普通状态。
+    hero.movement_stopped = False
+    hero.dead = False
+    hero.steps_remaining = max(hero.steps_remaining, 9)
+    options = engine.available_move_options(hero)
+
+    # 引擎不得给出"走的时候才被拒绝"的假探索选项（否则机器人整局空转）
+    explores = [option for option in options if option.is_new_room]
+    if not handler.can_discover_rooms(engine, hero):
+        assert not explores, "探索被剧本关闭时仍给出探索选项 → 机器人会死循环在必失败选项上"
+
+    # 划水进入新砖：本回合搜索加值 +3；跨回合由 on_turn_start 清掉
+    swim = next(
+        (option for option in options if str(option.target_key).startswith(handler.LAKE_PREFIX)),
+        None,
+    )
+    assert swim is not None, f"岸边应能划水进入湖面：{[(o.direction, o.target_key) for o in options]}"
+    hero.steps_remaining = max(hero.steps_remaining, swim.cost)
+    with patch.object(handler, "_search_roll"):  # 只验证记砖与加值，不触发搜索表结算
+        assert handler.lake_move(engine, hero, swim) is True
+    fresh = engine._haunt_flags().setdefault("fresh_tiles", {})
+    assert fresh.get(str(hero.id)) == hero.room_key, "新铺的砖应记进 fresh_tiles"
+    with_fresh = handler._search_bonus(engine, hero)
+    fresh.pop(str(hero.id))
+    without_fresh = handler._search_bonus(engine, hero)
+    assert with_fresh - without_fresh == handler.SEARCH_BONUS_FRESH_TILE, (
+        f"p44：本回合新铺的砖应 +{handler.SEARCH_BONUS_FRESH_TILE}"
+    )
+    fresh[str(hero.id)] = hero.room_key
+    with patch.object(handler, "_search_roll"):  # 搜索表可能挪人铺砖、把记录写回来
+        handler.on_turn_start(engine, hero)
+    assert str(hero.id) not in engine._haunt_flags().get("fresh_tiles", {}), (
+        "回合开始应清掉上回合的 fresh 砖记录（+3 只在本回合有效）"
+    )
+
+
+def verify_haunt39_spear_flow() -> None:
+    """剧本 39：矛是卡（p50 "the Spear card"）——可拾取、可上交继承人。"""
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=39)
+    handler = engine._mode_handler()
+    assert isinstance(handler, HeirAssassinMode)
+    flags = engine._haunt_flags()
+    heir = handler._heir(engine)
+    assert heir is not None
+    spear_room = flags.get("spear_room")
+    assert spear_room and spear_room in engine.state.board, "应把矛放进一个已探明房间"
+
+    # 矛必须是 omen_spear 卡（不是无人能拾取的 marker 令牌）
+    assert "omen_spear" in engine.state.room_items.get(spear_room, []), (
+        "矛应作为卡牌摆进房间（旧版 marker 令牌谁都拿不到 → 英雄线不可达）"
+    )
+    assert not engine.tokens_of_kind("spear"), "不应再生成矛令牌"
+    for deck in engine.state.card_decks.values():
+        assert "omen_spear" not in deck, "矛已摆进房间，不应还留在牌堆里"
+
+    # 引擎常规拾取通道可用
+    heir.room_key = spear_room
+    assert engine.pickup_item(heir, "omen_spear") is True, "继承人应能拾取矛卡"
+    assert "omen_spear" in heir.items
+
+    # 收牌人 = 继承人（bot 的通用"交给持令牌队友"启发在这里不适用）
+    assert handler.quest_carrier(engine) == heir.id
+
+    # bot 目标：先补缺的卡，再登王座；队友去和继承人会合
+    heir.items = ["omen_spear"]
+    heir.room_key = spear_room
+    throne = flags.get("throne_room")
+    assert handler.bot_goal_rooms(engine, heir) == [f"__room__{throne}"], (
+        "矛已在手时（戒指在地上）应优先去拿戒指或直奔王座"
+    )
+    heir.items = ["omen_spear", "omen_ring"]
+    assert handler.bot_goal_rooms(engine, heir) == [f"__room__{throne}"], "两件齐了就去王座"
+    heir.items = []
+    assert handler.bot_goal_rooms(engine, heir) == [f"__room__{spear_room}"], (
+        "没有矛时先去矛房间"
+    )
+    other = next(
+        (p for p in engine.state.players if p.role == "hero" and not p.dead and p.id != heir.id),
+        None,
+    )
+    if other is not None:
+        assert handler.bot_goal_rooms(engine, other) == [f"__room__{heir.room_key}"], (
+            "队友应去和继承人会合"
+        )
+
+    # quest_carrier 让队友把矛/戒指交给继承人（同房间、且持牌方是当前回合玩家）
+    if other is not None:
+        heir.items = []
+        heir.room_key = spear_room
+        other.items = ["omen_spear"]
+        other.room_key = spear_room
+        _set_current(engine, other)
+        bot = BotController()
+        assert bot._try_share_quest_items(engine, other) is True, (
+            "持矛队友应与继承人交接（quest_carrier）"
+        )
+        assert "omen_spear" in heir.items, "矛应已交到继承人手里"
+    else:
+        heir.items = ["omen_spear"]
+
+    # 继承人持矛与戒登王座 → 英雄胜
+    if "omen_ring" not in heir.items:
+        heir.items.append("omen_ring")
+    heir.room_key = throne
+    engine.state.winner = None
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "heroes"
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -7811,6 +8283,15 @@ def main():
     verify_no_instant_verdict_on_trigger()
     verify_haunt_track_targets_nonzero()
     verify_fixed_haunt_semantics()
+    # M10-35：70 本横切扩容（剧本机制 / 道具使用 / 角色交互）
+    verify_all_haunts_data_integrity()
+    verify_all_haunts_handler_smoke()
+    verify_traitor_death_semantics_sweep()
+    verify_item_use_matrix()
+    verify_weapon_cards_attack_paths()
+    verify_character_interaction_matrix()
+    verify_haunt33_fresh_tile_and_explore_gate()
+    verify_haunt39_spear_flow()
     print("verify_haunt_systems: ok")
 
 
