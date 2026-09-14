@@ -1154,6 +1154,8 @@ class GameEngine:
         pos, placement = chosen
         rotated = self._build_rotated_template(template, placement["rotation"])
         room = self._place_room(rotated, pos[1], pos[2], placement["rotation"])
+        # p10：房间以作祟指令等非探索方式放入时，首个进入者不抽符号牌。
+        room.data["no_first_draw"] = True
         if distance >= 0:
             self._log(f"「{room.name}」被拉进了这栋房子（距叛徒 {distance} 格）。")
         else:
@@ -1231,6 +1233,9 @@ class GameEngine:
             # 剧本可禁止本次的符号抽牌（剧本 16 p27：发现带符号的地下室
             # 房间时"代替抽牌"必须先攻击幻影）。
             suppress_draw = self._mode_handler().suppress_room_draw(self, player, room)
+            if room.data.get("no_first_draw"):
+                # p10：非探索方式放入的房间（作祟指令等）首个进入者不抽符号牌。
+                suppress_draw = True
             if room.symbol and not suppress_draw:
                 if room.symbol == "event" and self.state.phase == "HAUNT_PHASE" and player.role == "traitor":
                     if self.prompter.confirm("事件卡", f"{player.name} 进入了带事件符号的房间。要触发事件吗？"):
@@ -1323,11 +1328,21 @@ class GameEngine:
             self._log("青蛙不能抽牌。")
             return
         if kind == "omen":
-            self._draw_omen(player)
+            self._draw_omen(player, stop_movement=stop_movement)
         elif kind == "item":
-            self._draw_item(player)
+            self._draw_item(player, stop_movement=stop_movement)
         elif kind == "event":
-            self._draw_event(player)
+            self._draw_event(player, stop_movement=stop_movement)
+        if stop_movement:
+            player.movement_stopped = True
+            player.steps_remaining = 0
+
+    def _stop_movement_for_draw(self, player: Player, stop_movement: bool = True) -> None:
+        """规则手册 p6/p10：任何"抽牌"效果都会让该玩家本回合停止移动（仍可做其他动作）。
+
+        唯一例外是剧本明文的延迟抽牌（剧本 25 p36：结束移动时补抽），
+        由调用方传 stop_movement=False。
+        """
         if stop_movement:
             player.movement_stopped = True
             player.steps_remaining = 0
@@ -1360,7 +1375,8 @@ class GameEngine:
                 return card_id
         return None
 
-    def _draw_omen(self, player: Player) -> None:
+    def _draw_omen(self, player: Player, stop_movement: bool = True) -> None:
+        self._stop_movement_for_draw(player, stop_movement)
         searched = self._search_deck_for_required_card("omen")
         card_id = searched or self._draw_card_id("omen")
         if not card_id:
@@ -1381,7 +1397,8 @@ class GameEngine:
             self._log(f"{player.name} 抽到预兆：{card.name}。")
         self.prompter.notify(f"抽到预兆：{card.name}", card.text or "（无说明）")
 
-    def _draw_item(self, player: Player) -> None:
+    def _draw_item(self, player: Player, stop_movement: bool = True) -> None:
+        self._stop_movement_for_draw(player, stop_movement)
         searched = self._search_deck_for_required_card("item")
         card_id = searched or self._draw_card_id("item")
         if not card_id:
@@ -1395,7 +1412,8 @@ class GameEngine:
             self._log(f"{player.name} 抽到物品：{card.name}。")
         self.prompter.notify(f"获得物品：{card.name}", card.text or "（无说明）")
 
-    def _draw_event(self, player: Player) -> None:
+    def _draw_event(self, player: Player, stop_movement: bool = True) -> None:
+        self._stop_movement_for_draw(player, stop_movement)
         card_id = self._draw_card_id("event")
         if not card_id:
             self._log("事件牌堆已经空了，这次没有事件发生。")
@@ -1979,7 +1997,16 @@ class GameEngine:
                     return
             pos = player.stat_positions.get(stat, 0) - amount
             if pos < 0:
-                # 跌出轨道最左格（到达骷髅）→ 该属性归零（任何阶段都判定濒死/死亡）
+                if self.state.phase == "EXPLORE":
+                    # 规则手册 p5/p16：作祟开始之前没有人会死亡——属性降到轨道
+                    # 最左格就停住，不会滑到骷髅符号上。
+                    pos = 0
+                    player.stat_positions[stat] = pos
+                    player.stats[stat] = track[pos]
+                    if player.stats[stat] != before:
+                        self._log(f"{player.name} 的 {stat} 从 {before} 降到 {player.stats[stat]}。")
+                    return
+                # 跌出轨道最左格（到达骷髅）→ 该属性归零（作祟期判定死亡）
                 player.stat_positions[stat] = -1
                 player.stats[stat] = 0
                 self._log(f"{player.name} 的 {stat} 从 {before} 降到 0。")
@@ -2037,6 +2064,9 @@ class GameEngine:
 
     def _check_player_death(self, player: Player) -> None:
         if player.dead:
+            return
+        if self.state.phase == "EXPLORE":
+            # 规则手册 p5：作祟开始之前没有人会死（属性只会停在最低值）。
             return
         if any(player.stats[stat] <= 0 for stat in STAT_NAMES):
             player.dead = True
@@ -2099,7 +2129,8 @@ class GameEngine:
         card = self.catalog.cards.get(card_id)
         if not card or card_id not in player.items:
             return False
-        if not card.tradeable and "companion" in card.tags:
+        # p11："咬""狗""女孩""女士"不是道具，不能被丢弃（也不能被盗取或交易）。
+        if "companion" in card.tags or card.id == "omen_bite":
             self._log(f"{card.name} 不能被丢弃。")
             return False
         self._discard_card_from_player(player, card_id, return_to_room=True)
@@ -2545,7 +2576,9 @@ class GameEngine:
             if isinstance(target, Player) and attacker.role == "traitor" and target.role == "hero":
                 self._haunt5_infect(target)
         else:
-            if ranged and isinstance(target, Player):
+            if ranged:
+                # p20 词汇表："当你攻击骰结果低于对手时不受到伤害"——远程攻击
+                # 落败免伤对玩家与怪物目标一视同仁。
                 self._log(f"{target_name} 反击成功，但远程攻击不会让攻击者受伤。")
             elif self._mode_handler().attack_loss_damage_disabled(self, attacker, target):
                 self._log(f"{target_name} 反击了，但没能伤到 {attacker.name}。")
@@ -3679,6 +3712,9 @@ class GameEngine:
     def _resolve_monster_turns(self) -> None:
         if not self.state.monsters:
             return
+        # p18：数个相同类似的怪物（蝙蝠/僵尸）整组只投一次骰，该类型每个怪物
+        # 本回合都移动这个格数。键里带 speed —— 剧本会成长/削减个别怪的数值。
+        group_steps: dict[tuple[str, int], int] = {}
         for monster in list(self.state.monsters):
             if monster.stunned_turns > 0:
                 monster.stunned_turns -= 1
@@ -3693,16 +3729,53 @@ class GameEngine:
                 continue
             path = self._shortest_path(monster.room_key, target.room_key)
             if len(path) > 1:
-                steps = max(1, self.roll_dice(monster.speed, "怪物移动"))
+                group_key = (monster.template_id, monster.speed)
+                if group_key not in group_steps:
+                    group_steps[group_key] = max(1, self.roll_dice(monster.speed, "怪物移动"))
+                steps = group_steps[group_key]
                 # 剧本可接管移动（例如木乃伊掷出 0/1 时经秘密通道移动）；
                 # 返回 False 才走常规的沿最短路径前进。
                 if not self._mode_handler().on_monster_move(self, monster, steps):
-                    new_index = min(len(path) - 1, steps)
+                    new_index = self._monster_move_index(monster, path, steps)
                     monster.room_key = path[new_index]
                     self._log(f"{monster.name} 移动到 {self.state.board[monster.room_key].name}。")
             if monster.room_key == target.room_key:
                 self._monster_attack(monster, target)
         self.check_victory()
+
+    def _monster_move_index(self, monster: Monster, path: list[str], steps: int) -> int:
+        """把步数折算成实际前进格数（p17/p22 的"途经对手"对怪物同样生效）。
+
+        作祟开始后，房间里每有一名对手，离开该房间就要额外消耗 1 点移动力；
+        无论被拖慢多少，至少可以移动 1 格（p17：怪物投出 0 时也一样）。
+        """
+        index = 0
+        budget = max(1, steps)
+        while index + 1 < len(path):
+            room = self.state.board.get(path[index])
+            cost = 1 + (self._hostile_count_for_monster(monster, path[index]) if room else 0)
+            if index == 0:
+                index = 1
+                budget -= cost
+                if budget <= 0:
+                    break
+                continue
+            if cost > budget:
+                break
+            budget -= cost
+            index += 1
+        return index
+
+    def _hostile_count_for_monster(self, monster: Monster, room_key: str) -> int:
+        """怪物在 room_key 里遇到的对手数（叛徒的怪 = 英雄，反之亦然）。"""
+        if self.state.phase != "HAUNT_PHASE":
+            return 0
+        expected_role = "hero" if monster.controller == "traitor" else "traitor"
+        return sum(
+            1
+            for player in self.state.players
+            if not player.dead and player.room_key == room_key and player.role == expected_role
+        )
 
     def _find_monster_target(self, monster: Monster) -> Player | None:
         candidates = [player for player in self.state.players if not player.dead and player.role != "traitor"]

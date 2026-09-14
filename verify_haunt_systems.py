@@ -633,9 +633,13 @@ def verify_haunt1_secret_passage() -> None:
     assert other is not None
     mummy.room_key = other
 
+    # 目标由引擎按"最近英雄"选定，断言跟它保持一致：写死"第一个英雄"会让
+    # 用例随探索期的棋盘一起漂移（基础规则修正后 seed113 的英雄位置变过）。
+    expected = engine._find_monster_target(mummy)
+    assert expected is not None
     handler = engine._mode_handler()
     assert handler.on_monster_move(engine, mummy, 0), "掷 0 应触发秘密通道"
-    assert mummy.room_key == hero.room_key, "秘密通道应直接抵达目标所在房间"
+    assert mummy.room_key == expected.room_key, "秘密通道应直接抵达目标所在房间"
 
     # 掷 2 以上走常规移动，剧本不接管
     mummy.room_key = other
@@ -1075,7 +1079,11 @@ def verify_bot_holds_position_for_next_step() -> None:
 
     # 没有待办时照常机动
     engine._haunt_flags()["bats_sealed"] = True
+    # 上一回合可能已经把回合交给下一个人（引擎会拒绝"还没轮到该玩家"的行动），
+    # 这里把回合交还给英雄；同时复位移动状态（抽牌会停移动，p6/p10）。
+    _set_current(engine, hero)
     hero.steps_remaining = 5
+    hero.movement_stopped = False
     assert controller._pending_haunt_action_here(engine, hero) is False, "封门后风琴房不再有行动"
     controller._run_turn(engine, hero)
     assert hero.room_key != before_room, "没有待办时应当继续移动"
@@ -1118,6 +1126,9 @@ def verify_collapse_subsystem() -> None:
     assert hall not in {option.target_key for option in engine.available_move_options(walker)}, "不能走进坍塌的房间"
 
     # p104：速度检定失败 → 随地板坠入深渊死亡
+    # 坍塌只会由作祟触发（剧本 2 房屋坍塌、剧本 42 地狱之门），而"作祟开始
+    # 之前没有人会死"（p5）——所以这里必须先进入作祟期再验致死。
+    engine.state.phase = "HAUNT_PHASE"
     victim = engine.state.players[1]
     victim.room_key = stairs
     with patch.object(engine, "_resolve_check", return_value=False):
@@ -1450,7 +1461,16 @@ def verify_haunt9_dance_of_death() -> None:
     assert "pentagram_chamber" in board_ids and "ballroom" in board_ids, "关键房间应被补进场"
     assert engine.tokens_of_kind("dark_fiddler"), "黑暗提琴手令牌应已放置"
 
-    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    # 持圣徽者豁免诱惑检定（p20），所以要挑一个不带圣徽的英雄来验证"堕落"。
+    hero = next(
+        (
+            p
+            for p in engine.state.players
+            if p.role == "hero" and not p.dead and "omen_holy_symbol" not in p.items
+        ),
+        None,
+    )
+    assert hero is not None, "需要一个不带圣徽的英雄来验证诱惑堕落"
     ballroom_key = next(k for k, r in engine.state.board.items() if r.template_id == "ballroom")
 
     # 在舞厅抵抗失败 → 直接堕落为叛徒
@@ -3290,7 +3310,9 @@ def verify_haunt25_voodoo() -> None:
 
 def verify_haunt25_deferred_draw() -> None:
     """剧本 25 探索解禁：探索新房间不再强制停，抽牌推迟到「结束移动的房间」（p36）。"""
-    engine = _run_until_haunt(seed=113, players=3, haunt_id=25)
+    # seed 113 在基础规则修正后地面层已被探索干净（前沿 0 个），改用仍有
+    # 地面层空门位的 seed 137——本用例验的是"探索不再强制停"，与种子无关。
+    engine = _run_until_haunt(seed=137, players=3, haunt_id=25)
     handler = engine._mode_handler()
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
     # 探索阶段就倒下的英雄：开局即触发 p36 死亡联动，其娃娃直接是销毁态
@@ -3309,8 +3331,11 @@ def verify_haunt25_deferred_draw() -> None:
     assert frontier_options, "地面层应还有可探索的房间牌（否则本测试无法进行）"
     frontier = frontier_options[0]
     hero.room_key = frontier
-    option = next(o for o in engine.available_move_options(hero) if o.is_new_room)
+    # 先给足步数再问行动列表：available_move_options 不带步数/处于"移动已停"
+    # 状态就没有移动选项（换 seed 后英雄可能已把步数走完或已被停移动）。
     hero.steps_remaining = 5
+    hero.movement_stopped = False
+    option = next(o for o in engine.available_move_options(hero) if o.is_new_room)
     kitchen = engine.catalog.room_templates["kitchen"]
     real_draw = engine._draw_room_template
     used = {"kitchen": False}
@@ -4115,7 +4140,9 @@ def verify_haunt30_dracula() -> None:
 
 def verify_haunt33_lake_rescue() -> None:
     """剧本 33：地下湖强制入场/探索关闭/湖面砖/游泳/搜索表/溺水计时（p44/p115）。"""
-    engine = _run_until_haunt(seed=113, players=3, haunt_id=33)
+    # 湖面砖要求"水缘方向还没有房间"；基础规则修正后 seed113 的水缘已被
+    # 房间占满（湖面选项 0 个），换用仍有水缘空位的 seed 307。
+    engine = _run_until_haunt(seed=307, players=3, haunt_id=33)
     handler = engine._mode_handler()
     assert isinstance(handler, LakeRescueMode)
     flags = engine._haunt_flags()
@@ -4132,6 +4159,7 @@ def verify_haunt33_lake_rescue() -> None:
 
     # 湖面砖：hero 在地下湖时，extra_move_options 应包含 lake: 前缀选项
     hero.room_key = lake
+    hero.movement_stopped = False  # 停移动状态下钩子按规则返回空列表
     options = handler.extra_move_options(engine, hero, [])
     assert any(o.target_key.startswith("lake:") for o in options), "水缘应有湖面选项"
 
@@ -4364,17 +4392,19 @@ def verify_haunt36_swamp_escape() -> None:
         engine.place_token(t.uid, balcony)
     hero.room_key = balcony
     hero.movement_stopped = False
+    # p47：乘艇逃离时不能留下活着的英雄——其他英雄也必须先站到阳台上。
+    others = [p for p in engine.state.players if p.role == "hero" and not p.dead and p.id != hero.id]
+    for p in others:
+        p.room_key = balcony
     _set_current(engine, hero)
     ids = {a.id for a in handler.available_actions(engine, hero)}
     assert "escape_boat" in ids, "阳台+小艇应能逃离"
     assert handler.perform_action(engine, hero, "escape_boat", {}) is True
     assert hero.id in flags.get("escaped", [])
-    # 3 人局 need_ceil = 2，1 人不够——补一个
-    hero2 = next((p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead), None)
-    if hero2 is not None:
-        hero2.room_key = balcony
-        _set_current(engine, hero2)
-        assert handler.perform_action(engine, hero2, "escape_boat", {}) is True
+    # 3 人局 need_ceil = 2，1 人不够——其余英雄依次上艇
+    for p in others:
+        _set_current(engine, p)
+        assert handler.perform_action(engine, p, "escape_boat", {}) is True
     assert handler.check_victory(engine) is True
     assert engine.state.winner == "heroes"
 
@@ -4515,6 +4545,9 @@ def verify_haunt42_hell_gate() -> None:
     assert handler.attack_allowed(engine, hero, traitor) is False, "叛徒应无敌"
 
     # 活化雕像：持圣徽 → 审判官
+    # 形态由背包里**第一件**雕像物品决定，先清掉探索期可能抽到的同类物品，
+    # 保证两处断言（圣徽活化审判官、圣徽被消耗）都只对唯一一张成立。
+    hero.items[:] = [card_id for card_id in hero.items if card_id not in handler.STATUE_ITEMS]
     hero.items.append("omen_holy_symbol")
     statue_room = flags["statue_room"]
     hero.room_key = statue_room
@@ -6146,10 +6179,14 @@ def verify_haunt5_werewolf_hunt() -> None:
     # on_turn_start：叛徒在感染态里持续强化（力量/速度单调不减、至少一项上升）
     traitor = next(p for p in engine.state.players if p.role == "traitor")
     before = (traitor.stats.get("might", 0), traitor.stats.get("speed", 0))
+    pos_before = (traitor.stat_positions.get("might"), traitor.stat_positions.get("speed"))
     handler.on_turn_start(engine, traitor)
     after = (traitor.stats.get("might", 0), traitor.stats.get("speed", 0))
+    pos_after = (traitor.stat_positions.get("might"), traitor.stat_positions.get("speed"))
     assert after[0] >= before[0] and after[1] >= before[1]
-    assert after != before, "叛徒回合开始应获得强化"
+    # 轨道上有重复数值（例 [2,3,3,4,5,5,5,6]），+1 格可能不改变显示值——
+    # 强化要看"格位推进"，只比数值会随角色轨道形状假失败。
+    assert pos_after != pos_before or after != before, "叛徒回合开始应获得强化"
 
     # 英雄线：在场上存在的目标房间做知识检定 → 找左轮 / 制银弹
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
@@ -6157,14 +6194,14 @@ def verify_haunt5_werewolf_hunt() -> None:
     room_of = {r.template_id: k for k, r in engine.state.board.items()}
 
     revolver_rooms = [r for r in ("attic", "game_room", "junk_room", "master_bedroom", "vault") if r in room_of]
-    if revolver_rooms:
+    if revolver_rooms and not engine._card_is_controlled("item_revolver"):
         hero.room_key = room_of[revolver_rooms[0]]
         with patch.object(engine, "_resolve_check", return_value=True):
             assert handler.perform_action(engine, hero, "h5_find_revolver", {}) is True
         assert flags.get("revolver_found") is True, "检定成功应找到左轮"
 
     bullet_rooms = [r for r in ("research_laboratory", "furnace_room") if r in room_of]
-    if bullet_rooms:
+    if bullet_rooms and flags.get("silver_bullets_holder") is None:
         hero.room_key = room_of[bullet_rooms[0]]
         with patch.object(engine, "_resolve_check", return_value=True):
             assert handler.perform_action(engine, hero, "h5_make_silver_bullets", {}) is True
@@ -7990,11 +8027,14 @@ def verify_item_use_matrix() -> None:
             assert result is False, f"{card_id} 是武器：use_item 应提示攻击时选择"
         if card_id not in player.items:  # 一次性 / 用后弃置的卡补回来继续测交互
             player.items.append(card_id)
-        if not card.tradeable and "companion" in card.tags:
+        if "companion" in card.tags or card_id == "omen_bite":
+            # p11："咬""狗""女孩""女士"不是道具——不能丢弃、盗取或交易。
             companions.append(card_id)
-            assert engine.drop_item(player, card_id) is False, f"{card_id} 同伴不应可丢弃"
+            if not card.tradeable:
+                untradeable.append(card_id)
+            assert engine.drop_item(player, card_id) is False, f"{card_id} 不是道具，不应可丢弃"
             assert engine.trade_item(player, other, card_id) is False, (
-                f"{card_id} 同伴不应可交易"
+                f"{card_id} 不是道具，不应可交易"
             )
             continue
         assert engine.drop_item(player, card_id), f"{card_id} 应可丢弃"
@@ -8058,6 +8098,8 @@ def verify_character_interaction_matrix() -> None:
     victim.companions = ["omen_madman"]
     victim.room_key = first.room_key
     victim.stats["might"] = 0
+    # 死亡只在作祟期成立（p5：作祟开始之前没有人会死）。
+    engine.state.phase = "HAUNT_PHASE"
     engine._check_player_death(victim)
     assert victim.dead, "力量归零应死亡"
     assert not victim.items and not victim.companions, "死亡应清空物品与同伴"
@@ -8604,6 +8646,9 @@ def verify_explore_all_dead_ends_game() -> None:
     剧本可判，收口方式是"游戏结束、不判胜方"。
     """
     engine = _new_engine(seed=7, players=3)
+    # 探索期本身不允许死人（p5），所以"全员倒下"只可能出现在作祟期；
+    # 这里直接构造终局条件（属性归零 + 作祟期）来验收口分支。
+    engine.state.phase = "HAUNT_PHASE"
     for player in engine.state.players:
         player.stats["might"] = 0
         engine._check_player_death(player)
@@ -8807,15 +8852,22 @@ def verify_haunt9_traitor_goal_gating() -> None:
     engine = _run_until_haunt(seed=113, players=3, haunt_id=9)
     handler = engine._mode_handler()
     assert isinstance(handler, DeathDanceMode)
-    # 剧本 9 开局无叛徒：按既有测试的写法，在舞厅诱惑失败制造一个
-    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    # 剧本 9 开局无叛徒：按既有测试的写法，在舞厅诱惑失败制造一个。
+    # 持圣徽者豁免诱惑检定（p20），所以挑一个不带圣徽的英雄。
+    hero = next(
+        (
+            p
+            for p in engine.state.players
+            if p.role == "hero" and not p.dead and "omen_holy_symbol" not in p.items
+        ),
+        None,
+    )
+    assert hero is not None, "需要一个不带圣徽的英雄来制造堕落"
     ballroom_key = next(k for k, r in engine.state.board.items() if r.template_id == "ballroom")
     hero.room_key = ballroom_key
     with patch.object(engine, "_resolve_check", return_value=False):
         handler.on_turn_start(engine, hero)
     assert hero.role == "traitor", "需要在舞厅堕落一个叛徒来验证门控"
-    if "omen_holy_symbol" in hero.items:
-        hero.items.remove("omen_holy_symbol")
 
     assert handler.bot_action_blocked(engine, hero, "destroy_holy_symbol")
     assert handler.bot_goal_suppressed(engine, hero)

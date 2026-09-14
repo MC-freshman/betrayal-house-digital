@@ -1756,7 +1756,21 @@ class CarnivorousIvyMode(GenericModeHandler):
             return False
         victim = self._grabbed_by(engine, monster)
         root = self._root_for_tip(engine, monster)
-        if victim is None or root is None or victim.room_key != root.room_key:
+        if victim is None or root is None:
+            return False
+        if victim.room_key != root.room_key:
+            # 引擎只在"怪不在目标房"时才调 on_monster_move（`_resolve_monster_turns`
+            # 里的 `len(path) > 1` 闸门），可抓着人的尖端恰恰总与猎物同房——拖拽
+            # 永远不发生，人质被永久钉住、也不掉血（23 号 seed137/4p 实测 400 回合
+            # 两边都收不了场：`往根部缩` 0 次、`没能挣脱` 363 次、位置全程冻结）。
+            # 这里补一次向根部的拖拽。
+            path = engine._shortest_path(monster.room_key, root.room_key)
+            if len(path) > 1:
+                dest = path[min(len(path) - 1, 2)]
+                monster.room_key = dest
+                victim.room_key = dest
+                engine._log(f"拖着{victim.name}的藤蔓向根部爬去，来到{engine.state.board[dest].name}。")
+                return True
             return False
         engine._log(f"{victim.name} 被拖回了藤蔓根部——他来不及呼救就被吞噬了！")
         self._ungrab(engine, victim)
@@ -8221,6 +8235,19 @@ class TentacledHorrorMode(CarnivorousIvyMode):
             return False
         speed, might, sanity = self._growth_stats(engine._haunt_track_value("tentacle_turn"))
         monster.speed, monster.might, monster.sanity = speed, might, sanity
+        # p105：本剧本抓着人的尖端每回合只挪 1 格（7 号是 2 格）。父类的吞噬钩子
+        # 会补拖拽——引擎在"怪已与猎物同房"时不调 on_monster_move，抓人的尖端却
+        # 总与猎物同房；这里先按本剧本的幅度处理掉，父类再管吞噬。
+        victim = self._grabbed_by(engine, monster)
+        root = self._root_for_tip(engine, monster)
+        if victim is not None and root is not None and victim.room_key != root.room_key:
+            path = engine._shortest_path(monster.room_key, root.room_key)
+            if len(path) > 1:
+                dest = path[1]
+                monster.room_key = dest
+                victim.room_key = dest
+                engine._log(f"触手拖着{victim.name}往根部缩，来到{engine.state.board[dest].name}。")
+                return True
         return super().on_monster_turn_start(engine, monster)
 
     # ------------------------------------------------------------- 拖拽
