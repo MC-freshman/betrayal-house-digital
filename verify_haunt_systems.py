@@ -113,7 +113,9 @@ else:  # pragma: no cover
         ExorcismMode,
         FleshwalkerMode,
         NightmareDreamMode,
+        OffspringMode,
         PhantomBombMode,
+        GhostBrideMode,
         StarsRightMode,
         DragonSiegeMode,
         GenericModeHandler,
@@ -9044,6 +9046,143 @@ def verify_mode_rewards_gated_on_check_success() -> None:
     )
 
 
+def verify_haunt16_escape_and_fallback() -> None:
+    """16 号（p27/p98）：门开后抱女孩站在入口大厅即脱身；地下室翻完时兜底落位。
+
+    旧实现里 `escaped` 只被读取、从没被置位——逃脱这条英雄胜线永远走不通；
+    p98"地下室探索完由叛徒指定房间"的分支也没实现，幻影可能永不现身
+    （seed137/4p 实测 400 回合收不了场、场上一只怪都没有）。
+    """
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=16)
+    handler = engine._mode_handler()
+    assert isinstance(handler, PhantomBombMode)
+    flags = engine._haunt_flags()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    entrance = next(k for k, r in engine.state.board.items() if r.template_id == "entrance_hall")
+    hero.room_key = entrance
+    girl = engine.spawn_token(handler.GIRL, label="女孩", role="marker", room_key=entrance)
+    engine.give_token(girl.uid, hero.id)
+    flags["girl_holder_id"] = hero.id
+    flags["front_door_open"] = True
+    flags["escaped"] = False
+    _set_current(engine, hero)
+    handler.on_turn_start(engine, hero)
+    assert engine.state.winner == "heroes", "门开后抱女孩站在入口大厅应当立刻脱身"
+
+    # 兜底落位：地下室翻不出新房间时，幻影与女孩必须被放到某个地下室房间
+    engine2 = _run_until_haunt(seed=113, players=4, haunt_id=16)
+    handler2 = engine2._mode_handler()
+    engine2.state.monsters = [
+        m for m in engine2.state.monsters if m.template_id != handler2.PHANTOM
+    ]
+    engine2._haunt_flags()["girl_rescued"] = False
+    with patch.object(engine2, "exploration_frontier_keys", return_value=[]):
+        assert handler2._fallback_placement(engine2) is True
+    ghost = next((m for m in engine2.state.monsters if m.template_id == handler2.PHANTOM), None)
+    assert ghost is not None, "兜底落位应当放出幻影"
+    assert engine2.state.board[ghost.room_key].floor == -1, "幻影必须落在下室层"
+    assert engine2.tokens_in_room(ghost.room_key, handler2.GIRL), "女孩要与幻影同房"
+    assert engine2.tokens_in_room(ghost.room_key, handler2.MARK), "要放一枚到访标记"
+
+
+def verify_haunt16_timer_and_defuse_gate() -> None:
+    """16 号：叛徒死后计时器由存活者代跑（否则炸弹停摆）；拆弹只能在炸弹房（p27）。"""
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=16)
+    handler = engine._mode_handler()
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    assert handler._timer_ticks_now(engine, traitor) is True, "叛徒活着时由叛徒推进"
+    assert handler._timer_ticks_now(engine, heroes[0]) is False, "叛徒活着时别人不推进"
+    traitor.dead = True
+    first_alive_id = next(
+        pid for pid in engine.state.turn_order
+        if any(p.id == pid and not p.dead for p in engine.state.players)
+    )
+    first_alive = next(p for p in engine.state.players if p.id == first_alive_id)
+    assert handler._timer_ticks_now(engine, first_alive) is True, "叛徒死后轮回首位代跑"
+    others = [p for p in heroes if p.id != first_alive.id]
+    if others:
+        assert handler._timer_ticks_now(engine, others[0]) is False, "同一轮只推进一次"
+
+    # 拆弹位置闸门：不在击败幻影的房间时行动不可用、强制调用也失败
+    flags = engine._haunt_flags()
+    flags["girl_rescued"] = True
+    flags["bomb_defused"] = False
+    bomb_room, other_room = next(iter(engine.state.board)), None
+    other_room = next(k for k in engine.state.board if k != bomb_room)
+    flags["bomb_room"] = bomb_room
+    hero = heroes[0]
+    hero.room_key = other_room
+    _set_current(engine, hero)
+    engine._haunt_rule_state().setdefault("actions_used", {}).clear()
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "defuse_bomb" not in ids, "不在击败幻影的房间时不该给出拆弹选项"
+    assert handler.perform_action(engine, hero, "defuse_bomb", {}) is False
+    hero.room_key = bomb_room
+    engine._haunt_rule_state().setdefault("actions_used", {}).clear()
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "defuse_bomb" in ids, "回到炸弹房应当能拆弹"
+
+
+def verify_haunt18_breath_gating() -> None:
+    """18 号（p29）：只在"路线真的穿过孢子房"时才让机器人屏息。
+
+    一路禁掉英雄会被孢子磨死（实测 18 局英雄只胜 1 局）；一律放开又会让
+    机器人把唯一的剧本行动浪费在屏息上（#7 同款：屏息 359 次、削弱 0/3）。
+    """
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=18)
+    handler = engine._mode_handler()
+    assert isinstance(handler, OffspringMode)
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    plant = engine._haunt_flags().get("plant_room")
+    assert plant, "毒藤房间应当已记录"
+    if hero.room_key == plant:
+        hero.room_key = next(k for k in engine.state.board if k != plant)
+    # 清空所有孢子：去毒藤房间的路不再穿孢子 → 应当禁掉
+    for token in list(engine.tokens_of_kind(handler.SPORE)):
+        engine.remove_token(token.uid)
+    assert handler.bot_action_blocked(engine, hero, "hold_breath") is True, "不穿孢子房时不该屏息"
+    # 在去毒藤房间的下一步放一枚孢子 → 值得屏息
+    path = engine._shortest_path(hero.room_key, plant)
+    assert len(path) > 1, "英雄不该已经站在毒藤房间"
+    engine.spawn_token(handler.SPORE, label="孢子", role="marker", room_key=path[1])
+    assert handler.bot_action_blocked(engine, hero, "hold_breath") is False, "要穿孢子房时应当允许屏息"
+
+
+def verify_haunt20_corpse_drop_and_timer() -> None:
+    """20 号（p31/p102）：扛尸者倒下尸体留在原地；叛徒死后婚礼计时照走。
+
+    seed137/5p 实测：尸体停在死掉的扛尸者身上（room_key 空、holder 是死人），
+    教堂判定永远不成立；同局叛徒已死、wedding_timer 停在 0——两边都收不了场。
+    """
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=20)
+    handler = engine._mode_handler()
+    assert isinstance(handler, GhostBrideMode)
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    corpse_token = engine.spawn_token(
+        handler.CORPSE, label="新郎的尸体", role="marker", room_key=hero.room_key
+    )
+    engine.give_token(corpse_token.uid, hero.id)
+    assert engine.tokens_held_by(hero.id, handler.CORPSE)
+    handler.on_player_died(engine, hero)
+    dropped = engine.token_by_uid(corpse_token.uid)
+    assert dropped.room_key == hero.room_key, "扛尸者倒下，尸体应当掉在原房间"
+    assert dropped.holder is None, "尸体不该还挂在倒下的人身上"
+
+    flags = engine._haunt_flags()
+    flags["wedding_started"] = True
+    engine._set_haunt_track_value("wedding_timer", 0)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    traitor.dead = True
+    first_alive_id = next(
+        pid for pid in engine.state.turn_order
+        if any(p.id == pid and not p.dead for p in engine.state.players)
+    )
+    first_alive = next(p for p in engine.state.players if p.id == first_alive_id)
+    handler.on_turn_start(engine, first_alive)
+    assert engine._haunt_track_value("wedding_timer") == 1, "叛徒死后由存活者代跑婚礼计时"
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -9213,6 +9352,11 @@ def main():
     verify_haunt14_goal_hooks()
     verify_haunt15_equipment_goal()
     verify_mode_rewards_gated_on_check_success()
+    # M10-41：批次 4（剧本 16-20）审计新增的引擎能力与修复
+    verify_haunt16_escape_and_fallback()
+    verify_haunt16_timer_and_defuse_gate()
+    verify_haunt18_breath_gating()
+    verify_haunt20_corpse_drop_and_timer()
     print("verify_haunt_systems: ok")
 
 

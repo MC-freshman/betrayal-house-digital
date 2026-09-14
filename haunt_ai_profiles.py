@@ -277,6 +277,28 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "monster": {"mode": "nearest_weak_hero"},
     },
+    19: {
+        # 19 号（驯兽师）：英雄胜线 = 对驯兽师赢出 3 点以上（diff > 2）夺矛；
+        # 默认画像 attack_traitor_players=False 让英雄永远不攻击叛徒玩家，
+        # 这条胜线在 AI 层就是断的（试玩 18 局英雄 0 胜、长矛从未易手）。
+        # 引擎的 special_steal 会把 diff > 2 的攻击转成"夺矛"而非伤害，
+        # 只有赢 1–2 点的窄带才会真掉血，所以主动攻击的净收益为正。
+        "hero": {
+            "objective_type": "disarm_traitor",
+            "attack_monsters": True,
+            "attack_traitor_players": True,
+            "protect_humans": True,
+            "needed_items": ["戒指"],
+            "victory_focus": "追着驯兽师打，赢出 3 点以上夺下长矛（别打死他）",
+        },
+        "traitor": {
+            "objective_type": "hunt_heroes",
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "靠动物随从围杀英雄，别让任何人近身夺矛",
+        },
+        "monster": {"mode": "nearest_hero"},
+    },
     24: {
         "hero": {
             # p35：英雄真实胜利 = 把蝙蝠封回窗外（bats_sealed 且场上无蝙蝠），

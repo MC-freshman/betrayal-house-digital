@@ -3759,12 +3759,38 @@ class OffspringMode(GenericModeHandler):
         return result
 
     def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
-        """屏息是过孢子房的可选防护，不是推进手段。
+        """屏息：只在"接下来真要穿过孢子房"时才值得点（p29）。
 
-        机器人每回合先点它，就会被「本房间下回合还能做剧本行动」钉在原地
-        （seed113/3p 实测屏息 359 次，削弱 0/3）。真人玩家仍可手动屏息。
+        过去一律禁掉（理由见下：机器人每回合先点它，把唯一的剧本行动浪费在
+        非推进上——seed113/3p 实测屏息 359 次、削弱 0/3）。但本剧本的孢子是
+        核心威胁，一味硬吃伤害英雄会被磨死。折中：只有当"去目标的路"真的
+        要穿过孢子房时才允许屏息，其余时候照旧禁掉。
+
+        真人玩家不受影响（本钩子只过滤机器人）。
         """
-        return action_id == "hold_breath"
+        if action_id != "hold_breath":
+            return False
+        if self._in_spores(engine, player):
+            return True  # 房间里就有孢子，屏不了（available_actions 也会挡）
+        flags = engine._haunt_flags()
+        targets: list[str] = []
+        if flags.get("flower_found"):
+            plant = flags.get("plant_room")
+            if plant:
+                targets.append(plant)
+        else:
+            targets.extend(
+                key for key, room in engine.state.board.items()
+                if room.template_id in ("conservatory", "garden", "graveyard")
+            )
+        spore_rooms = self._spore_rooms(engine)
+        for target in targets:
+            if target == player.room_key:
+                continue
+            path = engine._shortest_path(player.room_key, target)
+            if any(step in spore_rooms for step in path[1:]):
+                return False  # 这条路要穿过孢子房 → 值得屏息
+        return True
 
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
         """没找到花就去温室/花园/墓地；找到了就把花带进毒藤房间削弱。"""
@@ -6485,10 +6511,66 @@ class GhostBrideMode(GenericModeHandler):
             return True
         return super().perform_action(engine, player, action_id, data)
 
-    # ------------------------------------------------------------- 炸弹式计时
+    def on_player_died(self, engine: Any, player: Any) -> None:
+        """p31：扛尸者倒下时尸体掉在原地——否则尸体悬在死人身上，英雄线断掉。
+
+        seed137/5p 实测：扛尸英雄在地下墓穴阵亡，尸体令牌停在"被背着"状态
+        （room_key 空、holder 是死人），教堂判定永远不成立，整局 400 回合
+        收不了场。掉在原地后，后来者进房会自动扛起（见 on_enter_room）。
+        """
+        for token in engine.tokens_held_by(player.id, self.CORPSE):
+            engine.place_token(token.uid, player.room_key)
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p31：按步骤走——问名 → 地窖定位/掘尸 → 把尸体与戒指送进小教堂。
+
+        没有这条时机器人手里拿着关键牌也只会到处乱走（seed137/5p 实测 400 回合
+        收不了场：剩下的英雄在图书馆/入口大厅/大楼梯之间兜圈子）。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        flags = engine._haunt_flags()
+        chapel = self._chapel(engine)
+        if not flags.get("groom_name_known"):
+            name_rooms = [
+                f"__room__{key}"
+                for key, room in engine.state.board.items()
+                if room.template_id in ("bedroom", "dining_room", "library")
+            ]
+            # 找不到这三间就直接去教堂方向碰运气（书也可能在身上）
+            return name_rooms or ([f"__room__{chapel}"] if chapel else [])
+        corpse_held = bool(engine.tokens_held_by(player.id, self.CORPSE))
+        ring_held = "omen_ring" in player.items
+        if chapel and (corpse_held or ring_held):
+            return [f"__room__{chapel}"]  # 扛尸/持戒的人直奔教堂
+        if not flags.get("body_disintered"):
+            crypt = next(
+                (key for key, room in engine.state.board.items() if room.template_id == "crypt"),
+                None,
+            )
+            return [f"__room__{crypt}"] if crypt else []
+        return [f"__room__{chapel}"] if chapel else []  # 尸体已出土：去教堂集合
+
+    # ------------------------------------------------------------- 婚礼计时
+    def _timer_ticks_now(self, engine: Any, player: Any) -> bool:
+        """计时器该由谁推进：叛徒活着就是叛徒；叛徒已死则由每个轮回的第一位
+        存活玩家代跑——引擎的 start_turn 会跳过死者回合，新娘照常完婚，
+        计时没人推的话叛徒胜线在叛徒死后就静默失效（seed137/5p 的 400 回合
+        死局里 wedding_timer 就停在 0）。"""
+        traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+        if traitor is not None and not traitor.dead:
+            return player.id == traitor.id
+        for player_id in engine.state.turn_order:
+            owner = next((p for p in engine.state.players if p.id == player_id), None)
+            if owner is not None and not owner.dead:
+                return owner.id == player.id
+        return False
+
     def on_turn_start(self, engine: Any, player: Any) -> None:
         flags = engine._haunt_flags()
-        if player.role != "traitor" or player.dead or not flags.get("wedding_started"):
+        if not flags.get("wedding_started"):
+            return
+        if not self._timer_ticks_now(engine, player):
             return
         # p102：婚礼开始后每回合推进，第 3 回合完成
         current = int(engine._haunt_track_value("wedding_timer")) + 1
@@ -7088,17 +7170,20 @@ class PhantomBombMode(GenericModeHandler):
       房间成为"可拆弹房间"；幻影防御成功（英雄攻击落败）→ 英雄照常
       受反击伤害，幻影带着女孩逃走（两枚令牌移除），下次再出现。
     · 拆弹（p27）：女孩获救后，在击败幻影的房间做知识 7+（每回合一次）。
-    · 逃脱（p27）：门厅开前门（知识/力量 6+，通用框架取高者）；持女孩
-      的英雄回合开始仍站在门厅即带她逃出——原文为群体逃跑，电子版
-      简化为持女孩者出门（已注明）。
+    · 逃脱（p27）：入口大厅开前门（知识/力量 6+，通用框架取高者）；
+      门开后，抱女孩的英雄回合开始仍站在入口大厅即带她逃出——原文为
+      群体逃跑，电子版简化为持女孩者出门（已注明）。
     · 炸弹（p98）：叛徒回合开始推进计时器并掷等量骰，掷出阈值以上房子
       爆炸（3 人 8+ / 4 人 7+ / 5 人 6+ / 6 人 5+）。原文"回合结束"用
       "下一回合开始"近似，时序等价。
+    · 兜底落位（p98）：地下室翻不出新房间而幻影又不在场时，替叛徒"任选"
+      一个没放过标记的地下室房间安置幻影与女孩（选离英雄最远的一间）。
+      缺这条时幻影可能永远不现身（女孩拿不到 → 拆弹/逃脱都开不了）。
     · 胜负：拆弹或带女孩逃出 → 英雄胜；爆炸或英雄全灭 → 叛徒胜。
-      叛徒阵亡后计时器冻结（怪物代跑惯例下的保守处理，已注明）。
-    · 已知简化：开成功门后"抽事件卡"步骤未建模；地下室全部探索完且
-      幻影仍存活的"叛徒指定房间"分支未建模（幻影出现依赖房间发现）；
-      女孩不可被偷是天然满足（女孩是令牌不是卡）。
+      叛徒阵亡后计时器不冻结——炸弹照走，由每个轮回的第一位存活玩家
+      代跑（叛徒一死炸弹就停摆的话，英雄线再断就是死局）。
+    · 已知简化：开成功门后"抽事件卡"步骤未建模；女孩不可被偷是天然
+      满足（女孩是令牌不是卡）。
     """
 
     mode = "phantom_bomb"
@@ -7202,10 +7287,165 @@ class PhantomBombMode(GenericModeHandler):
             flags["girl_holder_id"] = player.id
             engine._log(f"{player.name} 抱起了女孩。")
 
-    # ------------------------------------------------------------- 炸弹
+    # ------------------------------------------------------------- 逃脱 / 兜底
+    def _entrance_key(self, engine: Any) -> str | None:
+        return next(
+            (key for key, room in engine.state.board.items() if room.template_id == "entrance_hall"),
+            None,
+        )
+
+    def _place_phantom(self, engine: Any, room_key: str) -> None:
+        spec = next(
+            (s for s in (engine.state.haunt.rule_data or {}).get("monsters", [])
+             if s.get("template_id") == self.PHANTOM),
+            {},
+        )
+        if engine._spawn_single_haunt_monster(spec, room_key) is None:
+            return
+        engine.spawn_token(self.GIRL, label="女孩", role="marker", room_key=room_key)
+        engine.spawn_token(self.MARK, label="到访标记", role="marker", room_key=room_key)
+
+    def _fallback_placement(self, engine: Any) -> bool:
+        """p98：地下室翻不出新房间时，替叛徒指定幻影与女孩的落点。
+
+        原文："若整个地下室都已探索完毕、而幻影依然存活，就在怪物回合开始时
+        任选一个地下室房间，宣布幻影和女孩身处哪个房间"；且"在每一个地下室
+        房间都放有一枚有辨识度的令牌之前，幻影绝不会两次移动到同一个房间"。
+        缺这条兜底时幻影可能永远等不到"下一个带符号的地下室房间"：女孩拿不到，
+        拆弹与逃脱都开不了；叛徒再一死，炸弹没人推进，整局永远收不了场
+        （seed137/4p 实测 400 回合：机器人3 在入口大厅↔地下室平台来回 544 次，
+        `girl_rescued=False`、场上一只怪都没有）。
+        """
+        flags = engine._haunt_flags()
+        if flags.get("girl_rescued") or self._phantom_in_play(engine):
+            return False
+        if engine.exploration_frontier_keys(-1):
+            return False  # 地下层还能翻出新房间，先按"下一个带符号房间"走
+        used = {key for key in engine.state.board if engine.tokens_in_room(key, self.MARK)}
+        candidates: list[tuple[int, str]] = []
+        for key, room in engine.state.board.items():
+            if room.floor != -1 or key in used:
+                continue
+            distance = 0
+            for hero in engine.state.players:
+                if hero.role != "hero" or hero.dead:
+                    continue
+                length = engine._path_length(hero.room_key, key, avoid_transit=True)
+                if length == 9999:
+                    distance = -1
+                    break
+                distance = max(distance, length)
+            if distance >= 0:
+                candidates.append((distance, key))
+        if not candidates:
+            # 英雄哪间都走不到（极端布局）：别再挑三拣四，随便给一间保住胜线
+            candidates = [
+                (0, key) for key, room in engine.state.board.items()
+                if room.floor == -1 and key not in used
+            ]
+        if not candidates:
+            return False
+        _distance, target = max(candidates)
+        self._place_phantom(engine, target)
+        engine._log(f"地下室的每个角落都被翻遍了——幻影抱着女孩现身在{engine.state.board[target].name}！")
+        return True
+
+    def _timer_ticks_now(self, engine: Any, player: Any) -> bool:
+        """计时器该由谁推进：叛徒活着就是叛徒；叛徒已死则由每个轮回的第一位
+        存活玩家代跑——引擎的 start_turn 会跳过死者回合，没人代跑的话炸弹永远
+        停摆（见 _fallback_placement 里 seed137/4p 的死局）。"""
+        traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+        if traitor is not None and not traitor.dead:
+            return player.id == traitor.id
+        for player_id in engine.state.turn_order:
+            owner = next((p for p in engine.state.players if p.id == player_id), None)
+            if owner is not None and not owner.dead:
+                return owner.id == player.id
+        return False
+
+    # ------------------------------------------------------------- 拆弹 / 逃生
+    def _defuse_room_ok(self, engine: Any, player: Any) -> bool:
+        """p27：拆弹只能在"击败幻影的那间房"做，且女孩必须已获救。"""
+        flags = engine._haunt_flags()
+        if not flags.get("girl_rescued") or flags.get("bomb_defused"):
+            return False
+        bomb_room = flags.get("bomb_room")
+        return bomb_room is not None and player.room_key == bomb_room
+
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        actions = super().available_actions(engine, player)
+        result = []
+        for action in actions:
+            if action.id == "defuse_bomb" and not self._defuse_room_ok(engine, player):
+                continue  # 通用框架不认"击败幻影的房间"，这里补上 p27 的位置闸门
+            result.append(action)
+        return result
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        if action_id == "defuse_bomb" and not self._defuse_room_ok(engine, player):
+            engine._log("必须回到击败幻影的那间房才能拆除炸弹。")
+            return False
+        return super().perform_action(engine, player, action_id, data)
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p27：抱女孩的去入口大厅开门脱身；其余人去找幻影/翻地下室/回房拆弹。
+
+        没有这条时机器人没有剧本目标，在入口大厅↔地下室平台之间来回
+        （seed137/4p 实测 544 次，整局 400 回合收不了场）。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        flags = engine._haunt_flags()
+        entrance = self._entrance_key(engine)
+        if flags.get("girl_holder_id") == player.id and not flags.get("escaped"):
+            return [f"__room__{entrance}"] if entrance else []
+        phantom = next((m for m in engine.state.monsters if m.template_id == self.PHANTOM), None)
+        if phantom is not None:
+            return [f"__room__{phantom.room_key}"]  # 抢回女孩必须先打赢幻影
+        if flags.get("girl_rescued"):
+            bomb_room = flags.get("bomb_room")
+            if bomb_room and not flags.get("bomb_defused"):
+                return [f"__room__{bomb_room}"]
+            return []
+        # 幻影还没现身：去地下层还有空门位的房间继续翻牌（发现即现身）
+        return [f"__room__{key}" for key in engine.exploration_frontier_keys(-1)]
+
+    def bot_wants_explore(self, engine: Any, player: Any) -> bool:
+        """幻影还没露面时，去翻新房间把它找出来（p27：它出现在"接下来发现的"
+        带符号地下室房间）。
+
+        缺这条时机器人只会在已有房间里转悠、不翻门：试玩实测 18 局里幻影
+        0 次现身——女孩拿不到，拆弹与逃脱整条英雄线都开不了。
+        """
+        if player.dead or player.role != "hero":
+            return False
+        flags = engine._haunt_flags()
+        if flags.get("girl_rescued") or flags.get("escaped") or flags.get("bomb_defused"):
+            return False
+        if self._phantom_in_play(engine):
+            return False
+        return bool(engine.exploration_frontier_keys(-1))
+
+    # ------------------------------------------------------------- 回合开始
     def on_turn_start(self, engine: Any, player: Any) -> None:
         flags = engine._haunt_flags()
-        if player.role != "traitor" or player.dead:
+        entrance = self._entrance_key(engine)
+        if (
+            player.role == "hero"
+            and not player.dead
+            and flags.get("front_door_open")
+            and not flags.get("escaped")
+            and flags.get("girl_holder_id") == player.id
+            and entrance is not None
+            and player.room_key == entrance
+        ):
+            # p27：门开了以后，抱着女孩站在入口大厅就从正门脱身
+            flags["escaped"] = True
+            engine._log(f"{player.name} 抱着女孩冲出了前门——身后的宅子还在滴答作响。")
+            engine.check_victory()
+            return
+        self._fallback_placement(engine)
+        if not self._timer_ticks_now(engine, player):
             return
         # p98：回合结束推进计时器——用"下一回合开始"近似
         track = int(engine._haunt_track_value("bomb_timer")) + 1
@@ -7232,7 +7472,7 @@ class PhantomBombMode(GenericModeHandler):
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "没有一个英雄活着听到爆炸……或听到寂静。")
             return True
-        return True  # 叛徒阵亡后计时器冻结，胜负只认显式条件
+        return True  # 吸收引擎"叛徒死亡→英雄胜"：炸弹照走（_timer_ticks_now 代跑），胜负只认显式条件
 
 
 class DragonSiegeMode(GenericModeHandler):

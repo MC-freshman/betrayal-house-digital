@@ -1240,6 +1240,19 @@ class GameEngine:
                 else:
                     self._draw_symbol_card(player, room.symbol)
         self._collect_room_companions(player, room)
+        # 无主的"携带型"令牌（花/喷雾/火把/蜡烛…）进房自动拾起。这类剧本关键
+        # 令牌只由剧本行动产生，掉在地上过去没有任何拾取途径——18 号
+        # seed31-6p 实测：花随阵亡英雄落地，剩下的人围着毒藤站到 400 回合也
+        # 削弱不了（0 次），整局收不了场；7 号喷雾、17 号杀虫剂同理。令牌的
+        # role 为 "marker"（尸体/护甲/女孩）不在此列，那些由各剧本自己的
+        # 行动与 on_enter_room 钩子接管。
+        if not player.dead:
+            # 倒下的棋子会被房间效果/传送带着走，别再让它捡东西（18 号
+            # seed31-6p：阵亡英雄被传送时把刚掉落的花又捡了回去）。
+            for token in self.tokens_in_room(room.key):
+                if token.role == "carried" and token.holder is None:
+                    self.give_token(token.uid, player.id)
+                    self._log(f"{player.name} 拾起了{token.label}。")
         # 令牌拾取之类要在房间效果之后，避免顺序上出现歧义
         self._mode_handler().on_enter_room(self, player, room)
         self._apply_room_effect(player, room, first_entry=first_entry)
@@ -4448,6 +4461,13 @@ class GameEngine:
                 room_cards.append(card_id)
         player.items.clear()
         player.companions.clear()
+        # 携带的令牌也要落地。过去只掉卡片，令牌会一直挂在死人身上：剧本关键
+        # 令牌（花/尸体/女孩/护甲…）因此被锁死，胜线整条断掉——18 号 seed31-6p
+        # 实测：花被阵亡英雄拿着，全场 400 回合 0 次削弱、毒藤不死、叛徒也早死，
+        # 两边都收不了场；20 号扛尸者倒下后尸体同样悬空。落回死亡房间后，后来者
+        # 进房即可接手（各剧本的 on_enter_room 拾取逻辑照常生效）。
+        for token in self.tokens_held_by(player.id):
+            self.place_token(token.uid, player.room_key)
         self._log(f"{player.name} 的物品掉落在 {self.current_room(player).name}。")
 
     def _player_label(self, player: Player) -> str:
