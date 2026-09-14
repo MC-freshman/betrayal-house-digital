@@ -3436,12 +3436,14 @@ def verify_haunt26_rat_ritual() -> None:
         assert handler.on_monster_turn_start(engine, rat_a) is True
     assert hero.stat_positions["speed"] == speed_pos0 - 3, "合力攻击成功应造成差额物理伤害"
     assert rat_a in engine.state.monsters and rat_a.stunned_turns == 0
-    # 失败不受伤（p108）
+    # 失败不受伤（p108）；换一个回合号——同一回合同房间的鼠群只能扑一次
+    engine.state.turn_count += 1
     with patch.object(engine, "roll_dice", return_value=0), patch.object(engine, "_roll_attack", return_value=8):
         assert handler.on_monster_turn_start(engine, rat_a) is True
     assert rat_a in engine.state.monsters and rat_a.stunned_turns == 0, "合力攻击失败不受伤"
     assert rat_b in engine.state.monsters and rat_b.stunned_turns == 0
     # 骰数 = 力量相加（3 只 = 6 骰），封顶 8
+    engine.state.turn_count += 1
     rat_c.room_key = hero.room_key
     counts: list[int] = []
 
@@ -3452,6 +3454,11 @@ def verify_haunt26_rat_ritual() -> None:
     with patch.object(engine, "roll_dice", side_effect=fake_roll), patch.object(engine, "_roll_attack", return_value=8):
         handler.on_monster_turn_start(engine, rat_a)
     assert counts == [6], f"3 只老鼠应掷力量相加的 6 骰，实际 {counts}"
+    # 同回合轮到同房的第二只老鼠：整组已经扑过，不再重复结算（否则伤害翻 N 倍）
+    counts.clear()
+    with patch.object(engine, "roll_dice", side_effect=fake_roll), patch.object(engine, "_roll_attack", return_value=8):
+        handler.on_monster_turn_start(engine, rat_b)
+    assert counts == [], f"同回合同房间不应再扑一次，实际掷骰 {counts}"
 
     # ---- 被击败即死（不会昏迷）
     assert handler.monster_killed_on_defeat(engine, rat_a, hero, "might", "") is True
@@ -9411,6 +9418,8 @@ def main():
     verify_haunt20_corpse_drop_and_timer()
     # M10-42/批次 5：抓人藤蔓/触手的必拖拽 + #23 英雄斩首引导
     verify_haunt7_23_drag_and_goal_hooks()
+    # M10-44/批次 6：#26 鼠群合力攻击每回合只能一次
+    verify_haunt26_rat_pack_once_per_turn()
     print("verify_haunt_systems: ok")
 
 
@@ -9466,6 +9475,43 @@ def verify_haunt7_23_drag_and_goal_hooks() -> None:
     )
     assert handler._can_destroy_head(engine, hero) is False, "不在头颅房还不能斩首"
 
+
+
+def verify_haunt26_rat_pack_once_per_turn() -> None:
+    """剧本 26 p108：同房老鼠的"合力攻击"整组每回合只能扑一次。
+
+    `on_monster_turn_start` 对同房每一只老鼠都会跑一遍，早期实现没有"本回合
+    这间房已经扑过"的记录，N 只老鼠会各自发动一次 6–8 骰群攻，伤害直接翻 N 倍
+    （seed101/3p 实测英雄 5/6 局全灭，根本走不到"清光老鼠"的胜线）。
+    """
+    engine = _run_until_haunt(seed=101, players=3, haunt_id=26)
+    handler = engine._mode_handler()
+    rats = handler._rats(engine)
+    assert len(rats) >= 2, "本剧本开局应有多只老鼠"
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    room = hero.room_key
+    for rat in rats[:2]:
+        rat.room_key = room
+        rat.stunned_turns = 0
+    engine.state.turn_count += 1  # 换一个回合号，清掉上一回合的群攻记录
+
+    logs: list[str] = []
+    original = engine._log
+
+    def capture(message: str, category: str = "") -> None:
+        logs.append(message)
+        original(message, category)
+
+    engine._log = capture  # type: ignore[method-assign]
+    try:
+        assert handler.on_monster_turn_start(engine, rats[0]) is True
+        first = sum(1 for line in logs if "合力扑向" in line)
+        assert first == 1, f"第一只老鼠应发动一次合力攻击：{logs[-3:]}"
+        assert handler.on_monster_turn_start(engine, rats[1]) is True
+        total = sum(1 for line in logs if "合力扑向" in line)
+        assert total == 1, f"同房第二只老鼠不应再扑击一次：{logs[-3:]}"
+    finally:
+        engine._log = original  # type: ignore[method-assign]
 
 
 if __name__ == "__main__":

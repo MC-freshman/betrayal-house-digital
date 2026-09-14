@@ -9513,7 +9513,17 @@ class RatRitualMode(GenericModeHandler):
             if _monster_id(m) == self.RAT and m.room_key == monster.room_key and m.stunned_turns <= 0
         ]
         if len(pack) >= 2:
-            # p108：合力攻击——力量相加、封顶 8 骰，失败不受伤
+            # p108：合力攻击——力量相加、封顶 8 骰，失败不受伤。
+            # 但整组每回合只能扑一次：这个钩子对同房每一只老鼠都会跑一遍，
+            # 不加记录的话 N 只老鼠会各自发动一次 6–8 骰群攻，伤害直接翻 N 倍
+            # （seed101/3p 实测英雄 5/6 局全灭，根本进不到"清光老鼠"那一步）。
+            done = getattr(engine, "_rat_pack_done", None)
+            if done is None or done.get("turn") != engine.state.turn_count:
+                done = {"turn": engine.state.turn_count, "rooms": set()}
+                engine._rat_pack_done = done
+            if monster.room_key in done["rooms"]:
+                return True  # 本回合这间房的鼠群已经扑过了
+            done["rooms"].add(monster.room_key)
             dice = min(8, sum(max(0, m.might) for m in pack))
             attack_roll = engine.roll_dice(dice, "鼠群合力扑击")
             target_roll = engine._roll_attack(target, "might")
