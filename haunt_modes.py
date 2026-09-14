@@ -1223,6 +1223,41 @@ class WitchAndFrogsMode(GenericModeHandler):
             engine.spawn_token("cat", label="猫", role="marker", room_key=haunt_room)
             engine._log("一只舔着爪子的猫出现在了作祟的房间里。")
 
+    # ------------------------------------------------------------ bot
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """英雄的目标：凑齐「书 + 曼德拉草」，再去女巫房间施凡人形态（p14/p85）。
+
+        实测（seed113-3p，批次6 黄金重建时暴露）：书被叛徒抢在手里时，通用
+        目标换算只会给出"女巫所在房"（`cast_mortal_form` 的 same_room 要求）
+        与挖草房——**没有任何目标指向书**（通用换算只在"关键牌掉在地上"时才
+        引导去捡）。英雄拿着曼德拉草在女巫房干等，女巫永远不可攻击、叛徒又
+        打不过他，对局 400 回合收不了场。真人这时会去找持书的人把书夺回来：
+        书在谁手里是公开信息，攻击获胜即可偷取（引擎 `_steal_from_target`）。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        if engine._haunt_flags().get("witch_vulnerable"):
+            return []  # 凡人形态已生效：交给通用逻辑（去攻击女巫）
+        if "omen_book" not in player.items:
+            holder = next(
+                (p for p in engine.state.players if not p.dead and "omen_book" in p.items),
+                None,
+            )
+            if holder is not None:
+                return ["__room__" + holder.room_key]
+            floor = sorted(
+                key for key, items in engine.state.room_items.items() if "omen_book" in items
+            )
+            if floor:
+                return ["__room__" + key for key in floor]
+        # 手里没草：去挖草房（还有草可挖时才去，避免草用光后原地打转）
+        if not engine.tokens_held_by(player.id, "root") and engine.tokens_of_kind("root"):
+            return ["conservatory", "larder", "kitchen", "entrance_hall"]
+        witch = next((m for m in engine.state.monsters if _monster_id(m) == "witch"), None)
+        if witch is not None:
+            return ["__room__" + witch.room_key]
+        return []
+
     # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:
         # p14：英雄胜利 = 杀死女巫
@@ -4056,7 +4091,13 @@ class MadWorldMode(GenericModeHandler):
             return
         if _monster_id(attacker) != self.SERVANT:
             return
-        if not isinstance(target, Player) or not self._is_captive_carrier(engine, target):
+        # 本模块刻意不 import engine（防循环导入），所以"是不是玩家"只能按
+        # 鸭子类型判：Player 有 role（str），Monster 只有 template_id。
+        # 过去这里写 isinstance(target, Player) 必抛 NameError（该行虽因
+        # _monster_id(attacker) 前置判断而不可达，仍是必须拆掉的雷）。
+        if not isinstance(getattr(target, "role", None), str):
+            return
+        if not self._is_captive_carrier(engine, target):
             return
         # 随从以 2+ 点力量胜过背负者 → 释放
         engine._log(f"随从击溃了 {target.name} 的抓握，俘虏挣脱了！")
@@ -10284,11 +10325,30 @@ class DemonRingMode(GenericModeHandler):
             engine._log(f"恶魔领主被击败（{value}/2），暂时被击晕。")
 
     # ------------------------------------------------- 戒指攻击修正（p39）
+    def _prefer_sanity(self, attacker: Any, target: Any) -> bool:
+        """持戒指者徒手打恶魔时，是否改用理智攻击。
+
+        p39：持戒指对领主的**理智**攻击 +2；对普通恶魔的**理智**攻击成功
+        即策反。真人持戒打恶魔时都会挑这两条路，但引擎的徒手默认是力量，
+        所以这里在"理智不比力量差"时才切换——领主另给 +2 折算，
+        避免把高力量低理智的角色反而改弱。
+        """
+        if "omen_ring" not in getattr(attacker, "items", []):
+            return False
+        stats = getattr(attacker, "stats", None) or {}
+        bonus = 2 if _monster_id(target) == self.LORD else 0
+        return int(stats.get("sanity", 0)) + bonus >= int(stats.get("might", 0))
+
     def attack_attr_override(self, engine: Any, attacker: Any, target: Any, default_attr: str) -> str | None:
         # 记录本次攻击属性，供 attack_roll_bonus 判断"理智攻击 +2"。
         # 引擎保证同一攻击里先调本钩子再调加值钩子。
-        self._attack_attrs[str(getattr(attacker, "id", ""))] = default_attr
-        return None
+        attr = default_attr
+        tid = _monster_id(target)
+        if default_attr == "might" and (tid == self.LORD or tid in self.DEMON_TEMPLATES):
+            if self._prefer_sanity(attacker, target):
+                attr = "sanity"
+        self._attack_attrs[str(getattr(attacker, "id", ""))] = attr
+        return attr if attr != default_attr else None
 
     def attack_roll_bonus(self, engine: Any, attacker: Any, target: Any) -> int:
         if _monster_id(target) != self.LORD:
@@ -10422,7 +10482,7 @@ class DemonRingMode(GenericModeHandler):
                 engine._log(f"受控的{demon.name} 移动到 {engine.state.board[demon.room_key].name}。")
         if demon.room_key != nearest.room_key:
             return
-        if isinstance(nearest, Player):
+        if isinstance(getattr(nearest, "role", None), str):
             attack_roll = engine._roll_monster_attack(demon, "might")
             target_roll = engine._roll_attack(nearest, "might")
             engine._log(f"受控的{demon.name} 攻击 {nearest.name}：{attack_roll} 对 {target_roll}。")
@@ -10446,13 +10506,38 @@ class DemonRingMode(GenericModeHandler):
 
     # ------------------------------------------------------------ bot
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """英雄 bot 的推进目标：先把戒指拿到手，再持戒去敲恶魔领主。
+
+        旧实现只有"叛徒持戒时全队围攻他"一条，戒指一旦易主就退回通用追怪
+        （打谁全看谁近）。p39/p110 的戒指流转有好几种分支，逐条给目标：
+          · 自己持戒 → 直奔恶魔领主（只有它能被戒指摧毁；持有承诺加成会压过
+            "追最近的怪"，避免被半路的普通恶魔牵走）；
+          · 叛徒持戒 → 全队围攻叛徒（抢戒指）；
+          · 恶魔持戒（p110 抢走）→ 去打那只恶魔夺回来；
+          · 戒指随死亡掉在房间里 → 去那间房捡起来。
+        """
         if player.role != "hero" or player.dead:
             return []
-        # 戒指还在叛徒手里：全队去围攻他抢戒指（其余目标走默认追怪逻辑）
-        for other in engine.state.players:
-            if other.role == "traitor" and not other.dead and "omen_ring" in other.items:
-                return ["__room__" + other.room_key]
-        return []
+        holder = self._ring_holder(engine)
+        if holder is not None and holder.id == player.id:
+            lord = next(
+                (m for m in engine.state.monsters if _monster_id(m) == self.LORD),
+                None,
+            )
+            return ["__room__" + lord.room_key] if lord is not None else []
+        if holder is not None:
+            return ["__room__" + holder.room_key] if holder.role == "traitor" else []
+        carrier = next(
+            (m for m in engine.state.monsters if "omen_ring" in (m.items or [])),
+            None,
+        )
+        if carrier is not None:
+            return ["__room__" + carrier.room_key]
+        ring_room = next(
+            (key for key, items in engine.state.room_items.items() if "omen_ring" in items),
+            None,
+        )
+        return ["__room__" + ring_room] if ring_room else []
 
     # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:
@@ -10658,15 +10743,206 @@ class FrankensteinMode(GenericModeHandler):
         return False
 
     # ------------------------------------------------------------ bot
+    # p111 怪物速度 3：一次移动掷骰（3 枚 0–2）平均正好 3 格、上限 6 格。
+    # 3 步之内算"它一轮就够得着我"，要靠 5 步以上的距离才算过夜安全。
+    THREAT_STEPS = 3
+
+    def _monster_distances(self, engine: Any) -> dict[str, int]:
+        """从怪物所在房出发做一次 BFS：房间 key → 步数。
+
+        险区判定要问全屋几十间房；逐间调 `engine._path_length` 每次都要
+        重建邻接表再跑一遍 BFS，代价高一个量级。这里一次算完，而且走的是
+        引擎的完整图（含楼梯/煤导槽等 links），比只看门邻更接近怪物的
+        实际走法——它能顺着楼梯上楼，只看门邻会把它算慢。
+        """
+        monster = self._monster(engine)
+        if monster is None:
+            return {}
+        graph = engine._build_graph()
+        distances = {monster.room_key: 0}
+        queue = [monster.room_key]
+        while queue:
+            key = queue.pop(0)
+            for neighbor in graph.get(key, ()):
+                if neighbor in distances:
+                    continue
+                distances[neighbor] = distances[key] + 1
+                queue.append(neighbor)
+        return distances
+
+    def _is_monster_target(self, engine: Any, player: Any, distances: dict[str, int]) -> bool:
+        """怪物按"最近的英雄"选目标（引擎 `_find_monster_target`）——我是不是它？
+
+        平手时引擎按 `state.players` 顺序取第一个；这里同样按 (距离, id) 取最小，
+        与引擎的稳定排序一致。
+        """
+        best: tuple[int, int] | None = None
+        for other in engine.state.players:
+            if other.dead or getattr(other, "role", None) != "hero":
+                continue
+            distance = distances.get(other.room_key, 9999)
+            if best is None or distance < best[0]:
+                best = (distance, other.id)
+        return best is not None and best[1] == player.id
+
+    def _flee_rooms(self, engine: Any, distances: dict[str, int], keep: int) -> list[str]:
+        """全速撤离目标：优先距离 ≥ keep 步的房间，从最远的数起。
+
+        房子太小、凑不出 keep 步开外的房间时退回"能选到的最远几间"，
+        绝不能返回空——那等于把走位交回通用逻辑，而通用逻辑会朝着
+        怪物/目标房走。
+        """
+        ranked = sorted(
+            ((distance, key) for key, distance in distances.items() if distance > 0),
+            key=lambda item: (-item[0], item[1]),
+        )
+        beyond = [item for item in ranked if item[0] >= keep]
+        chosen = beyond or ranked
+        return ["__room__" + key for _distance, key in chosen[:6]]
+
+    def bot_blocked_rooms(self, engine: Any, player: Any) -> set[str]:
+        """英雄禁区：怪物所在的房间（p111 力 8 + 2，踏进去＝被摸到＝秒杀）。
+
+        实测（seed149/4p）：英雄的撤离目标本身没问题，但到远处的最短路径
+        要穿过怪物所在的那间房，机器人就照走不误、还顺手空手开打（1 对 13，
+        反手吃 12 点当场倒下）。唯一值得走进去的时候是 p40 的推落：怪物在
+        塔楼/深渊、自己力量够——这一间正是要去的目的地。"""
+        if player.dead or player.role != "hero":
+            return set()
+        monster = self._monster(engine)
+        if monster is None:
+            return set()
+        room = engine.state.board.get(monster.room_key)
+        stats = getattr(player, "stats", {}) or {}
+        if (
+            room is not None
+            and room.template_id in self.PUSH_ROOMS
+            and int(stats.get("might", 0)) >= 5
+        ):
+            return set()
+        return {monster.room_key}
+
+    def bot_attack_blocked(self, engine: Any, player: Any, target: Any) -> bool:
+        """英雄不主动肉搏本剧本的怪物（p111：力 8 且被攻击落败要挨差值反击）。
+
+        画像里的 `attack_monsters: False` 只挡住了"追怪"的走位，挡不住攻击
+        本身：被怪物堵在同一间房里时空手开打，几乎必然 0 命中反吃 10+ 点。
+        真人的赢法是火把投掷（剧本行动）与推落，不是拳头。"""
+        if player.role != "hero":
+            return False
+        return _monster_id(target) == self.MONSTER
+
+    def bot_hazard_rooms(self, engine: Any, player: Any) -> set[str]:
+        """本回合结束时不该留在里面的房间（"进去就没步数退出来"时重扣）。
+
+        实测（seed101/4p 追踪）：怪物力 8 + 2 打未受伤英雄平均 7 点，而英雄
+        物性总量才 8 点上下——被它在房间里摸到就是秒杀，所以险区不是"门邻
+        一圈"，而是它一轮移动（≤3 步）能到的整个范围。
+
+        拿火把的人另算：投掷位（1 步的门邻室）正是他该站的位置，不算险区；
+        但怪物自己的房间（0 步，站进去＝白给）和"够得着又投不了"的中段
+        （2–3 步）都不该过夜。
+        """
+        if player.dead or player.role != "hero":
+            return set()
+        distances = self._monster_distances(engine)
+        if not distances:
+            return set()
+        holding = bool(self._torches(engine, player))
+        hazards = set()
+        for key, distance in distances.items():
+            if holding:
+                if distance == 0 or 2 <= distance <= self.THREAT_STEPS:
+                    hazards.add(key)
+            elif distance <= self.THREAT_STEPS:
+                hazards.add(key)
+        return hazards
+
+    def bot_leave_after_action(self, engine: Any, player: Any) -> bool:
+        """投完火把（或推完）必须挪窝：留在投掷圈里＝下个怪物回合被拍。"""
+        if player.dead or player.role != "hero":
+            return False
+        return bool(engine._haunt_action_used(player))
+
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """英雄 bot 的推进目标（p40 的两条杀怪线 + 保命）。
+
+        实测（seed101/4p 逐回合追踪）：上一版拿到火把就直奔怪物门邻、投完
+        只退一间就停（`bot_stay_in_room`），而怪物移动 3 格——四人被一轮
+        一个拍死，整局只点 1 支火把、投 1 次、命中 0。按"距离—相位"重排：
+          ① 推落窗口：怪物已在塔楼/深渊、自己力量 ≥5 → 直奔它房间
+             （一次 6+ 检定直接摔死，比火把快得多的赢法）；
+          ② 站在投掷位上（同房或门邻）且手里有火把 → 原地不动：行动层
+             开局就会投（`available_actions` 只在射程内给 throw_torch）；
+             行动已用掉还杵在圈里（投不了/已投完）→ 按 ③ 撤；
+          ③ 没火把且怪物够得着我（≤3 步），或已经贴到 2 步内 → 全速拉开
+             到 5 步外。拿火把的人不在此列：他的活儿就是站进投掷位；
+          ④ 拿着火把：只有"这一步能踏进投掷位 + 行动还没用掉"才靠过去。
+             每个探险者每回合只有一次剧本行动——刚在点火房点完火把的人
+             这一回合已经投不了了（`_haunt_action_used`），再走进投掷位
+             就是白站：p111 的怪物赢 2+ 就把火把抢走（30 局实测被抢 23 次、
+             有效投掷只有 31 次）。够不着/投不了时保持 5 步外，让它自己追近
+             （它只追最近的人）；
+          ⑤ 空手 → 去四间点火房之一（烧焦的房间/熔炉房/五芒星室/厨房）。
+        """
         if player.role != "hero" or player.dead:
             return []
-        if self._torches(engine, player):
-            return []  # 已有火把：走默认追怪逻辑，够得着就投
+        monster = self._monster(engine)
+        if monster is None:
+            return []
+        distances = self._monster_distances(engine)
+        distance = distances.get(player.room_key, 9999)
+        holding = bool(self._torches(engine, player))
+        stats = getattr(player, "stats", {}) or {}
+        might = int(stats.get("might", 0))
+        room = engine.state.board.get(monster.room_key)
+
+        # ① 推落窗口
+        if (
+            room is not None
+            and room.template_id in self.PUSH_ROOMS
+            and might >= 5
+            and distance <= self.THREAT_STEPS + 1
+            and not engine._haunt_action_used(player)
+        ):
+            return ["__room__" + monster.room_key]
+
+        # ② 已在投掷位、手里有火把
+        if holding and distance <= 1:
+            if not engine._haunt_action_used(player):
+                return []
+            return self._flee_rooms(engine, distances, keep=self.THREAT_STEPS + 2)
+
+        # ③ 危险中：没火把的人不当靶子
+        if not holding and (
+            distance <= 2
+            or (
+                distance <= self.THREAT_STEPS
+                and self._is_monster_target(engine, player, distances)
+            )
+        ):
+            return self._flee_rooms(engine, distances, keep=self.THREAT_STEPS + 2)
+
+        # ④ 拿着火把：只在这一步真能踏进投掷位时才靠过去。
+        #    实测（30 局）：无脑靠拢会在半路停下，怪物一回身就把火把抢走
+        #    （p111 赢 2+ 抢火把，全场被抢 38 次、有效投掷只有 33 次）——
+        #    真人是"等它追近到一脚能进圈，进去就投，投完就跑"。够不着时
+        #    先把距离保持在 5 步外，让它自己追过来（它只追最近的人）。
+        if holding:
+            speed = int(stats.get("speed", 0))
+            if distance <= speed and not engine._haunt_action_used(player):
+                ring = [k for k in engine._door_neighbors(monster.room_key) if k != monster.room_key]
+                if not ring:
+                    ring = [monster.room_key]
+                return ["__room__" + key for key in ring]
+            if distance <= self.THREAT_STEPS + 2:
+                return self._flee_rooms(engine, distances, keep=self.THREAT_STEPS + 2)
+
+        # ⑤ 空手：去点火房
         return [
             "__room__" + key
-            for key, room in engine.state.board.items()
-            if room.template_id in self.TORCH_ROOMS
+            for key, board_room in engine.state.board.items()
+            if board_room.template_id in self.TORCH_ROOMS
         ]
 
     # ------------------------------------------------------------- 胜负
@@ -11168,6 +11444,69 @@ class DraculaRisingMode(GenericModeHandler):
             f"{player.name} 把木桩对准昏迷的{target.name}，狠狠钉了下去（p41）！",
         )
         return True
+
+    # ------------------------------------------------------------ bot
+    def _best_melee_dice(self, engine: Any, player: Any) -> int:
+        """这名英雄用最趁手的近战武器能掷几枚骰（力量 + 武器加成）。"""
+        might = int((getattr(player, "stats", {}) or {}).get("might", 0))
+        best = might
+        for card_id in getattr(player, "items", []):
+            card = engine.catalog.cards.get(card_id)
+            if card is None or "weapon" not in card.tags or "ranged" in card.tags:
+                continue
+            best = max(best, might + int((card.bonus or {}).get("attack", 0)))
+        return best
+
+    def _has_ranged_weapon(self, engine: Any, player: Any) -> bool:
+        for card_id in getattr(player, "items", []):
+            card = engine.catalog.cards.get(card_id)
+            if card is not None and "weapon" in card.tags and "ranged" in card.tags:
+                return True
+        return False
+
+    def bot_attack_blocked(self, engine: Any, player: Any, target: Any) -> bool:
+        """英雄不去送死：大概率打不过的吸血鬼就别出手（p20 落败吃差值反击）。
+
+        实测（30 局）：英雄对吸血鬼发起 195 次攻击、其中 55 次直接把英雄打死，
+        占全部英雄死亡的一半以上——没长矛、力 2-4 的英雄去捶力 8 的德古拉，
+        掷 1-3 骰对 8 骰，落败就是 5-7 点物理伤害。真人的打法：先躲，等日出
+        把它每项属性磨下来（每个叛徒回合 -1）、或圣徽把它逼退击晕，打得过
+        再用长矛补刀；昏迷的直接钉杀（另走剧本行动，不经过攻击）。
+        """
+        if player.role != "hero":
+            return False
+        if _monster_id(target) not in self.VAMPIRE_MONSTERS:
+            return False
+        if target.id in self._unconscious_ids(engine):
+            return False  # 昏迷：该走钉杀行动，不是攻击（由 available_actions 引导）
+        if getattr(target, "stunned_turns", 0) > 0:
+            return False  # 被击晕：白送的输出窗口
+        if self._has_ranged_weapon(engine, player):
+            return False  # p20：远程攻击落败不受伤，可以放手打
+        return self._best_melee_dice(engine, player) < int(getattr(target, "might", 0))
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """英雄 bot 的目标：只去"能赢"的吸血鬼。
+
+        画像已关掉通用追怪（`attack_monsters: False`）——力 8 的德古拉追着打
+        就是送死。这里只给两类目标：
+          ① 有吸血鬼昏迷不醒 → 去同房钉杀（p41，免费摧毁，不需要掷骰）；
+          ② 打得过（近战骰数 ≥ 它的力量，或它被击晕/自己有远程武器）→ 去补
+             长矛那一刀（p41：长矛 + 力量攻击击败 = 钉杀）。
+        打不过就不给目标：通用走位会把人留在远离吸血鬼的房间里拖到日出。
+        """
+        if player.role != "hero" or player.dead:
+            return []
+        vampires = self._vampire_monsters(engine)
+        unconscious = self._unconscious_ids(engine)
+        for monster in vampires:
+            if monster.id in unconscious:
+                return ["__room__" + monster.room_key]
+        for monster in vampires:
+            if self.bot_attack_blocked(engine, player, monster):
+                continue
+            return ["__room__" + monster.room_key]
+        return []
 
     # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:

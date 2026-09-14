@@ -439,8 +439,21 @@ class BotController:
         # 英雄默认不主动攻击同阵营玩家（除非 profile 允许）。
         hero_attacks_traitor = profile.get("attack_traitor_players", False)
         weapon_ids = [None] + engine.available_attack_weapons(player)
+        # 剧本可禁用特定目标（duck-typed `bot_attack_blocked`，默认不禁）。
+        # 29 号实测：`attack_monsters: False` 只挡住了"追怪"的走位，挡不住
+        # 攻击本身——英雄被怪物堵在同一间房里就空手开打（1 对 13），
+        # 反手吃 12 点反击当场倒下。真人不会拿拳头去捶力 8 的弗兰肯斯坦。
+        attack_blocked = getattr(engine._mode_handler(), "bot_attack_blocked", None)
         for target in targets:
             if isinstance(target, Player) and player.role == "hero" and not hero_attacks_traitor:
+                continue
+            if isinstance(target, Monster) and getattr(target, "controller", "traitor") == player.role:
+                # 不打自己这方的怪（怪物 controller 默认 traitor）。30 号实测：
+                # 新娘开局就站在叛徒身边，叛徒 bot 第一回合照着它就是一下
+                # （12 对 5 把自家新娘击晕），既不是人会做的事、也白送一回合。
+                # 反向同理：英雄不追 controller=hero 的怪（如 19 号驯兽师的兽）。
+                continue
+            if callable(attack_blocked) and attack_blocked(engine, player, target):
                 continue
             # 同源查询：该玩家用空手或任一武器至少有一种合法攻击方式才保留，
             # 顺带挡掉剧本 handler 闸门（如剧本 26 五芒星室叛徒）。

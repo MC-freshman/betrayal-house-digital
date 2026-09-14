@@ -374,6 +374,11 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         "hero": {
             # p40：怪物力 8 近身必死，英雄 bot 得先去点火房拿火把。
             "attack_monsters": False,
+            # 叛徒本人（力 2-4 的普通角色）拿着刀追人时，不还手就是白送。
+            # 实测（seed149/4p）：叛徒一个人用特质攻击 9–12 点把三名英雄逐个
+            # 拍死，全程没人还手——画像没开这一条，`_filter_attack_targets`
+            # 直接把叛徒从目标里滤掉了。
+            "attack_traitor_players": True,
             "victory_focus": "先去点火房拿火把，再投掷烧死怪物，或引到塔楼/深渊推落",
         },
         "traitor": {
@@ -386,6 +391,11 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         "hero": {
             # p41：日出会削弱吸血鬼，英雄 bot 拖时间也是策略；圣徽/长矛是关键牌。
             "attack_traitor_players": True,
+            # 不主动追吸血鬼：力 8 的德古拉近战落败吃差值反击，30 局实测
+            # 英雄对吸血鬼发起 195 次攻击、其中 55 次直接把英雄打死（占英雄
+            # 死亡的一半以上）。走位改由 handler 的 bot_goal_rooms 定向：
+            # 只去"钉杀昏迷者"或"力量+武器打得过"的目标（见 p41 钉杀/长矛）。
+            "attack_monsters": False,
             "victory_focus": "躲开吸血鬼拖到日出，用长矛钉杀或把昏迷的吸血鬼钉死",
         },
         "traitor": {

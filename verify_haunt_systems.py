@@ -3871,14 +3871,30 @@ def verify_haunt28_demon_ring() -> None:
     # 真实触发时揭示者持有戒指；强制触发的测试局手动补上并模拟流转
     traitor.items.append("omen_ring")
 
-    # ---- 理智 +2（p39）：持戒指对领主的理智攻击 +2，力量攻击不加
+    # ---- 理智 +2（p39）：持戒指对领主的理智攻击 +2；不持戒指不加
     traitor.items.remove("omen_ring")
     hero.items.append("omen_ring")
     handler.attack_attr_override(engine, hero, lord, "sanity")
     assert handler.attack_roll_bonus(engine, hero, lord) == 2
-    handler.attack_attr_override(engine, hero, lord, "might")
+    # 机器人持戒打恶魔会自选理智攻击（p39 的 +2 与"理智攻击策反"都只认理智，
+    # 而引擎徒手默认力量）：钩子把徒手力量切成理智，加值随之生效。
+    sanity0, might0 = hero.stats.get("sanity", 0), hero.stats.get("might", 0)
+    hero.stats["sanity"], hero.stats["might"] = 5, 4
+    assert handler.attack_attr_override(engine, hero, lord, "might") == "sanity"
+    assert handler.attack_roll_bonus(engine, hero, lord) == 2
+    assert handler.attack_attr_override(engine, hero, demons[0], "might") == "sanity", (
+        "p39：对普通恶魔也切理智（成功即策反）"
+    )
+    assert handler.attack_roll_bonus(engine, hero, demons[0]) == 0, "策反无 +2"
+    # 理智明显低于力量的角色不硬拗（不把角色改弱）：维持力量、不加值
+    hero.stats["sanity"], hero.stats["might"] = 1, 7
+    assert handler.attack_attr_override(engine, hero, lord, "might") is None
     assert handler.attack_roll_bonus(engine, hero, lord) == 0
+    hero.stats["sanity"], hero.stats["might"] = sanity0, might0
+    # 不持戒指：力量攻击照旧不加值，也不切换
     hero.items.remove("omen_ring")
+    assert handler.attack_attr_override(engine, hero, lord, "might") is None
+    assert handler.attack_roll_bonus(engine, hero, lord) == 0
     traitor.items.append("omen_ring")
 
     # ---- 抢戒指（p110）：恶魔赢戒指持有人 2+ → 抢走不掉血
@@ -3951,6 +3967,69 @@ def verify_haunt28_demon_ring() -> None:
     h5 = engine5._mode_handler()
     next(p for p in engine5.state.players if p.role == "traitor").dead = True
     assert h5.check_victory(engine5) is True and engine5.state.winner is None, "叛徒死亡 ≠ 英雄胜"
+
+    # ---- 受控恶魔打玩家（p39 代跑里"目标是人"的分支）
+    # 旧代码写 `isinstance(nearest, Player)`，而 haunt_modes 刻意不 import
+    # engine —— 该行一旦执行必抛 NameError（策反不可达时一直没暴露）。
+    # 改成鸭子类型判 role 后，这里必须真的结算出一次攻击。
+    engine6 = _run_until_haunt(seed=113, players=3, haunt_id=28)
+    h6 = engine6._mode_handler()
+    traitor6 = next(p for p in engine6.state.players if p.role == "traitor")
+    hero6 = next(p for p in engine6.state.players if p.role == "hero" and not p.dead)
+    demon6 = next(m for m in engine6.state.monsters if m.template_id == "demon_1")
+    hero6.items.append("omen_ring")
+    engine6._haunt_flags()["controlled_demons"].append(demon6.id)
+    far_key = max(engine6.state.board, key=lambda k: engine6._path_length(k, traitor6.room_key))
+    for other in engine6.state.monsters:  # 其余怪物挪远：保证最近敌人就是叛徒
+        if other is not demon6:
+            other.room_key = far_key
+    demon6.room_key = traitor6.room_key
+    demon6.stunned_turns = 0
+    lines: list[str] = []
+    original_log6 = engine6._log
+
+    def _cap6(message: str, category: str = "") -> None:
+        lines.append(message)
+        original_log6(message, category)
+
+    engine6._log = _cap6  # type: ignore[method-assign]
+    with patch.object(engine6, "_roll_monster_attack", return_value=3), patch.object(
+        engine6, "_roll_attack", return_value=0
+    ):
+        h6._controlled_demon_act(engine6, demon6)
+    engine6._log = original_log6  # type: ignore[method-assign]
+    assert any("受控的" in line and "攻击" in line for line in lines), (
+        "受控恶魔与叛徒同房时应发起攻击（旧 isinstance(Player) NameError 的回归）"
+    )
+
+    # ---- 目标钩子的戒指流转（p110 抢戒指 / p39 掉落）
+    engine7 = _run_until_haunt(seed=113, players=3, haunt_id=28)
+    h7 = engine7._mode_handler()
+    traitor7 = next(p for p in engine7.state.players if p.role == "traitor")
+    hero7 = next(p for p in engine7.state.players if p.role == "hero" and not p.dead)
+    other_hero7 = next(
+        (p for p in engine7.state.players if p.role == "hero" and p.id != hero7.id and not p.dead),
+        None,
+    )
+    lord7 = next(m for m in engine7.state.monsters if m.template_id == "demon_lord")
+    demon7 = next(m for m in engine7.state.monsters if m.template_id == "demon_1")
+    # ① 叛徒持戒 → 全队围攻叛徒
+    traitor7.items.append("omen_ring")
+    assert h7.bot_goal_rooms(engine7, hero7) == ["__room__" + traitor7.room_key]
+    # ② 英雄持戒 → 持戒者直奔恶魔领主；其余英雄不被这条目标牵走
+    traitor7.items.remove("omen_ring")
+    hero7.items.append("omen_ring")
+    assert h7.bot_goal_rooms(engine7, hero7) == ["__room__" + lord7.room_key]
+    if other_hero7 is not None:
+        assert h7.bot_goal_rooms(engine7, other_hero7) == [], "非持戒者不抢领主打点"
+    # ③ 戒指被恶魔抢走（p110）→ 去打那只恶魔夺回来
+    hero7.items.remove("omen_ring")
+    demon7.items.append("omen_ring")
+    assert h7.bot_goal_rooms(engine7, hero7) == ["__room__" + demon7.room_key]
+    # ④ 戒指掉在房间里（携带者死亡落地）→ 去那间房捡
+    demon7.items.remove("omen_ring")
+    engine7.state.room_items.setdefault(hero7.room_key, []).append("omen_ring")
+    assert h7.bot_goal_rooms(engine7, hero7) == ["__room__" + hero7.room_key]
 
 
 def verify_haunt29_frankenstein() -> None:
@@ -4075,6 +4154,80 @@ def verify_haunt29_frankenstein() -> None:
     h4 = engine4._mode_handler()
     next(p for p in engine4.state.players if p.role == "traitor").dead = True
     assert h4.check_victory(engine4) is True and engine4.state.winner is None, "叛徒死亡 ≠ 英雄胜"
+
+    # ---- bot 钩子（批次6 #29）：怪物房间禁区 / 禁肉搏 / 险区 / 距离分相
+    # 实测（seed149/4p）：英雄的撤离目标没问题，但到远处的最短路径要穿过
+    # 怪物所在的房间，机器人照走不误、还顺手空手开打（1 对 13，反手吃 12 点
+    # 当场倒下）。所以英雄必须把怪物房间当寻路禁区；唯一例外是 p40 的推落
+    # 窗口——怪物就在塔楼/深渊里、自己推得动的时候，那一间正是目的地。
+    engine5 = _run_until_haunt(seed=113, players=3, haunt_id=29)
+    h5 = engine5._mode_handler()
+    monster5 = h5._monster(engine5)
+    hero5 = next(p for p in engine5.state.players if p.role == "hero" and not p.dead)
+    traitor5 = next(p for p in engine5.state.players if p.role == "traitor")
+    assert h5.bot_blocked_rooms(engine5, hero5) == {monster5.room_key}, "怪物房间是英雄禁区"
+    assert h5.bot_blocked_rooms(engine5, traitor5) == set(), "叛徒不受英雄禁区限制"
+    tower_key5 = next(
+        (k for k, r in engine5.state.board.items() if r.template_id == "tower"), None
+    )
+    if tower_key5 is None:
+        placed5 = engine5._place_room(engine5.catalog.room_templates["tower"], 41, 40, 0)
+        placed5.revealed = True
+        tower_key5 = placed5.key
+    monster5.room_key = tower_key5
+    hero5.stats["might"] = 5
+    assert h5.bot_blocked_rooms(engine5, hero5) == set(), "推落窗口：怪物房间正是要去的地方"
+    hero5.stats["might"] = 2
+    assert h5.bot_blocked_rooms(engine5, hero5) == {tower_key5}, "力量不够就别进塔楼"
+
+    # 英雄不肉搏力 8 的怪物（p111 落败要挨差值反击）；叛徒可以打
+    assert h5.bot_attack_blocked(engine5, hero5, monster5) is True
+    assert h5.bot_attack_blocked(engine5, traitor5, monster5) is False
+
+    # 险区：空手 = 怪物一个移动射程（≤3 步）内全部；持火把时投掷位（1 步
+    # 门邻）是他该站的位置，不算险区，但怪物房间和中段（2-3 步）都算。
+    assert not h5._torches(engine5, hero5)
+    distances5 = h5._monster_distances(engine5)
+    assert h5.bot_hazard_rooms(engine5, hero5) == {
+        k for k, d in distances5.items() if d <= h5.THREAT_STEPS
+    }, "空手险区=怪物 3 步以内"
+    assert h5.perform_action(engine5, hero5, "light_torch", {}) is True
+    assert h5._torches(engine5, hero5)
+    distances5 = h5._monster_distances(engine5)
+    assert h5.bot_hazard_rooms(engine5, hero5) == {
+        k for k, d in distances5.items() if d == 0 or 2 <= d <= h5.THREAT_STEPS
+    }, "持火把：投掷位（1 步）不算险区"
+
+    # 怪物只追"最近的英雄"（引擎 _find_monster_target）——队友挪远、自己
+    # 站到它隔壁时，判定必须落在我身上。
+    adjacent5 = next((k for k, d in sorted(distances5.items()) if d == 1), None)
+    farthest5 = max(distances5.items(), key=lambda item: item[1])[0] if distances5 else None
+    if adjacent5 is not None and farthest5 is not None:
+        for other in engine5.state.players:
+            if other.role == "hero" and other.id != hero5.id and not other.dead:
+                other.room_key = farthest5
+        hero5.room_key = adjacent5
+        assert h5._is_monster_target(engine5, hero5, h5._monster_distances(engine5)) is True
+
+    # 目标分相：站在怪物 2-3 步外、拿着火把、行动还没用 → 往投掷位走
+    # （移动后 `_try_haunt_action` 会立刻把火把投出去）；行动已经用掉
+    # （比如刚在点火房点完火把）→ 不许再靠过去，只给撤离目标。
+    spot5 = next((k for k, d in sorted(distances5.items()) if 2 <= d <= 3), None)
+    if spot5 is not None:
+        hero5.room_key = spot5
+        hero5.stats["speed"] = 4
+        engine5._reset_player_turn_state(hero5)
+        ring5 = {k for k in engine5._door_neighbors(monster5.room_key) if k != monster5.room_key}
+        if ring5:
+            goals5 = {g[len("__room__") :] for g in h5.bot_goal_rooms(engine5, hero5)}
+            assert goals5 & ring5, "能一脚踏进投掷位 → 该往投掷位去"
+            engine5._mark_haunt_action_used(hero5)
+            goals5 = {g[len("__room__") :] for g in h5.bot_goal_rooms(engine5, hero5)}
+            assert not (goals5 & ring5), "行动已用：进去也投不了，只会白送火把"
+            assert goals5, "撤离目标不能为空（空 = 退回通用走位）"
+            far5 = {k for k, d in distances5.items() if d >= h5.THREAT_STEPS + 2}
+            if far5:
+                assert goals5 <= far5, "撤离目标该在怪物 5 步之外"
 
 
 def verify_haunt30_dracula() -> None:
@@ -4254,6 +4407,59 @@ def verify_haunt30_dracula() -> None:
     h7 = engine7._mode_handler()
     next(p for p in engine7.state.players if p.role == "traitor").dead = True
     assert h7.check_victory(engine7) is True and engine7.state.winner is None, "叛徒死亡 ≠ 英雄胜"
+
+    # ---- bot 钩子（批次6 #30）：不送死攻击 / 只去能赢的目标 / 不打自家怪
+    # 实测（30 局）：英雄对吸血鬼发起 195 次攻击、其中 55 次直接把英雄打死
+    # （占全部英雄死亡的一半以上）——力 2-4 的英雄去捶力 8 的德古拉，落败吃
+    # 差值反击。修正后自伤死亡 55→42、英雄胜 4→6（同口径 30 局）。
+    engine8 = _run_until_haunt(seed=113, players=3, haunt_id=30)
+    h8 = engine8._mode_handler()
+    hero8 = next(p for p in engine8.state.players if p.role == "hero" and not p.dead)
+    traitor8 = next(p for p in engine8.state.players if p.role == "traitor")
+    drac8 = next(m for m in engine8.state.monsters if m.template_id == "dracula")
+    bride8 = next(m for m in engine8.state.monsters if m.template_id == "bride")
+
+    # 送死攻击闸门：力 2 对力 8 → 不许打；被击晕/昏迷 → 随便打
+    # （先清干净：真实对局里英雄可能本来就带着远程武器、新娘可能已被击晕）
+    hero8.items = []
+    engine8._haunt_flags()["unconscious_ids"] = []
+    drac8.stunned_turns = 0
+    bride8.stunned_turns = 0
+    hero8.stats["might"] = 2
+    assert h8.bot_attack_blocked(engine8, hero8, drac8) is True, "力 2 打力 8 德古拉 = 送死"
+    bride8.might = 4
+    assert h8.bot_attack_blocked(engine8, hero8, bride8) is True, "力 2 对力 4 也是送死"
+    hero8.stats["might"] = 5
+    assert h8.bot_attack_blocked(engine8, hero8, bride8) is False, "力 5 对力 4：打得起"
+    assert h8.bot_attack_blocked(engine8, hero8, drac8) is True, "力 5 仍打不过力 8"
+    bride8.stunned_turns = 1
+    assert h8.bot_attack_blocked(engine8, hero8, bride8) is False, "被击晕：白送的输出"
+    bride8.stunned_turns = 0
+    # 长矛 +2：力 4 变 6 骰，打力 8 仍不够、打力 4 绰绰有余
+    hero8.items.append("omen_spear")
+    hero8.stats["might"] = 4
+    assert h8._best_melee_dice(engine8, hero8) == 6
+    assert h8.bot_attack_blocked(engine8, hero8, drac8) is True, "力 4+长矛=6 骰仍打不过力 8"
+    assert h8.bot_attack_blocked(engine8, hero8, bride8) is False
+    # 远程武器落败免伤（p20）：随便打
+    hero8.items.append("item_revolver")
+    hero8.stats["might"] = 1
+    assert h8._has_ranged_weapon(engine8, hero8) is True
+    assert h8.bot_attack_blocked(engine8, hero8, drac8) is False, "远程落败不受伤，可以打"
+    # 打不过就不给目标；打得过/昏迷才给（昏迷优先，去钉杀）
+    hero8.items = [c for c in hero8.items if c != "item_revolver"]
+    hero8.stats["might"] = 4  # 长矛在手：4+2=6 骰，打得过新娘（力 4）
+    assert h8.bot_goal_rooms(engine8, hero8) == ["__room__" + bride8.room_key], "只去打得过的吸血鬼"
+    hero8.stats["might"] = 1  # 打不过两只 → 不给目标（去别处拖到日出）
+    assert h8.bot_goal_rooms(engine8, hero8) == [], "打不过就不去送死"
+    engine8._haunt_flags().setdefault("unconscious_ids", []).append(drac8.id)
+    assert h8.bot_goal_rooms(engine8, hero8) == ["__room__" + drac8.room_key], "昏迷优先去钉杀"
+    # 叛徒不打自己的怪物（bot_ai 通用闸门：controller == 自己阵营）
+    assert drac8.controller == "traitor" and traitor8.role == "traitor"
+    filtered8 = BotController()._filter_attack_targets(
+        engine8, traitor8, [drac8, bride8], {"attack_heroes": True}
+    )
+    assert filtered8 == [], "叛徒不该打自家吸血鬼（30 号实测第一回合击晕自家新娘）"
 
 
 def verify_haunt33_lake_rescue() -> None:
