@@ -8593,6 +8593,248 @@ def verify_ensure_room_in_play_farthest() -> None:
     )
 
 
+def verify_explore_all_dead_ends_game() -> None:
+    """探索期全员倒下：立刻终局，不能把轮转停在死者身上（黄金 seed7-3p）。
+
+    `start_turn` 的"全员已死"分支过去只处理作祟期，探索期直接 return，
+    于是 turn_count 冻结、之后每次 take_turn 都是空转。探索期没有叛徒与
+    剧本可判，收口方式是"游戏结束、不判胜方"。
+    """
+    engine = _new_engine(seed=7, players=3)
+    for player in engine.state.players:
+        player.stats["might"] = 0
+        engine._check_player_death(player)
+    assert engine.state.phase == "GAME_OVER", "全员倒下应直接终局"
+    assert not engine.state.winner, "探索期没有叛徒，不应判出胜方"
+    assert engine.state.winner_reason, "终局要有可读原因"
+    # 兜底分支再跑一次也不应改变结论（轮转停在死者身上是允许的，游戏已结束）
+    engine.start_turn()
+    assert engine.state.phase == "GAME_OVER"
+
+
+def verify_mystic_elevator_not_transit() -> None:
+    """神秘电梯：不算"可探索前沿"，也不能当路径中转（进入即被传送）。
+
+    seed137/4p 实测：机器人把电梯当探索目标，进去→被传送到随机楼层→再
+    走回来，200 回合只开出 30 间房，作祟迟迟不触发。
+    """
+    from engine import DIRECTION_DELTAS  # 模块级常量，本文件顶层未导入
+
+    engine = _new_engine(seed=131, players=4)
+    elevator_key = engine._ensure_room_in_play("mystic_elevator")
+    assert elevator_key is not None, "测试前提：电梯能进场"
+    elevator = engine.state.board[elevator_key]
+    open_positions = 0
+    for direction in elevator.doors:
+        delta = DIRECTION_DELTAS.get(direction)
+        if delta is None:
+            continue
+        pos = (elevator.floor, elevator.x + delta[0], elevator.y + delta[1])
+        if pos not in engine.state.pos_index:
+            open_positions += 1
+    assert open_positions > 0, "测试前提：电梯要有空门位"
+    assert elevator_key not in engine.exploration_frontier_keys(elevator.floor), (
+        "电梯有空门位也不算探索前沿——进去只会被传送走"
+    )
+    graph = engine._build_graph(avoid_transit=True)
+    assert graph[elevator_key] == [], "avoid_transit 路径不能从电梯穿出去"
+
+
+def verify_omen_exhaustion_triggers_haunt() -> None:
+    """预兆来源断掉时，探索期要直接进入作祟（不能无限空转）。
+
+    两个判据都覆盖：预兆牌抽光；剩下的预兆房**放不下**（_can_place_template）。
+    seed131/3p 实测：全屋铺满 48/49 间后，唯一剩下的预兆房没有合法落位，
+    引擎却一直认为"未来还有预兆"，探索期 400 回合不结束。
+    """
+    engine = _new_engine(seed=113, players=3)
+    # 负面：楼层上没有已放置房间时，该层模板没有任何落位
+    for key in [k for k, room in engine.state.board.items() if room.floor == -1]:
+        room = engine.state.board.pop(key)
+        engine.state.pos_index.pop((room.floor, room.x, room.y), None)
+    empty_floor_template = next(
+        template
+        for template in engine.catalog.room_templates.values()
+        if not any(room.floor == template.floor for room in engine.state.board.values())
+    )
+    assert engine._can_place_template(empty_floor_template) is False
+
+    # 牌抽光 + 场上没有未翻开的预兆房 + 牌堆里没有预兆房 → 未来无预兆
+    engine.state.card_decks["omen"] = []
+    engine.state.card_discards["omen"] = []
+    for room in engine.state.board.values():
+        if room.symbol == "omen":
+            room.revealed = True
+    engine.state.room_deck = [
+        rid for rid in engine.state.room_deck
+        if engine.catalog.room_templates[rid].symbol != "omen"
+    ]
+    engine.state.room_discard = [
+        rid for rid in engine.state.room_discard
+        if engine.catalog.room_templates[rid].symbol != "omen"
+    ]
+    engine.state.last_omen_id = next(
+        card_id for card_id, card in engine.catalog.cards.items() if card.kind == "omen"
+    )
+    assert not engine._has_future_omen_source()
+    engine.start_turn()
+    assert engine.state.phase == "HAUNT_PHASE", "预兆来源断掉应直接触发作祟"
+
+
+def verify_dead_player_command_guard() -> None:
+    """死者只剩"结束回合"这一条命令（倒下后不能把掉落的牌捡回去）。"""
+    from engine import ActionCommand  # 局部导入（本文件顶层只导了 GameEngine）
+
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=6)
+    victim = next(p for p in engine.state.players if p.dead)
+    _set_current(engine, victim)
+    room_key = victim.room_key
+    card_id = "item_medical_kit"
+    engine.state.room_items.setdefault(room_key, [])
+    if card_id not in engine.state.room_items[room_key]:
+        engine.state.room_items[room_key].append(card_id)
+
+    assert not engine.execute_command(
+        ActionCommand("pickup", victim.id, {"card_id": card_id})
+    ), "死者不能捡牌"
+    assert card_id in engine.state.room_items.get(room_key, []), "牌应该还躺在地上"
+    assert not engine.pickup_item(victim, card_id), "引擎层同样要挡住"
+    # 死者仍能结束回合——否则轮转会卡在死者身上（剧本 6 老 bug）
+    assert engine.execute_command(ActionCommand("end_turn", victim.id))
+
+
+def verify_haunt7_goal_hooks() -> None:
+    """7 号目标门控：持书才去实验室、抢到喷雾才去销毁房、被抓住先打抓人者。
+
+    p18/p89。此前两处偏差：全体英雄都往实验室挤（只有持书的人做得成
+    检定）；叛徒没抢到喷雾就把三间销毁房当常驻目标巡视空房。
+    """
+    engine = _run_until_haunt(seed=101, players=4, haunt_id=7)
+    handler = engine._mode_handler()
+    assert isinstance(handler, CarnivorousIvyMode)
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor" and not p.dead)
+
+    if "omen_book" in hero.items:
+        hero.items.remove("omen_book")
+    assert handler.bot_action_blocked(engine, hero, "make_plant_spray"), "没书不该把实验室当目标"
+    if "omen_book" not in hero.items:
+        hero.items.append("omen_book")
+    assert not handler.bot_action_blocked(engine, hero, "make_plant_spray"), "持书应解锁"
+
+    assert handler.bot_action_blocked(engine, traitor, "destroy_spray")
+    assert handler.bot_goal_suppressed(engine, traitor), "没喷雾的叛徒不该有剧本目标房间"
+    engine.spawn_token("plant_spray", label="植物喷雾", role="carried", holder=traitor.id)
+    assert not handler.bot_action_blocked(engine, traitor, "destroy_spray"), "抢到喷雾应解锁"
+    assert not handler.bot_goal_suppressed(engine, traitor)
+
+    # 持喷雾的人去有根/尖端的房间（另一局，避免与上面的令牌串味）
+    engine2 = _run_until_haunt(seed=101, players=4, haunt_id=7)
+    handler2 = engine2._mode_handler()
+    hero2 = next(p for p in engine2.state.players if p.role == "hero" and not p.dead)
+    roots = [token for token in engine2.tokens_of_kind("root") if token.room_key]
+    assert roots, "7 号开局至少要布下一对根/尖端"
+    assert handler2.bot_goal_rooms(engine2, hero2) == [], "没喷雾时没有喷杀目标"
+    engine2.spawn_token("plant_spray", label="植物喷雾", role="carried", holder=hero2.id)
+    goals = handler2.bot_goal_rooms(engine2, hero2)
+    assert f"__room__{roots[0].room_key}" in goals, "持喷雾应把有根的房间当目标"
+
+    # 被抓住 → 指认抓着它的那只（bot_ai 会优先攻击它）
+    tip = next(
+        monster for monster in engine2.state.monsters
+        if getattr(monster, "template_id", "") == "creeper_tip"
+    )
+    engine2._haunt_flags()["grabbed"] = {str(hero2.id): tip.id}
+    assert handler2.bot_captor_monster(engine2, hero2) is tip
+    engine2._haunt_flags()["grabbed"] = {}
+    assert handler2.bot_captor_monster(engine2, hero2) is None
+
+    # 书还压在预兆牌堆里 → 英雄必须去翻新房间找书（p18 的造喷雾两步链）
+    engine3 = _run_until_haunt(seed=101, players=4, haunt_id=7)
+    handler3 = engine3._mode_handler()
+    hero3 = next(p for p in engine3.state.players if p.role == "hero" and not p.dead)
+    deck = engine3.state.card_decks.setdefault("omen", [])
+    if "omen_book" not in deck:
+        deck.append("omen_book")
+    engine3._haunt_flags()["plant_spray_created"] = False
+    engine3._haunt_flags()["plant_spray_destroyed"] = False
+    assert handler3.bot_wants_explore(engine3, hero3), "书没进场时英雄应继续探索"
+    engine3._haunt_flags()["plant_spray_created"] = True
+    assert not handler3.bot_wants_explore(engine3, hero3), "喷雾造出后不必再找书"
+
+
+def verify_bot_attacks_captor_first() -> None:
+    """被怪抓住时，机器人优先攻击"抓着它的那只"（赢了才能脱身，p18）。
+
+    seed127/5p 实测：英雄被 mon_3 抓着、同房间还有另外 9 只尖端，它按列表
+    顺序一直打 mon_1，被钉在入口大厅 180 回合、整局 245 回合。
+    """
+    engine = _run_until_haunt(seed=127, players=5, haunt_id=7)
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    tips = [
+        monster for monster in engine.state.monsters
+        if getattr(monster, "template_id", "") == "creeper_tip"
+    ]
+    assert len(tips) >= 2, "需要两只以上尖端才能验证'打错对象'"
+    other, captor = tips[0], tips[1]
+    other.room_key = captor.room_key
+    hero.room_key = captor.room_key
+    _set_current(engine, hero)
+    engine._haunt_flags()["grabbed"] = {str(hero.id): captor.id}
+
+    attacked: list = []
+    original_attack = engine.attack
+    engine.attack = lambda attacker, target, weapon_card_id=None, ranged=False: (  # type: ignore[method-assign]
+        attacked.append(target) or True
+    )
+    try:
+        BotController()._try_attack(engine, hero)
+    finally:
+        engine.attack = original_attack  # type: ignore[method-assign]
+    assert attacked, "应当发起一次攻击"
+    assert attacked[0] is captor, "应优先攻击抓着自己的那只，而不是列表里第一只"
+
+
+def verify_haunt9_traitor_goal_gating() -> None:
+    """9 号：圣徽不在手上时"毁圣徽"的房间不算目标，叛徒改去追杀英雄。
+
+    seed109/3p 实测：叛徒把深渊/熔炉房/地下湖当常驻目标来回巡视，而圣徽
+    还压在预兆牌堆里，它在地下室三间房之间绕了 33 圈、整局拖到 133 回合。
+    """
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=9)
+    handler = engine._mode_handler()
+    assert isinstance(handler, DeathDanceMode)
+    # 剧本 9 开局无叛徒：按既有测试的写法，在舞厅诱惑失败制造一个
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    ballroom_key = next(k for k, r in engine.state.board.items() if r.template_id == "ballroom")
+    hero.room_key = ballroom_key
+    with patch.object(engine, "_resolve_check", return_value=False):
+        handler.on_turn_start(engine, hero)
+    assert hero.role == "traitor", "需要在舞厅堕落一个叛徒来验证门控"
+    if "omen_holy_symbol" in hero.items:
+        hero.items.remove("omen_holy_symbol")
+
+    assert handler.bot_action_blocked(engine, hero, "destroy_holy_symbol")
+    assert handler.bot_goal_suppressed(engine, hero)
+    bot = BotController()
+    assert bot._haunt_goal_targets(engine, hero) == set(), "被抑制时不应再有剧本目标房间"
+
+    hero.items.append("omen_holy_symbol")
+    assert not handler.bot_action_blocked(engine, hero, "destroy_holy_symbol"), "持徽应解锁"
+    assert not handler.bot_goal_suppressed(engine, hero)
+    targets = bot._haunt_goal_targets(engine, hero)
+    destroy_templates = {"chasm", "furnace_room", "underground_lake"}
+    on_board_destroy = {
+        key
+        for key, room in engine.state.board.items()
+        if room.template_id in destroy_templates
+    }
+    if on_board_destroy:
+        assert targets & on_board_destroy, (
+            f"持徽后销毁房应回到目标（实际 {sorted(targets)}）"
+        )
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -8747,6 +8989,14 @@ def main():
     verify_haunt2_setup_places_pentagram()
     verify_haunt2_burial_timer_not_frozen()
     verify_ensure_room_in_play_farthest()
+    # M10-39：批次 2（剧本 6-10）审计新增的引擎能力与修复
+    verify_explore_all_dead_ends_game()
+    verify_mystic_elevator_not_transit()
+    verify_omen_exhaustion_triggers_haunt()
+    verify_dead_player_command_guard()
+    verify_haunt7_goal_hooks()
+    verify_bot_attacks_captor_first()
+    verify_haunt9_traitor_goal_gating()
     print("verify_haunt_systems: ok")
 
 

@@ -433,6 +433,12 @@ class GameEngine:
         for room in self.state.board.values():
             if room.floor != floor:
                 continue
+            if room.template_id in self.NON_TRANSIT_TEMPLATES:
+                # 进入即被传送的房间（神秘电梯）不能算"可探索前沿"：人一进去
+                # 就被丢到随机楼层，根本站不住，更谈不上从里面翻门。
+                # seed137/4p 实测：机器人把电梯当探索目标，进去→被传送→走回来，
+                # 200 回合只开出 30 间房，作祟迟迟不触发。
+                continue
             for direction in room.doors:
                 if direction not in DIRECTION_DELTAS:
                     continue
@@ -507,21 +513,30 @@ class GameEngine:
                 break
             self._advance_turn()
         else:
-            # 全员已死还要判一次胜负。叛徒开局就出局的剧本（10/24/47 等）
+            # 全员已死还要收一次口。叛徒开局就出局的剧本（10/24/47 等）
             # 若英雄随后也全灭，这里若不判，就会永远停在死者回合上
             # （47 号 seed109/4p 实测卡在 27 回合 HAUNT_PHASE）。
-            if self.state.phase == "HAUNT_PHASE":
-                self.check_victory()
+            self._check_all_players_dead()
             return
         self._reset_player_turn_state(player)
         self.state.turn_count += 1
         self._log(f"轮到 {self._player_label(player)}")
+        if (
+            self.state.phase == "EXPLORE"
+            and self.state.last_omen_id
+            and not self._has_future_omen_source()
+        ):
+            # 探索期已经不可能再出现预兆（预兆牌抽光，或剩下的预兆房放不下）。
+            # 再熬下去只是空转，按"最后一次预兆检定"的既有兜底口径直接进入
+            # 作祟——判据与 _resolve_haunt_check 完全一致。
+            self._log("场上已不可能再出现预兆；本次作为最后一次预兆检定，触发作祟。")
+            self._trigger_haunt(player)
         if self.state.phase == "HAUNT_PHASE":
             self._apply_start_of_turn_haunt_effects(player)
             self.check_victory()
 
     def end_turn(self) -> None:
-        if self.state.winner:
+        if self.state.winner or self.state.phase == "GAME_OVER":
             return
         player = self.current_player
         haunt_triggered = False
@@ -573,6 +588,11 @@ class GameEngine:
         player = self.state.players[cmd.player_id]
         if self.state.turn_order and player.id != self.current_player.id:
             self._log(f"{player.name} 的操作被拒绝：还没轮到该玩家。")
+            return False
+        if player.dead and cmd.action != "end_turn":
+            # 死者只剩"结束回合"这一条命令。以前没有任何闸门，机器人倒下后
+            # 还能被自己的收尾逻辑带着捡回刚掉落的牌（seed7/3p 实测：
+            # 倒下 → 物品掉落 → 又"捡起了 疯子/铃铛/咬伤"）。
             return False
         data = cmd.data or {}
         self._active_player_id = player.id
@@ -1975,6 +1995,30 @@ class GameEngine:
             self._drop_inventory_on_death(player)
             # 剧本可对死亡做后处理（剧本 14 p96：尸体留在房间里可被搬走）。
             self._mode_handler().on_player_died(self, player)
+            # 最后一个探险者倒下：立刻收口，不能把回合轮转停在死者身上。
+            self._check_all_players_dead()
+
+    def _check_all_players_dead(self) -> bool:
+        """全员倒下时的收口：作祟期交给剧本判胜负，探索期直接终局。
+
+        探索期还没有叛徒与剧本，无人可判；不在这里结束的话回合轮转会
+        永远停在死者身上——seed7/3p 实测：三名机器人先后在探索期倒下，
+        turn_count 冻结在第 31 回合，之后每次行动都是空转（黄金里唯一
+        跑不完的用例）。作祟期仍按原口径交给 `check_victory`（10/24/47
+        那类"叛徒开局就出局"的剧本也走这里）。
+        """
+        if self.state.phase == "GAME_OVER":
+            return True
+        if any(not player.dead for player in self.state.players):
+            return False
+        if self.state.phase == "HAUNT_PHASE":
+            self.check_victory()
+            if self.state.winner:
+                return True
+        self.state.phase = "GAME_OVER"
+        self.state.winner_reason = "所有探险者都倒下了。"
+        self._log("所有探险者都倒下了。游戏结束。")
+        return True
 
     def _deal_damage(self, player: Player, damage_type: str, amount: int, source: str = "") -> None:
         if amount <= 0 or player.dead:
@@ -2020,6 +2064,8 @@ class GameEngine:
         if self._mode_handler().item_pickup_blocked(self, player, card_id):
             card = self.catalog.cards.get(card_id)
             self._log(f"{card.name if card else card_id}无法被 {player.name} 捡起。")
+            return False
+        if player.dead:
             return False
         room_cards = self.state.room_items.get(player.room_key, [])
         if card_id not in room_cards:
@@ -3301,8 +3347,31 @@ class GameEngine:
                 return True
         for room_id in (*self.state.room_deck, *self.state.room_discard):
             template = self.catalog.room_templates.get(room_id)
-            if template and template.symbol == "omen":
+            if template and template.symbol == "omen" and self._can_place_template(template):
+                # 预兆房还得**放得下**才算未来来源：'还剩一张预兆牌'不等于
+                # '还能翻出预兆房'。seed131/3p 实测：全屋铺满 48/49 间后，
+                # 仅剩的小教堂（预兆房）落在没有任何合法落位的位置上，
+                # 引擎却一直认为未来还有预兆，探索期永远不结束。
                 return True
+        return False
+
+    def _can_place_template(self, template: RoomTemplate) -> bool:
+        """这张房间牌是否还有合法落位（与探索时的放置规则同一套）。"""
+        for room in self.state.board.values():
+            if room.floor != template.floor:
+                continue
+            if room.template_id in self.NON_TRANSIT_TEMPLATES:
+                # 传送房不能从里面翻门（见 exploration_frontier_keys）。
+                continue
+            for direction in room.doors:
+                if direction not in DIRECTION_DELTAS:
+                    continue
+                dx, dy = DIRECTION_DELTAS[direction]
+                pos = (room.floor, room.x + dx, room.y + dy)
+                if pos in self.state.pos_index:
+                    continue
+                if self._compute_explore_placements(template, direction, pos):
+                    return True
         return False
 
     def _trigger_haunt(self, revealer: Player) -> None:

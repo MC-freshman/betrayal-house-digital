@@ -1848,6 +1848,81 @@ class CarnivorousIvyMode(GenericModeHandler):
             for m in engine.state.monsters
         )
 
+    def bot_wants_explore(self, engine: Any, player: Any) -> bool:
+        """古书还压在预兆牌堆里时，英雄必须去翻新房间把它抽出来。
+
+        p18 的英雄胜利线是"持书 + 研究实验室/厨房 + 知识 5+ 造喷雾"，书
+        整局不进场整条链就断掉：实测 seed101/4p、5p 两局里书始终留在预兆
+        牌堆（既没人抽到、也没掉在地上），全局一次剧本行动都没出现过，
+        173 回合被藤蔓吃光。规则允许继续探索抽预兆，所以让机器人像人一样
+        先去把书翻出来。喷雾已造出/已被毁则不必再找（p18：毁掉后不能重造）。
+        """
+        if player.dead or player.role != "hero":
+            return False
+        flags = engine._haunt_flags()
+        if flags.get("plant_spray_created") or flags.get("plant_spray_destroyed"):
+            return False
+        return "omen_book" in engine.state.card_decks.get("omen", [])
+
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        """没拿着关键道具时，相关行动的"目的地"不作数。
+
+        · 造喷雾要持书（requires: omen_book）。不挡的话全体英雄都往研究
+          实验室/厨房挤，而只有持书的人做得成检定。
+        · 毁喷雾要叛徒先把喷雾偷到手（p89）。不挡的话叛徒把深渊/熔炉房/
+          地下湖当常驻目标来回巡视空房（与 9 号"毁圣徽"同款问题）。
+        """
+        if action_id == "make_plant_spray" and "omen_book" not in player.items:
+            return True
+        if action_id == "destroy_spray" and not engine.tokens_held_by(player.id, "plant_spray"):
+            return True
+        return False
+
+    def bot_goal_suppressed(self, engine: Any, player: Any) -> bool:
+        """叛徒没抢到喷雾时没有剧本目标房间（见 bot_action_blocked）。
+
+        它的取胜路径只剩"杀光英雄"（p89），正确行为是转头追杀英雄；不抑制
+        的话 key_rooms 保底会把实验室/厨房/三间销毁房当成目的地。
+        """
+        return player.role == "traitor" and not engine.tokens_held_by(player.id, "plant_spray")
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """拿着喷雾的人去找爬行藤（根或尖端）所在的房间喷杀（p18）。
+
+        喷杀不需要检定，但要"走进有根或尖端的房间"才能按住喷雾（引擎在
+        available_actions 里按这条过滤）。spray_creeper 行动没有 rooms
+        字段，静态表表达不了"藤现在在哪"，所以按令牌/怪物实时取。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        if not engine.tokens_held_by(player.id, "plant_spray"):
+            return []
+        rooms: set[str] = set()
+        for token in engine.tokens_of_kind("root"):
+            if token.room_key:
+                rooms.add(f"__room__{token.room_key}")
+        for monster in engine.state.monsters:
+            if _monster_id(monster) == self.CREEPER_TEMPLATE:
+                rooms.add(f"__room__{monster.room_key}")
+        return sorted(rooms)
+
+    def bot_captor_monster(self, engine: Any, player: Any) -> Any | None:
+        """抓着该玩家的爬行藤尖端（bot_ai 会让它优先攻击这只，赢即脱身）。
+
+        p18："You can also make an attack against the Tip ... If you defeat
+        the Tip, it is stunned and releases you." 同房间往往有多只尖端，
+        不指定目标时机器人按列表顺序打错对象，永远脱不了身——实测
+        seed127/5p 在入口大厅被钉了 180 回合、整局 245 回合。
+        """
+        grabbed = engine._haunt_flags().get("grabbed", {})
+        monster_id = grabbed.get(str(player.id))
+        if monster_id is None:
+            return None
+        return next(
+            (m for m in engine.state.monsters if str(getattr(m, "id", "")) == str(monster_id)),
+            None,
+        )
+
     def available_actions(self, engine: Any, player: Any) -> list[Any]:
         actions = super().available_actions(engine, player)
         result = []
@@ -2309,6 +2384,26 @@ class DeathDanceMode(GenericModeHandler):
             return False
         return self.HOLY_SYMBOL in engine.state.card_decks.get("omen", [])
 
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        """圣徽不在自己手上时，"毁掉圣徽"的房间不算目标。
+
+        毁圣徽要求先偷到手（requires: omen_holy_symbol），但机器人的寻路
+        目标只看行动声明的 rooms，于是叛徒把深渊/熔炉房/地下湖当常驻目标
+        来回巡视——圣徽还压在预兆牌堆里时它根本无从下手，实测 seed109/3p
+        在地下室三间房之间绕了 33 圈、整局拖到 133 回合。拿到手后行动
+        自然解锁（引擎本身也要求持徽才能执行）。
+        """
+        if action_id == "destroy_holy_symbol" and self.HOLY_SYMBOL not in player.items:
+            return True
+        return False
+
+    def bot_goal_suppressed(self, engine: Any, player: Any) -> bool:
+        """叛徒没持圣徽时没有任何剧本目标房间（见 bot_action_blocked）。
+
+        没有这条，key_rooms 保底会把五芒星室/舞厅/三间销毁房当成目的地，
+        叛徒继续在空房间之间来回；正确行为是转头追杀英雄（通用追击逻辑）。
+        """
+        return player.role == "traitor" and self.HOLY_SYMBOL not in player.items
     def available_actions(self, engine: Any, player: Any) -> list[Any]:
         actions = super().available_actions(engine, player)
         result = []

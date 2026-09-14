@@ -169,15 +169,26 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         "hero": {
             "objective_type": "craft_and_destroy",
             "needed_items": ["书", "植物喷雾"],
-            "target_rooms": ["research_laboratory", "kitchen"],
-            "attack_monsters": True,
+            # 目标房间（研究实验室/厨房）不写死：只有持书的人去才做得出喷雾，
+            # 写死会让全体英雄往实验室挤。书还没进场时由 CarnivorousIvyMode
+            # 的 bot_wants_explore 接管（去翻新房间找书），持书后目的地由
+            # make_plant_spray 行动的 rooms 提供（bot_action_blocked 已把
+            # 非持有人挡在门外）。
+            "target_rooms": [],
+            # 不追爬行物：杀尖端只是击晕、不解决问题，追过去反而被反击抓走
+            # 拖向根部吞噬（68 号同款坑）。同房间自己挨打时照常还手（
+            # _filter_attack_targets 不看这一项），拿喷雾后由
+            # CarnivorousIvyMode.bot_goal_rooms 指向有根/尖端的房间。
+            "attack_monsters": False,
             "protect_humans": True,
             "victory_focus": "带书制作植物喷雾，然后逐个清理爬行物",
         },
         "traitor": {
             "objective_type": "destroy_key_item",
             "needed_items": ["植物喷雾"],
-            "target_rooms": ["chasm", "furnace_room", "underground_lake"],
+            # 同上：销毁房间只在抢到喷雾后才算目标，由 destroy_spray 行动的
+            # rooms 提供，bot_action_blocked / bot_goal_suppressed 把关。
+            "target_rooms": [],
             "attack_heroes": True,
             "prefer_weak_targets": False,
             "victory_focus": "抢走植物喷雾并把它带到危险房间销毁",
@@ -218,7 +229,12 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         "traitor": {
             "objective_type": "destroy_relic",
             "needed_items": ["圣徽"],
-            "target_rooms": ["chasm", "furnace_room", "underground_lake"],
+            # 销毁房间（深渊/熔炉房/地下湖）不写死：圣徽不在手上时这些房间
+            # 不是目的地，写死会让叛徒来回巡视空房（seed109/3p 实测在地下室
+            # 三间房之间绕了 33 圈、整局拖到 133 回合）。目标改由
+            # destroy_holy_symbol 行动的 rooms 提供，DeathDanceMode 的
+            # bot_action_blocked 负责"没持徽就不算目标"。
+            "target_rooms": [],
             "attack_heroes": True,
             "prefer_weak_targets": False,
             "victory_focus": "夺取圣徽并带到可销毁的房间",

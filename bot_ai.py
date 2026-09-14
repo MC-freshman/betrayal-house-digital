@@ -382,6 +382,13 @@ class BotController:
             return False
         profile = self._side_profile(engine, player)
         choices: list[tuple[int, object, str | None, bool]] = []
+        # 被某只怪"抓着/贴附"时先打它：打别的怪再多次也脱不了身。
+        # 7 号实测：英雄被 mon_3 抓住，却按列表顺序一直打 mon_1，在入口
+        # 大厅被钉了 180 回合（p18 明确"攻击抓着你的尖端，赢了就松手"）。
+        captor = None
+        captor_hook = getattr(engine._mode_handler(), "bot_captor_monster", None)
+        if callable(captor_hook):
+            captor = captor_hook(engine, player)
         weapon_ids: list[str | None] = [None] + engine.available_attack_weapons(player)
         for weapon_id in weapon_ids:
             ranged = False
@@ -397,6 +404,8 @@ class BotController:
                 if not engine.attack_would_be_allowed(player, target, weapon_id):
                     continue
                 score = self._target_score(engine, player, target, profile) + bonus
+                if captor is not None and target is captor:
+                    score += 200
                 if ranged:
                     score += 3
                 choices.append((score, target, weapon_id, ranged))
@@ -581,12 +590,27 @@ class BotController:
             if room:
                 if option.target_key == previous_room_key:
                     value -= 55
+                if (
+                    room.template_id in engine.NON_TRANSIT_TEMPLATES
+                    and option.target_key not in haunt_goals
+                    and option.target_key not in committed_steps
+                ):
+                    # 进入即被随机传送的房间（神秘电梯）：不是剧本明确目标就别进。
+                    # 人不会为了抄近路赌一次随机传送；机器人却会因为它是"前沿"
+                    # 或在中转路径上而走进去（seed137/4p）。扣分只影响优先级，
+                    # 真的没别的选择时仍然会走。
+                    value -= 70
                 if engine.state.phase == "EXPLORE" and room.visit_count == 0:
                     value += 20
                 if engine.state.phase == "EXPLORE":
                     # 目标楼层由 _next_steps_toward_objectives 决定；这里的前沿数量
                     # 只做轻微的同楼层偏好，不能压过前往另一层的明确路线。
-                    value += 2 * len(engine.exploration_frontier_keys(room.floor))
+                    # 上限 6：不封顶时"前沿越多、已有房间越香"——房子一大
+                    # （前沿 ≥13 间）就永远压过"就地翻门"的 155，机器人从此
+                    # 不再探索、整局在几间屋子间绕圈（seed131/3p 实测：
+                    # 48/49 房间铺满后停在探索期 400 回合，最后一张预兆房
+                    # 明明放得下却没人去翻）。
+                    value += 2 * min(6, len(engine.exploration_frontier_keys(room.floor)))
                 if engine.room_items(room.key):
                     value += 50 if player.bot_difficulty == "hard" else 35
                 if room.name in target_rooms or room.template_id in target_rooms:
@@ -677,6 +701,15 @@ class BotController:
             provided = custom_goals(engine, player) or []
             if provided:
                 goals.update(provided)
+
+        # 0b) 剧本可声明"这个玩家此刻没有任何剧本目标房间"（区别于上面
+        #     bot_goal_rooms 返回空 = 退回通用换算）。9 号实测：叛徒唯一的
+        #     行动要持圣徽才能做，而 key_rooms 保底会把深渊/熔炉房/地下湖
+        #     当成目的地，它在三间空房之间绕了 33 圈；此时它的正确目标是
+        #     追杀英雄（通用追击逻辑），不该再被空目标牵着走。
+        suppressed = getattr(handler, "bot_goal_suppressed", None)
+        if callable(suppressed) and suppressed(engine, player):
+            return set()
 
         # 1) 有房间要求的剧本行动：挖曼德拉草要去温室/储藏室/厨房，
         #    降灵会要去五芒星室……
@@ -898,7 +931,10 @@ class BotController:
 
         next_steps: set[str] = set()
         for target_key in targets:
-            path = engine._shortest_path(player.room_key, target_key)
+            # avoid_transit=True：不能把"进入即传送"的神秘电梯当中转。默认
+            # 路径会把它当普通房间穿过去，机器人于是主动走进电梯、被丢到随机
+            # 楼层（seed137/4p 实测 400 行日志里 15 次进电梯、17 次被传送）。
+            path = engine._shortest_path(player.room_key, target_key, avoid_transit=True)
             if len(path) > 1:
                 next_steps.add(path[1])
         return next_steps
