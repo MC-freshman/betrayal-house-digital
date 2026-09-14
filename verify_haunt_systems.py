@@ -7297,9 +7297,10 @@ def verify_haunt65_breath_of_wind() -> None:
         _set_current(engine, hero)
         ids = {a.id for a in handler.available_actions(engine, hero)}
         assert "find_candle" in ids, "在蜡烛房间应能找蜡烛"
-        with patch.object(engine, "_roll_attack", return_value=5):
+        # 找蜡烛是速度 3+ 的检定：失败不发蜡烛（批次 3 修掉了"行动已执行=成功"）。
+        with patch.object(engine, "_resolve_check", return_value=True):
             assert handler.perform_action(engine, hero, "find_candle", {}) is True
-        assert engine.tokens_held_by(hero.id, "candle"), "找蜡烛应获得蜡烛"
+        assert engine.tokens_held_by(hero.id, "candle"), "找蜡烛（检定成功）应获得蜡烛"
 
     # 点燃蜡烛
     haunt_floor = engine.state.board.get(engine._haunt_rule_state().get("haunt_room", "")).floor
@@ -8835,6 +8836,214 @@ def verify_haunt9_traitor_goal_gating() -> None:
         )
 
 
+def verify_stairs_reverse_link_exit() -> None:
+    """楼梯链接只在一侧声明时，出口生成必须补出反向选项（图与出口一致）。
+
+    13 号 seed137/3p 实测：图里"入口大厅—地下室楼梯"相邻（_build_graph 会
+    对称补边），出口列表里却没有这条（只扫本房间的 links）——机器人寻路把
+    这条边当下一步，承诺加分落在一个选不出来的选项上，在入口大厅↔厨房来回
+    16 次；而去地下墓穴其实只要下两层楼。楼梯在物理上双向可走。
+    """
+    engine = _new_engine(seed=3, players=4)
+    entrance_key = next(
+        key for key, room in engine.state.board.items() if room.template_id == "entrance_hall"
+    )
+    stairs_key = engine._ensure_room_in_play("stairs_from_basement", entrance_key)
+    assert stairs_key, "地下室楼梯应当能放上场"
+    assert "up" in engine.state.board[stairs_key].links, "前提：楼梯只从自己一侧声明 up 链接"
+
+    hero = engine.state.players[0]
+    hero.room_key = entrance_key
+    hero.movement_stopped = False
+    targets = {
+        option.target_key
+        for option in engine.available_move_options(hero)
+        if not option.is_new_room
+    }
+    assert stairs_key in targets, "入口大厅应当能顺着楼梯下到地下室楼梯"
+
+    # 图与出口必须一致：图里的邻居都得有对应出口，否则机器人会走向走不通的下一步。
+    graph_neighbors = set(engine._build_graph(avoid_transit=True)[entrance_key])
+    missing = graph_neighbors - targets
+    assert not missing, f"图里有边但走不过去：{sorted(missing)}"
+
+
+def verify_haunt13_wake_success_gating() -> None:
+    """p24：唤醒检定失败不能当成功——令牌与轨道必须一致。
+
+    seed137/5p 实测：唤醒令牌 6 枚、轨道只记 4 点。旧实现拿
+    `ok = super().perform_action(...)` + `if ok:` 当成功标志，而引擎的返回值
+    是"行动是否执行"（检定失败同样是 True），失败也发了一枚"唤醒成功"令牌。
+    """
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=13)
+    handler = engine._mode_handler()
+    assert isinstance(handler, NightmareDreamMode)
+    sleeper_room = engine._haunt_flags().get("sleeper_room")
+    assert sleeper_room, "沉睡房间应当已记录"
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    hero.room_key = sleeper_room
+    if "omen_holy_symbol" not in hero.items:
+        hero.items.append("omen_holy_symbol")
+    _set_current(engine, hero)
+
+    def clear_used() -> None:
+        engine._haunt_rule_state().setdefault("actions_used", {}).clear()
+
+    before_track = engine._haunt_track_value("waking_progress")
+    before_tokens = len(engine.tokens_of_kind("wake_token"))
+    with patch.object(engine, "_resolve_check", return_value=False):
+        handler.perform_action(engine, hero, "wake_attempt", {})
+    assert engine._haunt_track_value("waking_progress") == before_track, "检定失败不能推进唤醒轨道"
+    assert len(engine.tokens_of_kind("wake_token")) == before_tokens, "检定失败不能发唤醒成功令牌"
+
+    clear_used()
+    with patch.object(engine, "_resolve_check", return_value=True):
+        handler.perform_action(engine, hero, "wake_attempt", {})
+    assert engine._haunt_track_value("waking_progress") == before_track + 1, "检定成功必须推进轨道"
+    assert len(engine.tokens_of_kind("wake_token")) == before_tokens + 1, "检定成功必须发令牌"
+
+
+def verify_haunt13_goal_hooks() -> None:
+    """p24：圣徽到手后英雄应当直奔沉睡房间；还压在牌堆里就先翻新房间。
+
+    没有这两条时机器人只剩 key_rooms 保底，在门厅/庭院一带来回（seed137/3p、
+    131/5p 实测各 16 次），英雄胜线打不出来。
+    """
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=13)
+    handler = engine._mode_handler()
+    assert isinstance(handler, NightmareDreamMode)
+    sleeper_room = engine._haunt_flags().get("sleeper_room")
+    assert sleeper_room, "沉睡房间应当已记录"
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    # 圣徽还在预兆牌堆里：先去翻房间，不给固定目标
+    for player in engine.state.players:
+        while "omen_holy_symbol" in player.items:
+            player.items.remove("omen_holy_symbol")
+    for key in list(engine.state.room_items):
+        engine.state.room_items[key] = [
+            card for card in engine.state.room_items[key] if card != "omen_holy_symbol"
+        ]
+    if "omen_holy_symbol" not in engine.state.card_decks["omen"]:
+        engine.state.card_decks["omen"].append("omen_holy_symbol")
+    assert handler.bot_wants_explore(engine, hero) is True, "圣徽在牌堆里 → 必须去翻新房间"
+    assert handler.bot_goal_rooms(engine, hero) == [], "圣徽没到手时不给固定目标"
+
+    # 圣徽到手：目标 = 沉睡者的房间
+    engine.state.card_decks["omen"].remove("omen_holy_symbol")
+    hero.items.append("omen_holy_symbol")
+    assert handler.bot_wants_explore(engine, hero) is False, "圣徽到手后不必再去翻牌"
+    assert handler.bot_goal_rooms(engine, hero) == [f"__room__{sleeper_room}"]
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    assert handler.bot_goal_rooms(engine, traitor) == [], "叛徒不拿英雄目标"
+
+
+def verify_haunt14_goal_hooks() -> None:
+    """p25/p96：背罐去五芒星室隔壁扔、空手去捡罐、叛徒背尸去献祭。
+
+    没有这条时机器人只有 key_rooms 保底（五芒星室 + 四间油漆房），到达一间后
+    重挑"最近"的下一间，永远在油漆房之间来回（seed137/5p 实测厨房×88、
+    储藏室×87，整局拖到 127 回合）。
+    """
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=14)
+    handler = engine._mode_handler()
+    assert isinstance(handler, StarsRightMode)
+    pentagram = handler._pentagram_room(engine)
+    assert pentagram, "五芒星室应当在场上"
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # 空手：目标 = 还有罐的房间
+    loose = {token.room_key for token in engine.tokens_of_kind(handler.PAINT) if token.room_key}
+    assert loose, "开局应当有散落的油漆罐"
+    assert set(handler.bot_goal_rooms(engine, hero)) == {f"__room__{key}" for key in loose}
+
+    # 背罐：目标 = 与五芒星室有门相连的房间（到了就能扔）
+    token = next(t for t in engine.tokens_of_kind(handler.PAINT) if t.room_key)
+    engine.give_token(token.uid, hero.id)
+    goals = handler.bot_goal_rooms(engine, hero)
+    assert goals, "背罐英雄应当有扔罐目标"
+    for goal in goals:
+        key = goal.replace("__room__", "")
+        assert handler._door_adjacent(engine, key, pentagram), "扔罐目标必须与五芒星室有门相连"
+
+    # 叛徒：地上有尸体 → 去搬；背着尸体 → 去五芒星室献祭
+    engine.spawn_token(handler.CORPSE, label="死者", role="marker", room_key=hero.room_key)
+    assert handler.bot_goal_rooms(engine, traitor) == [f"__room__{hero.room_key}"]
+    corpse = next(iter(engine.tokens_of_kind(handler.CORPSE)))
+    engine.give_token(corpse.uid, traitor.id)
+    assert handler.bot_goal_rooms(engine, traitor) == [f"__room__{pentagram}"]
+
+
+def verify_haunt15_equipment_goal() -> None:
+    """p26/p97：英雄先去地下室取三件套，装备被拿走/穿上后目标要消失。
+
+    没有这条目标时机器人只会朝龙硬冲，试玩实测英雄 0/18 胜；补上之后
+    护甲/盾会被真的取走（改后同一批种子英雄 2/18 胜，且能打到斩杀）。
+    """
+    engine = _run_until_haunt(seed=113, players=4, haunt_id=15)
+    handler = engine._mode_handler()
+    assert isinstance(handler, DragonSiegeMode)
+    flags = engine._haunt_flags()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+
+    goals = set(handler.bot_goal_rooms(engine, hero))
+    armor_room = flags.get("armor_room")
+    assert armor_room and f"__room__{armor_room}" in goals, "护甲房应当进目标"
+    shield = next(t for t in engine.tokens_of_kind("shield") if t.room_key)
+    assert f"__room__{shield.room_key}" in goals, "盾所在房应当进目标"
+
+    # 有人穿上护甲：护甲房不再是目标；盾被拿走：盾房也不再是目标
+    armor = next(iter(engine.tokens_in_room(armor_room, "antique_armor")))
+    engine.give_token(armor.uid, hero.id)
+    flags["worn_by"] = hero.id
+    engine.give_token(shield.uid, hero.id)
+    goals = set(handler.bot_goal_rooms(engine, hero))
+    assert f"__room__{armor_room}" not in goals, "护甲已被穿走，不该再当目标"
+    assert f"__room__{shield.room_key}" not in goals, "盾已被拿走，不该再当目标"
+
+
+def verify_mode_rewards_gated_on_check_success() -> None:
+    """源码级回归：handler 的奖励块不能拿"行动已执行"当成功标志。
+
+    引擎 `perform_action` 的返回值是"行动是否执行"（检定失败同样返回 True），
+    判定成功与否要看 `engine.last_haunt_action_succeeded()`。批次 3 审计在
+    9/13/16/17/18/20/37/43/44/45/53/54/55/61/63/65/68 号里修了 15 处旧写法
+    （如 13 号失败也发"唤醒成功"令牌、53 号失败也能开门）。规则里没有
+    stat/attack 的行动永远成功，`if ok:` 与成功等价，不进红名单。
+    """
+    import re
+
+    import haunt_rules
+
+    risky_ids: set[str] = set()
+    for rule in haunt_rules.HAUNT_RULE_OVERRIDES.values():
+        for action in (rule or {}).get("actions", []) or []:
+            if "stat" in action or "attack" in action:
+                risky_ids.add(str(action.get("id")))
+
+    source = (Path(__file__).resolve().parent / "haunt_modes.py").read_text(encoding="utf-8")
+    lines = source.splitlines()
+    offenders: list[tuple[int, str]] = []
+    for index, line in enumerate(lines):
+        if "= super().perform_action" not in line:
+            continue
+        if not any(follow.strip() == "if ok:" for follow in lines[index + 1: index + 5]):
+            continue
+        action_id = ""
+        for back in range(index, max(index - 40, -1), -1):
+            match = re.match(r'\s*(?:el)?if action_id == "([^"]+)"', lines[back])
+            if match:
+                action_id = match.group(1)
+                break
+        if action_id in risky_ids:
+            offenders.append((index + 1, action_id))
+    assert not offenders, (
+        "这些奖励块仍在拿「行动已执行」当成功（应为 ok and engine.last_haunt_action_succeeded()）："
+        f"{offenders}"
+    )
+
+
 def main():
     verify_mode_dispatch()
     verify_mode_handler_reaches_engine()
@@ -8997,6 +9206,13 @@ def main():
     verify_haunt7_goal_hooks()
     verify_bot_attacks_captor_first()
     verify_haunt9_traitor_goal_gating()
+    # M10-40：批次 3（剧本 11-15）审计新增的引擎能力与修复
+    verify_stairs_reverse_link_exit()
+    verify_haunt13_wake_success_gating()
+    verify_haunt13_goal_hooks()
+    verify_haunt14_goal_hooks()
+    verify_haunt15_equipment_goal()
+    verify_mode_rewards_gated_on_check_success()
     print("verify_haunt_systems: ok")
 
 

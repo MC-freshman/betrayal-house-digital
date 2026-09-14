@@ -736,6 +736,42 @@ class GameEngine:
                     cost=cost,
                 )
             )
+        # 反向链接：楼梯这类连接只在一侧声明（"地下室楼梯"声明 up→"入口大厅"，
+        # 入口大厅没有对应的 down 链接）。_build_graph 会对称补边，出口生成却只看
+        # 本房间的 links——于是"图里相邻、实际走不过去"：机器人寻路会把这条件
+        # 边当成下一步，承诺加成落在一个不存在的选项上，于是原地打转
+        # （13 号 seed137/3p：英雄在入口大厅↔厨房来回 16 次，而去地下墓穴其实
+        # 只要下两层楼）。楼梯在物理上双向可走，这里为指向本房间的单侧链接补出
+        # 反向出口，让出口与图重新一致。
+        reverse_labels = {"up": "down", "down": "up"}
+        for other_key, other in self.state.board.items():
+            if other_key == room.key or self._is_collapsed(other_key):
+                continue
+            for label, value in other.links.items():
+                if label in DIRECTIONS:  # 方位型链接由门覆盖，同正向循环
+                    continue
+                if self._link_target_key(value) != room.key:
+                    continue
+                if any(
+                    not option.is_new_room and option.target_key == other_key
+                    for option in options
+                ):
+                    break  # 门或本房间自己的链接已经能到这里，不必重复
+                if self._mode_handler().room_entry_blocked(self, player, other):
+                    break
+                reverse = reverse_labels.get(label, label)
+                options.append(
+                    ExitOption(
+                        label=f"使用{self._special_link_cn(reverse)}前往 {other.name}",
+                        direction=reverse,
+                        target_key=other_key,
+                        target_room_name=other.name,
+                        is_new_room=False,
+                        is_special=True,
+                        cost=self._movement_cost(player, room, from_key=player.room_key),
+                    )
+                )
+                break
         # 剧本可追加额外移动选项（剧本 33 p44：从地下湖的无门水缘划入湖面）。
         options.extend(self._mode_handler().extra_move_options(self, player, options))
         return options

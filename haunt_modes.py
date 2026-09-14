@@ -2432,7 +2432,7 @@ class DeathDanceMode(GenericModeHandler):
                 engine._log("需要有英雄把圣徽带进五芒星室才能尝试放逐。")
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 engine.spawn_token(
                     "sanity_check", label="放逐成功", role="check", room_key=player.room_key
                 )
@@ -3070,6 +3070,47 @@ class NightmareDreamMode(GenericModeHandler):
     def _sleeper_room(self, engine: Any) -> str | None:
         return engine._haunt_flags().get("sleeper_room")
 
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """圣徽到手后，全体英雄去沉睡者的房间（p24 唤醒条件是"人在那间房"）。
+
+        `wake_attempt` 没有 rooms 字段，静态表表达不了"沉睡者在哪"；没有这条
+        时机器人只剩 key_rooms 保底，在门厅/庭院一带来回（seed137/3p、131/5p
+        实测各 16 次、往返 21/28 步），英雄胜线几乎打不出来。圣徽还在地上时
+        由 required_cards 的通用逻辑负责去捡，这里只管"送到沉睡者房间"。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        sleeper_room = self._sleeper_room(engine)
+        if not sleeper_room:
+            return []
+        symbol_held = any(
+            other.role == "hero" and not other.dead and "omen_holy_symbol" in other.items
+            for other in engine.state.players
+        )
+        if symbol_held:
+            return [f"__room__{sleeper_room}"]
+        return []
+
+    def bot_wants_explore(self, engine: Any, player: Any) -> bool:
+        """圣徽还压在预兆牌堆里时，英雄必须去翻新房间把它抽出来（p24/p95）。
+
+        同 7/9 号：没有这条，机器人访到沉睡者房间也做不了检定（行动被
+        "圣徽在房"闸门挡住），只能干等，英雄胜线永远开不了。
+        """
+        if player.dead or player.role != "hero":
+            return False
+        if any(
+            "omen_holy_symbol" in other.items
+            for other in engine.state.players
+            if not other.dead
+        ):
+            return False
+        if any(
+            "omen_holy_symbol" in items for items in engine.state.room_items.values()
+        ):
+            return False
+        return "omen_holy_symbol" in engine.state.card_decks.get("omen", [])
+
     def _escape_room_ids(self, engine: Any) -> set[str]:
         return {r.template_id for r in engine.state.board.values()} & set(
             [*self.WINDOW_ROOMS, *self.EXTRA_ESCAPE_ROOMS]
@@ -3168,7 +3209,7 @@ class NightmareDreamMode(GenericModeHandler):
                 engine._log("需要有英雄带着圣徽在沉睡者的房间里才能尝试唤醒。")
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 engine.spawn_token("wake_token", label="唤醒成功", role="check", room_key=player.room_key)
             return ok
         return super().perform_action(engine, player, action_id, data)
@@ -3361,6 +3402,43 @@ class StarsRightMode(GenericModeHandler):
             if (dx, dy) == (ddx, ddy) and direction in a.doors and OPPOSITE_DOOR[direction] in b.doors:
                 return True
         return False
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p25/p96 的后勤：背罐去五芒星室隔壁扔，背尸去五芒星室献祭。
+
+        两个行动都没有 rooms 字段，静态表表达不了"罐/尸现在在哪、扔罐要站在
+        哪"，机器人只剩 key_rooms 保底（五芒星室 + 四间油漆房）——到达一间后
+        重挑"最近"的下一间，于是永远在油漆房之间来回（seed137/5p 实测
+        厨房×88 / 储藏室×87、往返 172 步、整局拖到 127 回合）。
+        """
+        if player.dead:
+            return []
+        pentagram = self._pentagram_room(engine)
+        if player.role == "hero":
+            if engine.tokens_held_by(player.id, self.PAINT):
+                if not pentagram:
+                    return []
+                # 背着罐：去与五芒星室有门相连的房间，到了就能扔（p25）
+                return [
+                    f"__room__{key}"
+                    for key in sorted(engine.state.board)
+                    if self._door_adjacent(engine, key, pentagram)
+                ]
+            # 空手：去还有罐的房间捡一罐（一次只能背一罐）
+            return [
+                f"__room__{token.room_key}"
+                for token in engine.tokens_of_kind(self.PAINT)
+                if token.room_key
+            ]
+        # 叛徒：背着尸体先去五芒星室献祭（4 分）；否则去有尸体的房间搬尸；
+        # 都没有时不给目标，走通用追击逻辑去打英雄（尸体由击杀产生）。
+        if engine.tokens_held_by(player.id, self.CORPSE):
+            return [f"__room__{pentagram}"] if pentagram else []
+        return [
+            f"__room__{token.room_key}"
+            for token in engine.tokens_of_kind(self.CORPSE)
+            if token.room_key
+        ]
 
     # ------------------------------------------------------------- 尸体
     def on_player_died(self, engine: Any, player: Any) -> None:
@@ -3722,7 +3800,7 @@ class OffspringMode(GenericModeHandler):
                 engine._log("需要有人带着花朵进入毒藤的房间才能削弱它。")
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 engine.spawn_token("knowledge_check", label="削弱成功", role="check", room_key=player.room_key)
                 flags["weaken_count"] = int(flags.get("weaken_count", 0)) + 1
                 needed = 2 if len(engine.state.players) <= 4 else 3
@@ -4414,7 +4492,7 @@ class SupernaturalAgingMode(GenericModeHandler):
                 engine._log("这个房间不能用于仪式（或已被使用）。")
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 used.add(room_id)
                 engine._haunt_flags()["ritual_rooms_used"] = sorted(used)
                 engine.spawn_token("knowledge_check", label="仪式成功", role="check", room_key=player.room_key)
@@ -4500,7 +4578,7 @@ class TimeBombMode(GenericModeHandler):
                 engine._log("你身上没有炸弹（或已拆除）。")
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 bomb_defused = engine._haunt_flags().setdefault("bomb_defused", [])
                 pid = str(player.id)
                 if pid not in bomb_defused:
@@ -4956,7 +5034,7 @@ class DeathCheckmateMode(GenericModeHandler):
                 engine._log("这个房间里没有圣印。")
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 engine.remove_token(token.uid)
                 flags = engine._haunt_flags()
                 flags["seals_broken"] = int(flags.get("seals_broken", 0)) + 1
@@ -6389,7 +6467,7 @@ class GhostBrideMode(GenericModeHandler):
     def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
         if action_id == "disinter_body":
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 corpse = next(iter(engine.tokens_in_room(player.room_key, self.CORPSE)), None)
                 if corpse is not None:
                     engine.give_token(corpse.uid, player.id)
@@ -6955,7 +7033,7 @@ class BugSprayMode(GenericModeHandler):
                 engine._log("这个房间里没有被缚的探险者。")
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 flags = engine._haunt_flags()
                 freed_ids = {str(p.id) for p in webbed_here}
                 flags["webbed"] = [pid for pid in flags.get("webbed", []) if pid not in freed_ids]
@@ -7259,6 +7337,32 @@ class DragonSiegeMode(GenericModeHandler):
             engine._place_card_in_room(room.key, "omen_spear")
             flags["spear_room"] = room.key
             engine._log(f"{room.name}里躺着一件装备：长矛。")
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p26/p97：先取地下室的三件套，再去屠龙——空手冲龙只是送死。
+
+        装备全以令牌/卡牌形式散在地下室，没有这条目标机器人只会朝龙硬冲
+        （试玩实测英雄 0/18 胜）。像人的打法是先武装自己：护甲（物理 -5）、
+        盾（免疫龙焰）、长矛（攻防 +4）。装备被拿走/穿上/捡起后目标自动
+        消失（令牌、卡牌已不在原地），不会赖着不走。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        flags = engine._haunt_flags()
+        rooms: list[str] = []
+        if flags.get("worn_by") is None:
+            armor_room = flags.get("armor_room")
+            if armor_room and engine.tokens_in_room(armor_room, "antique_armor"):
+                rooms.append(f"__room__{armor_room}")
+        rooms.extend(
+            f"__room__{token.room_key}"
+            for token in engine.tokens_of_kind("shield")
+            if token.room_key
+        )
+        spear_room = flags.get("spear_room")
+        if spear_room and "omen_spear" in engine.state.room_items.get(spear_room, []):
+            rooms.append(f"__room__{spear_room}")
+        return rooms
 
     # ------------------------------------------------------------- 内部
     def _door_adjacent(self, engine: Any, key_a: str, key_b: str) -> bool:
@@ -15150,7 +15254,7 @@ class KingsRoadsMode(GenericModeHandler):
                 engine._log("这个房间已经用过了。")
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 used.add(room_id)
                 engine._haunt_flags()["used_sources"] = sorted(used)
             return ok
@@ -15287,7 +15391,7 @@ class ArkanokSkullMode(GenericModeHandler):
                 engine._log("你必须在遗骸所在的房间。")
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 skull = next(iter(engine.tokens_held_by(player.id, "skull")), None)
                 if skull:
                     engine.place_token(skull.uid, player.room_key)
@@ -15437,7 +15541,7 @@ class ToxicObjectEscapeMode(GenericModeHandler):
 
         if action_id == "unlock_door":
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 flags["door_unlocked"] = True
                 engine._log("前门解锁了！")
             return ok
@@ -16163,7 +16267,7 @@ class BreathOfWindMode(GenericModeHandler):
         flags = engine._haunt_flags()
         if action_id == "find_candle":
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 engine.spawn_token("candle", label="蜡烛", role="carried", holder=player.id)
                 flags["candles_found"] = int(flags.get("candles_found", 0)) + 1
                 engine._log(f"{player.name} 找到了一根蜡烛。")
@@ -16176,7 +16280,7 @@ class BreathOfWindMode(GenericModeHandler):
                 return False
             engine.remove_token(token.uid)
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 room_id = engine._current_room_template_id(player)
                 used = flags.setdefault("candle_rooms_used", [])
                 used.append(room_id)
@@ -17493,7 +17597,7 @@ class TwistingNetherMode(GenericModeHandler):
                 engine._log("这个房间已经锚定了。")
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 anchored.append(player.room_key)
                 engine._log(f"{engine.state.board[player.room_key].name} 被锚定到了现实！")
             return ok
@@ -17653,7 +17757,7 @@ class EternalGloryMode(GenericModeHandler):
             if not relic:
                 return False
             ok = super().perform_action(engine, player, action_id, data)
-            if ok:
+            if ok and engine.last_haunt_action_succeeded():
                 engine._advance_haunt_track("persuasion_track", 1)
                 new_track = engine._haunt_track_value("persuasion_track")
                 target_track = 2 * sum(1 for p in engine.state.players if p.role == "hero")
