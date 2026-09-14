@@ -9409,7 +9409,63 @@ def main():
     verify_haunt16_timer_and_defuse_gate()
     verify_haunt18_breath_gating()
     verify_haunt20_corpse_drop_and_timer()
+    # M10-42/批次 5：抓人藤蔓/触手的必拖拽 + #23 英雄斩首引导
+    verify_haunt7_23_drag_and_goal_hooks()
     print("verify_haunt_systems: ok")
+
+
+def verify_haunt7_23_drag_and_goal_hooks() -> None:
+    """剧本 7/23：抓着人的尖端必须每回合往根部拖（引擎闸门 bug 回归）。
+
+    引擎只在"怪物不在目标房"时才调 `on_monster_move`（`_resolve_monster_turns`
+    的 `len(path) > 1` 闸门），而抓着人的尖端**总与猎物同房**，拖拽代码永不执行：
+    人质每回合挣脱失败就结束回合（不能行动、不掉血），双方都收不了场。
+    seed137/4p 实测 400 回合 `往根部缩` 0 次、完成 11/18。修法是在剧本的
+    `on_monster_turn_start` 里自己走这一步。另外 #23 的头颅房离得远时，英雄
+    需要 `bot_goal_rooms` 指引才会去斩首（18 局 `destroy_head` 0 次）。
+    """
+    for haunt_id, expected_step in ((7, 2), (23, 1)):
+        engine = _run_until_haunt(seed=137, players=3, haunt_id=haunt_id)
+        handler = engine._mode_handler()
+        tips = handler._tips(engine)
+        assert tips, f"剧本 {haunt_id} 应有尖端在场"
+        tip = tips[0]
+        root = handler._root_for_tip(engine, tip)
+        assert root is not None, "尖端应有配对的根"
+
+        # 挑一个离根最远的房间，把"尖端 + 人质"放过去
+        far = max(
+            (key for key in engine.state.board if key != root.room_key),
+            key=lambda key: engine._path_length(key, root.room_key),
+        )
+        before = engine._path_length(far, root.room_key)
+        assert before >= expected_step + 1, "需要一个离根足够远的房间来观察拖拽"
+        hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+        tip.room_key = far
+        hero.room_key = far
+        engine._haunt_flags().setdefault("grabbed", {})[str(hero.id)] = tip.id
+
+        took_over = handler.on_monster_turn_start(engine, tip)
+        assert took_over is True, "抓着人的尖端应接管本回合行动（否则引擎不会拖）"
+        assert tip.room_key == hero.room_key, "人质必须跟着尖端走"
+        after = engine._path_length(tip.room_key, root.room_key)
+        assert after < before, f"拖拽应更靠近根部：{before} → {after}"
+        assert before - after <= expected_step, "每回合拖拽步数不应超过剧本设定"
+
+    # #23 斩首引导：持炸药/长矛者直奔头颅房，其余人不受影响
+    engine = _run_until_haunt(seed=137, players=3, haunt_id=23)
+    handler = engine._mode_handler()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    other = next((p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead), None)
+    head_key = next(key for key in engine.state.board if key != hero.room_key)
+    engine._haunt_flags()["head_room"] = head_key
+    assert handler.bot_goal_rooms(engine, hero) == [], "没带武器时不该直奔头颅房"
+    hero.items.append("item_dynamite")
+    assert handler.bot_goal_rooms(engine, hero) == [f"__room__{head_key}"], (
+        "持炸药者应以头颅房为目标"
+    )
+    assert handler._can_destroy_head(engine, hero) is False, "不在头颅房还不能斩首"
+
 
 
 if __name__ == "__main__":

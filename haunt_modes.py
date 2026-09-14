@@ -8348,6 +8348,20 @@ class TentacledHorrorMode(CarnivorousIvyMode):
         head = engine._haunt_flags().get("head_room")
         return bool(head) and player.room_key == head and any(w in player.items for w in self.HEAD_WEAPONS)
 
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p105 英雄胜线：拿着炸药/长矛的人要走到那颗头所在的房间才能斩首。
+
+        斩首只在同房间可用（`_can_destroy_head`），而头颅定位成功后头颅房
+        可能离得很远。不给目标房间时，机器人只会按"最近怪物"追触手——
+        18 局实测 `destroy_head` 一次都没发生（英雄 0 胜）。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        head = engine._haunt_flags().get("head_room")
+        if head and any(weapon in player.items for weapon in self.HEAD_WEAPONS):
+            return [f"__room__{head}"]
+        return []
+
     def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
         if action_id == self.GAZE_ACTION:
             return self._gaze(engine, player, action_id, data)
