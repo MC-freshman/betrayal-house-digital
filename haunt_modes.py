@@ -312,6 +312,30 @@ class GenericModeHandler:
         """True = 机器人这回合不要离开当前房间（等人、等下一步检定）。"""
         return False
 
+    def bot_blocked_rooms(self, engine: Any, player: Any) -> set[str]:
+        """机器人寻路禁区：不走进、也不作为路径中转的房间（可选，duck-typed）。
+
+        剧本 27 首个使用者：Blob 房间对非 Blobperson 是"踏进去立刻被同化"，
+        真人不会走，引擎默认图里却把它当普通通路。默认空集合，行为不变。
+        """
+        return set()
+
+    def bot_hazard_rooms(self, engine: Any, player: Any) -> set[str]:
+        """机器人险房：可以靠近/经过，但不该在本回合结束时留在里面（可选）。
+
+        剧本 27 首个使用者：Blob 扩张圈——贴边做完检定/投掷后必须退开，否则
+        下一个怪物回合被吞。bot_ai 只在"走进去就没步数退出来"时重扣。
+        """
+        return set()
+
+    def bot_leave_after_action(self, engine: Any, player: Any) -> bool:
+        """True = 本回合剧本行动做完后不要原地等下一回合（可选，duck-typed）。
+
+        剧本 27 首个使用者：贴边检定后留在扩张圈里＝下个怪物回合被同化。
+        默认 False，其它剧本"原地等下一步"的行为不变。
+        """
+        return False
+
     def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
         """剧本进度摘要（可选，duck-typed，桌面 UI 面板会探测）。
 
@@ -9938,26 +9962,166 @@ class AmokFleshMode(GenericModeHandler):
         return True
 
     # ------------------------------------------------------------ bot
+    # bot 的自保模型（p109「下个怪物回合会吞哪些房间」）：
+    #   · Blob 核心：已落地的 Blob 房间；未落地时只有起源房——第一个怪物回合
+    #     会连它的门邻/链接邻域一起吞掉。
+    #   · 险区（danger）：核心 + 一圈邻域。怪物回合后活下来 = 本回合结束时
+    #     不在险区里。贴边检定/投掷必须进险区，所以节奏是"进、做、退"。
+    def _blob_all(self, engine: Any) -> set[str]:
+        flags = engine._haunt_flags()
+        return set(flags.get("blob_rooms", [])) | set(flags.get("blob_seeded", []))
+
+    def _blob_core(self, engine: Any) -> set[str]:
+        blob = self._blob_all(engine)
+        if blob:
+            return blob
+        origin = engine._haunt_flags().get("blob_origin")
+        if origin and origin in engine.state.board:
+            return {origin}
+        return set()
+
+    def _neighbors_of(self, engine: Any, keys: set[str], doors_only: bool = False) -> set[str]:
+        """keys 的邻域（默认门 + 楼梯链接，与扩张同源；doors_only 只算门）。
+
+        与 `_grow_blob` 用同一套扩张规则，危险预判才和实际吞并对得上。
+        """
+        out: set[str] = set()
+        for key in keys:
+            if doors_only:
+                out |= {n for n in engine._door_neighbors(key) if n != key}
+            else:
+                out |= self._blob_neighbors(engine, key)
+        return {
+            k
+            for k in out
+            if k in engine.state.board and k not in keys and not engine._is_collapsed(k)
+        }
+
+    def _danger_zone(self, engine: Any) -> set[str]:
+        """下个怪物回合会被吞掉的房间（核心 + 一圈邻域）。"""
+        core = self._blob_core(engine)
+        if not core:
+            return set()
+        return core | self._neighbors_of(engine, core)
+
+    def _safe_keys(self, engine: Any) -> list[str]:
+        """险区之外的安全房（在这里结束回合不会被吞）。"""
+        danger = self._danger_zone(engine)
+        return [
+            key
+            for key in sorted(engine.state.board)
+            if key not in danger and not engine._is_collapsed(key)
+        ]
+
+    def bot_blocked_rooms(self, engine: Any, player: Any) -> set[str]:
+        """寻路禁区：Blob 房间（bot_ai 不走进也不路过——进去＝立刻同化）。"""
+        if player.dead or self._is_blobperson(engine, player):
+            return set()
+        return self._blob_all(engine)
+
+    def bot_hazard_rooms(self, engine: Any, player: Any) -> set[str]:
+        """危险房：扩张圈（本回合结束留在里面＝下个怪物回合被吞）。"""
+        if player.dead or self._is_blobperson(engine, player):
+            return set()
+        return self._danger_zone(engine)
+
+    def bot_leave_after_action(self, engine: Any, player: Any) -> bool:
+        """贴边做完本回合的一步后必须挪窝（扩张圈里过夜＝被同化）。"""
+        if player.dead or self._is_blobperson(engine, player):
+            return False
+        return bool(engine._haunt_action_used(player))
+
+    def bot_stay_in_room(self, engine: Any, player: Any) -> bool:
+        """本回合的剧本行动已经做完、且退到了险区之外：原地结束回合。"""
+        if player.dead or self._is_blobperson(engine, player):
+            return False
+        if not engine._haunt_action_used(player):
+            return False
+        return player.room_key not in self._danger_zone(engine)
+
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        """给 bot 判寻路目标/可做行动用（p38 顺序：先找弱点，再搜配料，最后投掷）。
+
+        · 弱点没找到前，配料房不是目的地（引擎同样要求 weakness_found，否则
+          bot 会提前跑去配料房干站，把贴边检定的回合浪费掉）。
+        · Blobperson 没有任何剧本行动。
+        """
+        if self._is_blobperson(engine, player):
+            return True
+        if action_id == "search_ingredient" and not engine._haunt_flags().get("weakness_found"):
+            return True
+        return False
+
+    def _has_work_here(self, engine: Any, player: Any) -> bool:
+        """这个房间此刻还有没有值得做的剧本一步（只看位置与旗标，不掷骰）。
+
+        不能在这里调 `available_actions`：试玩探针靠代理统计该接口的
+        "行动出现/使用"，多调一次就把 offered 计数虚增，报出假的"行动空转"
+        （seed151/6p 实测 warned `行动空转:search_ingredient`，实际是钩子的
+        计数噪声）。这里按 p38 的三步流程手写等价判断。
+        """
+        flags = engine._haunt_flags()
+        if player.room_key in self._blob_all(engine):
+            return False
+        adjacent = self._blob_adjacent(engine, player)
+        if not flags.get("weakness_found"):
+            return adjacent  # ① 检查弱点
+        if int(flags.get("ingredients", {}).get(str(player.id), 0)) > 0:
+            return adjacent  # ③ 贴边投掷
+        room = engine.current_room(player)
+        return (  # ② 搜配料
+            room.template_id in self.INGREDIENT_ROOMS
+            and room.key not in set(flags.get("searched_rooms", []))
+        )
+
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
-        if player.role != "hero" or player.dead or self._is_blobperson(engine, player):
+        """英雄 bot 的推进目标（含"贴边看一眼就退开"的自保节奏）。
+
+        旧实现只给扩张圈，实测两个致命问题（seed101/3p 两回合团灭、未完成）：
+        · 英雄在扩张圈里做完检定后原地过夜（`_pending_haunt_action_here`），
+          下一个怪物回合 Blob 正好扩进这间房 → 同化；
+        · 寻路把 Blob 房间当普通通路穿过去（入口大厅→地下室平台）→ 走进即同化。
+        现在：做完一步 / 身处险区却无事可做 → 退回险区外；寻路禁区与危险房
+        分别由 `bot_blocked_rooms` / `bot_hazard_rooms` 交给 bot_ai。
+        """
+        if player.dead or self._is_blobperson(engine, player):
             return []
         flags = engine._haunt_flags()
-        blob = set(flags.get("blob_rooms", [])) | set(flags.get("blob_seeded", []))
-        frontier: list[str] = []
-        for key in sorted(blob):
-            for nxt in engine._door_neighbors(key):
-                if nxt not in blob:
-                    frontier.append("__room__" + nxt)
+        danger = self._danger_zone(engine)
+        retreat = ["__room__" + key for key in self._safe_keys(engine)]
+        if player.role == "traitor":
+            # p109：叛徒也会被同化（原文"包括你自己"）。站在险区先退开；
+            # 其余交给通用追击逻辑——Blob 自会替他料理英雄。
+            return retreat if player.room_key in danger else []
+        if not self._blob_all(engine):
+            # 第一怪物回合之前：起源房与邻室马上要变 Blob（p38：站那儿的
+            # 人赶紧走）。先离开；其余人挪到将来的检定圈上等它落地。
+            if not danger:
+                return []
+            if player.room_key in danger:
+                return retreat
+            return [
+                "__room__" + key
+                for key in sorted(self._neighbors_of(engine, danger, doors_only=True))
+            ]
+        acted = engine._haunt_action_used(player)
+        idle_in_danger = player.room_key in danger and not self._has_work_here(engine, player)
+        if acted or idle_in_danger:
+            return retreat  # 本回合该做的做完了：退回险区外过夜
+        ring = ["__room__" + key for key in sorted(self._neighbors_of(engine, self._blob_all(engine), doors_only=True))]
         if not flags.get("weakness_found"):
-            return frontier  # 弱点阶段：贴着 Blob 检定
-        goals: list[str] = []
-        searched = set(flags.get("searched_rooms", []))
-        for key, room in engine.state.board.items():
-            if room.template_id in self.INGREDIENT_ROOMS and key not in searched and key not in blob:
-                goals.append("__room__" + key)
+            return ring  # 弱点阶段：贴着 Blob 检定
         if int(flags.get("ingredients", {}).get(str(player.id), 0)) > 0:
-            goals.extend(frontier)  # 有配料：去 Blob 邻室投掷
-        return goals
+            return ring  # 有配料：贴边投掷
+        blob = self._blob_all(engine)
+        searched = set(flags.get("searched_rooms", []))
+        return [
+            "__room__" + key
+            for key, room in sorted(engine.state.board.items())
+            if room.template_id in self.INGREDIENT_ROOMS
+            and key not in searched
+            and key not in blob
+        ]
 
     # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:

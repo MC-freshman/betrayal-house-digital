@@ -183,10 +183,12 @@ class BotController:
                 engine.state.phase == "HAUNT_PHASE"
                 and engine._haunt_action_used(player)
                 and self._pending_haunt_action_here(engine, player)
+                and not self._leave_after_action(engine, player)
             ):
                 # 已经在这间房做完一步、下一步还在这间房：原地等下回合。
                 # 24 号实测——英雄启动管风琴后立刻被战斗牵走，知识 6+ 的第二步
-                # 永远没人做，驱魔三步链断在中间。
+                # 永远没人做，驱魔三步链断在中间。剧本可声明"做完必须挪窝"
+                # 否决原地等待（27 号：贴边检定完留在扩张圈里＝下回合被吞）。
                 break
             ranked = self._rank_move_options(engine, player, options)
             if not ranked:
@@ -491,8 +493,39 @@ class BotController:
             return False
         return bool(wants(engine, player))
 
+    def _leave_after_action(self, engine: GameEngine, player: Player) -> bool:
+        """剧本声明"本回合剧本行动做完后必须挪窝"（duck-typed，默认 False）。
+
+        27 号实测：英雄贴着 Blob 做完知识检定后，`_pending_haunt_action_here`
+        判定"下回合还能在这儿做"，于是原地过夜——下一个怪物回合 Blob 正好
+        扩张进这间房，人直接被同化（seed101/3p 两名英雄都没活过两个回合）。
+        真人贴边看一眼就会退开，这里把"要不要原地等"交给剧本决定。
+        """
+        handler = engine._mode_handler()
+        leave = getattr(handler, "bot_leave_after_action", None)
+        return bool(leave(engine, player)) if callable(leave) else False
+
+    def _bot_path_filters(
+        self, engine: GameEngine, player: Player
+    ) -> tuple[set[str], set[str]]:
+        """剧本声明的寻路禁区与危险房（duck-typed，默认空 → 行为不变）。
+
+        · 禁区 `bot_blocked_rooms`：不走进去、也不作为路径中转（27 号 Blob
+          房间：踏进去立刻被同化，真人不会走，也不该被当成抄近路的通道）。
+        · 危险房 `bot_hazard_rooms`：可以靠近/经过（贴边做检定要做），但不该
+          在本回合结束时留在里面（27 号扩张圈：下个怪物回合被吞）。评分时
+          "走进去就没步数退出来"重扣。
+        """
+        handler = engine._mode_handler()
+        blocked_fn = getattr(handler, "bot_blocked_rooms", None)
+        hazard_fn = getattr(handler, "bot_hazard_rooms", None)
+        blocked = set(blocked_fn(engine, player) or ()) if callable(blocked_fn) else set()
+        hazards = set(hazard_fn(engine, player) or ()) if callable(hazard_fn) else set()
+        return blocked - {player.room_key}, hazards
+
     def _rank_move_options(self, engine: GameEngine, player: Player, options: list[ExitOption]) -> list[ExitOption]:
         profile = self._side_profile(engine, player)
+        blocked_rooms, hazard_rooms = self._bot_path_filters(engine, player)
         wants_explore = self._bot_wants_explore(engine, player)
         next_targets = self._next_steps_toward_objectives(engine, player, profile)
         # 剧本层面的目标（该去哪个房间完成剧本任务）。权重刻意低于"追杀"：
@@ -617,6 +650,21 @@ class BotController:
                     value += 95 if player.bot_difficulty == "hard" else 70
                 if room.name in avoid_rooms or room.template_id in avoid_rooms:
                     value -= 90 if player.bot_difficulty == "hard" else 55
+                if option.target_key in blocked_rooms:
+                    # 剧本禁区（27 号 Blob 房间：踏进去立刻被同化）。扣到成负分，
+                    # 只有真的无路可走时才会走——真人同样宁可不走近路。
+                    value -= 400
+                elif option.target_key in hazard_rooms and (
+                    player.steps_remaining - option.cost <= 0
+                    or engine.room_stop_risk(room)
+                ):
+                    # 剧本危险房（27 号扩张圈：下个怪物回合必被吞）：进去以后
+                    # 一步不剩＝要在里面过夜。贴边看一眼就走是可以的，留宿不行，
+                    # 所以只在"没步数退出来"时重扣，不禁止靠近。
+                    # 另一类同样致命：进房可能立刻终止移动的效果房（保险库/
+                    # 研究实验室抽牌、煤导槽/坍塌房传送、深渊/地下墓穴/地下湖
+                    # 检定失败停下）——进去就退不出来，等于把命交给掷骰。
+                    value -= 400
                 value -= self._danger_penalty(player, room.effect_id)
                 # 英雄走位三项扣分（均为新增情形，系数均小于追击 +100 / 剧本
                 # 目标 +95 的正分，不会压过取胜主线）：
@@ -803,12 +851,20 @@ class BotController:
         return room_keys
 
     def _next_steps_toward(self, engine: GameEngine, player: Player, room_keys: set[str]) -> set[str]:
-        """把目标房间集合换算成"下一步该走进哪间"的集合。"""
+        """把目标房间集合换算成"下一步该走进哪间"的集合。
+
+        寻路会绕开剧本禁区（`bot_blocked_rooms`）：27 号实测，英雄从入口大厅
+        去地下室方向的检定位，最短路穿过 Blob 已经吞掉的房间，机器人照走不误、
+        一进去就被同化（seed101/3p 首名英雄）。
+        """
         next_steps: set[str] = set()
+        blocked, _hazards = self._bot_path_filters(engine, player)
         for room_key in room_keys:
             if room_key not in engine.state.board or room_key == player.room_key:
                 continue
-            path = engine._shortest_path(player.room_key, room_key, avoid_transit=True)
+            path = engine._shortest_path(
+                player.room_key, room_key, avoid_transit=True, blocked=blocked
+            )
             if len(path) > 1:
                 next_steps.add(path[1])
         return next_steps
@@ -839,10 +895,13 @@ class BotController:
             self._goal_commitment_by_player.pop(player.id, None)
 
         reachable: list[tuple[int, str]] = []
+        blocked, _hazards = self._bot_path_filters(engine, player)
         for key in sorted(targets):
             if key not in engine.state.board or key == player.room_key:
                 continue
-            distance = engine._path_length(player.room_key, key, avoid_transit=True)
+            distance = engine._path_length(
+                player.room_key, key, avoid_transit=True, blocked=blocked
+            )
             if distance == 9999:
                 continue
             reachable.append((distance, key))
@@ -930,11 +989,15 @@ class BotController:
                     targets.append(key)
 
         next_steps: set[str] = set()
+        blocked, _hazards = self._bot_path_filters(engine, player)
         for target_key in targets:
             # avoid_transit=True：不能把"进入即传送"的神秘电梯当中转。默认
             # 路径会把它当普通房间穿过去，机器人于是主动走进电梯、被丢到随机
             # 楼层（seed137/4p 实测 400 行日志里 15 次进电梯、17 次被传送）。
-            path = engine._shortest_path(player.room_key, target_key, avoid_transit=True)
+            # blocked：同 _next_steps_toward，绕开剧本禁区。
+            path = engine._shortest_path(
+                player.room_key, target_key, avoid_transit=True, blocked=blocked
+            )
             if len(path) > 1:
                 next_steps.add(path[1])
         return next_steps

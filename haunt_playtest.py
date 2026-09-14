@@ -128,10 +128,30 @@ class _HandlerProxy:
     def __getattr__(self, name: str) -> object:
         return getattr(self._inner(), name)
 
+    @staticmethod
+    def _from_pending_probe() -> bool:
+        """这次询问是不是 `_pending_haunt_action_here` 的假设性提问。
+
+        那个检查会临时清掉"本回合已用"标记，只为了问一句"下回合在这间房
+        还能做什么"。它返回的行动**此刻并不可用**，计进 offered 会在
+        "对局刚好在这回合结束"时报出假的"行动空转"（27 号 seed151/6p：
+        英雄最后一回合走进配料房，下回合本该搜索，却先被 Blob 吞掉）。
+        真正的空转仍会被下一回合的真实可用行动抓到，所以这里跳过统计。
+        """
+        frame = sys._getframe(1)
+        for _ in range(5):
+            if frame is None:
+                return False
+            if frame.f_code.co_name == "_pending_haunt_action_here":
+                return True
+            frame = frame.f_back
+        return False
+
     def available_actions(self, engine: object, player: object) -> list:
         actions = self._inner().available_actions(engine, player)  # type: ignore[attr-defined]
-        for action in actions:
-            self._stats.note_offered(str(getattr(action, "id", action)))
+        if not self._from_pending_probe():
+            for action in actions:
+                self._stats.note_offered(str(getattr(action, "id", action)))
         return actions
 
     def perform_action(self, engine: object, player: object, action_id: str, data: dict) -> bool:

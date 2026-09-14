@@ -1443,6 +1443,26 @@ class GameEngine:
     # ------------------------------------------------------------------
     # Room effects
     # ------------------------------------------------------------------
+    # 进入后"可能立刻终止本回合剩余移动"的房间效果（抽牌/传送/坠落/障碍失败）。
+    # 机器人用它判断"走进这间房之后还退不退得出来"——剧本 27 的贴边节奏里，
+    # 在 Blob 扩张圈内踏进这类房间等于把自己钉死（seed101/3p 实测：英雄进保险库、
+    # 知识检定成功连抽两张物品卡，`_draw_item` 把剩余步数清零，下个怪物回合
+    # Blob 正好扩进这间房，人被同化）。
+    STOP_RISK_EFFECTS = frozenset({
+        "room_vault", "room_research_laboratory", "room_coal_chute",
+        "room_collapsed_room", "room_chasm", "room_catacombs",
+        "room_mystic_elevator", "room_underground_lake",
+    })
+
+    def room_stop_risk(self, room: Any) -> bool:
+        """进入该房间是否**可能**立刻终止本回合剩余移动（纯查询，无副作用）。
+
+        保守判定：只要效果里存在"抽牌/传送/坠落/障碍失败停下"的分支就算，
+        不看检定结果（机器人没法预知掷骰）。
+        """
+        effect = getattr(room, "effect_id", "") or ""
+        return effect in self.STOP_RISK_EFFECTS
+
     def _apply_room_effect(self, player: Player, room: PlacedRoom, first_entry: bool) -> None:
         effect = room.effect_id
         if effect == "none":
@@ -4316,7 +4336,9 @@ class GameEngine:
     # ------------------------------------------------------------------
     # Graph/path helpers
     # ------------------------------------------------------------------
-    def _build_graph(self, avoid_transit: bool = False) -> dict[str, set[str]]:
+    def _build_graph(
+        self, avoid_transit: bool = False, blocked: set[str] | None = None
+    ) -> dict[str, set[str]]:
         # 邻接表必须是有序结构。若用 set，BFS 遍历顺序会随 PYTHONHASHSEED
         # 变化，导致同一种子在不同进程得到不同的最短路径——种子回放、
         # 存档复现、联机重放都会失效。这里用 dict 做有序去重，再输出排序列表。
@@ -4325,12 +4347,20 @@ class GameEngine:
         # 它仍是合法终点（可以特意走进电梯），但不能被当作去别处的通路——
         # 玩家一进去就被送到随机房间，站在里面是不可能的。默认 False 保持
         # 原有行为（怪物不触发房间效果，仍可穿行）。
+        #
+        # blocked：机器人寻路禁区（剧本 27 的 Blob 房间：踏进去立刻被同化，
+        # 真人不会走，也不该被当成抄近路的通道）。默认 None 行为完全不变。
+        blocked = blocked or set()
         adjacency: dict[str, dict[str, None]] = {
-            key: {} for key, room in self.state.board.items() if not room.data.get(self.COLLAPSE_KEY)
+            key: {}
+            for key, room in self.state.board.items()
+            if not room.data.get(self.COLLAPSE_KEY) and key not in blocked
         }
         for room in self.state.board.values():
             if room.data.get(self.COLLAPSE_KEY):
                 continue  # 塌进深渊的板块既不是节点也不是通路
+            if room.key in blocked:
+                continue
             if avoid_transit and room.template_id in self.NON_TRANSIT_TEMPLATES:
                 continue
             for direction in room.doors:
@@ -4342,14 +4372,18 @@ class GameEngine:
                 if not target_key:
                     continue
                 target = self.state.board[target_key]
-                if target.data.get(self.COLLAPSE_KEY):
+                if target.data.get(self.COLLAPSE_KEY) or target_key in blocked:
                     continue
                 if OPPOSITE[direction] in target.doors:
                     adjacency[room.key][target_key] = None
                     adjacency[target_key][room.key] = None
             for link_value in room.links.values():
                 target_key = self._link_target_key(link_value)
-                if target_key and not self.state.board[target_key].data.get(self.COLLAPSE_KEY):
+                if (
+                    target_key
+                    and target_key not in blocked
+                    and not self.state.board[target_key].data.get(self.COLLAPSE_KEY)
+                ):
                     adjacency[room.key][target_key] = None
                     adjacency[target_key][room.key] = None
         graph = {key: sorted(neighbors) for key, neighbors in adjacency.items()}
@@ -4358,7 +4392,7 @@ class GameEngine:
             # 只在自己那一趟跳过（上面的 continue）挡不住它们把出边加回来。
             # 清掉之后：进得去（别人到它的边还在，可作为终点），出不来（不能当中转）。
             for key, room in self.state.board.items():
-                if room.template_id in self.NON_TRANSIT_TEMPLATES:
+                if room.template_id in self.NON_TRANSIT_TEMPLATES and key in graph:
                     graph[key] = []
         return graph
 
@@ -4373,7 +4407,13 @@ class GameEngine:
                     queue.append(neighbor)
         return visited
 
-    def _path_length(self, start_key: str, target_key: str, avoid_transit: bool = False) -> int:
+    def _path_length(
+        self,
+        start_key: str,
+        target_key: str,
+        avoid_transit: bool = False,
+        blocked: set[str] | None = None,
+    ) -> int:
         """两房间之间的步数（相邻为 1，同房间为 0，不可达返回 9999）。
 
         修正说明：_shortest_path 返回的是**包含起点**的节点序列，所以步数
@@ -4386,20 +4426,27 @@ class GameEngine:
         追那些根本走不到的目标。
 
         avoid_transit=True：不把传送房（神秘电梯）当中转，见 _build_graph。
+        blocked：机器人寻路禁区，见 _build_graph（默认 None 行为不变）。
         """
         if start_key == target_key:
             return 0
-        path = self._shortest_path(start_key, target_key, avoid_transit=avoid_transit)
+        path = self._shortest_path(
+            start_key, target_key, avoid_transit=avoid_transit, blocked=blocked
+        )
         if len(path) < 2:
             return 9999
         return len(path) - 1
 
     def _shortest_path(
-        self, start_key: str, target_key: str, avoid_transit: bool = False
+        self,
+        start_key: str,
+        target_key: str,
+        avoid_transit: bool = False,
+        blocked: set[str] | None = None,
     ) -> list[str]:
         if start_key == target_key:
             return [start_key]
-        graph = self._build_graph(avoid_transit=avoid_transit)
+        graph = self._build_graph(avoid_transit=avoid_transit, blocked=blocked)
         queue = deque([(start_key, [start_key])])
         visited = {start_key}
         while queue:

@@ -3728,6 +3728,117 @@ def verify_haunt27_amok_flesh() -> None:
     assert engine3.state.winner is None, "叛徒死亡 ≠ 英雄胜"
 
 
+def verify_haunt27_blob_ai() -> None:
+    """剧本 27：Blob 自保钩子（禁区/险区/做完挪窝/停步风险）与寻路绕行。
+
+    钉住三条实测教训：
+      · seed101/3p：英雄寻路把 Blob 房间当近路穿过去（入口大厅→地下室平台），
+        进门即被同化——`bot_blocked_rooms` 必须让规划绕开，引擎寻路支持 blocked；
+      · seed113/3p：贴边检定完原地过夜（`_pending_haunt_action_here` 判定
+        "下回合还能在这儿做"），下个怪物回合 Blob 正好扩进这间房——
+        `bot_leave_after_action` 必须拦下，且撤退目标只给险区外的房间；
+      · seed101/3p：险区里踏进"进房即停"的效果房（保险库知识检定成功连抽
+        两张物品卡，`_draw_item` 清零剩余步数），被困在扩张圈里——
+        `room_stop_risk` 必须识别这一类房间，bot 的险区扣分才会生效。
+    """
+
+    class _FakeRoom:
+        """只带 effect_id 的替身，用来确定性地验 room_stop_risk（不看牌桌布局）。"""
+
+        def __init__(self, effect_id: str) -> None:
+            self.effect_id = effect_id
+
+    engine = _run_until_haunt(seed=101, players=3, haunt_id=27)
+    handler = engine._mode_handler()
+    assert isinstance(handler, AmokFleshMode)
+    flags = engine._haunt_flags()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+
+    # ---- Blob 未落地：险区 = 起源房 + 一圈邻域；起源房里的人先退开
+    origin = flags["blob_origin"]
+    zone = {origin} | handler._neighbors_of(engine, {origin})
+    assert handler.bot_blocked_rooms(engine, hero) == set(), "未落地时没有禁区"
+    assert handler.bot_hazard_rooms(engine, hero) == zone, "未落地时险区=起源房邻域"
+    hero.room_key = origin
+    goals = {g[len("__room__") :] for g in handler.bot_goal_rooms(engine, hero)}
+    assert goals and goals <= set(handler._safe_keys(engine)), "起源房里应先退到险区外"
+    outside = next(k for k in sorted(engine.state.board) if k not in zone)
+    hero.room_key = outside
+    goals = {g[len("__room__") :] for g in handler.bot_goal_rooms(engine, hero)}
+    assert goals == handler._neighbors_of(engine, zone, doors_only=True), "未落地时应预习检定圈"
+
+    # ---- Blob 落地：禁区 = Blob 房间；规划路径不得穿过禁区
+    with patch.object(engine, "roll_dice", return_value=1):
+        handler.on_turn_end(engine, traitor)
+    blob = set(flags["blob_rooms"])
+    assert blob, "第一个怪物回合应让 Blob 落地"
+    assert handler.bot_blocked_rooms(engine, hero) == blob, "Blob 房间是寻路禁区"
+    assert handler.bot_hazard_rooms(engine, hero) == blob | handler._neighbors_of(engine, blob)
+    checked = 0
+    for start in sorted(engine.state.board):
+        for target in sorted(engine.state.board):
+            if start == target or start in blob or target in blob:
+                continue
+            path = engine._shortest_path(start, target, avoid_transit=True, blocked=blob)
+            assert not (set(path) & blob), f"禁区房间不得出现在路径里：{start}→{target}"
+            checked += 1
+            if checked >= 40:
+                break
+        if checked >= 40:
+            break
+    assert checked >= 40, "样本不足，没真正跑到绕行分支"
+
+    # ---- bot_ai 的接线：禁区/险区确实来自剧本钩子
+    controller = BotController()
+    blocked, hazards = controller._bot_path_filters(engine, hero)
+    assert blocked == blob - {hero.room_key}, "寻路禁区应透传给 bot"
+    assert hazards == handler.bot_hazard_rooms(engine, hero), "危险房应透传给 bot"
+
+    # ---- 做完一步必须挪窝；退到险区外才允许原地结束
+    assert handler.bot_leave_after_action(engine, hero) is False, "还没行动：不触发挪窝"
+    engine._mark_haunt_action_used(hero)
+    assert handler.bot_leave_after_action(engine, hero) is True, "行动用完必须挪窝"
+    ring = sorted(handler._neighbors_of(engine, blob, doors_only=True))
+    assert ring, "Blob 落地后应有门邻检定圈"
+    hero.room_key = ring[0]
+    assert handler.bot_stay_in_room(engine, hero) is False, "扩张圈里不能过夜"
+    goals = {g[len("__room__") :] for g in handler.bot_goal_rooms(engine, hero)}
+    assert goals and goals <= set(handler._safe_keys(engine)), "险区里做完一步→目标是退开"
+    safe = [k for k in handler._safe_keys(engine) if k != hero.room_key]
+    assert safe, "42 间房的牌桌应仍有险区外的安全房"
+    hero.room_key = safe[0]
+    assert handler.bot_stay_in_room(engine, hero) is True, "退到险区外：原地结束"
+
+    # ---- 弱点没找到前，配料房不是寻路目的地
+    flags["weakness_found"] = False
+    assert handler.bot_action_blocked(engine, hero, "search_ingredient") is True
+    flags["weakness_found"] = True
+    assert handler.bot_action_blocked(engine, hero, "search_ingredient") is False
+
+    # ---- "这里还有活吗"：险区里未找到弱点=有事做；Blob 房间里=没事做
+    flags["weakness_found"] = False
+    hero.room_key = ring[0]
+    assert handler._has_work_here(engine, hero) is True, "扩张圈上（弱点未找到）应能检定"
+    hero.room_key = sorted(blob)[0]
+    assert handler._has_work_here(engine, hero) is False, "Blob 房间里的英雄无事可做"
+
+    # ---- 停步风险房：抽牌/传送/坠落/障碍失败类房间会被识别
+    for effect in (
+        "room_vault",
+        "room_research_laboratory",
+        "room_coal_chute",
+        "room_collapsed_room",
+        "room_chasm",
+        "room_catacombs",
+        "room_mystic_elevator",
+        "room_underground_lake",
+    ):
+        assert engine.room_stop_risk(_FakeRoom(effect)) is True, f"{effect} 应算停步风险"
+    assert engine.room_stop_risk(_FakeRoom("room_graveyard")) is False
+    assert engine.room_stop_risk(_FakeRoom("")) is False
+
+
 def verify_haunt28_demon_ring() -> None:
     """剧本 28：地狱门选址与恶魔入场/速度免疫/理智 +2/两败领主/策反与
     受控代跑/抢戒指与取回/胜负（p39/p110）。"""
@@ -9306,6 +9417,8 @@ def main():
     verify_haunt26_rat_ritual()
     verify_haunt26_pentagram_block()
     verify_haunt27_amok_flesh()
+    # M10-45/批次6：#27 Blob 自保钩子（禁区/险区/做完挪窝/停步风险）
+    verify_haunt27_blob_ai()
     verify_haunt28_demon_ring()
     verify_haunt29_frankenstein()
     verify_haunt30_dracula()
