@@ -6726,6 +6726,39 @@ def verify_haunt58_nightfall_setup() -> None:
     flags["torches"] = {}
     assert handler.bot_goal_suppressed(engine, traitor) is True
     assert handler.bot_goal_suppressed(engine, hero) is False
+    # 没火把先去熔炉房；队里有一支之后去暮色房会合，别再把全员拽回熔炉房
+    no_torch_goals = handler.bot_goal_rooms(engine, hero)
+    assert f"__room__{furnace}" in no_torch_goals
+    other_hero = next(
+        p for p in engine.state.players if p.role == "hero" and not p.dead and p.id != hero.id
+    )
+    flags["torches"] = {str(hero.id): True}
+    assert handler.bot_action_blocked(engine, hero, "create_torch") is True
+    assert handler.bot_action_blocked(engine, other_hero, "create_torch") is True
+    torch_goals = handler.bot_goal_rooms(engine, hero)
+    other_goals = handler.bot_goal_rooms(engine, other_hero)
+    rally = handler._rally_room(engine)
+    assert rally, "场上应有可驱散的暮色房"
+    assert engine.state.board[rally].template_id not in handler.TWILIGHT_FREE
+    assert handler._is_stop_risk_room(engine, rally) is False
+    assert f"__room__{furnace}" not in torch_goals
+    assert f"__room__{furnace}" not in other_goals
+    assert torch_goals == [f"__room__{rally}"]
+    assert other_goals == [f"__room__{rally}"]
+    saved_room = hero.room_key
+    hero.room_key = furnace
+    assert handler.bot_leave_after_action(engine, hero) is True
+    hero.room_key = saved_room
+    rally = handler._rally_room(engine)
+    hero.room_key = rally
+    other_hero.room_key = rally
+    assert handler.bot_stay_in_room(engine, hero) is True
+    flags["banished_floors"] = [engine.state.board[rally].floor]
+    assert handler.bot_leave_after_action(engine, hero) is True
+    next_rally = handler._rally_room(engine)
+    assert next_rally != rally
+    flags["banished_floors"] = []
+    flags["torches"] = {}
 
 
 def verify_haunt58_torch_banish_haunting() -> None:
@@ -6770,6 +6803,10 @@ def verify_haunt58_torch_banish_haunting() -> None:
     assert engine.state.board[room_key].floor in flags["banished_floors"]
     # p69：参与检定者本回合不能移动/攻击
     assert hero.movement_stopped and hero.attack_used
+    # 缺理智时只派给掷得出 4+ 的人，别把知识 5 / 理智 1 硬派去掷理智
+    hero.stats["knowledge"] = 5
+    hero.stats["sanity"] = 1
+    assert handler._banish_stat_for(engine, hero, True, False) == "knowledge"
     # 三层全驱散 → 英雄胜
     flags["banished_floors"] = list(handler.FLOORS)
     assert handler.check_victory(engine) is True and engine.state.winner == "heroes"

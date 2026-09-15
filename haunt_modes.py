@@ -15361,6 +15361,8 @@ class NightfallMode(GenericModeHandler):
         torches[str(player.id)] = True
         flags["torches"] = torches
         player.attack_used = True  # p69：代替攻击
+        # 会合点按点火这一刻的站位钉死，之后不再跟着人漂——否则两人互追。
+        flags["rally_key"] = self._compute_rally_room(engine)
         engine._log(f"{engine._player_label(player)} 在熔炉里点燃了一支火把。")
         return True
 
@@ -15378,20 +15380,9 @@ class NightfallMode(GenericModeHandler):
         sanity_ok = False
         for hero in here:
             # p69：每位英雄各做一次知识 4+ 或理智 4+，团队需要"两类各至少一次成功"。
-            # 过去每人都挑自己更强的那一项：全员偏知识就会清一色知识检定，
-            # 理智那类永远凑不齐，驱散永远失败——而"驱散三层暮色"是英雄的
-            # 胜利线之一，等于整条线静默失效（seed137 三人局实测）。
-            # 真人团队会分工补缺口：先挑自己的强项，之后缺哪类就补哪类。
-            prefer = (
-                "knowledge"
-                if hero.stats.get("knowledge", 0) >= hero.stats.get("sanity", 0)
-                else "sanity"
-            )
-            if knowledge_ok and not sanity_ok:
-                prefer = "sanity"
-            elif sanity_ok and not knowledge_ok:
-                prefer = "knowledge"
-            stat = prefer
+            # 缺哪类就补哪类——但只派给掷得出 4+ 的人。知识已成、这人理智 1
+            # 时硬派理智，等于把一次必败检定浪费掉。
+            stat = self._banish_stat_for(engine, hero, knowledge_ok, sanity_ok)
             if engine._resolve_check(hero, stat, self.BANISH_TARGET, "驱散暮色"):
                 if stat == "knowledge":
                     knowledge_ok = True
@@ -15406,6 +15397,8 @@ class NightfallMode(GenericModeHandler):
         flags = engine._haunt_flags()
         floors = sorted(set(flags.get("banished_floors", [])) | {room.floor})
         flags["banished_floors"] = floors
+        # 这一层清完，会合点改到还没驱散的最近暮色房——两人还在一起，一起换层。
+        flags["rally_key"] = self._nearest_twilight_to(engine, player.room_key)
         engine._log(f"火光与意志同时亮起——{room.floor} 层的暮色被驱散了！")
         return True
 
@@ -15431,27 +15424,218 @@ class NightfallMode(GenericModeHandler):
         return False
 
     # ------------------------------------------------------------- bot/UI
+    def _alive_heroes(self, engine: Any) -> list[Any]:
+        return [p for p in engine.state.players if p.role == "hero" and not p.dead]
+
+    def _team_has_torch(self, engine: Any) -> bool:
+        return any(self._carries_torch(engine, p) for p in self._alive_heroes(engine))
+
+    def _twilight_rooms_on_floor(self, engine: Any, floor: int) -> list[str]:
+        return [
+            key
+            for key, room in engine.state.board.items()
+            if room.floor == floor and room.template_id not in self.TWILIGHT_FREE
+        ]
+
+    def _is_stop_risk_room(self, engine: Any, room_key: str) -> bool:
+        room = engine.state.board.get(room_key)
+        if room is None:
+            return True
+        return bool(engine.room_stop_risk(room))
+
+    def _can_make_check(self, engine: Any, player: Any, stat: str, target: int) -> bool:
+        value = max(0, int(player.stats.get(stat, 0) or 0))
+        dice = max(1, min(8, value))
+        return dice * 2 >= int(target)
+
+    def _banish_stat_for(
+        self, engine: Any, hero: Any, knowledge_ok: bool, sanity_ok: bool
+    ) -> str:
+        can_knowledge = self._can_make_check(engine, hero, "knowledge", self.BANISH_TARGET)
+        can_sanity = self._can_make_check(engine, hero, "sanity", self.BANISH_TARGET)
+        if knowledge_ok and not sanity_ok and can_sanity:
+            return "sanity"
+        if sanity_ok and not knowledge_ok and can_knowledge:
+            return "knowledge"
+        if can_knowledge and (
+            not can_sanity
+            or int(hero.stats.get("knowledge", 0) or 0)
+            >= int(hero.stats.get("sanity", 0) or 0)
+        ):
+            return "knowledge"
+        if can_sanity:
+            return "sanity"
+        return (
+            "knowledge"
+            if int(hero.stats.get("knowledge", 0) or 0)
+            >= int(hero.stats.get("sanity", 0) or 0)
+            else "sanity"
+        )
+
+    def _twilight_candidates(self, engine: Any) -> list[str]:
+        banished = set(engine._haunt_flags().get("banished_floors", []))
+        twilight = [
+            key
+            for key, room in engine.state.board.items()
+            if room.floor not in banished and room.template_id not in self.TWILIGHT_FREE
+        ]
+        safe = [key for key in twilight if not self._is_stop_risk_room(engine, key)]
+        return safe or twilight
+
+    def _nearest_twilight_to(self, engine: Any, from_key: str) -> str | None:
+        """还没驱散的暮色房里，离 from_key 最近的一间；效果房只作后备。"""
+        pool = self._twilight_candidates(engine)
+        if not pool or not from_key:
+            return None
+        best_key = None
+        best_score = None
+        for key in pool:
+            distance = engine._path_length(from_key, key, avoid_transit=True)
+            if distance >= 9999:
+                continue
+            score = (distance, key)
+            if best_score is None or score < best_score:
+                best_score = score
+                best_key = key
+        return best_key
+
+    def _compute_rally_room(self, engine: Any) -> str | None:
+        """按点火时的站位，挑火把持有者与最近队友的中途暮色房并钉死。
+
+        只跟火把走会把人拽进保险库；只跟队友走，火把在地下室时两人永远凑不齐。
+        中途暮色房是真人会约的地方。效果房不当落脚点。
+        """
+        heroes = self._alive_heroes(engine)
+        holders = [hero for hero in heroes if self._carries_torch(engine, hero)]
+        if not holders:
+            return None
+        holder = min(holders, key=lambda hero: hero.id)
+        others = [hero for hero in heroes if hero.id != holder.id]
+        if not others:
+            return self._nearest_twilight_to(engine, holder.room_key)
+        other = min(
+            others,
+            key=lambda hero: (
+                engine._path_length(holder.room_key, hero.room_key, avoid_transit=True),
+                hero.id,
+            ),
+        )
+        pool = self._twilight_candidates(engine)
+        best_key = None
+        best_score = None
+        for key in pool:
+            dist_holder = engine._path_length(holder.room_key, key, avoid_transit=True)
+            dist_other = engine._path_length(other.room_key, key, avoid_transit=True)
+            if dist_holder >= 9999 or dist_other >= 9999:
+                continue
+            floor = engine.state.board[key].floor
+            score = (
+                -(dist_holder + dist_other),
+                -max(dist_holder, dist_other),
+                0 if floor == 0 else -abs(floor),
+                key,
+            )
+            if best_score is None or score > best_score:
+                best_score = score
+                best_key = key
+        return best_key or self._nearest_twilight_to(engine, holder.room_key)
+
+    def _rally_still_valid(self, engine: Any, room_key: str | None) -> bool:
+        if not room_key:
+            return False
+        room = engine.state.board.get(room_key)
+        if room is None or room.template_id in self.TWILIGHT_FREE:
+            return False
+        if room.floor in set(engine._haunt_flags().get("banished_floors", [])):
+            return False
+        if self._is_stop_risk_room(engine, room_key) and any(
+            not self._is_stop_risk_room(engine, key)
+            for key in self._twilight_candidates(engine)
+        ):
+            return False
+        return True
+
+    def _rally_room(self, engine: Any) -> str | None:
+        """会合点优先用点火/驱散时钉死的房间，避免两人互追。"""
+        flags = engine._haunt_flags()
+        stored = flags.get("rally_key")
+        if self._rally_still_valid(engine, stored):
+            return stored
+        return self._compute_rally_room(engine)
+
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
         if player.role != "hero":
             return []
         flags = engine._haunt_flags()
-        # 没火把 → 先去熔炉房；有火把 → 找同伴会合驱散暮色
-        if not self._carries_torch(engine, player):
+        heroes = self._alive_heroes(engine)
+        # 驱散要两个人。只剩一人就改杀噩梦（另一条胜线）。
+        if len(heroes) < 2:
+            if not self._carries_torch(engine, player):
+                furnace = flags.get("furnace_key")
+                return [f"__room__{furnace}"] if furnace else []
+            return [
+                f"__room__{monster.room_key}"
+                for monster in engine.state.monsters
+                if monster.template_id == self.NIGHTMARE and monster.room_key
+            ]
+        # 全队还没火把：先去熔炉房点一支。已经有人点着了就别再排队熔炉房——
+        # create_torch 的 rooms 会把熔炉房塞进目标，人会点完火把还往回聚，
+        # 熔炉房又不在暮色里，驱散永远凑不齐三层。
+        if not self._team_has_torch(engine):
             furnace = flags.get("furnace_key")
-            if furnace:
-                return [f"__room__{furnace}"]
-        others = [
-            p
-            for p in engine.state.players
-            if p.role == "hero" and not p.dead and p.id != player.id
+            return [f"__room__{furnace}"] if furnace else []
+        rally = self._rally_room(engine)
+        if rally:
+            return [f"__room__{rally}"]
+        # 场上还没有可驱散的暮色房（那一层还没铺出来）→ 改杀噩梦
+        return [
+            f"__room__{monster.room_key}"
+            for monster in engine.state.monsters
+            if monster.template_id == self.NIGHTMARE and monster.room_key
         ]
-        if others:
-            return [f"__room__{others[0].room_key}"]
-        return []
 
     def bot_goal_suppressed(self, engine: Any, player: Any) -> bool:
         """叛徒没有剧本房间目标。不压住的话 key_rooms 保底会把熔炉房当成目的地。"""
         return getattr(player, "role", None) == "traitor"
+
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        if action_id == "create_torch":
+            if self._carries_torch(engine, player):
+                return True
+            # 队里已有火把、还够两个人驱散：别再把全员拽去熔炉房。
+            if len(self._alive_heroes(engine)) >= 2 and self._team_has_torch(engine):
+                return True
+            return False
+        if action_id == "banish_twilight":
+            return not self._banish_allowed(engine, player)
+        return False
+
+    def bot_leave_after_action(self, engine: Any, player: Any) -> bool:
+        if getattr(player, "role", None) != "hero":
+            return False
+        room = engine.state.board.get(player.room_key)
+        if room is None:
+            return False
+        # 点完火把立刻离开熔炉房（那里驱散不了）。
+        if room.template_id == self.FURNACE and self._carries_torch(engine, player):
+            return True
+        # 这一层已经驱散完，换层。
+        if room.floor in set(engine._haunt_flags().get("banished_floors", [])):
+            return True
+        return False
+
+    def bot_stay_in_room(self, engine: Any, player: Any) -> bool:
+        """火把到了会合房就停，等人来齐再驱散——别在同层暮色房间之间踱步。"""
+        if getattr(player, "role", None) != "hero" or getattr(player, "dead", False):
+            return False
+        if len(self._alive_heroes(engine)) < 2 or not self._team_has_torch(engine):
+            return False
+        room = engine.state.board.get(player.room_key)
+        if room is None or room.template_id in self.TWILIGHT_FREE:
+            return False
+        if self._is_stop_risk_room(engine, player.room_key):
+            return False
+        return player.room_key == self._rally_room(engine)
 
     def bot_attack_blocked(self, engine: Any, player: Any, target: Any) -> bool:
         """没火把就别在暮色里拿拳头捶噩梦——知识骰对 Might 2 的怪不划算，先去点火把。"""
@@ -15460,6 +15644,16 @@ class NightfallMode(GenericModeHandler):
         if getattr(target, "template_id", "") != self.NIGHTMARE:
             return False
         return not self._carries_torch(engine, player)
+
+    def bot_hazard_rooms(self, engine: Any, player: Any) -> set[str]:
+        """没火把时别在噩梦房间过夜——去熔炉房的路上绕开，别自己送进嘴里。"""
+        if getattr(player, "role", None) != "hero" or self._carries_torch(engine, player):
+            return set()
+        return {
+            monster.room_key
+            for monster in engine.state.monsters
+            if monster.template_id == self.NIGHTMARE and monster.room_key
+        }
 
     def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
         flags = engine._haunt_flags()
