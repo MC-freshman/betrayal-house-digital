@@ -6406,6 +6406,8 @@ def verify_haunt56_sands_of_time_setup() -> None:
     assert handler.attack_attr_override(engine, hero, spectres[0], "might") == "sanity"
     hero.items.remove(handler.RING)
     assert handler.attack_attr_override(engine, hero, spectres[0], "might") is None
+    assert handler.bot_action_blocked(engine, traitor, "time_stop_strike") is True
+    assert handler.bot_leave_after_action(engine, traitor) is True
     # p67：持奖章者与幽影对决落败免伤
     hero.items.append(handler.MEDALLION)
     assert handler.attack_loss_damage_disabled(engine, hero, spectres[0]) is True
@@ -6417,18 +6419,45 @@ def verify_haunt56_sands_of_time_setup() -> None:
     handler.on_monster_turn_start(engine, spirit)
     after = spirit.room_key
     assert after != before, "幽影应能穿墙移动（同房必有正交邻格）"
+    assert handler.on_monster_move(engine, spirit, 3) is True, "穿墙后应跳过引擎默认移动"
 
-    # p67 失控检定：轨道 3、掷骰必低 → 循环磨损到轨道 0
+    # p67 失控检定：轨道 3、掷骰必低 → 循环磨损到轨道 0（归零后再掷高，避免 0≤0 无限磨）
     flags["time_track"] = 3
+    for stat in ("sanity", "knowledge", "might", "speed"):
+        track = engine._stat_track(traitor, stat) or [1, 2, 3, 4, 5]
+        traitor.stat_positions[stat] = min(5, len(track) - 1)
+        traitor.stats[stat] = track[traitor.stat_positions[stat]]
+        traitor.overflow[stat] = 0
     pos_before = dict(traitor.stat_positions)
-    with patch.object(engine, "roll_dice", return_value=0):
+
+    def _control_roll(_dice, _label=""):
+        return 0 if int(flags["time_track"]) > 0 else 99
+
+    with patch.object(engine, "roll_dice", side_effect=_control_roll):
         handler.on_turn_end(engine, traitor)
     assert flags["time_track"] == 0, "失控循环应把轨道磨到 0"
+    assert not traitor.dead, "属性充裕时失控只磨损、不应直接判死"
     lost = sum(
         pos_before[s] - traitor.stat_positions[s]
         for s in ("sanity", "knowledge", "might", "speed")
     )
     assert lost >= 3, f"失控应磨损叛徒属性（实际 -{lost}）"
+
+    # p67：失控把属性磨到骷髅必须判死（_apply_stat_loss 本身不判死）
+    engine2 = _run_until_haunt(seed=113, players=3, haunt_id=56)
+    h2 = engine2._mode_handler()
+    f2 = engine2._haunt_flags()
+    traitor2 = next(p for p in engine2.state.players if p.role == "traitor")
+    for stat in ("sanity", "knowledge", "might", "speed"):
+        traitor2.stat_positions[stat] = 0
+        track = engine2._stat_track(traitor2, stat) or [1]
+        traitor2.stats[stat] = track[0]
+        traitor2.overflow[stat] = 0
+    f2["time_track"] = 1
+    with patch.object(engine2, "roll_dice", return_value=0):
+        h2.on_turn_end(engine2, traitor2)
+    assert traitor2.dead, "失控磨损到骷髅应杀死叛徒"
+    assert engine2.state.winner == "heroes"
 
 
 def verify_haunt56_time_powers() -> None:
@@ -6659,10 +6688,13 @@ def verify_haunt58_nightfall_setup() -> None:
     assert handler.in_twilight(engine, other) is False
     flags["banished_floors"] = []
 
-    # p69：暮色中力量/速度攻击改用知识；持火把者不受限
+    # p69/p140：暮色中 explorers and monsters 的力量/速度攻击改用知识；持火把者不受限
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
     hero.room_key = other
     assert handler.attack_attr_override(engine, hero, traitor, "might") == "knowledge"
+    nightmare = handler._nightmares(engine)[0]
+    nightmare.room_key = other
+    assert handler.attack_attr_override(engine, nightmare, hero, "might") == "knowledge"
     flags["torches"] = {str(hero.id): True}
     assert handler.attack_attr_override(engine, hero, traitor, "might") is None
     # p69：火把抵消所在房间的暮色
@@ -6799,9 +6831,32 @@ def verify_haunt59_medallion_flow() -> None:
     traitor = next(p for p in engine.state.players if p.role == "traitor")
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
 
-    # p70：挂徽章胜利——mock 速度检定成功
-    flags["medallion_holder"] = f"hero:{hero.id}"
+    # p70/p141：打赢持徽章者就该改偷，不能默认弃伤害
+    assert handler.bot_wants_steal(engine, hero, traitor) == handler.MEDALLION
+    statue_key = flags.get("statue_key")
+    assert statue_key
+    assert engine.tokens_in_room(statue_key, handler.STATUE), "开局必须把国王雕像令牌放进雕像房"
+    # 没拿徽章时挂徽章不能当寻路目标，否则全员扎进雕像房从不去抢叛徒
+    assert handler.bot_action_blocked(engine, hero, "place_medallion") is True
+    witch = next(m for m in engine.state.monsters if m.template_id == handler.WITCH)
+    assert handler.bot_attack_blocked(engine, hero, witch) is True, "徽章不在怪手里时别去捶女巫"
+    assert handler.bot_attack_blocked(engine, hero, traitor) is False, "持徽章的叛徒必须能打"
+    traitor.items = [c for c in traitor.items if c != handler.MEDALLION]
     hero.items.append(handler.MEDALLION)
+    handler.on_attack_resolved(engine, hero, traitor, True)
+    assert flags["medallion_holder"] == f"hero:{hero.id}"
+    # 队友拿着徽章：去雕像会合，而不是空目标掉进塔楼保底
+    other = next(
+        (p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead),
+        None,
+    )
+    if other is not None:
+        goals = handler.bot_goal_rooms(engine, other)
+        statue = flags.get("statue_key")
+        assert statue is not None
+        assert f"__room__{statue}" in goals
+
+    # p70：挂徽章胜利——mock 速度检定成功
     hero.room_key = flags["statue_key"]
     _set_current(engine, hero)
     with patch.object(engine, "_resolve_check", return_value=True):
@@ -6817,6 +6872,8 @@ def verify_haunt59_medallion_flow() -> None:
     # 3 人局英雄数 <4 没有猫：把在场一只怪物改造成猫来构造抢徽章场景
     cat = engine2.state.monsters[0]
     cat.template_id = h2.CAT
+    traitor2_setup = next(p for p in engine2.state.players if p.role == "traitor")
+    traitor2_setup.items = [c for c in traitor2_setup.items if c != h2.MEDALLION]
     hero2.items.append(h2.MEDALLION)
     f2["medallion_holder"] = f"hero:{hero2.id}"
     cat.room_key = hero2.room_key
@@ -6826,11 +6883,15 @@ def verify_haunt59_medallion_flow() -> None:
         assert h2.on_monster_turn_attack(engine2, cat) is True
     assert f2["medallion_holder"] == f"monster:{cat.id}", "差值 ≥2 猫应抢走徽章"
     assert h2.MEDALLION not in hero2.items
-    # 怪物带着徽章到塔楼结束回合 → 叛徒胜
+    # 怪物带着徽章路过塔楼不算赢；叛徒回合结束才扔
     tower = next((k for k, r in engine2.state.board.items() if r.template_id == "tower"), None)
     assert tower is not None, "塔楼应在场（骨架保证）"
     cat.room_key = tower
-    assert h2.check_victory(engine2) is True and engine2.state.winner == "traitor"
+    assert h2.check_victory(engine2) is not True or engine2.state.winner is None
+    assert engine2.state.winner is None, "路过塔楼不应立刻判胜"
+    traitor2 = next(p for p in engine2.state.players if p.role == "traitor")
+    h2.on_turn_end(engine2, traitor2)
+    assert engine2.state.winner == "traitor"
 
     # p141：持徽章怪物被击败 → 徽章掉地上（英雄可拾取）
     engine3 = _run_until_haunt(seed=137, players=3, haunt_id=59)
@@ -6880,6 +6941,19 @@ def verify_haunt60_burning_sands_setup() -> None:
     assert sphinxes[0].stunned_turns == before_stun, "斯芬克斯输了对决也不该被晕"
     assert engine.state.players and target.stat_positions["sanity"] >= 0
 
+    # p142：不进只有英雄、没有叛徒/另一只斯芬克斯的房间
+    empty = next(
+        k
+        for k, r in engine.state.board.items()
+        if k != hall and not any(p.room_key == k for p in engine.state.players)
+    )
+    hero.room_key = empty
+    sphinxes[0].room_key = hall
+    assert handler._sphinx_may_enter(engine, sphinxes[0], empty) is False
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    traitor.room_key = empty
+    assert handler._sphinx_may_enter(engine, sphinxes[0], empty) is True
+
 
 def verify_haunt60_riddle_race() -> None:
     """剧本 60：三线索收集、英雄解谜胜利、叛徒解谜胜利（p71/p142）。"""
@@ -6899,6 +6973,11 @@ def verify_haunt60_riddle_race() -> None:
         if r.template_id == tid
     }
     hero.room_key = room_of["junk_room"]
+    saved_might = hero.stats.get("might", 0)
+    hero.stats["might"] = 1
+    assert handler.bot_action_blocked(engine, hero, "clue_junk") is True
+    assert "junk_room" not in handler.bot_goal_rooms(engine, hero)
+    hero.stats["might"] = saved_might
     events_before = len(engine.state.card_discards.get("event", []))
     with patch.object(engine, "_resolve_check", return_value=True), patch.object(
         engine, "_draw_event", return_value=None
@@ -6906,17 +6985,33 @@ def verify_haunt60_riddle_race() -> None:
         assert handler.perform_action(engine, hero, "clue_junk", {}) is True
         assert draw.called, "拿线索后应抽一张事件牌"
     assert set(flags["clues"][str(hero.id)]) == {"might"}
-    # 重复拿同一条线索：不允许
+    # 重复拿同一条线索：不允许（还没真正掷骰，不耗行动）
     with patch.object(engine, "_resolve_check", return_value=True):
         assert handler.perform_action(engine, hero, "clue_junk", {}) is False
-    # 其余两条
+    # p71：检定失败也算本回合那一次尝试
     hero.room_key = room_of["game_room"]
-    with patch.object(engine, "_resolve_check", return_value=True):
+    with patch.object(engine, "_resolve_check", return_value=False):
+        assert handler.perform_action(engine, hero, "clue_gameroom", {}) is True
+    assert "speed" not in handler._clues(engine, hero)
+    # 失败也耗行动后必须离开，否则 _pending 把人钉在线索房空点（seed101/5p ×251）
+    assert handler.bot_leave_after_action(engine, hero) is True
+    # 其余两条（抽事件一律 mock，避免事件把英雄抽死导致 leave 断言漂移）
+    hero.room_key = room_of["game_room"]
+    with patch.object(engine, "_resolve_check", return_value=True), patch.object(
+        engine, "_draw_event", return_value=None
+    ):
         assert handler.perform_action(engine, hero, "clue_gameroom", {}) is True
     hero.room_key = room_of["organ_room"]
-    with patch.object(engine, "_resolve_check", return_value=True):
+    with patch.object(engine, "_resolve_check", return_value=True), patch.object(
+        engine, "_draw_event", return_value=None
+    ):
         assert handler.perform_action(engine, hero, "clue_organ", {}) is True
+    assert not hero.dead
     assert len(handler._clues(engine, hero)) == 3
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "clue_junk" not in ids and "clue_gameroom" not in ids and "clue_organ" not in ids
+    haunt_room = engine.state.meta["haunt_rule"]["haunt_room"]
+    assert handler.bot_leave_after_action(engine, hero) is (hero.room_key != haunt_room)
 
     # 线索不全时解谜失败（新英雄没有线索；该局可能有英雄阵亡，先复活）
     hero2 = next(p for p in engine.state.players if p.role == "hero" and p.id != hero.id)

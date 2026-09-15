@@ -14700,6 +14700,8 @@ class SandsOfTimeMode(GenericModeHandler):
         · 面具"不可摘/不可弃/不可偷"未在物品系统层拦截（bot 不偷）。
         · 失控检定的掷骰英雄由系统自动选择（原版由英雄们自行商定）。
         · "时停打击"重构为显式剧本行动（原版为攻击附效自动触发）。
+        · 幽影穿墙在 on_monster_turn_start 里走完；on_monster_move 对幽影
+          返回 True，避免引擎再沿最短路叠一次移动。
     """
 
     mode = "time_sands"
@@ -14797,7 +14799,11 @@ class SandsOfTimeMode(GenericModeHandler):
             else:
                 dest = sorted(neighbors)[0]
             monster.room_key = dest
-        return False  # 移动由本钩子接管；攻击交给 on_monster_turn_attack
+        return False  # 不跳过攻击阶段；移动由 on_monster_move 宣告已处理
+
+    def on_monster_move(self, engine: Any, monster: Any, rolled: int) -> bool:
+        """穿墙步已在 on_monster_turn_start 走完，跳过引擎默认的沿路移动。"""
+        return getattr(monster, "template_id", "") == self.SPECTRE
 
     def on_monster_turn_attack(self, engine: Any, monster: Any) -> bool:
         """p138：幽影只能以理智攻击（目标以理智防御，精神伤害）。"""
@@ -14845,10 +14851,20 @@ class SandsOfTimeMode(GenericModeHandler):
             # 欺骗命运：须持水晶球，或房内没有其他英雄（p67）
             if aid == "cheat_fate" and not self._cheat_fate_allowed(engine, player):
                 continue
-            # 补充时沙：同房间得有没被晕的幽影
-            if aid == "replenish_sands" and not any(
-                s.room_key == player.room_key and s.stunned_turns <= 0
-                for s in self._spectres(engine)
+            # 补充时沙：同房间得有没被晕的幽影；轨道已是 0 时再点只会空耗
+            if aid == "replenish_sands" and (
+                int(engine._haunt_flags().get("time_track", 0)) <= 0
+                or not any(
+                    s.room_key == player.room_key and s.stunned_turns <= 0
+                    for s in self._spectres(engine)
+                )
+            ):
+                continue
+            # 时停打击：没有同房英雄时行动必失败，不该出现在列表里
+            # （否则机器人空点一次、本回合剧本行动额度还没花掉，再被之风钉死）
+            if aid == "time_stop_strike" and not any(
+                p.role == "hero" and not p.dead and p.room_key == player.room_key
+                for p in engine.state.players
             ):
                 continue
             result.append(action)
@@ -14957,9 +14973,13 @@ class SandsOfTimeMode(GenericModeHandler):
             engine._log(f"时之沙掌控检定：{result} ≤ {track}——叛徒失控了！")
             for stat in ("sanity", "knowledge", "might", "speed"):
                 engine._apply_stat_loss(traitor, stat, 1)
+            # _apply_stat_loss 可以把属性滑到骷髅，但不会判死；p67 英雄胜线
+            # 就是叛徒死亡，必须在这里补一次，否则轨道被之风堆高后循环 24 次
+            # 仍带着 0 属性活着（批次 12 实测 4 局 300 回合僵局）。
+            engine._check_player_death(traitor)
             track = self._advance_time(engine, -1)
             engine.check_victory()
-            if engine.state.winner:
+            if traitor.dead or engine.state.winner:
                 return
 
     def on_turn_start(self, engine: Any, player: Any) -> None:
@@ -14988,6 +15008,50 @@ class SandsOfTimeMode(GenericModeHandler):
         return False
 
     # ------------------------------------------------------------- bot/UI
+    def _hero_here(self, engine: Any, player: Any) -> bool:
+        return any(
+            p.role == "hero" and not p.dead and p.room_key == player.room_key
+            for p in engine.state.players
+        )
+
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        """叛徒按情境选时间之力：同房才时停，轨道高才补充，有活可打就别吹风。"""
+        if player.dead or player.role != "traitor":
+            return False
+        track = int(engine._haunt_flags().get("time_track", 0))
+        hero_here = self._hero_here(engine, player)
+        spectres_here = any(
+            s.room_key == player.room_key and s.stunned_turns <= 0
+            for s in self._spectres(engine)
+        )
+        if action_id == "time_stop_strike":
+            return not hero_here
+        if action_id == "replenish_sands":
+            return track < 3 or not spectres_here
+        if action_id == "winds_of_fate":
+            if hero_here:
+                return True
+            if spectres_here and track >= 3:
+                return True
+            return False
+        return False
+
+    def bot_leave_after_action(self, engine: Any, player: Any) -> bool:
+        """吹完命运之风必须去找人；原地等下一回合之风会把人钉死在同一间房。"""
+        if player.dead:
+            return False
+        if player.role == "traitor":
+            if self._hero_here(engine, player):
+                return False
+            track = int(engine._haunt_flags().get("time_track", 0))
+            if track >= 3 and any(
+                s.room_key == player.room_key and s.stunned_turns <= 0
+                for s in self._spectres(engine)
+            ):
+                return False
+            return True
+        return not self._cheat_fate_allowed(engine, player)
+
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
         if player.role != "hero":
             return []
@@ -15144,14 +15208,13 @@ class NightfallMode(GenericModeHandler):
     def attack_attr_override(
         self, engine: Any, attacker: Any, target: Any, default_attr: str
     ) -> str | None:
-        """p69：暮色中不能做力量/速度攻击，改用知识攻击（持火把者除外）。"""
+        """p69/p140：暮色中 explorers and monsters 不能做力量/速度攻击，改用知识。"""
         if default_attr not in ("might", "speed"):
             return None
         if self._carries_torch(engine, attacker):
             return None
-        if getattr(attacker, "role", "") == "hero" and self.in_twilight(
-            engine, attacker.room_key
-        ):
+        room_key = getattr(attacker, "room_key", None)
+        if room_key and self.in_twilight(engine, room_key):
             return "knowledge"
         return None
 
@@ -15405,15 +15468,15 @@ class ForAThousandYearsMode(GenericModeHandler):
     · 放置徽章（p70）：持徽章者在雕像房做速度掷骰，结果 ≥ 房间内未
       昏迷对手数（叛徒+怪物）的两倍 → 挂上雕像 → 英雄胜。
     · 摧毁徽章（p141）：持有者（叛徒或怪物）在塔楼或地下湖结束回合
-      → 扔下徽章 → 叛徒胜（on_turn_end 检查）。
+      → 扔下徽章 → 叛徒胜（on_turn_end 检查，路过不算）。
     · 怪物攻击（p141）：女巫以知识攻击（目标以理智防御、精神伤害）；
       熊力量攻击多掷 2 骰；猫以速度攻击（目标以速度防御、物理伤害）；
       猫/信徒造成 ≥2 伤害且目标持徽章 → 偷走徽章（bot 总是偷）。
     · 徽章易手：怪物可拾取地上的徽章；怪物被击败/击晕时徽章掉在地上
       （英雄拾取即转为英雄持有）；英雄持有时被偷则同步移出 items。
-    · 胜负（p70/p141）：英雄胜 = 徽章挂上雕像；叛徒胜 = 徽章被扔进
-      塔楼/地下湖，或英雄全灭。叛徒出局时女巫与使魔继续行动
-      （7/8 号怪物自主口径），故吸收兜底。
+    · 胜负（p70/p141）：英雄胜 = 徽章挂上雕像；叛徒胜 = 持有者在塔楼/
+      地下湖结束回合扔下徽章，或英雄全灭。叛徒出局时女巫与使魔继续
+      行动（7/8 号口径），故吸收兜底。
 
     已知简化：
         · "拖拽昏迷怪物"未建模（引擎无怪物跟随移动机制）。
@@ -15452,6 +15515,7 @@ class ForAThousandYearsMode(GenericModeHandler):
         ]
         witch_room = omen_rooms[0] if omen_rooms else room_key
         flags["statue_key"] = witch_room
+        engine.spawn_token(self.STATUE, label="国王雕像", room_key=witch_room)
         spec = dict(
             engine._haunt_rule_state()
             .get("monster_specs", {})
@@ -15504,6 +15568,9 @@ class ForAThousandYearsMode(GenericModeHandler):
             if self.MEDALLION not in traitor.items:
                 traitor.items.append(self.MEDALLION)
             flags["medallion_holder"] = f"traitor:{traitor.id}"
+        # 塔楼/地下湖是叛徒胜线的投掷点，不在场就从牌堆拉进来
+        for template_id in self.DOOM_ROOMS:
+            engine._ensure_room_in_play(template_id, room_key)
         engine._log("王室徽章在叛徒手里闪闪发光——把它挂回雕像，就能破咒。")
 
     # ------------------------------------------------------- 徽章归属
@@ -15517,9 +15584,42 @@ class ForAThousandYearsMode(GenericModeHandler):
         return None
 
     def _hero_holds(self, engine: Any, player: Any) -> bool:
+        self._sync_medallion(engine)
         flags = engine._haunt_flags()
         holder = flags.get("medallion_holder")
         return holder == f"hero:{player.id}" or self.MEDALLION in player.items
+
+    def _sync_medallion(self, engine: Any) -> None:
+        """引擎偷窃/拾取只改 items，必须把 flags 持有者同步过来。"""
+        flags = engine._haunt_flags()
+        for player in engine.state.players:
+            if player.dead:
+                continue
+            if self.MEDALLION not in getattr(player, "items", []):
+                continue
+            prefix = "traitor" if player.role == "traitor" else "hero"
+            flags["medallion_holder"] = f"{prefix}:{player.id}"
+            return
+        for key, cards in engine.state.room_items.items():
+            if self.MEDALLION in cards:
+                flags["medallion_holder"] = None
+                return
+        holder = flags.get("medallion_holder") or ""
+        if holder.startswith("monster:"):
+            return
+        flags["medallion_holder"] = None
+
+    def bot_wants_steal(self, engine: Any, attacker: Any, target: Any) -> str | None:
+        """p70/p141：徽章是胜负钥匙——打赢了就从对方身上抢，默认不偷会整局拿不到。"""
+        if self.MEDALLION in getattr(target, "items", []):
+            return self.MEDALLION
+        return None
+
+    def on_attack_resolved(self, engine: Any, attacker: Any, target: Any, attacker_won: bool) -> None:
+        self._sync_medallion(engine)
+
+    def on_player_died(self, engine: Any, player: Any) -> None:
+        self._sync_medallion(engine)
 
     def _give_to_hero(self, engine: Any, player: Any) -> None:
         flags = engine._haunt_flags()
@@ -15564,6 +15664,7 @@ class ForAThousandYearsMode(GenericModeHandler):
         """回合开始重置持徽章步数（p70：拾取当回合也可再走 2 格）。"""
         if engine.state.phase != "HAUNT_PHASE" or player.dead:
             return
+        self._sync_medallion(engine)
         flags = engine._haunt_flags()
         steps = dict(flags.get("medallion_steps", {}))
         if str(player.id) in steps:
@@ -15594,6 +15695,7 @@ class ForAThousandYearsMode(GenericModeHandler):
         template = getattr(monster, "template_id", "")
         if template not in (self.WITCH, self.BEAR, self.CAT, self.CULTIST):
             return False
+        self._sync_medallion(engine)
         flags = engine._haunt_flags()
         floor_key = self._medallion_on_floor(engine)
         if floor_key is not None and floor_key == monster.room_key:
@@ -15602,6 +15704,22 @@ class ForAThousandYearsMode(GenericModeHandler):
                 cards.remove(self.MEDALLION)
                 flags["medallion_holder"] = f"monster:{monster.id}"
                 engine._log(f"{monster.name} 捡起了地上的王室徽章！")
+        if flags.get("medallion_holder") == f"monster:{monster.id}":
+            doom = [
+                key
+                for key, room in engine.state.board.items()
+                if room.template_id in self.DOOM_ROOMS
+            ]
+            if doom and monster.room_key not in doom:
+                dest = min(doom, key=lambda k: engine._path_length(monster.room_key, k))
+                path = engine._shortest_path(monster.room_key, dest)
+                if len(path) > 1:
+                    monster.room_key = path[1]
+                    room = engine.state.board.get(monster.room_key)
+                    engine._log(
+                        f"{monster.name} 带着徽章赶往 {room.name if room else dest}。"
+                    )
+            return True
         return False
 
     def on_monster_turn_attack(self, engine: Any, monster: Any) -> bool:
@@ -15696,32 +15814,53 @@ class ForAThousandYearsMode(GenericModeHandler):
         engine._set_winner("heroes", "千年的诅咒破除了——房子恢复了旧日的荣光。")
         return True
 
+    def _holder_in_doom_room(self, engine: Any) -> bool:
+        """持徽章的叛徒/怪物此刻是否站在塔楼或地下湖。"""
+        holder = engine._haunt_flags().get("medallion_holder", "") or ""
+        prefix, _, hid = holder.partition(":")
+        if prefix == "traitor":
+            owner = next((p for p in engine.state.players if p.id == hid), None)
+            room_key = owner.room_key if owner is not None else None
+        elif prefix == "monster":
+            owner = next((m for m in engine.state.monsters if m.id == hid), None)
+            room_key = owner.room_key if owner is not None else None
+        else:
+            return False
+        room = engine.state.board.get(room_key) if room_key else None
+        return room is not None and room.template_id in self.DOOM_ROOMS
+
+    def _throw_medallion(self, engine: Any) -> bool:
+        """p141：在塔楼/地下湖结束回合 → 扔下徽章 → 叛徒胜。"""
+        if engine.state.winner:
+            return True
+        if not self._holder_in_doom_room(engine):
+            return False
+        engine._set_winner("traitor", "王室徽章被扔进了深渊——诅咒将延续一千年。")
+        return True
+
+    def on_turn_end(self, engine: Any, player: Any) -> None:
+        """p141：持徽章者结束回合时才扔；怪物回合由叛徒（或本轮末尾）代跑。"""
+        if engine.state.phase != "HAUNT_PHASE" or engine.state.winner:
+            return
+        self._sync_medallion(engine)
+        holder = engine._haunt_flags().get("medallion_holder", "") or ""
+        prefix, _, hid = holder.partition(":")
+        if prefix == "traitor" and player.id == hid:
+            self._throw_medallion(engine)
+            return
+        if prefix == "monster":
+            traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+            if traitor is not None and not traitor.dead:
+                if player.id == traitor.id:
+                    self._throw_medallion(engine)
+            elif _is_last_in_round(engine, player):
+                self._throw_medallion(engine)
+
     # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:
-        flags = engine._haunt_flags()
         heroes_alive = [p for p in engine.state.players if p.role == "hero" and not p.dead]
-        # p141：持有徽章者在塔楼/地下湖结束回合 → 扔下徽章 → 叛徒胜
-        holder = flags.get("medallion_holder", "")
-        if holder:
-            prefix, _, hid = holder.partition(":")
-            if prefix in ("traitor", "monster"):
-                holder_room = None
-                if prefix == "traitor":
-                    owner = next((p for p in engine.state.players if p.id == hid), None)
-                    holder_room = owner.room_key if owner is not None else None
-                else:
-                    owner = next((m for m in engine.state.monsters if m.id == hid), None)
-                    holder_room = owner.room_key if owner is not None else None
-                if holder_room is not None and engine.state.board.get(
-                    holder_room
-                ) is not None and engine.state.board[holder_room].template_id in self.DOOM_ROOMS:
-                    if not engine.state.winner:
-                        engine._set_winner(
-                            "traitor", "王室徽章被扔进了深渊——诅咒将延续一千年。"
-                        )
-                        return True
-        # p70：徽章挂上雕像 → 英雄胜（在 _place_medallion 里已判，这里兜底 flags）
-        # p141：英雄全灭 → 叛徒胜
+        # p70：徽章挂上雕像 → 英雄胜（在 _place_medallion 里已判）
+        # p141：英雄全灭 → 叛徒胜。路过塔楼/湖不算赢，必须结束回合才扔。
         if not heroes_alive:
             engine._set_winner("traitor", "最后的继承人倒下了——血脉永埋尘土。")
             return True
@@ -15731,23 +15870,95 @@ class ForAThousandYearsMode(GenericModeHandler):
         return False
 
     # ------------------------------------------------------------- bot/UI
+    def _doom_room_keys(self, engine: Any) -> list[str]:
+        return [
+            f"__room__{key}"
+            for key, room in engine.state.board.items()
+            if room.template_id in self.DOOM_ROOMS
+        ]
+
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        """没拿着徽章时，挂徽章不能当寻路目标——否则全员扎进雕像房，从不去抢叛徒。"""
+        if action_id == "place_medallion":
+            return not self._hero_holds(engine, player)
+        return False
+
+    def bot_attack_blocked(self, engine: Any, player: Any, target: Any) -> bool:
+        """徽章不在这只怪手里时别去捶女巫/使魔——反击会把护送线打崩。"""
+        if getattr(player, "role", None) != "hero":
+            return False
+        template = getattr(target, "template_id", "")
+        if template not in (self.WITCH, self.BEAR, self.CAT, self.CULTIST):
+            return False
+        holder = engine._haunt_flags().get("medallion_holder", "") or ""
+        return holder != f"monster:{getattr(target, 'id', '')}"
+
+    def bot_leave_after_action(self, engine: Any, player: Any) -> bool:
+        """持徽章就别在原地过夜：英雄赶去雕像，叛徒赶去塔楼/湖。"""
+        if player.dead:
+            return False
+        self._sync_medallion(engine)
+        if self._hero_holds(engine, player):
+            statue = self._statue_room(engine)
+            return statue is None or player.room_key != statue
+        holder = engine._haunt_flags().get("medallion_holder", "") or ""
+        if player.role == "traitor" and holder == f"traitor:{player.id}":
+            return not self._holder_in_doom_room(engine)
+        return False
+
+    def bot_hazard_rooms(self, engine: Any, player: Any) -> set:
+        """持徽章的英雄每回合只能走 2 格，别进有未晕怪物的房间过夜。雕像除外。"""
+        if player.dead or player.role != "hero" or not self._hero_holds(engine, player):
+            return set()
+        statue = self._statue_room(engine)
+        hazards = set()
+        for monster in engine.state.monsters:
+            if monster.stunned_turns > 0 or not monster.room_key:
+                continue
+            if statue is not None and monster.room_key == statue:
+                continue
+            hazards.add(monster.room_key)
+        return hazards
+
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        self._sync_medallion(engine)
+        holder = engine._haunt_flags().get("medallion_holder", "") or ""
+        if player.role == "traitor":
+            if holder == f"traitor:{player.id}":
+                return self._doom_room_keys(engine)
+            if holder.startswith("hero:"):
+                hero = next(
+                    (p for p in engine.state.players if p.id == holder.split(":", 1)[1]),
+                    None,
+                )
+                if hero is not None and not hero.dead:
+                    return [f"__room__{hero.room_key}"]
+            floor_key = self._medallion_on_floor(engine)
+            if floor_key is not None:
+                return [f"__room__{floor_key}"]
+            return []
         if player.role != "hero":
             return []
         statue_key = self._statue_room(engine)
         if self._hero_holds(engine, player) and statue_key is not None:
             return [f"__room__{statue_key}"]
-        # 徽章在怪物/叛徒手里或地上：优先去捡地上掉落的
         floor_key = self._medallion_on_floor(engine)
         if floor_key is not None:
             return [f"__room__{floor_key}"]
-        holder = engine._haunt_flags().get("medallion_holder", "")
         if holder.startswith("monster:"):
             monster = next(
                 (m for m in engine.state.monsters if m.id == holder.split(":", 1)[1]), None
             )
             if monster is not None:
                 return [f"__room__{monster.room_key}"]
+        if holder.startswith("traitor:"):
+            traitor = next((p for p in engine.state.players if p.id == holder.split(":", 1)[1]), None)
+            if traitor is not None and not traitor.dead:
+                return [f"__room__{traitor.room_key}"]
+        if holder.startswith("hero:") and statue_key is not None:
+            # 队友拿着徽章：去雕像会合。返回空会掉进 key_rooms 保底（塔楼/湖），
+            # 真人不会在自己人护送徽章时往深渊跑。
+            return [f"__room__{statue_key}"]
         return []
 
     def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
@@ -15798,8 +16009,6 @@ class BurningSandsMode(GenericModeHandler):
           玩家攻击属性选择层；斯芬克斯只能被力量攻击（正常规则）。
         · "多只斯芬克斯同时知识战"未建模（依附于上一条）。
         · 沙偶重生（叛徒受伤时丢弃物品/属性回起始/移门厅）未建模。
-        · 斯芬克斯"不进有英雄的房间（除非叛徒或另一只已在）"未建模——
-          bot 斯芬克斯守门厅不主动追击，仅在英雄进入门厅时嘲讽。
         · "英雄知识攻击失败回合立即结束"未建模（依附于第一条）。
     """
 
@@ -15868,7 +16077,7 @@ class BurningSandsMode(GenericModeHandler):
         ok = engine._resolve_check(player, stat, self.CLUE_TARGET, "寻找线索")
         if not ok:
             engine._log(f"{engine._player_label(player)} 翻遍了每个角落，一无所获。")
-            return False
+            return True  # p71：每回合只能尝试一条检定，失败也耗掉行动
         self._grant_clue(engine, player, stat)
         engine._log(f"{engine._player_label(player)} 拿到了一条线索（{len(self._clues(engine, player))}/3）！")
         # p71：成功后抽一张事件牌再继续回合
@@ -15883,10 +16092,24 @@ class BurningSandsMode(GenericModeHandler):
         if len(mine) < 3:
             engine._log(f"{engine._player_label(player)} 的线索还不全（{len(mine)}/3）。")
             return False
-        ok = engine._resolve_check(player, "knowledge", target, "解开谜语")
+        extra = 0
+        if player.role != "traitor" and (
+            self.BALL in getattr(player, "items", [])
+            or self.BOARD in getattr(player, "items", [])
+        ):
+            extra = 1  # p71：水晶球/灵应板解谜多掷 1 骰
+        if extra:
+            player.stats["knowledge"] = int(player.stats.get("knowledge", 0)) + extra
+        try:
+            ok = engine._resolve_check(player, "knowledge", target, "解开谜语")
+        finally:
+            if extra:
+                player.stats["knowledge"] = max(
+                    0, int(player.stats.get("knowledge", 0)) - extra
+                )
         if not ok:
             engine._log(f"{engine._player_label(player)} 把线索拼来拼去，始终差一点。")
-            return False
+            return True  # p71：每回合只能尝试一次解谜，失败也耗掉行动
         flags = engine._haunt_flags()
         flags["riddle_solved"] = True
         if player.role == "traitor":
@@ -15914,6 +16137,51 @@ class BurningSandsMode(GenericModeHandler):
         return 3 * count if count else 0
 
     # ------------------------------------------------------- 嘲讽攻击
+    def _heroes_in(self, engine: Any, room_key: str) -> bool:
+        return any(
+            p.role == "hero" and not p.dead and p.room_key == room_key
+            for p in engine.state.players
+        )
+
+    def _sphinx_may_enter(self, engine: Any, monster: Any, room_key: str) -> bool:
+        """p142：不进有英雄的房间，除非叛徒或另一只斯芬克斯已在。"""
+        if not self._heroes_in(engine, room_key):
+            return True
+        if any(
+            p.role == "traitor" and not p.dead and p.room_key == room_key
+            for p in engine.state.players
+        ):
+            return True
+        return any(
+            m.template_id == self.SPHINX
+            and m.id != getattr(monster, "id", None)
+            and m.room_key == room_key
+            for m in engine.state.monsters
+        )
+
+    def on_monster_move(self, engine: Any, monster: Any, rolled: int) -> bool:
+        if getattr(monster, "template_id", "") != self.SPHINX:
+            return False
+        target = engine._find_monster_target(monster)
+        if target is None or monster.room_key == target.room_key:
+            return True
+        path = engine._shortest_path(monster.room_key, target.room_key)
+        if len(path) <= 1:
+            return True
+        steps = max(1, int(rolled))
+        index = 0
+        while index + 1 < len(path) and steps > 0:
+            nxt = path[index + 1]
+            if not self._sphinx_may_enter(engine, monster, nxt):
+                break
+            index += 1
+            steps -= 1
+        if index > 0:
+            monster.room_key = path[index]
+            room = engine.state.board.get(monster.room_key)
+            engine._log(f"{monster.name} 移动到 {room.name if room else monster.room_key}。")
+        return True
+
     def on_monster_turn_attack(self, engine: Any, monster: Any) -> bool:
         """p142：斯芬克斯以理智嘲讽攻击；它输了对决不受伤也不被晕。"""
         if getattr(monster, "template_id", "") != self.SPHINX:
@@ -15940,6 +16208,15 @@ class BurningSandsMode(GenericModeHandler):
             if aid in ("solve_riddle", "traitor_solve_riddle") and not (
                 len(self._clues(engine, player)) >= 3 and player.room_key == haunt_room
             ):
+                continue
+            # 已经拿到的线索不要再出现：失败返回 False 不会消耗行动额度，
+            # 机器人会在垃圾房空点 100+ 回合（批次 12 seed101/4p）。
+            mine = self._clues(engine, player)
+            if aid == "clue_junk" and "might" in mine:
+                continue
+            if aid == "clue_gameroom" and "speed" in mine:
+                continue
+            if aid == "clue_organ" and "sanity" in mine:
                 continue
             result.append(action)
         return result
@@ -15976,20 +16253,103 @@ class BurningSandsMode(GenericModeHandler):
         return False
 
     # ------------------------------------------------------------- bot/UI
+    def _check_dice(self, engine: Any, player: Any, stat: str) -> int:
+        """与引擎 _resolve_check 同一套骰数：属性 + 物品加成，夹在 1–8。"""
+        try:
+            dice = int(engine._effective_stat(player, stat)) + int(engine._check_bonus(player, stat))
+        except Exception:
+            dice = int((player.stats or {}).get(stat, 0) or 0)
+        return max(1, min(8, dice))
+
+    def _can_make_check(self, engine: Any, player: Any, stat: str, target: int) -> bool:
+        """Betrayal 骰子面值 0/1/2，骰数 ×2 仍 < 目标就永远掷不出。"""
+        return self._check_dice(engine, player, stat) * 2 >= int(target)
+
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        """已拿到的、或骰数永远掷不出 4+ 的线索，不要再当目标/再点。"""
+        mine = self._clues(engine, player)
+        mapping = {
+            "clue_junk": "might",
+            "clue_gameroom": "speed",
+            "clue_organ": "sanity",
+        }
+        if action_id in mapping:
+            stat = mapping[action_id]
+            if stat in mine:
+                return True
+            return not self._can_make_check(engine, player, stat, self.CLUE_TARGET)
+        if action_id in ("solve_riddle", "traitor_solve_riddle"):
+            if len(mine) < 3:
+                return True
+            need = self.HERO_SOLVE if action_id == "solve_riddle" else self.TRAITOR_SOLVE
+            return not self._can_make_check(engine, player, "knowledge", need)
+        return False
+
+    def bot_leave_after_action(self, engine: Any, player: Any) -> bool:
+        """线索没齐就做完一次换房间；集齐后若不在作祟房也要走。
+
+        失败也耗行动之后，若还 leave=False，`_pending_haunt_action_here`
+        会把人钉在垃圾房每回合空点力量 4+（批次 12 seed101/5p ×251）。
+        """
+        if player.dead:
+            return False
+        mine = self._clues(engine, player)
+        if len(mine) >= 3:
+            haunt_room = engine.state.meta["haunt_rule"].get("haunt_room")
+            return player.room_key != haunt_room
+        return True
+
+    def bot_hazard_rooms(self, engine: Any, player: Any) -> set:
+        """未晕的斯芬克斯房过夜会被拦死；正在找的线索房/作祟房除外。"""
+        if getattr(player, "role", None) != "hero":
+            return set()
+        mine = self._clues(engine, player)
+        needed = {tid for stat, tid in self.CLUE_ROOMS.items() if stat not in mine}
+        haunt_room = engine.state.meta.get("haunt_rule", {}).get("haunt_room")
+        if len(mine) >= 3 and haunt_room:
+            needed.add(engine.state.board[haunt_room].template_id if haunt_room in engine.state.board else "")
+        hazards = set()
+        for monster in engine.state.monsters:
+            if monster.template_id != self.SPHINX or monster.stunned_turns > 0 or not monster.room_key:
+                continue
+            room = engine.state.board.get(monster.room_key)
+            if room is not None and room.template_id in needed:
+                continue
+            hazards.add(monster.room_key)
+        return hazards
+
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
-        if player.role != "hero":
+        if player.dead or player.role not in ("hero", "traitor"):
             return []
         mine = self._clues(engine, player)
-        # 缺哪条线索就去哪个房间；集齐三枚直奔作祟房
-        for stat in self.ROLL_TOKENS:
-            if stat not in mine:
-                # 返回**模板 id**：bot 侧的 _haunt_goal_rooms 会按 template_id
-                # 换算成房间 key 再取下一步。写成 "__room__<模板 id>" 是错的——
-                # 那个前缀只接受真正的棋盘 key，模板 id 会被静默丢弃，
-                # 结果机器人永远不去线索房（#60 实测：三线索从没被 bot 拿过）。
-                return [self.CLUE_ROOMS[stat]]
         haunt_room = engine.state.meta["haunt_rule"].get("haunt_room")
-        return [f"__room__{haunt_room}"] if haunt_room else []
+        if len(mine) >= 3:
+            return [f"__room__{haunt_room}"] if haunt_room else []
+        room = engine.state.board.get(player.room_key)
+        current_tid = room.template_id if room is not None else None
+        hittable: list[str] = []
+        leftover: list[str] = []
+        for stat in self.ROLL_TOKENS:
+            if stat in mine:
+                continue
+            tid = self.CLUE_ROOMS[stat]
+            leftover.append(tid)
+            if self._can_make_check(engine, player, stat, self.CLUE_TARGET):
+                hittable.append(tid)
+        # 本房刚做过（失败也耗了行动）就换下一间，别被承诺机制拽回来。
+        if current_tid in hittable and len(hittable) > 1:
+            hittable = [tid for tid in hittable if tid != current_tid]
+        if hittable:
+            # 返回**模板 id**：bot 侧按 template_id 换算房间 key。
+            return hittable
+        if player.role == "traitor":
+            # 自己掷不出剩下的线索，改去磨死英雄（解谜竞速已经没戏）。
+            return [
+                f"__room__{p.room_key}"
+                for p in engine.state.players
+                if p.role == "hero" and not p.dead and p.room_key
+            ]
+        return leftover
 
     def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
         flags = engine._haunt_flags()
@@ -19025,6 +19385,10 @@ class PortraitCurseMode(GenericModeHandler):
         if self._gallery_key(engine):
             lines.append("肖像在画廊——叛徒不敢直视它")
         return lines
+
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        """放下颜料只给人类；机器人会「放下→再捡起」原地打转。"""
+        return action_id == "drop_paint"
 
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
         """手里有颜料就往画廊跑，没有就去搜颜料；叛徒同样追颜料（好把它毁掉）。"""

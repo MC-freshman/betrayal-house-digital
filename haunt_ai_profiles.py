@@ -653,9 +653,10 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
     56: {
         "hero": {
-            # p67：幽影免疫力量攻击——持戒指用理智、否则去骗命运放逐；
-            # 别急着围殴叛徒，逼他多用时间之力就会自毁。
-            "victory_focus": "持戒指理智清幽影，或独处骗命运放逐；缠住叛徒等时之沙反噬",
+            # p67：英雄胜线就是杀死叛徒。默认画像不打叛徒，人永远等时之沙
+            # 自己磨——但叛徒 bot 若学会少吹风，这条线会永远走不到。
+            "attack_traitor_players": True,
+            "victory_focus": "持戒指理智清幽影，或独处骗命运放逐；能打到叛徒就下手",
         },
         "traitor": {
             "attack_heroes": True,
@@ -677,13 +678,18 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
     59: {
         "hero": {
-            # p70：徽章开局在叛徒手里——打掉他/让猫抢了再夺回，捡到后只能
-            # 慢慢挪（每回合 2 格），直奔雕像房挂上去。
+            # p70：徽章开局在叛徒手里。默认不打叛徒就永远夺不回徽章，
+            # 3 人局又没有猫/熊去抢，整局卡死（批次 12 seed101/3p）。
+            "attack_traitor_players": True,
+            # 追女巫/使魔 +130 会压过追持徽章的叛徒；徽章不在怪手里时别去互殴。
+            "attack_monsters": False,
             "victory_focus": "夺回王室徽章，护送（每回合限 2 格）到雕像房挂上去",
         },
         "traitor": {
             "attack_heroes": True,
-            "victory_focus": "让使魔抢走徽章送到塔楼或地下湖扔掉，守住雕像不让英雄挂徽章",
+            # 持徽章时要去塔楼/湖，追人 +130 会压过剧本目标 +125。
+            "chase_heroes": False,
+            "victory_focus": "自己或使魔把徽章送到塔楼或地下湖扔掉，守住雕像",
         },
         "scenario": {"special_rules": ["medallion_escort", "steal_medallion", "statue_threshold"]},
     },
@@ -748,11 +754,14 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         "hero": {
             # p71：解谜竞速——三条线索各自收集（力量/速度/理智 4+），集齐后
             # 回作祟房知识 6+；斯芬克斯挡路每只多花 3 移动，绕开别硬闯。
+            "attack_monsters": False,
             "victory_focus": "分头收集三条线索（垃圾房/游戏室/管风琴房），集齐后回作祟房解谜",
         },
         "traitor": {
             "attack_heroes": True,
-            "victory_focus": "用斯芬克斯堵住三个线索房拖慢英雄，自己抢先解谜（知识 5+）",
+            # 自己也要集线索解谜；追人 +130 会压过线索房。
+            "chase_heroes": False,
+            "victory_focus": "自己抢先集齐三线索回作祟房解谜（知识 5+），斯芬克斯只负责拦路",
         },
         "scenario": {"special_rules": ["riddle_race", "sphinx_toll", "clue_hunt"]},
     },
