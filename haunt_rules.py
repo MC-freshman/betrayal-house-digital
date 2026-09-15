@@ -3049,153 +3049,234 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "source_pages": [71, 142],
     },
     61: {
-        # 校准记录（2026-09-05，对照英雄手册 p72 / 叛徒手册 p143）：
+        # 校准记录（2026-09-15 批次13 逐条复核，对照英雄手册 p72 / 叛徒手册 p143）：
         #   机制落在 EternalGloryMode：
-        #   · 三遗物：雕像（画廊）/石棺（墓地）/古甲（酒窖）——强制入场
-        #   · 矛 token 放作祟房间；幽灵战士（Speed 3 Might 5）生成并拾矛
-        #   · 英雄拾矛 → 带到遗物房间 → 知识检定推 Track
-        #   · Track = 2× 英雄数 且在两个不同房间 → 英雄胜
-        #   · 矛离开遗物房间 → Track 归零
-        #   · 英雄胜：安息；叛徒胜：英雄全灭
-        #   简化：叛徒 incorporeal / 盾 / 偷矛需 3+ 伤害未建模。
-        "version": 3,
+        #   · 三遗物：雕像（画廊）/石棺（墓地）/古甲（酒窖）
+        #   · 矛 token 放作祟房间地上；幽灵战士（Speed 3 Might 5）绑定长矛
+        #   · 英雄拾矛 → 带到遗物房间 → 知识检定**按点分档**推 Track（≤2 / 3-5 / 6-8 / 9+）
+        #   · Track = 2× 作祟时英雄数 → 在该房放一枚安息印记；两间不同房间 → 英雄胜
+        #   · 矛离开所在房间 → Track 归零
+        #   · 叛徒：与矛同房做知识/理智 6+ 记一次鼓舞，6 次 → 叛徒胜
+        #   · 拾矛/回合开始持矛须理智 4+；失败被幽灵力量 4 攻击，受伤即掉矛
+        #   · 进入/结束回合于矛房须速度 3+，失败 1 骰物理伤害
+        #   · 持矛英雄不能攻击；幽灵只在无人持矛时行动
+        #   简化：盾牌只作叛徒携带令牌（无交易/被偷）、偷矛沿用引擎 >2 阈值、
+        #         叛徒化作虚体免伤未建模。
+        "version": 4,
         "fidelity": "refined",
         "status": "playable",
         "mode": "ghost_warrior",
         "traitor_rule": "revealer",
-        "hero_goal": "带着长矛到遗物房间说服幽灵战士安息。",
-        "traitor_goal": "让幽灵战士杀死所有英雄。",
+        "hero_goal": "把长矛带进两间不同的遗物房，做知识检定说服幽灵战士安息。",
+        "traitor_goal": "与长矛同房鼓吹旧日荣耀（6 次）或在幽灵的剑下杀光英雄。",
         "suggested_monsters": [],
         "required_cards": [],
         "key_rooms": ["gallery", "graveyard", "wine_cellar"],
-        "tokens": ["spear", "statue_relic", "sarcophagus_relic", "ancient_armor", "ghost_warrior"],
+        "tokens": ["spear", "shield", "statue_relic", "sarcophagus_relic", "ancient_armor"],
         "setup": {
             "tracks": {
                 "persuasion_track": {"label": "说服进度", "target": 20, "side": "heroes"},
+                "inspire_track": {"label": "鼓舞进度", "target": 6, "side": "traitor"},
             },
             "flags": {
-                "rest_tokens_rooms": [], "spear_held_by": None,
-                "ghost_alive": True, "relic_rooms": {},
+                "rest_token_rooms": [], "inspire_count": 0, "spear_locked": {},
+                "hero_count_at_start": 0, "last_spear_room": "", "relic_rooms": {},
             },
         },
         "monsters": [
             {"template_id": "ghost", "name": "幽灵战士", "spawn": "deferred", "count": 1, "speed": 3, "might": 5, "sanity": 0},
         ],
         "actions": [
-            {"id": "persuade_ghost", "side": "heroes", "label": "说服幽灵", "detail": "持矛在遗物房间做知识检定推 Track（p72）。", "stat": "knowledge", "target": 5, "progress": "persuasion_track"},
-            {"id": "pick_up_spear", "side": "heroes", "label": "拾取长矛", "detail": "在同房间拾取幽灵战士掉落的长矛（p72）。"},
+            # 说服的分档（≤2 拒绝 / 3-5 +1 / 6-8 +2 / 9+ +3）由 handler 自己掷骰结算，
+            # 所以这里**不写 stat / progress**——写了引擎会额外 +1，与分档重复结算。
+            {"id": "persuade_ghost", "side": "heroes", "label": "说服幽灵", "detail": "持矛在遗物房做知识检定，按点数推说服进度（p72）。"},
+            {"id": "pick_up_spear", "side": "heroes", "label": "拾取长矛", "detail": "拾起地上的长矛；须通过理智 4+ 才能握稳（p72）。"},
+            {"id": "inspire_ghost", "side": "traitor", "label": "鼓舞幽灵", "detail": "与长矛同房做知识或理智 6+，累计 6 次让幽灵重燃战意（p143）。"},
         ],
         "win_conditions": [],
         "source_pages": [72, 143],
     },
     62: {
-        # 校准记录（2026-09-05，对照英雄手册 p73 / 叛徒手册 p144）：
+        # 校准记录（2026-09-15 批次13 逐条复核，对照英雄手册 p73 / 叛徒手册 p144）：
         #   机制落在 BagOfTricksMode：
-        #   · 叛徒角色从游戏中移除（p73）；疯子怪物（Speed 4 Might 3）生成
-        #   · 英雄在同疯子/小玩意的房间做知识 6+ 推进进度
-        #   · 进度 = 玩家数 → 疯子被送走（英雄胜）
-        #   简化：小玩意收集/每房限一枚/灵应板加骰未建模。
-        "version": 3,
+        #   · 叛徒角色按规则从游戏中移除（令牌离场、携带物落地不弃掉）
+        #   · 疯子怪物（Speed 4 Might 3）进作祟房间；回合/伤害轨归零
+        #   · 英雄胜线：与疯子/小玩意同房 → 知识 6+ 抬轨（同房每件小玩意结果 +1、
+        #     通灵板 +1 骰、封顶 8）；理智检定 roll < 轨道当前格 → 得一枚理智检定
+        #     令牌并降轨一格；令牌攒到「作祟时英雄数」→ 英雄胜
+        #   · 叛徒胜线：疯子在物品符号房间做速度 4+ 搜纪念品，满 4 枚 → 叛徒胜
+        #   · 疯子不能常规攻击：与英雄同房时掷 4 骰用一件随机小玩意（0-8 号效果，
+        #     3/4/5/7 真结算，其余记日志）；防守打赢只让英雄回合立刻结束
+        #   · 打中疯子不掉血也不昏迷，但英雄可摸走一件小玩意；免疫速度（左轮）
+        #     攻击；炸药同样伤不到他（"挨打不掉血"已接管）
+        #   简化：小玩意起手 2 件（原文未写死枚数）；保险库双份纪念品未建模
+        #         （本仓库保险库无物品符号）。
+        "version": 4,
         "fidelity": "refined",
         "status": "playable",
         "mode": "bag_of_tricks",
         "traitor_rule": "revealer",
-        "hero_goal": "在疯子杀死你们之前破解他的小玩意。",
-        "traitor_goal": "让疯子收集足够的纪念品。",
+        "hero_goal": "贴住疯子（或手持小玩意）做知识 6+ 抬高回合/伤害轨，再用理智检定把它换成一枚枚理智检定令牌。",
+        "traitor_goal": "让疯子在带物品符号的房间搜到四件纪念品。",
         "suggested_monsters": [],
         "required_cards": [],
         "key_rooms": [],
-        "tokens": ["madman_token"],
+        "tokens": ["trinket", "souvenir"],
         "setup": {
             "tracks": {
-                "trinket_progress": {"label": "小玩意破解", "target": "player_count", "side": "heroes"},
+                "trinket_progress": {"label": "回合/伤害轨", "target": 8, "side": "heroes"},
+                "trinket_tokens": {"label": "理智检定令牌", "target": "hero_count", "side": "heroes"},
+                "souvenir_count": {"label": "纪念品", "target": 4, "side": "traitor"},
             },
-            "flags": {"traitor_removed": True},
+            "flags": {"traitor_removed": True, "sack": 2, "souvenir_rooms": []},
         },
         "monsters": [
-            {"template_id": "madman", "name": "疯子（收藏家）", "spawn": "haunt_room", "count": 1, "speed": 4, "might": 3, "sanity": 0},
+            {
+                "template_id": "madman",
+                "name": "疯子（收藏家）",
+                "spawn": "haunt_room",
+                "count": 1,
+                "speed": 4,
+                "might": 3,
+                "sanity": 5,
+                "knowledge": 0,
+                "immune_to": ["speed"],
+            },
         ],
         "actions": [
-            {"id": "tap_trinkets", "side": "heroes", "label": "破解小玩意", "detail": "在同疯子的房间做知识 6+（p73）。", "stat": "knowledge", "target": 6, "progress": "trinket_progress"},
+            {
+                "id": "tap_trinkets",
+                "side": "heroes",
+                "label": "破解小玩意（知识 6+）",
+                "detail": "与疯子或小玩意同房做知识 6+：同房每有一件英雄携带的小玩意结果 +1，持通灵板多掷一骰（封顶 8）。成功把回合/伤害轨上调一格（p73）。",
+                "requires": ["same_room:madman"],
+            },
+            {
+                "id": "use_trinket",
+                "side": "heroes",
+                "label": "用小玩意（理智检定）",
+                "detail": "与疯子或小玩意同房做理智检定：结果低于回合/伤害轨当前格 → 得一枚理智检定令牌并把轨道降一格（持头骨少掷一骰，最少 1 骰）。令牌达到作祟时英雄数即获胜（p73）。",
+                "requires": ["same_room:madman"],
+            },
         ],
         "win_conditions": [],
         "source_pages": [73, 144],
     },
     63: {
-        # 校准记录（2026-09-05，对照英雄手册 p74 / 叛徒手册 p145）：
+        # 校准记录（2026-09-15 批次13 逐条复核，对照英雄手册 p74 / 叛徒手册 p145）：
         #   机制落在 TwistingNetherMode：
-        #   · 英雄锚定房间（知识 5+ 任意房间，每房一次）→ 玩家数个 → 英雄胜
-        #   · 叛徒每回合溶解一个未锚定房间
-        #   · 非锚定房间全溶 → 叛徒胜
-        #   简化：nether 穿行/随机落房/重连房间/怪物不可攻击未建模。
-        "version": 3,
+        #   · 英雄锚定：**预兆符号房间**知识 5+（骷髅 +1 骰 / 通灵板 +2 骰），
+        #     每房一次；含锚房间 + 与之连通的房间都算"已锚定"
+        #   · 胜利门槛按人数：3 人 12 / 4 人 15 / 5 人 19 / 6 人 21 间 → 英雄胜
+        #   · 开局 + 每回合结束：只留 门厅/门廊/大楼梯/上层平台/地下室平台、
+        #     有探险者/怪物/锚的房间、以及与上述房间连通的房间，其余连同
+        #     房内的物品/预兆/事件一起收回牌堆（p74/p145 "Do This After Each Turn"）
+        #   · 叛徒首回合放星界灵；英雄 ≥3 加放 Specter、≥4 加放 Ghost、
+        #     5 人加放 Phantom（都放在还有未探索门口的房间）
+        #   · 特殊：Specter 打速度/知识 <4 的目标 +1 骰；Ghost 以理智攻击
+        #     （精神伤害）且免疫力量/速度、持戒指的英雄可改用理智打它；
+        #     Phantom 行动前瞬移到有别的怪物或叛徒的房间
+        #   · 叛徒胜：英雄全灭（叛徒倒下不等于结束，虚空怪物照常行动）
+        #   简化：穿越虚空（断连落房 / 三选一 / 额外 1 点移动）未建模；
+        #     神秘电梯仍可乘坐；Phantom 瞬移取"离最近英雄最近"的候选房间。
+        "version": 4,
         "fidelity": "refined",
         "status": "playable",
         "mode": "twisting_nether",
         "traitor_rule": "revealer",
-        "hero_goal": "锚定足够多的房间把房子拉回现实。",
-        "traitor_goal": "溶解整栋房子。",
+        "hero_goal": "在预兆房间做知识 5+ 锚定，把 12/15/19/21 间（按人数）房子连成锚网。",
+        "traitor_goal": "驱使虚空怪物杀光英雄。",
         "suggested_monsters": [],
         "required_cards": [],
         "key_rooms": [],
-        "tokens": [],
+        "tokens": ["anchor"],
         "setup": {
+            # target 在 handler.setup 里按人数改写为 12/15/19/21
             "tracks": {
-                "anchor_progress": {"label": "锚定进度", "target": "player_count", "side": "heroes"},
-                "dissolve_progress": {"label": "溶解进度", "target": 50, "side": "traitor"},
+                "anchor_progress": {"label": "锚定房间", "target": 12, "side": "heroes"},
             },
-            "flags": {"anchored_rooms": [], "dissolved_rooms": []},
+            "flags": {
+                "anchored_rooms": [],
+                "dissolved_rooms": [],
+                "nether_spawned": False,
+            },
         },
-        "monsters": [],
+        "monsters": [
+            # p145 属性表：星界灵 5/3/4/5、Specter 3/4/6/3、Ghost -/2/5/5、
+            # Phantom 4/1/2/3（力量/速度/知识/理智）。全部 deferred，由
+            # handler 在叛徒首回合按英雄数生成。Phantom 借 shadow 模板承载。
+            {"template_id": "astral_spirit", "spawn": "deferred", "name": "星界灵",
+             "speed": 3, "might": 5, "sanity": 5, "knowledge": 4},
+            {"template_id": "spectre", "spawn": "deferred", "name": "虚空幽灵",
+             "speed": 4, "might": 3, "sanity": 3, "knowledge": 6},
+            {"template_id": "ghost", "spawn": "deferred", "name": "鬼魂",
+             "speed": 2, "might": 0, "sanity": 5, "knowledge": 5,
+             "attack_attr": "sanity", "immune_to": ["might", "speed"]},
+            {"template_id": "shadow", "spawn": "deferred", "name": "魅影",
+             "speed": 1, "might": 4, "sanity": 3, "knowledge": 2},
+        ],
         "actions": [
-            {"id": "anchor_room", "side": "heroes", "label": "锚定房间", "detail": "知识 5+ 锚定当前房间（p74）。", "stat": "knowledge", "target": 5, "progress": "anchor_progress"},
+            {"id": "anchor_room", "side": "heroes", "label": "锚定房间",
+             "detail": "预兆房间内知识 5+；骷髅 +1 骰、通灵板 +2 骰（p74）。",
+             "stat": "knowledge", "target": 5},
         ],
         "win_conditions": [],
         "source_pages": [74, 145],
     },
     64: {
-        # 校准记录（2026-09-05，对照英雄手册 p75 / 叛徒手册 p146）：
+        # 校准记录（2026-09-15 批次13 逐条复核，对照英雄手册 p75 / 叛徒手册 p146）：
         #   机制落在 BloodOfferingMode：
-        #   · 女孩 token 放作祟房间；叛徒失去女孩卡
-        #   · 邪教徒（英雄数-1）+ 蝙蝠（等同邪教徒数）布点
-        #   · 计时到 7 → 恶魔不耐烦杀了叛徒（英雄胜）
-        #   · 邪教徒到达女孩房间 → 献祭（叛徒胜）
-        #   · 简化：女孩移动/蝙蝠精神免疫/钩爪未建模。
-        "version": 3,
+        #   · 女孩 token 放作祟房间；揭示者失去女孩预兆卡；计时轨归零
+        #   · 邪教徒 = 英雄数-1，布点「距最近英雄 ≥4 格、每层不超过该层英雄数」
+        #   · 计时：每个怪物回合后 +1；到 7 → 恶魔不耐烦，叛徒与仆从一起消失（英雄胜）
+        #   · 叛徒胜：女孩被力量/速度攻击命中累计 5 枚力量 token → 女孩死
+        #   · 邪教徒：预兆房知识 5+ 开传送门；在传送门房知识检定召唤蝙蝠
+        #     （8+ 3 只 / 5-7 2 只 / 3-4 1 只 / 0-2 无）
+        #   · 英雄可同房知识 4+ 关闭传送门
+        #   · 蝙蝠受物理伤害即死（不击晕）、对左轮防御 +1 骰、不受精神伤害
+        #   简化：女孩移动/NPC 操控、钩爪、蝙蝠半速与"当回合不能攻击"未建模。
+        "version": 4,
         "fidelity": "refined",
         "status": "playable",
         "mode": "blood_offering",
         "traitor_rule": "revealer",
-        "hero_goal": "保护女孩不被邪教徒献祭——撑到恶魔不耐烦为止。",
-        "traitor_goal": "把女孩带到邪教徒面前献祭。",
-        "suggested_monsters": ["cultist"],
+        "hero_goal": "保护女孩：撑到计时轨走到 7，恶魔会先收拾叛徒和他的邪教徒。",
+        "traitor_goal": "在女孩身上累计 5 次力量/速度伤害把她献祭，或杀光英雄。",
+        "suggested_monsters": [],
         "required_cards": [],
         "key_rooms": [],
         "tokens": ["girl", "cultist", "bat"],
         "setup": {
             "tracks": {
-                "demon_timer": {"label": "恶魔计时", "target": 7, "side": "heroes"},
+                "demon_timer": {"label": "恶魔耐心", "target": 7, "side": "heroes"},
+                "girl_wounds": {"label": "女孩伤势", "target": 5, "side": "traitor"},
             },
-            "flags": {"girl_sacrificed": False},
+            "flags": {"girl_room": "", "girl_dead": False, "girl_stunned": 0, "haunt_floor": -1},
         },
         "monsters": [
             {"template_id": "cultist", "name": "邪教徒", "spawn": "deferred", "count": 1, "speed": 3, "might": 4, "sanity": 4, "knowledge": 5},
             {"template_id": "bat", "name": "蝙蝠", "spawn": "deferred", "count": 1, "speed": 4, "might": 3, "sanity": 3},
         ],
-        "actions": [],
+        "actions": [
+            {"id": "attack_girl", "side": "traitor", "label": "攻击女孩", "detail": "与女孩同房，用力量攻击她；命中一次累计一枚力量令牌（p146）。"},
+            {"id": "close_portal", "side": "heroes", "label": "关闭传送门", "detail": "与传送门同房做知识 4+ 把它关掉（p75）。"},
+        ],
         "win_conditions": [],
         "source_pages": [75, 146],
     },
     65: {
-        # 校准记录（2026-09-05，对照英雄手册 p76 / 叛徒手册 p147）：
+        # 校准记录（2026-09-15，对照英雄手册 p76 / 叛徒手册 p147）：
         #   机制落在 BreathOfWindMode：
         #   · 骚灵（ghost 模板，Speed 3）生成于作祟房间
-        #   · 计时从 3 开始，每个怪物回合 -1；归零 → 英雄死亡
-        #   · 找蜡烛：速度 3+（厨房/餐厅/教堂/画廊），每回合一次
-        #   · 用蜡烛：弃蜡烛 + 知识 5+（作祟层）→ 放 token（每房一次）
-        #   · 仪式 token 数 = 英雄数 → 英雄胜
-        #   简化：骚灵免疫力量攻击/左轮/重生未建模。
-        "version": 3,
+        #   · 回合/伤害轨起始 3；骚灵待在 杂物间/储藏室/图书馆/研究实验室/手术室
+        #     时每个怪物回合 +1；骚灵的攻击骰 = 当前轨道值（上限 8）
+        #   · 找蜡烛：速度 3+（厨房/餐厅/小教堂/画廊），每回合一次
+        #   · 用蜡烛：弃蜡烛（或「蜡烛」物品牌）+ 知识 5+（作祟层、每房一次）
+        #     → 放知识令牌；令牌数 = **作祟揭示时的英雄数** → 英雄胜
+        #   · 骚灵免疫力量；英雄默认用速度打它，持 戒指/骷髅/铃铛 改用理智
+        #     （理智取胜按差值压低轨道，两种攻击都不造成伤害也不击晕）
+        #   注：本仓库房间目录里没有"阁楼"，轨道加速房间只剩五间。
+        "version": 4,
         "fidelity": "refined",
         "status": "playable",
         "mode": "haunt_exorcism",
@@ -3208,13 +3289,22 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "tokens": ["candle", "poltergeist"],
         "setup": {
             "tracks": {
-                "poltergeist_timer": {"label": "骚灵倒计时", "target": 3, "side": "traitor"},
+                "poltergeist_timer": {"label": "回合/伤害轨", "target": 8, "side": "traitor"},
                 "exorcism_progress": {"label": "驱魔进度", "target": "player_count", "side": "heroes"},
             },
             "flags": {"candle_rooms_used": [], "candles_found": 0},
         },
         "monsters": [
-            {"template_id": "ghost", "name": "骚灵", "spawn": "haunt_room", "count": 1, "speed": 3, "might": 0, "sanity": 4},
+            {
+                "template_id": "ghost",
+                "name": "骚灵",
+                "spawn": "haunt_room",
+                "count": 1,
+                "speed": 3,
+                "might": 0,
+                "sanity": 4,
+                "immune_to": ["might"],
+            },
         ],
         "actions": [
             {"id": "find_candle", "side": "heroes", "label": "寻找蜡烛", "detail": "速度 3+（厨房/餐厅/教堂/画廊）（p76）。", "stat": "speed", "target": 3, "rooms": ["kitchen", "dining_room", "chapel", "gallery"]},

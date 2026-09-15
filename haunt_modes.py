@@ -19752,54 +19752,197 @@ class BreathOfWindMode(GenericModeHandler):
     """剧本 65 一阵风息（A Breath of Wind）。
 
     权威原文：英雄手册 p76 / 叛徒手册 p147。
-    · 骚灵（ghost 模板，Speed 3）生成于作祟房间。
-    · 计时从 3 开始，每个怪物回合 -1；归零 → 英雄死亡。
-    · 找蜡烛：速度 3+（厨房/餐厅/教堂/画廊），每回合一次。
-    · 用蜡烛：弃蜡烛 + 知识 5+（作祟层）→ 放 token（每房一次）。
-    · 仪式 token 数 = 英雄数 → 英雄胜。
-    · 简化：骚灵免疫力量攻击/左轮/重生未建模。
+
+    英雄（p76）：
+      · 找蜡烛：在 **厨房/餐厅/小教堂/画廊** 每回合一次，速度 3+ → 得到蜡烛令牌
+        （蜡烛可以像物品一样掉落、交易、被抢）。
+      · 点蜡烛：弃掉一根蜡烛，在**作祟所在楼层**的任意房间做知识 5+ → 成功在该房
+        放一枚知识令牌；同一间房不能重复做。持「蜡烛」物品牌也可代替令牌弃掉。
+      · 知识令牌数达到"作祟揭示时的英雄数" → 驱魔成功，英雄胜。
+    叛徒（p147）：
+      · 骚灵（ghost 模板）落在作祟房间；**回合/伤害轨**起始 3。
+      · 每个怪物回合前，骚灵在 **杂物间/储藏室/图书馆/研究实验室/手术室** 时轨道 +1。
+      · 骚灵攻击：对同房每个英雄各攻击一次，掷「当前轨道值」（上限 8）枚骰，英雄用
+        **力量**防御；赢 3+ 时英雄只受 2 点伤害，否则按差值受伤；英雄防守赢下则骚灵
+        毫发无损（它不会被打晕）。
+      · 骚灵免疫力量攻击；英雄只能用**速度**打它，持 戒指/骷髅/铃铛 时改用**理智**：
+        赢了不造成伤害，而是把轨道按差值压低。
+      · 英雄全灭 → 叛徒胜；叛徒倒下不停止作祟（吸收引擎「叛徒死亡→英雄胜」兜底）。
+
+    已知简化：
+      · 本仓库的房间目录里**没有"阁楼"**（见 content.py 的房间清单），轨道加速房间
+        因此只剩 杂物间/储藏室/图书馆/研究实验室/手术室 五间。
+      · 「骚灵可以捡物品、每捡一件轨道 +1 / 掉一件 -1」未建模——引擎里怪物不持物品。
+      · 重组（re-form）未建模：原文是叛徒的可选操作（丢掉所有物品 + 轨道重置为 3 +
+        在任意预兆房现身），只有轨道被打到极低时才划算，且引擎的怪物位置没有
+        "回预兆房"的通用入口。
+      · 英雄打骚灵落败时原文是"掷 1 枚骰的物理伤害"而非差值伤害，引擎没有"反击伤害
+        改写"入口，沿用引擎默认的差值伤害。
+      · 左轮/玩具猴对骚灵无效、炸药把它打出局等武器特例未建模。
+      · 速度攻击赢下后"抢它携带的一件物品"未建模（同"怪物不持物品"）。
     """
 
     mode = "haunt_exorcism"
 
+    POLTERGEIST = "ghost"
+    CANDLE = "candle"
+    CANDLE_ITEM = "item_candle"
+    MARK = "knowledge_check"
+    TRACK = "poltergeist_timer"
+    TRACK_START = 3
+    TRACK_MAX = 8
+    # 机器人一次出门囤几根蜡烛（原文不限根数；这只是"人不会一根一根跑"的策略值）
+    CANDLE_STOCK = 2
+    # p76：找蜡烛只在四间房；p147：轨道加速只在五间房（本仓库没有"阁楼"）。
+    FIND_ROOMS = ("kitchen", "dining_room", "chapel", "gallery")
+    BOOST_ROOMS = (
+        "junk_room",
+        "larder",
+        "library",
+        "research_laboratory",
+        "operating_laboratory",
+    )
+    # p76：持这三件法器之一才能改用理智打骚灵。
+    SANITY_TOOLS = ("omen_ring", "omen_skull", "omen_bell")
+
+    # ------------------------------------------------------------- 小工具
+    def _poltergeist(self, engine):
+        return engine._monster_by_template(self.POLTERGEIST)
+
+    def _track(self, engine):
+        return int(engine._haunt_track_value(self.TRACK))
+
+    def _attack_dice(self, engine):
+        """p147：骚灵的攻击骰 = 当前轨道值（上限 8）。"""
+        return max(1, min(self.TRACK_MAX, self._track(engine)))
+
+    def _hero_count_at_reveal(self, engine):
+        return max(1, int(engine._haunt_flags().get("hero_count_at_reveal", 1)))
+
+    def _haunt_floor(self, engine):
+        return int(engine._haunt_flags().get("haunt_floor", -1))
+
+    def _candle_of(self, engine, player):
+        """p76：蜡烛令牌与「蜡烛」物品牌都可以用来点火，返回 (令牌, 物品牌)。"""
+        token = next(iter(engine.tokens_held_by(player.id, self.CANDLE)), None)
+        if token is not None:
+            return token, None
+        if self.CANDLE_ITEM in player.items:
+            return None, self.CANDLE_ITEM
+        return None, None
+
+    def _candle_count(self, engine, player):
+        count = len(list(engine.tokens_held_by(player.id, self.CANDLE)))
+        if self.CANDLE_ITEM in player.items:
+            count += 1
+        return count
+
+    def _burn_room_ok(self, engine, player):
+        """p76：得在作祟楼层、且这间房还没净化过。"""
+        room = engine.current_room(player)
+        if room is None or room.floor != self._haunt_floor(engine):
+            return False
+        used = engine._haunt_flags().get("candle_rooms_used", [])
+        return room.template_id not in used
+
+    # ------------------------------------------------------------- setup
     def setup(self, engine, haunt, room_key):
         flags = engine._haunt_flags()
+        heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
         flags["candle_rooms_used"] = []
         flags["candles_found"] = 0
-        engine._set_haunt_track_value("poltergeist_timer", 3)  # p76：计时从 3 开始
+        flags["hero_count_at_reveal"] = len(heroes)
+        room = engine.state.board.get(room_key)
+        flags["haunt_floor"] = room.floor if room is not None else -1
+        engine._set_haunt_track_value(self.TRACK, self.TRACK_START)
+        # p76：知识令牌数要达到"**作祟揭示时**的英雄数"——不是当前人数，
+        # 也不是总人数（含叛徒）。规则表里的 "player_count" 只是兜底默认值。
+        track = engine._haunt_tracks().setdefault(
+            "exorcism_progress", {"label": "驱魔进度", "value": 0, "side": "heroes"}
+        )
+        track["label"] = "驱魔进度"
+        track["target"] = max(1, len(heroes))
+        track["value"] = 0
         engine._log("骚灵发出了疯狂的笑声——物件开始朝你飞来！")
 
-    def on_turn_start(self, engine, player):
-        flags = engine._haunt_flags()
-        if player.role == "traitor" and not player.dead:
-            # 每个怪物回合递减计时
-            current = int(engine._haunt_track_value("poltergeist_timer"))
-            if current > 0:
-                engine._set_haunt_track_value("poltergeist_timer", current - 1)
-                engine._log(f"骚灵的愤怒升级了！（倒计时 {current - 1}）")
-                if current - 1 <= 0:
-                    # 骚灵杀死一个英雄
-                    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
-                    if heroes:
-                        victim = engine.rng.choice(heroes)
-                        victim.dead = True
-                        engine._log(f"{victim.name} 被骚灵的狂怒撕碎了！")
-                        engine.check_victory()
+    # --------------------------------------------------------- 回合/伤害轨
+    def on_monster_turn_start(self, engine, monster):
+        """p147：骚灵在杂物间/储藏室/图书馆/研究实验室/手术室时，轨道 +1。"""
+        if getattr(monster, "template_id", "") != self.POLTERGEIST:
+            return False
+        room = engine.state.board.get(monster.room_key)
+        if room is None or room.template_id not in self.BOOST_ROOMS:
+            return False
+        value = self._track(engine) + 1
+        engine._set_haunt_track_value(self.TRACK, value)
+        engine._log(f"骚灵搅动的碎屑越来越凶（回合/伤害轨 {value}）。")
+        return False
 
+    def on_monster_turn_attack(self, engine, monster):
+        """p147：骚灵对同房每个英雄各攻击一次，掷轨道值（上限 8）枚骰，英雄用力量防御。"""
+        if getattr(monster, "template_id", "") != self.POLTERGEIST:
+            return False
+        victims = [
+            p
+            for p in engine.state.players
+            if p.role == "hero" and not p.dead and p.room_key == monster.room_key
+        ]
+        if not victims:
+            return False
+        dice = self._attack_dice(engine)
+        for victim in victims:
+            attack = engine.roll_dice(dice, "骚灵的攻击")
+            defense = engine._roll_attack(victim, "might")
+            engine._log(
+                f"{monster.name} 掀起碎屑砸向 {engine._player_label(victim)}："
+                f"{attack} 对 {defense}。"
+            )
+            if attack <= defense:
+                engine._log("碎屑擦身而过——骚灵不会因为防守输掉而受伤。")
+                continue
+            if attack - defense >= 3:
+                engine._deal_damage(victim, "physical", 2, source=monster.name)
+            else:
+                engine._deal_damage(victim, "physical", attack - defense, source=monster.name)
+        return True
+
+    def on_monster_defeated(self, engine, monster, amount):
+        """p76：打中骚灵不造成伤害、也不击晕。
+
+        · 理智攻击（持戒指/骷髅/铃铛）：按**掷骰差值**把轨道压低。
+        · 速度攻击：只能抢它携带的物品（本仓库未建模），同样不造成伤害。
+        引擎在进入这个钩子前会把本次攻击的属性写进 `_last_attack_attr`。
+        """
+        if getattr(monster, "template_id", "") != self.POLTERGEIST:
+            return False
+        if str(getattr(engine, "_last_attack_attr", "") or "") == "sanity":
+            value = max(0, self._track(engine) - max(1, int(amount)))
+            engine._set_haunt_track_value(self.TRACK, value)
+            engine._log(f"理智的冲击撕开了骚灵的怨气（回合/伤害轨 {value}）。")
+        else:
+            engine._log("骚灵被打散了片刻，但没有受伤。")
+        return True
+
+    def attack_attr_override(self, engine, attacker, target, default_attr):
+        """p76：骚灵免疫力量；英雄默认用速度打它，持戒指/骷髅/铃铛时改用理智。"""
+        if getattr(target, "template_id", "") != self.POLTERGEIST:
+            return None
+        if getattr(attacker, "role", "") != "hero":
+            return None
+        if any(card in getattr(attacker, "items", []) for card in self.SANITY_TOOLS):
+            return "sanity"
+        return "speed"
+
+    # ------------------------------------------------------------- 行动
     def available_actions(self, engine, player):
         actions = super().available_actions(engine, player)
         result = []
-        flags = engine._haunt_flags()
         for action in actions:
             if action.id == "burn_candle":
-                if not engine.tokens_held_by(player.id, "candle"):
+                token, item = self._candle_of(engine, player)
+                if token is None and item is None:
                     continue
-                room_id = engine._current_room_template_id(player)
-                if room_id in flags.get("candle_rooms_used", []):
-                    continue
-                # 必须在作祟层
-                room = engine.current_room(player)
-                if room.floor != engine.state.board[engine._haunt_rule_state().get("haunt_room", "")].floor:
+                if not self._burn_room_ok(engine, player):
                     continue
             result.append(action)
         return result
@@ -19809,31 +19952,115 @@ class BreathOfWindMode(GenericModeHandler):
         if action_id == "find_candle":
             ok = super().perform_action(engine, player, action_id, data)
             if ok and engine.last_haunt_action_succeeded():
-                engine.spawn_token("candle", label="蜡烛", role="carried", holder=player.id)
+                engine.spawn_token(self.CANDLE, label="蜡烛", role="carried", holder=player.id)
                 flags["candles_found"] = int(flags.get("candles_found", 0)) + 1
                 engine._log(f"{player.name} 找到了一根蜡烛。")
             return ok
 
         if action_id == "burn_candle":
-            token = next(iter(engine.tokens_held_by(player.id, "candle")), None)
-            if token is None:
+            token, item = self._candle_of(engine, player)
+            if token is None and item is None:
                 engine._log("你没有蜡烛。")
                 return False
-            engine.remove_token(token.uid)
+            if not self._burn_room_ok(engine, player):
+                engine._log("这个房间已经净化过了。")
+                return False
+            room_key = player.room_key
+            room_id = engine._current_room_template_id(player)
+            if token is not None:
+                engine.remove_token(token.uid)
+            else:
+                engine._discard_card_from_player(player, item, return_to_room=False)
             ok = super().perform_action(engine, player, action_id, data)
             if ok and engine.last_haunt_action_succeeded():
-                room_id = engine._current_room_template_id(player)
                 used = flags.setdefault("candle_rooms_used", [])
                 used.append(room_id)
-                engine.spawn_token("knowledge_check", label="驱魔成功", role="check", room_key=player.room_key)
+                engine.spawn_token(
+                    self.MARK, label="驱魔成功", role="marker", room_key=room_key
+                )
                 engine._log("蜡烛的火焰净化了这个房间！")
                 engine.check_victory()
             return ok
 
         return super().perform_action(engine, player, action_id, data)
 
+    # ------------------------------------------------------------- 机器人
+    def bot_action_blocked(self, engine, player, action_id):
+        """手上有蜡烛、且眼前就能点火时，别再翻找。
+
+        两条都要，缺一条就废：
+          ① 不作"能点火就别翻找"，机器人会一直挑 `find_candle`——同分时它总是取
+             规则表里靠前的那个——攒一堆蜡烛却永远不去点火（批次13 seed101/4p
+             实测 find_candle ×233、`burn_candle` 出现 114 次一次没用，卡到 300
+             回合上限）。
+          ② 不作"最多囤 2 根"，机器人就会"找一根 → 跑一整趟去烧一根 → 再跑回来"，
+             把整局耗在来回路上（seed197/5p 煤导槽被踩 80 次）。人是一次多带几根。
+        """
+        if action_id != "find_candle":
+            return False
+        if self._candle_count(engine, player) == 0:
+            return False
+        if self._burn_room_ok(engine, player):
+            return True
+        return self._candle_count(engine, player) >= self.CANDLE_STOCK
+
+    @staticmethod
+    def _sticky_goal(engine, player, slot, candidates):
+        """锁定"这一趟要去哪间房"，直到它不再合格。
+
+        每回合都重新挑"最近的一间"会来回摆：两间等距的净化房之间会 A→B→A，
+        而且只要队友烧掉一间、全场的最近房就会改名，走到一半的英雄当场掉头
+        （批次13 seed151/4p 实测往返 45 次、seed197/5p 煤导槽踩 80 次）。
+        人不会这么走——他认准一间走到为止。
+        """
+        flags = engine._haunt_flags()
+        key = f"{slot}_{player.id}"
+        current = flags.get(key)
+        if (
+            current in candidates
+            and engine._path_length(player.room_key, current) < 9999
+        ):
+            return current
+        reachable = [
+            candidate for candidate in candidates
+            if engine._path_length(player.room_key, candidate) < 9999
+        ]
+        if not reachable:
+            flags.pop(key, None)
+            return None
+        best = min(
+            sorted(reachable), key=lambda candidate: engine._path_length(player.room_key, candidate)
+        )
+        flags[key] = best
+        return best
+
+    def bot_goal_rooms(self, engine, player):
+        """英雄：空手去四间蜡烛房翻找；拿到蜡烛就去作祟层还没净化的房间点火。"""
+        if player.role != "hero":
+            return []
+        token, item = self._candle_of(engine, player)
+        if token is not None or item is not None:
+            used = set(engine._haunt_flags().get("candle_rooms_used", []))
+            floor = self._haunt_floor(engine)
+            candidates = [
+                key
+                for key, room in sorted(engine.state.board.items())
+                if room.floor == floor and room.template_id not in used
+            ]
+            target = self._sticky_goal(engine, player, "burn_target", candidates)
+        else:
+            candidates = [
+                key
+                for key, room in sorted(engine.state.board.items())
+                if room.template_id in self.FIND_ROOMS
+            ]
+            target = self._sticky_goal(engine, player, "find_target", candidates)
+        return [f"__room__{target}"] if target else []
+
+    # ------------------------------------------------------------- 胜负
     def check_victory(self, engine):
-        if engine._haunt_track_value("exorcism_progress") >= engine._haunt_track_target("exorcism_progress"):
+        target = engine._haunt_track_target("exorcism_progress") or self._hero_count_at_reveal(engine)
+        if engine._haunt_track_value("exorcism_progress") >= target:
             engine._set_winner("heroes", "驱魔完成——骚灵消散了！")
             return True
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
@@ -19844,6 +20071,15 @@ class BreathOfWindMode(GenericModeHandler):
         if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
             return True
         return False
+
+    def progress_summary(self, engine, viewer):
+        dice = self._attack_dice(engine)
+        return [
+            f"驱魔进度 {engine._haunt_track_value('exorcism_progress')}/"
+            f"{engine._haunt_track_target('exorcism_progress') or self._hero_count_at_reveal(engine)}"
+            "（知识令牌）。",
+            f"回合/伤害轨 {self._track(engine)}——骚灵攻击掷 {dice} 枚骰。",
+        ]
 
 
 
@@ -20979,96 +21215,330 @@ class BloodOfferingMode(GenericModeHandler):
     """剧本 64 血之献祭（An Offering of Blood）。
 
     权威原文：英雄手册 p75 / 叛徒手册 p146。
-    · 女孩 token 放作祟房间（静止不移动——简化）。
-    · 邪教徒（英雄数-1）+ 蝙蝠（同数）布点。
-    · 计时到 7 → 恶魔不耐烦杀了叛徒（英雄胜）。
-    · 邪教徒到达女孩房间 → 献祭 → 叛徒胜。
-    · 简化：女孩移动/蝙蝠精神免疫/钩爪未建模。
+
+    机制（逐条对照原文）：
+      · 开局：女孩 token 放进作祟房间（揭示者手上的女孩预兆卡归位）；计时轨归零。
+      · 邪教徒 = 英雄数 - 1，布点按原文「距最近英雄至少 4 格、每层人数不超过
+        该层英雄数、做不到就放到尽可能远」。
+      · 英雄胜线（p75）：**每个怪物回合结束后计时轨 +1，到 7 时恶魔不耐烦，
+        叛徒与他的仆从一起消失**——即英雄需要撑满 7 个怪物回合。
+      · 叛徒胜线（p146）：女孩每次被力量/速度攻击打中，女孩卡上添一枚力量令牌；
+        累计 5 枚女孩死亡，叛徒获胜（被理智攻击击败只会让她昏迷，不计数）。
+      · 邪教徒：在带预兆符号的房间代替攻击做知识 5+ → 打开传送门
+        （知识检定令牌）；在已有传送门的房间代替攻击做知识检定召唤蝙蝠：
+        8+ 3 只 / 5-7 2 只 / 3-4 1 只 / 0-2 无。
+      · 英雄可以同房做知识 4+ 关闭传送门。
+      · 特殊攻击：蝙蝠受到物理伤害即死（不击晕）；邪教徒照常击晕。
+
+    已知简化：
+      · 女孩在电子版静止不动（原文由揭示者像怪物一样掷骰移动），
+        所以"移动女孩逃命"这条战术不存在，双方都围着固定点位打。
+      · 钩爪（原文女孩被钩爪之类的特殊交互）与女孩被理智攻击后"昏迷一回合"
+        只记 flag，不取消她的存在感。
+      · 蝙蝠「召唤当回合半速移动、不能攻击」未建模（新蝙蝠下一回合才轮到行动，
+        与原文的差别只在召唤当回合）。
+      · 「对左轮防御多掷一骰」未建模（引擎没有武器专属防御加值入口）。
     """
 
     mode = "blood_offering"
 
-    def setup(self, engine, haunt, room_key):
+    GIRL_MIGHT = 3
+    GIRL_SPEED = 3
+    MAX_BATS = 24  # p146：原版配件一共 24 枚蝙蝠令牌
+    BAT_SPEC = {"template_id": "bat", "name": "蝙蝠", "speed": 4, "might": 3, "sanity": 3}
+
+    # ------------------------------------------------------------- 工具
+    def _girl_room(self, engine: Any) -> str | None:
+        room_key = engine._haunt_flags().get("girl_room")
+        return room_key or None
+
+    def _portals(self, engine: Any) -> list[Any]:
+        return engine.tokens_of_kind("knowledge_check")
+
+    def _cultist_spots(self, engine: Any, count: int) -> list[str]:
+        """p146：距最近英雄 ≥4 格、每层不超过该层英雄数（做不到就放到尽量远）。"""
+        board = engine.state.board
+        if not board or count <= 0:
+            return []
+        heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        if not heroes:
+            return [sorted(board)[0]] * count
+
+        def distance(key: str) -> int:
+            return min((engine._path_length(key, h.room_key) for h in heroes), default=9999)
+
+        hero_per_floor: dict[int, int] = {}
+        for hero in heroes:
+            room = board.get(hero.room_key)
+            if room is not None:
+                hero_per_floor[room.floor] = hero_per_floor.get(room.floor, 0) + 1
+
+        chosen: list[str] = []
+        for min_distance in (4, 3, 2, 1, 0):
+            for key in sorted(board, key=lambda k: (-distance(k), k)):
+                if len(chosen) >= count or key in chosen:
+                    continue
+                if distance(key) < min_distance:
+                    continue
+                floor = board[key].floor
+                cap = max(1, hero_per_floor.get(floor, 1))
+                if sum(1 for c in chosen if board[c].floor == floor) >= cap:
+                    continue
+                chosen.append(key)
+            if len(chosen) >= count:
+                break
+        while len(chosen) < count:
+            chosen.append(sorted(board)[0])
+        return chosen[:count]
+
+    # ------------------------------------------------------------- setup
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
         flags = engine._haunt_flags()
-        flags["girl_sacrificed"] = False
-        # 女孩 token 放作祟房间
-        engine.spawn_token("girl", label="女孩", role="marker", room_key=room_key)
         flags["girl_room"] = room_key
-        # 邪教徒（英雄数-1）+ 蝙蝠（同数）
-        spec_cultist = next((s for s in haunt.rule_data.get("monsters", []) if s.get("template_id") == "cultist"), {})
-        spec_bat = {"template_id": "bat", "name": "蝙蝠", "speed": 4, "might": 3, "sanity": 3}
+        flags["girl_dead"] = False
+        flags["girl_stunned"] = 0
+        flags["girl_pending"] = []
+        room = engine.state.board.get(room_key)
+        flags["haunt_floor"] = room.floor if room is not None else -1
+        engine.spawn_token("girl", label="女孩", role="marker", room_key=room_key)
+        engine._set_haunt_track_value("demon_timer", 0)
+        engine._set_haunt_track_value("girl_wounds", 0)
+
+        # p75：揭示者失去女孩预兆卡（卡本身留在场外，不再提供加值）
+        revealer = next(
+            (p for p in engine.state.players if p.id == engine.state.haunt_revealer_id), None
+        )
+        if revealer is not None and "omen_girl" in revealer.items:
+            engine._discard_card_from_player(revealer, "omen_girl", return_to_room=False)
+
         heroes = sum(1 for p in engine.state.players if p.role == "hero")
         cultist_count = max(0, heroes - 1)
-        bat_count = cultist_count
-        for _ in range(cultist_count):
-            key = engine.rng.choice(sorted(engine.state.board.keys()))
+        spec_cultist = next(
+            (s for s in haunt.rule_data.get("monsters", []) if s.get("template_id") == "cultist"), {}
+        )
+        for key in self._cultist_spots(engine, cultist_count):
             engine._spawn_single_haunt_monster(spec_cultist, key)
-        for _ in range(bat_count):
-            key = engine.rng.choice(sorted(engine.state.board.keys()))
-            engine._spawn_single_haunt_monster(spec_bat, key)
-        engine._log(f"{cultist_count} 名邪教徒和 {bat_count} 只蝙蝠出现了——他们在追猎女孩！")
+        engine._log(f"{cultist_count} 名邪教徒在屋里四处张望——他们要把女孩献出去！")
 
-    def on_turn_start(self, engine, player):
+    # ------------------------------------------------------------- 生命周期
+    def on_turn_start(self, engine: Any, player: Any) -> None:
         flags = engine._haunt_flags()
-        if player.dead:
-            return
-        if player.role == "traitor":
-            return
-        # 每个怪物回合后推进计时（简化：在叛徒回合开始时推进）
-        if player.role == "traitor":
-            return
-        # 用英雄回合开始推进（近似每个怪物回合后）
-        # p75：计时到 7 → 英雄胜
+        if int(flags.get("girl_stunned", 0)) > 0:
+            flags["girl_stunned"] = int(flags["girl_stunned"]) - 1
 
-    def on_monster_turn_start(self, engine, monster):
-        """邪教徒到达女孩房间 → 献祭。"""
+    def on_turn_end(self, engine: Any, player: Any) -> None:
+        """p75：每个怪物回合结束后计时 +1——用「本轮最后一名玩家」当那根指针。"""
+        if not _is_last_in_round(engine, player):
+            return
+        self._advance_timer(engine)
+
+    def _advance_timer(self, engine: Any) -> None:
+        flags = engine._haunt_flags()
+        flags["summoned_rooms"] = []  # 新一轮：每道传送门又能被召唤一次
+        if flags.get("girl_dead"):
+            return
+        current = engine._advance_haunt_track("demon_timer", 1)
+        engine._log(f"恶魔开始不耐烦了（{current}/7）。")
+        if current >= 7:
+            engine._set_winner("heroes", "恶魔失去了耐心——它把叛徒和他的仆从一起拖回了地狱。")
+
+    # ------------------------------------------------------------- 怪物回合
+    def on_monster_turn_start(self, engine: Any, monster: Any) -> bool:
         kind = getattr(monster, "template_id", "")
         if kind != "cultist":
             return False
         flags = engine._haunt_flags()
-        girl_room = flags.get("girl_room")
-        if girl_room is None:
+        if flags.get("girl_dead"):
             return False
-        if monster.room_key == girl_room:
-            flags["girl_sacrificed"] = True
-            engine._log("女孩被献祭了——恶魔的力量涌入了世界！")
-            engine._set_winner("traitor", "血之献祭完成——恶魔的力量属于叛徒。")
-            engine.check_victory()
+        room_key = monster.room_key
+        room = engine.state.board.get(room_key)
+        knowledge = int(getattr(monster, "knowledge", 0) or 5)
+
+        # p146：已有传送门的房间 → 召唤蝙蝠（代替攻击）
+        if engine.tokens_in_room(room_key, "knowledge_check"):
+            # 原文："Only one Cultist can summon bats from a given portal each
+            # turn." —— 同一道传送门每回合只允许一只邪教徒召唤。不设这一条时
+            # 三只邪教徒各自开一扇门、每回合各召 1-3 只，蝙蝠会滚成雪球
+            # （批次 13 实测 seed109/5p 场上 13 只怪，英雄 23 回合全灭）。
+            used = flags.setdefault("summoned_rooms", [])
+            if room_key in used:
+                return True
+            if sum(1 for m in engine.state.monsters if getattr(m, "template_id", "") == "bat") >= self.MAX_BATS:
+                return True
+            used.append(room_key)
+            roll = engine.roll_dice(max(1, min(8, knowledge)), "召唤蝙蝠")
+            count = 3 if roll >= 8 else (2 if roll >= 5 else (1 if roll >= 3 else 0))
+            for _ in range(count):
+                engine._spawn_single_haunt_monster(dict(self.BAT_SPEC), room_key)
+            if count:
+                engine._log(f"邪教徒从传送门里唤出 {count} 只蝙蝠！")
+            else:
+                engine._log("邪教徒低声念咒，但传送门里什么都没出来。")
             return True
-        # 邪教徒向女孩移动
-        path = engine._shortest_path(monster.room_key, girl_room)
-        if len(path) > 1:
-            steps = engine.roll_dice(getattr(monster, "speed", 3), "邪教徒移动")
-            monster.room_key = path[min(len(path) - 1, steps)]
-        # 到达 → 献祭
-        if monster.room_key == girl_room:
-            flags["girl_sacrificed"] = True
-            engine._set_winner("traitor", "血之献祭完成。")
-            engine.check_victory()
+
+        # p146：带预兆符号的房间 → 开传送门（代替攻击）
+        if room is not None and room.symbol == "omen":
+            roll = engine.roll_dice(max(1, min(8, knowledge)), "开启传送门")
+            if roll >= 5:
+                engine.spawn_token("knowledge_check", label="传送门", role="marker", room_key=room_key)
+                engine._log(f"邪教徒在{room.name}撕开了一道传送门！")
+            else:
+                engine._log("邪教徒试图撕开传送门，却什么也没发生。")
+            return True
+        return False
+
+    def monster_killed_on_defeat(
+        self, engine: Any, monster: Any, attacker: Any, attack_attr: str, weapon_id: str
+    ) -> bool:
+        """p75：蝙蝠受到物理伤害即死（不击晕）；邪教徒照常击晕。"""
+        if getattr(monster, "template_id", "") != "bat":
+            return False
+        return attack_attr == "might"
+
+    # ------------------------------------------------------------- 行动
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        actions = super().available_actions(engine, player)
+        flags = engine._haunt_flags()
+        girl_room = self._girl_room(engine)
+        result = []
+        for action in actions:
+            if action.id == "attack_girl":
+                if flags.get("girl_dead") or int(flags.get("girl_stunned", 0)) > 0:
+                    continue
+                if girl_room is None or player.room_key != girl_room:
+                    continue
+            elif action.id == "close_portal":
+                if not engine.tokens_in_room(player.room_key, "knowledge_check"):
+                    continue
+            result.append(action)
+        return result
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        if action_id == "attack_girl":
+            return self._attack_girl(engine, player)
+        if action_id == "close_portal":
+            return self._close_portal(engine, player)
+        return super().perform_action(engine, player, action_id, data)
+
+    def _attack_girl(self, engine: Any, player: Any) -> bool:
+        """p146：力量或速度攻击命中 → 女孩卡上添一枚力量令牌。"""
+        flags = engine._haunt_flags()
+        if flags.get("girl_dead"):
+            return False
+        attack = engine._roll_attack(player, "might")
+        defense = engine.roll_dice(self.GIRL_MIGHT, "女孩反抗")
+        engine._log(f"{player.name} 扑向女孩：{attack} 对 {defense}。")
+        if attack <= defense:
+            engine._log("女孩躲开了这一击。")
+            return True
+        wounds = engine._advance_haunt_track("girl_wounds", 1)
+        flags.setdefault("girl_pending", []).append(player.id)
+        engine._log(f"女孩受了伤（{wounds}/5）。")
+        if wounds >= 5:
+            flags["girl_dead"] = True
+            engine._set_winner("traitor", "女孩的血渗进地板——恶魔的契约兑现了。")
         return True
 
-    def _advance_timer(self, engine):
-        """p75：每个怪物回合后推进计时。到 7 → 英雄胜。"""
-        current = engine._haunt_track_value("demon_timer") + 1
-        engine._set_haunt_track_value("demon_timer", current)
-        if current >= 7:
-            engine._set_winner("heroes", "恶魔不耐烦了——TA 杀死了叛徒和他的仆从！")
-            engine.check_victory()
+    def _close_portal(self, engine: Any, player: Any) -> bool:
+        """p75：同房知识 4+ 关掉传送门。"""
+        portal = next(iter(engine.tokens_in_room(player.room_key, "knowledge_check")), None)
+        if portal is None:
+            return False
+        roll = engine._roll_attack(player, "knowledge")
+        if roll < 4:
+            engine._log(f"{player.name} 没能关上这道传送门（知识 {roll}）。")
+            return True
+        engine.remove_token(portal.uid)
+        engine._log(f"{player.name} 念动咒语，传送门合上了。")
+        return True
 
-    def check_victory(self, engine):
+    # ------------------------------------------------------------- bot
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
         flags = engine._haunt_flags()
-        # 计时到 7 → 英雄胜
+        if action_id == "attack_girl":
+            if flags.get("girl_dead") or int(flags.get("girl_stunned", 0)) > 0:
+                return True
+            return False
+        if action_id == "close_portal":
+            # 关传送门要走过去，没门可关时别当目标
+            return not bool(self._portals(engine))
+        return False
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        flags = engine._haunt_flags()
+        girl_room = self._girl_room(engine)
+        if player.role == "traitor":
+            if girl_room is None or flags.get("girl_dead"):
+                return []
+            return ["__room__" + girl_room]
+        # 英雄：守住女孩；已经有传送门时优先去关掉
+        portals = self._portals(engine)
+        if portals:
+            return ["__room__" + token.room_key for token in portals if token.room_key]
+        if girl_room is None:
+            return []
+        return ["__room__" + girl_room]
+
+    def bot_attack_blocked(self, engine: Any, player: Any, target: Any) -> bool:
+        """p75/p146：英雄的胜线是**撑到计时轨走到 7**，打架换不来胜利。
+
+        批次 13 实测（12 局）：英雄的死因基本是自己的送死攻击——空手对邪教徒
+        打出「0 对 7」按 p20 吃满差值反击当场倒下，而邪教徒只是被击晕、下一回合
+        照常回来干活。真人不会拿拳头去换一只会复活的邪教徒。只有手里有武器、
+        或者力量本来就不吃亏时才还手。
+        """
+        if getattr(player, "role", None) != "hero":
+            return False
+        if getattr(target, "template_id", "") not in ("cultist", "bat"):
+            return False
+        might = int(getattr(player, "stats", {}).get("might", 0))
+        weapons = engine.available_attack_weapons(player)
+        return (not weapons) and might <= int(getattr(target, "might", 0))
+
+    def bot_hazard_rooms(self, engine: Any, player: Any) -> set[str]:
+        """p75：英雄的胜线是「活着撑满 7 个怪物回合」——本回合结束别留在怪物房里。
+
+        真人守女孩时会贴着门口打游击，而不是站在邪教徒怀里过夜。本剧本英雄
+        没有非留不可的房间（关门是顺手做的事），所以把所有未晕怪物所在房都
+        标成"不该过夜"是安全的。
+        """
+        if getattr(player, "role", None) != "hero":
+            return set()
+        return {
+            monster.room_key
+            for monster in engine.state.monsters
+            if getattr(monster, "room_key", "") and monster.stunned_turns <= 0
+        }
+
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        flags = engine._haunt_flags()
+        lines = []
+        girl_room = self._girl_room(engine)
+        room = engine.state.board.get(girl_room) if girl_room else None
+        lines.append(f"女孩在{room.name if room else '未知房间'}")
+        if flags.get("girl_dead"):
+            lines.append("女孩已被献祭")
+        else:
+            lines.append(f"女孩伤势：{engine._haunt_track_value('girl_wounds')}/5")
+        portals = self._portals(engine)
+        if portals:
+            lines.append(f"传送门：{len(portals)} 道")
+        return lines
+
+    # ------------------------------------------------------------- 胜负
+    def check_victory(self, engine: Any) -> bool:
+        flags = engine._haunt_flags()
         if engine._haunt_track_value("demon_timer") >= 7:
             if engine.state.winner is None:
-                engine._set_winner("heroes", "恶魔不耐烦了——TA 杀死了叛徒！")
+                engine._set_winner("heroes", "恶魔失去了耐心——叛徒和他的仆从一起消失了。")
             return True
-        if flags.get("girl_sacrificed"):
+        if flags.get("girl_dead"):
             return True  # winner 已在献祭处设定
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
-            engine._set_winner("traitor", "最后的英雄也死了——女孩被献祭了。")
+            engine._set_winner("traitor", "最后的英雄倒下了——没人再拦着邪教徒。")
             return True
-        # 吸收引擎「叛徒死亡→英雄胜」兜底：p75/p146 的英雄胜 = 计时轨到 7
-        # （恶魔不耐烦、杀死叛徒），叛徒提前死亡不等于英雄达成目标。
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p75 的英雄胜 = 撑到计时 7
+        # （恶魔收拾叛徒），叛徒提前死亡不等于英雄达成目标。
         if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
             return True
         return False
@@ -21079,85 +21549,661 @@ class TwistingNetherMode(GenericModeHandler):
     """剧本 63 扭曲虚空（The Twisting Nether）。
 
     权威原文：英雄手册 p74 / 叛徒手册 p145。
-    · 英雄锚定房间（知识 5+ 任意房间，每房一次）→ 玩家数个 → 英雄胜。
-    · 叛徒每回合溶解一个未锚定房间。
-    · 非锚定房间全溶 → 叛徒胜。
-    · 简化：nether 穿行/怪物不可攻击未建模。
+
+    英雄（p74）：
+        · 「锚定房间」：**带预兆符号的房间**内，每回合一次，知识 5+ 立下一个锚
+          （持骷髅 +1 骰、持通灵板 +2 骰）；同一房间只能有一个锚。
+        · 含锚的房间、以及与含锚房间**连通**的房间都算"已锚定"。
+        · 锚定房间数按人数：3 人 12 / 4 人 15 / 5 人 19 / 6 人 21 → 英雄胜。
+        · 开局与每回合结束：只保留 门厅/门廊/大楼梯/上层平台/地下室平台、
+          有探险者或怪物或锚的房间、以及与上述房间直接或间接连通的房间，
+          其余板块连同房内的物品/预兆/事件一起收回牌堆、洗匀。
+    叛徒（p145）：
+        · 首个回合：放星界灵；英雄 ≥3 加放 Specter、≥4 加放 Ghost、
+          5 名英雄加放 Phantom ——都放在"至少还有一个未探索门口"的房间。
+        · 胜利：英雄全灭。
+
+    特殊规则（p145）：
+        · Specter：攻击速度或知识低于 4 的目标时多掷 1 枚骰。
+        · Ghost：以理智攻击、被理智防御、造成精神伤害；免疫力量与速度攻击，
+          持戒指（omen_ring）的英雄才能改以理智打它。
+        · Phantom：行动前可瞬移到有别的怪物或叛徒的房间。
+
+    已知简化：
+        · 「穿越虚空」（从没有板块的门离开时多花 1 点移动、三选一）落地为：
+          ① 开场的 "Right Now" 清算按原文执行，房子当场被撕成几座孤岛；
+          ② 每回合结束按原文收回"没人在、没有锚、也不与起始板块连通"的孤岛；
+          ③ **选项 3「寻求特定目的地」建成了独立行动 `nether_seek`**：站在有
+             未探索门口的房间，知识 4+ 跳到任意"还有未探索门口"的房间——
+             这是英雄唯一能跨孤岛的通道，缺了它胜线整条断掉；
+          ④ **选项 1「随机坠入虚空」**作为检定失败的后果：从牌堆顶抽一块板块
+             放在四邻皆空的格子上（与现有房间不连通）再把探险者放进去；
+          ⑤ 选项 2「连接新房间」就是引擎常规的探索（本来就门对门接上），
+             不再单独建模；"多花 1 点移动"没落地——跨孤岛改以"消耗本回合的
+             剧本行动"作代价，避免动到通用移动逻辑；
+          ⑥ 敌方按 p145 "All monsters can explore new rooms" 允许跨孤岛，
+             简化为"目标在别的孤岛时直接落到它邻接的房间"（见
+             `on_monster_turn_start`），不做额外移动力与检定。
+        · 神秘电梯（原文"失效，当普通房间"）在本引擎仍可乘坐；神秘滑梯/
+          Gallery/塌陷室的虚空特例未处理。
+        · Phantom 的"瞬移到任意有怪物或叛徒的房间"简化为"瞬移到离最近英雄
+          最近的那个候选房间"（原版由叛徒任选，bot 固定取最优）。
     """
 
     mode = "twisting_nether"
 
-    def setup(self, engine, haunt, room_key):
+    ANCHOR_ACTION = "anchor_room"
+    SEEK_ACTION = "nether_seek"
+    ANCHOR_TOKEN = "anchor"
+    SPIRIT = "astral_spirit"
+    SPECTER = "spectre"
+    GHOST = "ghost"
+    PHANTOM = "shadow"  # 引擎没有 phantom 模板；借未占用的 shadow 承载，名字改写
+    PHANTOM_NAME = "魅影"
+
+    # p74：锚定房间数按人数（3/4/5/6 人 → 12/15/19/21）
+    ANCHOR_TARGETS = {3: 12, 4: 15, 5: 19, 6: 21}
+    # p74/p145：锚定需要预兆符号，知识 5+；骷髅 +1 骰、通灵板 +2 骰。
+    # 通灵板的 +2 由它自己的卡牌 bonus（knowledge +2）经 `_check_bonus` 结算，
+    # 这里只补骷髅那 +1，避免重复计数。
+    ANCHOR_MIN = 5
+    ANCHOR_BONUS = {"omen_skull": 1}
+    # p74/p145「穿越虚空」选项 3：知识 4+（持通灵板 +2 骰）跳到任意"还有
+    # 未探索门口"的房间。通灵板的 +2 同样走卡牌 bonus（knowledge +2），
+    # 这里不再重复补骰。
+    SEEK_MIN = 4
+    # 开局与每回合结束都不动的起始板块
+    FIXED_ROOMS = (
+        "entrance_hall",
+        "foyer",
+        "grand_staircase",
+        "upper_landing",
+        "basement_landing",
+    )
+
+    # ------------------------------------------------------------- 小工具
+    @staticmethod
+    def _monster_id(entity: Any) -> str:
+        return str(getattr(entity, "template_id", "") or "")
+
+    def _target(self, engine: Any) -> int:
+        players = len(engine.state.players)
+        return int(self.ANCHOR_TARGETS.get(players, 12))
+
+    def _haunt_room(self, engine: Any) -> str:
+        return str(engine._haunt_rule_state().get("haunt_room") or "")
+
+    # ------------------------------------------------------------- 开场
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
         flags = engine._haunt_flags()
         flags["anchored_rooms"] = []
         flags["dissolved_rooms"] = []
-        engine._log("房子周围的现实扭曲了——房间正在被虚空吞噬！")
+        flags["nether_spawned"] = False
+        target = self._target(engine)
+        track = engine._haunt_tracks().setdefault(
+            "anchor_progress", {"label": "锚定房间", "value": 0, "side": "heroes"}
+        )
+        track["label"] = "锚定房间"
+        track["target"] = target
+        track["value"] = 0
+        engine._log(
+            f"一次剧烈的颠簸把所有人掀翻在地——房子之外的现实扭曲成一片阴影。"
+            f"英雄必须锚定 {target} 间房，才能把它拉回物质位面！"
+        )
+        # p74 "Right Now"：**只**保留五间起始板块与有探险者的房间（原文
+        # "Remove from play any rooms that do not contain explorers except for
+        # the Entrance Hall/Foyer/Grand Staircase, Upper Landing, and Basement
+        # Landing"）——这一刀把房子当场撕成几座孤岛，正是本剧本的核心压力：
+        # 之后的每回合结束，没人在、没有锚、也不与起始板块连通的孤岛会被虚空
+        # 整个吃掉。开场若照"连通闭包"清算，整栋房子连成一片、锚一次就满，
+        # 机制会退化成 1-4 次锚定的走过场（seed101/3p 实测）。
+        self._purge(engine, keep_closure=False)
 
-    def on_turn_start(self, engine, player):
-        flags = engine._haunt_flags()
-        if player.role != "traitor" or player.dead:
-            return
-        anchored = set(flags.get("anchored_rooms", []))
-        dissolved = flags.get("dissolved_rooms", [])
-        # 溶解一个未锚定房间
-        candidates = [
-            k for k, r in engine.state.board.items()
-            if k not in anchored and k not in dissolved
-            and r.template_id not in ("entrance_hall", "foyer", "grand_staircase",
-                                       "upper_landing", "basement_landing")
+    # ------------------------------------------------------------- 锚定
+    def _can_anchor(self, engine: Any, player: Any) -> bool:
+        room = engine.state.board.get(player.room_key)
+        if room is None or getattr(room, "symbol", None) != "omen":
+            return False
+        return player.room_key not in engine._haunt_flags().get("anchored_rooms", [])
+
+    # ------------------------------------------------- 穿越虚空（p74 选项 3）
+    #
+    # 这一条是**英雄胜线的命门**，不是锦上添花：p74 "Right Now" 开场那一刀按
+    # 原文只保留五间起始板块与有探险者的房间，房子当场被撕成几座孤岛；而预兆房
+    # 落在哪座孤岛上是随机的（seed151/4p 实测：唯一存活下来的预兆房"墓地"与叛徒
+    # 同岛，三名英雄全在别的孤岛上）。不做选项 3，英雄永远够不到那座孤岛，
+    # anchor_progress 一局钉死在 0，叛徒靠怪物收割 100% 获胜。
+    def _seek_departure_ok(self, engine: Any, player: Any) -> bool:
+        """出发条件（p74）：所在房间要有一扇门通向还没有板块的格子。"""
+        return player.room_key in self._unexplored_door_rooms(engine)
+
+    def _seek_destinations(self, engine: Any, player: Any) -> list[str]:
+        """目的地（p74 选项 3）：任意**至少还有一扇未探索门口**的房间。"""
+        return [
+            key
+            for key in self._unexplored_door_rooms(engine)
+            if key != player.room_key
         ]
-        if candidates:
-            room = engine.rng.choice(sorted(candidates))
-            dissolved.append(room)
-            flags["dissolved_rooms"] = dissolved
-            engine._log(f"{engine.state.board[room].name} 被虚空溶解了！")
-        # 检查：非锚定房间全溶 → 叛徒胜
-        total_rooms = len(engine.state.board)
-        fixed_rooms = 5  # 入口大厅等不溶
-        non_fixed = total_rooms - fixed_rooms
-        if len(dissolved) >= max(1, non_fixed - len(anchored)):
-            engine._set_winner("traitor", "整栋房子被虚空吞噬了！")
-            engine.check_victory()
 
-    def available_actions(self, engine, player):
-        actions = super().available_actions(engine, player)
-        result = []
+    def _best_seek_destination(self, engine: Any, player: Any) -> tuple[str, int] | None:
+        """挑一个"离某个未锚定预兆房最近"的落点，返回 (房间, 距离)。
+
+        距离 < 9999 就说明落点与那间预兆房在**同一座孤岛**上——落到那儿之后再
+        走过去锚定即可。全体落点都够不到预兆房时返回 None（这时该去探索，
+        而不是白掷一次知识）。
+        """
+        destinations = self._seek_destinations(engine, player)
+        if not destinations:
+            return None
         anchored = set(engine._haunt_flags().get("anchored_rooms", []))
-        for action in actions:
-            if action.id == "anchor_room":
-                if player.room_key in anchored:
+        omens = [
+            key
+            for key in sorted(engine.state.board)
+            if getattr(engine.state.board[key], "symbol", None) == "omen"
+            and key not in anchored
+        ]
+        if not omens:
+            return None
+        best = min(
+            sorted(destinations),
+            key=lambda key: (min(engine._path_length(key, omen) for omen in omens), key),
+        )
+        return best, min(engine._path_length(best, omen) for omen in omens)
+
+    def _seek_useful(self, engine: Any, player: Any) -> bool:
+        """只在"真的够不到预兆房、但跳一下就能够到"时才把这个行动摆出来。
+
+        与 18/62 号同样的教训：行动摆出来却一局都没用过，就是"空转"警报。
+        门槛必须与 bot 的用法同源，所以这里把两个条件都写死。
+        """
+        if not self._seek_departure_ok(engine, player):
+            return False
+        anchored = set(engine._haunt_flags().get("anchored_rooms", []))
+        for key, room in engine.state.board.items():
+            if getattr(room, "symbol", None) != "omen" or key in anchored:
+                continue
+            if engine._path_length(player.room_key, key) < 9999:
+                return False  # 能走过去，不需要跳
+        picked = self._best_seek_destination(engine, player)
+        return bool(picked and picked[1] < 9999)
+
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        actions = super().available_actions(engine, player)
+        if player.role != "hero":
+            return actions
+        if not self._can_anchor(engine, player):
+            actions = [
+                action
+                for action in actions
+                if str(getattr(action, "id", "")) != self.ANCHOR_ACTION
+            ]
+        if self._seek_useful(engine, player):
+            picked = self._best_seek_destination(engine, player)
+            destination = engine.state.board.get(picked[0]) if picked else None
+            actions = list(actions) + [
+                HauntAction(
+                    self.SEEK_ACTION,
+                    "穿越虚空",
+                    f"知识 {self.SEEK_MIN}+：跳到 {destination.name if destination else '未知房间'}"
+                    "（附近有预兆房）",
+                    {"room": picked[0]} if picked else {},
+                )
+            ]
+        return actions
+
+    def _fall_through_nether(self, engine: Any, player: Any) -> str | None:
+        """p74 选项 1「随机坠入虚空」：从牌堆顶抽一块板块（不论楼层），
+
+        放在**不与任何房间连通**的空格上，然后把探险者放进去。检定失败的
+        代价就是"你没跳成想去的地方，虚空把你扔到了别处"。
+        """
+        deck = engine.state.room_deck
+        if not deck:
+            # 牌堆抽空 → 把弃牌堆洗回来（与 `_draw_room_template` 同口径）。
+            engine.state.room_deck = list(engine.state.room_discard)
+            engine.state.room_discard = []
+            engine.rng.shuffle(engine.state.room_deck)
+            deck = engine.state.room_deck
+        template = None
+        while deck:
+            # 与常规探索同口径：从牌堆尾部拿（`room_deck.pop()`）。
+            candidate = engine.catalog.room_templates.get(deck.pop())
+            if candidate is not None:
+                template = candidate
+                break
+        if template is None:
+            return None
+        slot = self._isolated_slot(engine, template.floor)
+        if slot is None:
+            return None
+        rotated = engine._build_rotated_template(template, 0)
+        room = engine._place_room(rotated, slot[0], slot[1], 0)
+        engine._move_to_room(player, room.key, via_effect=True)
+        engine._log(f"{player.name} 翻滚着跌进{room.name}——它与任何房间都不相连。")
+        return room.key
+
+    @staticmethod
+    def _isolated_slot(engine: Any, floor: int, radius: int = 8) -> tuple[int, int] | None:
+        """找一格"空着且四邻皆空"的坐标，保证新板块不与现有房间连通。
+
+        按"离大宅最近"的顺序扫，避免把板块甩到棋盘边缘（前端画布有边界）。
+        """
+        taken = engine.state.pos_index
+        offsets = sorted(
+            (
+                (x, y)
+                for x in range(-radius, radius + 1)
+                for y in range(-radius, radius + 1)
+            ),
+            key=lambda pos: (max(abs(pos[0]), abs(pos[1])), abs(pos[0]) + abs(pos[1]), pos),
+        )
+        deltas = tuple(DIRECTION_DELTAS.values())
+        for x, y in offsets:
+            if (floor, x, y) in taken:
+                continue
+            if any((floor, x + dx, y + dy) in taken for dx, dy in deltas):
+                continue
+            return x, y
+        return None
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        if action_id == self.SEEK_ACTION:
+            return self._perform_seek(engine, player, data)
+        if action_id != self.ANCHOR_ACTION:
+            return super().perform_action(engine, player, action_id, data)
+        if not self._can_anchor(engine, player):
+            engine._log(f"{player.name} 这里没有预兆符号，钉不住现实。")
+            return False
+        # 检定自己做：器具的额外骰（p74 骷髅 +1 / 通灵板 +2）通用通道表达不了。
+        bonus = sum(
+            dice for card_id, dice in self.ANCHOR_BONUS.items() if card_id in player.items
+        )
+        dice = engine._effective_stat(player, "knowledge") + engine._check_bonus(
+            player, "knowledge"
+        )
+        dice = max(1, min(8, dice + bonus))
+        roll = engine.roll_dice(dice, "锚定房间")
+        if bonus:
+            engine._log(f"{player.name} 借法器多掷了 {bonus} 枚骰（共 {dice} 枚）。")
+        engine._log(f"锚定房间：{player.name} 掷出 {roll}，目标 {self.ANCHOR_MIN}。")
+        if roll < self.ANCHOR_MIN:
+            engine._log(f"{player.name} 没能在这个房间钉住现实。")
+            return True  # 失败也算行动已执行（否则机器人会反复尝试）
+        room = engine.state.board[player.room_key]
+        engine.spawn_token(
+            self.ANCHOR_TOKEN, label="锚", role="marker", room_key=player.room_key
+        )
+        anchored = engine._haunt_flags().setdefault("anchored_rooms", [])
+        if player.room_key not in anchored:
+            anchored.append(player.room_key)
+        region = self._recount(engine)
+        engine._log(
+            f"{room.name} 被锚定了！锚网现覆盖 {len(region)}/{self._target(engine)} 间房。"
+        )
+        return True
+
+    def _perform_seek(self, engine: Any, player: Any, data: dict) -> bool:
+        if not self._seek_departure_ok(engine, player):
+            engine._log(f"{player.name} 这里没有通向虚空的门口。")
+            return False
+        destination = str(data.get("room") or "")
+        if destination not in self._seek_destinations(engine, player):
+            picked = self._best_seek_destination(engine, player)
+            destination = picked[0] if picked else ""
+        dice = engine._effective_stat(player, "knowledge") + engine._check_bonus(
+            player, "knowledge"
+        )
+        dice = max(1, min(8, dice))
+        roll = engine.roll_dice(dice, "穿越虚空")
+        engine._log(f"穿越虚空：{player.name} 掷出 {roll}，目标 {self.SEEK_MIN}。")
+        if roll < self.SEEK_MIN or not destination:
+            engine._log(f"{player.name} 没找准方向，被虚空甩了出去。")
+            self._fall_through_nether(engine, player)
+            return True
+        engine._log(f"{player.name} 在虚空中锁定了目标。")
+        engine._move_to_room(player, destination, via_effect=True)
+        return True
+
+    # ------------------------------------------------------- 锚定区域 / 收回
+    def _anchored_region(self, engine: Any) -> set[str]:
+        """含锚房间 + 与含锚房间直接或间接连通的房间（p74）。"""
+        anchors = {
+            token.room_key
+            for token in engine.tokens_of_kind(self.ANCHOR_TOKEN)
+            if token.room_key and token.room_key in engine.state.board
+        }
+        if not anchors:
+            return set()
+        graph = engine._build_graph()
+        seen = set(anchors)
+        frontier = list(anchors)
+        while frontier:
+            key = frontier.pop()
+            for neighbor in graph.get(key, ()):
+                if neighbor not in seen:
+                    seen.add(neighbor)
+                    frontier.append(neighbor)
+        return seen
+
+    def _recount(self, engine: Any) -> set[str]:
+        region = self._anchored_region(engine)
+        engine._set_haunt_track_value("anchor_progress", len(region))
+        return region
+
+    def _keep_set(self, engine: Any, closure: bool = True) -> set[str]:
+        """每回合结束时必须留下的房间（p74/p145 "Do This After Each Turn"）。
+
+        closure=True：再加上"与上述房间直接或间接连通"的房间（每回合结束）。
+        closure=False：只要 起始板块 + 有探险者/怪物的房间（开场 "Right Now"
+        那一刀，原文没有连通这一条）。
+        """
+        keep: set[str] = set()
+        for key, room in engine.state.board.items():
+            if room.template_id in self.FIXED_ROOMS:
+                keep.add(key)
+            if engine.tokens_in_room(key, self.ANCHOR_TOKEN):
+                keep.add(key)
+        haunt_room = self._haunt_room(engine)
+        if haunt_room in engine.state.board:
+            keep.add(haunt_room)
+        for player in engine.state.players:
+            if not player.dead and player.room_key in engine.state.board:
+                keep.add(player.room_key)
+        for monster in engine.state.monsters:
+            if monster.room_key in engine.state.board:
+                keep.add(monster.room_key)
+        if not closure:
+            return keep
+        # 连通闭包：与上述任一房间"直接或间接连通"的都在场
+        graph = engine._build_graph()
+        seen = set(keep)
+        frontier = list(keep)
+        while frontier:
+            key = frontier.pop()
+            for neighbor in graph.get(key, ()):
+                if neighbor not in seen:
+                    seen.add(neighbor)
+                    frontier.append(neighbor)
+        return seen
+
+    def _recycle_room(self, engine: Any, key: str) -> None:
+        """把一块板块收回牌堆：房内的物品/预兆/事件先洗回对应牌堆。"""
+        room = engine.state.board.get(key)
+        if room is None:
+            return
+        for card_id in list(engine.state.room_items.pop(key, [])):
+            card = engine.catalog.cards.get(card_id)
+            kind = card.kind if card is not None else "item"
+            engine.state.card_decks.setdefault(kind, []).append(card_id)
+        for token in [
+            t for t in engine.state.tokens if t.room_key == key and t.holder is None
+        ]:
+            engine.remove_token(token.uid)
+        engine._detach_room(key, return_to_deck=True, force=True)
+
+    def _purge(self, engine: Any, keep_closure: bool = True) -> list[str]:
+        keep = self._keep_set(engine, closure=keep_closure)
+        removed: list[str] = []
+        for key in sorted(engine.state.board):
+            if key in keep:
+                continue
+            name = engine.state.board[key].name
+            self._recycle_room(engine, key)
+            removed.append(key)
+            engine._log(f"{name} 被虚空吞掉了。")
+        if removed:
+            flags = engine._haunt_flags()
+            flags["dissolved_rooms"] = sorted(
+                set(flags.get("dissolved_rooms", [])) | set(removed)
+            )
+            # p74/p145："shuffle the room tiles back into the room stack"。
+            # `_detach_room(return_to_deck=True)` 是 `insert(0, ...)`，而抽牌是
+            # `room_deck.pop()`（从尾部拿）——不洗一次，被回收的板块会**排在整副
+            # 牌的最后**，预兆房等于被雪藏。seed151/4p 实测：开场回收 39 块之后
+            # 英雄连翻 12 间房，一间预兆房都没翻到，锚定数永远 0。
+            engine._shuffle_room_piles()
+        return removed
+
+    def on_turn_end(self, engine: Any, player: Any) -> None:
+        if engine.state.phase != "HAUNT_PHASE":
+            return
+        self._purge(engine)
+        self._recount(engine)
+
+    # ------------------------------------------------------------- 虚空怪物
+    def _unexplored_door_rooms(self, engine: Any) -> list[str]:
+        """至少还有一扇门通向空白格（未探索门口）的房间。"""
+        result: list[str] = []
+        for key in sorted(engine.state.board):
+            room = engine.state.board[key]
+            for direction in room.doors:
+                if direction not in DIRECTION_DELTAS:
                     continue
-            result.append(action)
+                dx, dy = DIRECTION_DELTAS[direction]
+                if (room.floor, room.x + dx, room.y + dy) not in engine.state.pos_index:
+                    result.append(key)
+                    break
         return result
 
-    def perform_action(self, engine, player, action_id, data):
-        if action_id == "anchor_room":
-            flags = engine._haunt_flags()
-            anchored = flags.setdefault("anchored_rooms", [])
-            if player.room_key in anchored:
-                engine._log("这个房间已经锚定了。")
-                return False
-            ok = super().perform_action(engine, player, action_id, data)
-            if ok and engine.last_haunt_action_succeeded():
-                anchored.append(player.room_key)
-                engine._log(f"{engine.state.board[player.room_key].name} 被锚定到了现实！")
-            return ok
-        return super().perform_action(engine, player, action_id, data)
-
-    def check_victory(self, engine):
+    def _spawn_nether(self, engine: Any) -> None:
         flags = engine._haunt_flags()
-        anchored = engine._haunt_track_value("anchor_progress")
-        if anchored >= engine._haunt_track_target("anchor_progress"):
-            engine._set_winner("heroes", "足够的房间被锚定了——房子回到了现实！")
+        flags["nether_spawned"] = True
+        heroes = len(
+            [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        )
+        plan = [self.SPIRIT]
+        if heroes >= 3:
+            plan.append(self.SPECTER)
+        if heroes >= 4:
+            plan.append(self.GHOST)
+        if heroes >= 5:
+            plan.append(self.PHANTOM)
+        specs = engine._haunt_rule_state().get("monster_specs", {})
+        rooms = self._unexplored_door_rooms(engine)
+        fallback = self._haunt_room(engine)
+        for index, template_id in enumerate(plan):
+            spec = dict(specs.get(template_id) or {"template_id": template_id})
+            spec.setdefault("template_id", template_id)
+            if template_id == self.PHANTOM:
+                spec.setdefault("name", self.PHANTOM_NAME)
+            if rooms:
+                room_key = rooms[index % len(rooms)]
+            elif fallback in engine.state.board:
+                room_key = fallback
+            else:
+                room_key = next(iter(sorted(engine.state.board)), "")
+            if not room_key:
+                continue
+            engine._spawn_single_haunt_monster(spec, room_key)
+        engine._log("虚空里挤出了东西——它们要在房子里猎杀探险者。")
+
+    def on_turn_start(self, engine: Any, player: Any) -> None:
+        if engine.state.phase != "HAUNT_PHASE":
+            return
+        # p145 "At the Start of Your First Turn"
+        if (
+            player.role == "traitor"
+            and not player.dead
+            and not engine._haunt_flags().get("nether_spawned")
+        ):
+            self._spawn_nether(engine)
+
+    def on_monster_turn_start(self, engine: Any, monster: Any) -> bool:
+        """虚空穿行（p145 "All monsters can explore new rooms in this Haunt"）。
+
+        原作里怪物同样走"穿越虚空"三选一，所以它们能跨过没有板块的门。本引擎
+        的移动完全基于门图，孤岛之间不连通——不补这一条，"开场清算把房子撕成
+        孤岛"之后怪物会永远够不到隔壁岛上的英雄，叛徒的胜线整条断掉
+        （seed113/5p 实测：3 只怪物与最后 1 名英雄僵到 300 回合）。
+        简化：不做三选一与额外移动力，只把"目标在别的孤岛"这一种情况简化为
+        直接落到目标邻接的房间。
+        """
+        if self._monster_id(monster) == self.PHANTOM:
+            dest = self._phantom_destination(engine, monster)
+            if dest and dest != monster.room_key:
+                monster.room_key = dest
+                engine._log(f"{monster.name} 瞬移到了 {engine.state.board[dest].name}。")
+        target = engine._find_monster_target(monster)
+        if target is None or target.room_key not in engine.state.board:
+            return False
+        if engine._path_length(monster.room_key, target.room_key) < 9999:
+            return False
+        dest = next(
+            iter(sorted(engine._build_graph().get(target.room_key, ()))), target.room_key
+        )
+        monster.room_key = dest
+        engine._log(
+            f"{monster.name} 穿过扭曲的虚空，从 {engine.state.board[dest].name} 逼近。"
+        )
+        return False
+
+    def bot_wants_explore(self, engine: Any, player: Any) -> bool:
+        """英雄的本层预兆房锚完之后必须去翻新房间——牌堆里还有被虚空收回的
+        板块（里面就有新的预兆房），不去探索就只能在已探明的几间房之间游荡
+        （seed113/5p 实测：机器人5 在花园一带空转到 300 回合）。
+        """
+        if player.role != "hero" or player.dead:
+            return False
+        anchored = set(engine._haunt_flags().get("anchored_rooms", []))
+        for key, room in engine.state.board.items():
+            if getattr(room, "symbol", None) != "omen" or key in anchored:
+                continue
+            if engine._path_length(player.room_key, key) < 9999:
+                return False
+        return True
+
+    def _phantom_destination(self, engine: Any, monster: Any) -> str | None:
+        candidates: set[str] = set()
+        for other in engine.state.monsters:
+            if getattr(other, "id", None) == getattr(monster, "id", None):
+                continue
+            if other.room_key in engine.state.board:
+                candidates.add(other.room_key)
+        for player in engine.state.players:
+            if player.role == "traitor" and not player.dead and player.room_key:
+                candidates.add(player.room_key)
+        candidates = {key for key in candidates if key in engine.state.board}
+        if not candidates:
+            return None
+        heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        if not heroes:
+            return sorted(candidates)[0]
+
+        def score(key: str) -> tuple[int, str]:
+            return (min(engine._path_length(key, hero.room_key) for hero in heroes), key)
+
+        return min(sorted(candidates), key=score)
+
+    def monster_attack_roll_bonus(self, engine: Any, monster: Any, target: Any) -> int:
+        """p145：Specter 攻击速度或知识低于 4 的目标时多掷 1 枚骰。"""
+        if self._monster_id(monster) != self.SPECTER:
+            return 0
+        stats = getattr(target, "stats", None)
+        if not isinstance(stats, dict):
+            return 0
+        if stats.get("speed", 99) < 4 or stats.get("knowledge", 99) < 4:
+            return 1
+        return 0
+
+    def on_monster_turn_attack(self, engine: Any, monster: Any) -> bool:
+        """p145：Ghost 以理智攻击、造成精神伤害，防御方也用理智。"""
+        if self._monster_id(monster) != self.GHOST:
+            return False
+        victim = next(
+            (
+                p
+                for p in engine.state.players
+                if p.role == "hero" and not p.dead and p.room_key == monster.room_key
+            ),
+            None,
+        )
+        if victim is None:
+            return False
+        attack = engine._roll_monster_attack(monster, "sanity")
+        defense = engine._roll_attack(victim, "sanity")
+        engine._log(
+            f"{monster.name} 用理智撕扯 {engine._player_label(victim)}：{attack} 对 {defense}。"
+        )
+        if attack > defense:
+            engine._deal_damage(victim, "mental", attack - defense, source=monster.name)
+        elif attack < defense:
+            engine._stun_monster(monster, 1)
+        else:
+            engine._log("平手。")
+        return True
+
+    def attack_attr_override(
+        self, engine: Any, attacker: Any, target: Any, default_attr: str
+    ) -> str | None:
+        """p145：Ghost 免疫力量/速度，但持戒指的英雄可以改用理智打它。"""
+        if self._monster_id(target) != self.GHOST:
+            return None
+        if getattr(attacker, "role", "") != "hero":
+            return None
+        if "omen_ring" in getattr(attacker, "items", []):
+            return "sanity"
+        return None
+
+    # ------------------------------------------------------------- 机器人
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """英雄去还没锚的预兆房间；没有剩余目标就交回通用探索逻辑。
+
+        够不到预兆房（开场清查把房子撕成了孤岛）时，改把"附近还有未探索门口的
+        房间"当成目标——走到那样的房间门口，下回合才掷得出 p74 选项 3。没有这
+        一步，机器人会抱着一个 `_path_length == 9999` 的目标原地打转到终局。
+        """
+        if player.role != "hero":
+            return []
+        anchored = set(engine._haunt_flags().get("anchored_rooms", []))
+        targets = [
+            f"__room__{key}"
+            for key in sorted(engine.state.board)
+            if getattr(engine.state.board[key], "symbol", None) == "omen"
+            and key not in anchored
+        ]
+        if not targets:
+            return []
+        if any(
+            engine._path_length(player.room_key, key) < 9999
+            for key in (t[len("__room__") :] for t in targets)
+        ):
+            return targets
+        picked = self._best_seek_destination(engine, player)
+        if not picked or picked[1] >= 9999:
+            return targets
+        departures = [
+            f"__room__{key}"
+            for key in sorted(self._unexplored_door_rooms(engine))
+            if engine._path_length(player.room_key, key) < 9999
+        ]
+        return departures or targets
+
+    # ------------------------------------------------------------- 胜负
+    def check_victory(self, engine: Any) -> bool:
+        self._recount(engine)
+        target = engine._haunt_track_target("anchor_progress") or self._target(engine)
+        if engine._haunt_track_value("anchor_progress") >= target:
+            engine._set_winner("heroes", "足够的房间被锚回现实——房子重新变得坚实！")
             return True
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
-            engine._set_winner("traitor", "最后的英雄也消失在虚空中。")
+            engine._set_winner("traitor", "最后的英雄也消失在虚空里。")
             return True
-        # 吸收引擎「叛徒死亡→英雄胜」兜底：p74/p145 只认"锚定足够房间"，
-        # 虚空不随叛徒死亡停止扩张。
+        # 吸收引擎「叛徒死亡→英雄胜」兜底：p74/p145 的英雄胜只认"锚定足够
+        # 房间"，叛徒倒下后虚空怪物照常行动（见 verify_traitor_death_semantics_sweep
+        # 的 keeps_playing 名单，63 号在其中）。
         if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
             return True
         return False
+
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        region = self._anchored_region(engine)
+        target = engine._haunt_track_target("anchor_progress") or self._target(engine)
+        anchors = len(engine.tokens_of_kind(self.ANCHOR_TOKEN))
+        monsters = "、".join(m.name for m in engine.state.monsters) or "尚未出现"
+        return [
+            f"锚定房间 {len(region)}/{target}（锚点 {anchors} 个）。",
+            f"虚空怪物：{monsters}。",
+        ]
 
 
 
@@ -21165,38 +22211,467 @@ class BagOfTricksMode(GenericModeHandler):
     """剧本 62 魔袋把戏（Bag of Tricks）。
 
     权威原文：英雄手册 p73 / 叛徒手册 p144。
-    · 叛徒角色从游戏中移除；疯子怪物（Speed 4 Might 3）生成。
-    · 英雄在同疯子的房间做知识 6+ 推进进度。
-    · 进度 = 玩家数 → 英雄胜；英雄全灭 → 叛徒胜。
+
+    机制（逐条对照原文）：
+      · 开局（p73/p144）：叛徒角色**按规则从游戏中移除**（不是被打倒）——令牌
+        离场，携带的物品/预兆留在原地、不弃掉（本仓库落到作祟房间地上，后来者
+        走过去即可捡）。疯子令牌（红）放进作祟揭示的房间；回合/伤害轨归零。
+      · 英雄胜线（p73）：与疯子**或与小玩意**同房时可做下面两种检定之一——
+          ① 破解：知识 6+。骰数 = 英雄知识（持通灵板多掷 1 骰），上限 8；
+             同房每有一件英雄携带的小玩意，**结果 +1**。成功把回合/伤害轨
+             上调一格。
+          ② 使用：理智检定。结果**低于回合/伤害轨当前格**时，在角色卡上放一枚
+             理智检定令牌，并把轨道**下调一格**（持头骨少掷一骰，最少 1 骰）。
+        同一英雄一回合不能两种都做（引擎"每回合一次剧本行动"即此约束）。
+        理智检定令牌攒到「作祟时英雄数」→ 英雄获胜。
+      · 疯子胜线（p144）：在带**物品符号**的房间做速度 4+ 搜索，成功在该房放
+        一枚纪念品令牌；凑满 4 枚纪念品（或英雄全灭）→ 叛徒获胜。
+      · 疯子不能做常规攻击（p144）：改在**与英雄同房时**每回合掷 4 骰使用一件
+        随机小玩意。疯子被打中既不掉血也不昏迷，只会被英雄**摸走一件小玩意**
+        （五边形令牌，等同普通物品可丢可交易可被抢）。
+      · 疯子防守打赢时英雄不掉血，但该英雄的回合**立刻结束**（p144）。
+      · 疯子免疫距离攻击（左轮的速度攻击由引擎 `immune_to` 拦在门外）；因为
+        "挨打不掉血"这条已由 `on_monster_defeated` 接管，炸药同样伤不到他。
+
+    已知简化：
+      · 原文只写"取出若干三角/五边形令牌"、没写死枚数。本仓库让疯子袋中起手
+        有 2 件小玩意，英雄靠打疯子摸走；小玩意以令牌形式挂在**英雄**身上
+        （引擎的 `give_token` 只认玩家 id，疯子的存货记在 `flags["sack"]`，
+        避免把怪物 id 塞进 token.holder 破坏存档）。
+      · 随机小玩意 9 种结果（0-8）按可实现性取舍：0/1/2/6/8 只写日志（事件抽牌、
+        物品重抽、指定点数、换房间板块、挪方形令牌都牵动引擎没有的子系统），
+        3/4/5/7 真结算（移动、掉最高属性、换位、跳到目标房）。
+      · "保险库可收两件（每回合一件）"未建模——本仓库的保险库没有物品符号，
+        统一按"每个物品符号房间一件"处理；"不必先开保险库"原文本就允许。
+      · 叛徒被移除时物品落在地上而非"搁在桌边"，英雄需要走过去捡（差别仅在
+        多花移动力）。
     """
 
     mode = "bag_of_tricks"
 
-    def setup(self, engine, haunt, room_key):
+    MADMAN = "madman"
+    TRINKET = "trinket"
+    SOUVENIR = "souvenir"
+    SPIRIT_BOARD = "omen_spirit_board"
+    SKULL = "omen_skull"
+    SACK_START = 2
+    TAP_TARGET = 6
+    DICE_CAP = 8
+    TRACK_MAX = 8
+    SOUVENIR_NEEDED = 4
+    # 轨道 ≥ 这一格时才值得赌理智检定（"roll < track"的胜率才压得过"再破解一次"）。
+    # 它同时是行动出现门槛与 bot 门槛——两者必须同源，否则 UI/探针会看到
+    # "行动出现但一局都没用过"的空转警告（批次13 实测 use_trinket 出现 3-6 次未用）。
+    USE_TRINKET_MIN = 3
+
+    # ------------------------------------------------------------- 工具
+    def _madman(self, engine: Any) -> Any:
+        return engine._monster_by_template(self.MADMAN)
+
+    def _living_heroes(self, engine: Any) -> list[Any]:
+        return [p for p in engine.state.players if p.role == "hero" and not p.dead]
+
+    def _hero_count_at_start(self, engine: Any) -> int:
+        flags = engine._haunt_flags()
+        return max(1, int(flags.get("hero_count_at_start", len(self._living_heroes(engine)) or 1)))
+
+    def _item_rooms(self, engine: Any) -> list[str]:
+        """带物品符号的已放置房间（p144 的纪念品搜索点）。"""
+        return [
+            key
+            for key, room in engine.state.board.items()
+            if getattr(room, "symbol", None) == "item"
+        ]
+
+    def _trinkets_in_hand(self, engine: Any, player: Any) -> int:
+        """同房间（含本人）英雄手上小玩意的总件数——知识检定结果加值用。"""
+        total = 0
+        for other in engine.state.players:
+            if other.dead or other.room_key != player.room_key:
+                continue
+            total += len(engine.tokens_held_by(other.id, self.TRINKET))
+        return total
+
+    def _can_tap_here(self, engine: Any, player: Any) -> bool:
+        """p73：与「小玩意」或「疯子」同房才能做检定。"""
+        if engine.tokens_held_by(player.id, self.TRINKET):
+            return True
+        if self._trinkets_in_hand(engine, player) > 0:
+            return True
+        madman = self._madman(engine)
+        return madman is not None and madman.room_key == player.room_key
+
+    def _next_souvenir_room(self, engine: Any, madman: Any) -> str | None:
+        done = set(engine._haunt_flags().get("souvenir_rooms", []))
+        candidates = [key for key in self._item_rooms(engine) if key not in done]
+        if not candidates:
+            return None
+        return min(candidates, key=lambda key: engine._path_length(madman.room_key, key))
+
+    def _steal_trinket(self, engine: Any, madman: Any, hero: Any) -> None:
+        """p73：英雄造成 ≥1 点物理伤害 → 不伤疯子，但可摸走一件小玩意。"""
+        flags = engine._haunt_flags()
+        if int(flags.get("sack", 0)) <= 0:
+            engine._log(f"{madman.name} 的袋子已经空了。")
+            return
+        flags["sack"] = int(flags["sack"]) - 1
+        engine.spawn_token(self.TRINKET, label="小玩意", role="carried", holder=hero.id)
+        engine._log(
+            f"{hero.name} 抓住破绽，从{madman.name}的袋子里摸走一件小玩意"
+            f"（袋中还剩 {flags['sack']} 件）。"
+        )
+
+    # ------------------------------------------------------------- setup
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
         flags = engine._haunt_flags()
         flags["traitor_removed"] = True
-        # p73：叛徒角色从游戏中移除
+        flags["sack"] = self.SACK_START
+        flags["souvenir_rooms"] = []
+        flags["hero_count_at_start"] = max(1, len(self._living_heroes(engine)))
+        engine._set_haunt_track_value("trinket_progress", 0)
+        engine._set_haunt_track_value("trinket_tokens", 0)
+        engine._set_haunt_track_value("souvenir_count", 0)
+        # p73：理智检定令牌的目标 = 作祟时英雄数（按人数动态钉进轨道，UI 才显示对）。
+        engine._haunt_tracks().setdefault("trinket_tokens", {})["target"] = int(
+            flags["hero_count_at_start"]
+        )
+        engine._haunt_tracks().setdefault("trinket_progress", {})["target"] = self.TRACK_MAX
+
+        # p73/p144：叛徒角色从游戏中移除——令牌离场，携带物落地不弃掉。
         traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
         if traitor is not None:
             engine._drop_inventory_on_death(traitor)
             traitor.dead = True
-            engine._log(f"{traitor.name}消失在空气中——TA 离开了游戏。")
+            engine._log(f"{traitor.name} 消失在空气中——TA 离开了游戏。")
+
+        madman = self._madman(engine)
+        if madman is None:
+            # 兜底：rule_data 的 spawn=haunt_room 正常情况下已由引擎生成。
+            spec = next(
+                (
+                    s
+                    for s in ((haunt.rule_data or {}).get("monsters", []))
+                    if s.get("template_id") == self.MADMAN
+                ),
+                {"template_id": self.MADMAN},
+            )
+            madman = engine._spawn_single_haunt_monster(dict(spec), room_key)
+        if madman is not None:
+            engine._log("疯子从虚空中走来，肩上扛着一只鼓鼓囊囊的袋子。")
         engine.check_victory()
 
-    def available_actions(self, engine, player):
-        actions = super().available_actions(engine, player)
+    # ------------------------------------------------------------- 行动
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        if player.role != "hero" or not self._can_tap_here(engine, player):
+            return []
+        if int(engine._haunt_track_value("trinket_tokens")) >= self._hero_count_at_start(engine):
+            return []
+        track = engine._haunt_track_value("trinket_progress")
         result = []
-        for action in actions:
-            if action.id == "tap_trinkets":
-                madman = engine._monster_by_template("madman")
-                if madman is None or madman.room_key != player.room_key:
-                    continue
-            result.append(action)
+        for spec in engine._generic_haunt_actions():
+            action_id = str(spec.get("id", ""))
+            if action_id not in {"tap_trinkets", "use_trinket"}:
+                continue
+            # 轨道太低时"roll < 0/1/2"几乎不可能命中：不给这次检定白掷。
+            if action_id == "use_trinket" and track < self.USE_TRINKET_MIN:
+                continue
+            result.append(
+                HauntAction(
+                    action_id,
+                    str(spec.get("label", action_id)),
+                    str(spec.get("detail", "")),
+                    dict(spec.get("data", {})),
+                )
+            )
         return result
 
-    def check_victory(self, engine):
-        if engine._haunt_track_value("trinket_progress") >= engine._haunt_track_target("trinket_progress"):
-            engine._set_winner("heroes", "疯子被送走了——房子恢复了原状。")
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        if action_id not in {"tap_trinkets", "use_trinket"}:
+            return super().perform_action(engine, player, action_id, data)
+        if player.role != "hero" or not self._can_tap_here(engine, player):
+            return False
+        if action_id == "tap_trinkets":
+            self._tap(engine, player)
+        else:
+            if engine._haunt_track_value("trinket_progress") < self.USE_TRINKET_MIN:
+                return False
+            self._use_trinket(engine, player)
+        return True
+
+    def _tap(self, engine: Any, player: Any) -> None:
+        """p73：知识 6+（通灵板 +1 骰，同房每件小玩意结果 +1）→ 轨道 +1。"""
+        dice = engine._effective_stat(player, "knowledge")
+        has_board = engine._has_item(player, self.SPIRIT_BOARD)
+        if has_board:
+            dice += 1
+        dice = max(1, min(self.DICE_CAP, dice))
+        roll = engine.roll_dice(dice, "破解小玩意")
+        if has_board:
+            engine._log(f"{player.name} 借着通灵板与灵界搭话（知识 {dice} 骰）。")
+        bonus = self._trinkets_in_hand(engine, player)
+        total = roll + bonus
+        if bonus:
+            engine._log(f"同房英雄手上的 {bonus} 件小玩意让线索更清晰（{roll}+{bonus}={total}）。")
+        if total < self.TAP_TARGET:
+            engine._log(f"{player.name} 没能破解小玩意的用法（{total}，需要 {self.TAP_TARGET}）。")
+            return
+        value = engine._advance_haunt_track("trinket_progress", 1)
+        engine._log(f"{player.name} 摸清了小玩意的一点门道：回合/伤害轨升到 {value}。")
+
+    def _use_trinket(self, engine: Any, player: Any) -> None:
+        """p73：理智检定；结果 < 轨道当前格 → 得一枚理智检定令牌，轨道 -1。"""
+        track = engine._haunt_track_value("trinket_progress")
+        dice = engine._effective_stat(player, "sanity")
+        has_skull = engine._has_item(player, self.SKULL)
+        if has_skull:
+            dice -= 1
+        dice = max(1, min(self.DICE_CAP, dice))
+        roll = engine.roll_dice(dice, "使用小玩意")
+        if has_skull:
+            engine._log(f"{player.name} 攥着冰冷的头骨，手有点抖（理智 {dice} 骰）。")
+        if roll >= track:
+            engine._log(f"{player.name} 没敢按下小玩意的机关（理智 {roll} 对轨道 {track}）。")
+            return
+        need = self._hero_count_at_start(engine)
+        tokens = engine._advance_haunt_track("trinket_tokens", 1)
+        engine._set_haunt_track_value("trinket_progress", track - 1)
+        engine._log(
+            f"{player.name} 用小玩意撬开了虚空的一角（理智 {roll} < 轨道 {track}）："
+            f"理智检定令牌 {tokens}/{need}。"
+        )
+        if tokens >= need:
+            engine._set_winner("heroes", "小玩意的力量被彻底破解——疯子被送走了。")
+
+    # ------------------------------------------------------------- 疯子回合
+    def on_monster_turn_start(self, engine: Any, monster: Any) -> bool:
+        """p144：疯子的一整个回合由剧本接管（搜刮 → 移动 → 用小玩意）。"""
+        if _monster_id(monster) != self.MADMAN:
+            return False
+        self._madman_turn(engine, monster)
+        return True
+
+    def _madman_turn(self, engine: Any, monster: Any) -> None:
+        self._collect_souvenir(engine, monster)
+        if engine.state.winner:
+            return
+        dest = self._next_souvenir_room(engine, monster)
+        if dest and dest != monster.room_key:
+            path = engine._shortest_path(monster.room_key, dest)
+            if len(path) > 1:
+                steps = max(1, engine.roll_dice(monster.speed, "疯子移动"))
+                monster.room_key = path[min(len(path) - 1, steps)]
+                room = engine.state.board.get(monster.room_key)
+                engine._log(f"{monster.name} 逛到{room.name if room else '未知房间'}翻找纪念品。")
+        if any(
+            p.role == "hero" and not p.dead and p.room_key == monster.room_key
+            for p in engine.state.players
+        ):
+            self._use_random_trinket(engine, monster)
+
+    def _collect_souvenir(self, engine: Any, monster: Any) -> bool:
+        """p144：物品符号房间做速度 4+ → 该房放一枚纪念品；满 4 枚 → 叛徒胜。"""
+        room = engine.state.board.get(monster.room_key)
+        if room is None or getattr(room, "symbol", None) != "item":
+            return False
+        flags = engine._haunt_flags()
+        collected = flags.setdefault("souvenir_rooms", [])
+        if monster.room_key in collected:
+            return False
+        roll = engine.roll_dice(monster.speed, "搜索纪念品")
+        if roll < 4:
+            engine._log(f"{monster.name} 在{room.name}翻了半天，什么也没找到（速度 {roll}）。")
+            return False
+        collected.append(monster.room_key)
+        count = engine._advance_haunt_track("souvenir_count", 1)
+        engine.spawn_token(self.SOUVENIR, label="纪念品", role="marker", room_key=monster.room_key)
+        engine._log(
+            f"{monster.name} 从{room.name}收走了一件纪念品（{count}/{self.SOUVENIR_NEEDED}）。"
+        )
+        if count >= self.SOUVENIR_NEEDED:
+            engine._set_winner("traitor", "疯子集齐了四件纪念品——他转身走向门口。")
+        return True
+
+    def _use_random_trinket(self, engine: Any, monster: Any) -> None:
+        """p144：代替普通攻击，掷 4 骰用一件随机小玩意（0-8 号效果）。"""
+        roll = engine.roll_dice(4, "小玩意")
+        engine._log(f"{monster.name} 从袋子里掏出一件小玩意，掷出了 {roll}。")
+        heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        if roll == 0:
+            engine._log("小玩意炸出一团彩纸：每个英雄都被迫分心了一瞬（未建模：抽事件卡）。")
+            return
+        if roll == 1:
+            engine._log('小玩意"噗"地吐出烟雾，屋里的东西全乱了套（未建模：物品重抽）。')
+            return
+        if roll == 2:
+            engine._log(f"{monster.name} 把小玩意捏在手心——下一掷由它说了算（未建模）。")
+            return
+        if roll == 3:
+            self._madman_free_step(engine, monster)
+            return
+        if roll == 4:
+            self._trinket_trait_shock(engine, heroes)
+            return
+        if roll == 5:
+            self._trinket_swap(engine, monster, heroes)
+            return
+        if roll == 6:
+            engine._log("小玩意咯咯作响，房间的轮廓晃了一下又复位（未建模：换房间板块）。")
+            return
+        if roll == 7:
+            dest = self._next_souvenir_room(engine, monster)
+            if dest and dest != monster.room_key:
+                monster.room_key = dest
+                room = engine.state.board.get(dest)
+                engine._log(f"{monster.name} 一步跨进了{room.name if room else '未知房间'}。")
+            else:
+                engine._log(f"{monster.name} 在屋里转了一圈，没找到想去的地方。")
+            return
+        engine._log("小玩意从疯子指缝里滑走了，什么也没发生（未建模）。")
+
+    def _madman_free_step(self, engine: Any, monster: Any) -> None:
+        """p144 · 3：把疯子推进相邻的一个房间（不必有门相连）。"""
+        dest = self._next_souvenir_room(engine, monster)
+        if dest is None:
+            return
+        path = engine._shortest_path(monster.room_key, dest)
+        if len(path) > 1:
+            monster.room_key = path[1]
+            room = engine.state.board.get(monster.room_key)
+            engine._log(f"{monster.name} 被小玩意拽进了{room.name if room else '未知房间'}。")
+
+    def _trinket_trait_shock(self, engine: Any, heroes: list[Any]) -> None:
+        """p144 · 4：每个英雄掷 1 骰，从最高属性上扣掉这么多点。"""
+        for hero in heroes:
+            amount = engine.roll_dice(1, "小玩意反噬")
+            if amount <= 0:
+                continue
+            stat = max(
+                ("speed", "might", "sanity", "knowledge"),
+                key=lambda name: engine._effective_stat(hero, name),
+            )
+            names = {"speed": "速度", "might": "力量", "sanity": "理智", "knowledge": "知识"}
+            engine._apply_stat_loss(hero, stat, amount)
+            engine._log(f"{hero.name} 的最高属性（{names[stat]}）被打掉了 {amount} 点。")
+            engine._check_player_death(hero)
+
+    def _trinket_swap(self, engine: Any, monster: Any, heroes: list[Any]) -> None:
+        """p144 · 5：与同层最近的英雄换位；本层没英雄就把最近的英雄拽过来。"""
+        here = engine.state.board.get(monster.room_key)
+        same_floor = [
+            p
+            for p in heroes
+            if engine.state.board.get(p.room_key) is not None
+            and here is not None
+            and engine.state.board[p.room_key].floor == here.floor
+        ]
+        if same_floor:
+            target = min(same_floor, key=lambda p: engine._path_length(monster.room_key, p.room_key))
+            monster.room_key, target.room_key = target.room_key, monster.room_key
+            engine._log(f"一阵眩晕过后，{monster.name} 和{target.name} 互换了位置。")
+            return
+        if not heroes:
+            return
+        target = min(heroes, key=lambda p: engine._path_length(monster.room_key, p.room_key))
+        engine._log(f"{monster.name} 把{target.name} 硬生生拽到了自己面前。")
+        target.room_key = monster.room_key
+
+    # ------------------------------------------------------------- 战斗
+    def on_monster_defeated(self, engine: Any, monster: Any, amount: int) -> bool:
+        """p73/p144：打中疯子不造成伤害、也不昏迷——他只是被掏了口袋。"""
+        if _monster_id(monster) != self.MADMAN:
+            return False
+        engine._log(f"{monster.name} 挨了一下，却像没事人一样站住了。")
+        return True
+
+    def monster_counterattack_disabled(self, engine: Any, monster: Any) -> bool:
+        """p144：疯子防守打赢时不造成伤害（只让英雄的回合立刻结束）。"""
+        return _monster_id(monster) == self.MADMAN
+
+    def on_attack_resolved(
+        self, engine: Any, attacker: Any, target: Any, attacker_wins: bool
+    ) -> None:
+        if _monster_id(target) != self.MADMAN:
+            return
+        if getattr(attacker, "role", None) != "hero":
+            return
+        if not attacker_wins:
+            # p144：疯子防守得手 → 英雄不掉血，但回合立刻结束。
+            attacker.movement_stopped = True
+            attacker.steps_remaining = 0
+            engine._log(f"{attacker.name} 被{target.name} 缠住，回合就此结束。")
+            return
+        # 攻击的代价（自伤武器）可能先要了英雄的命——死人拿不动小玩意。
+        if getattr(attacker, "dead", False):
+            return
+        # p73：造成 ≥1 点物理伤害 → 不伤疯子，但可摸走一件小玩意。
+        if getattr(engine, "_last_attack_attr", "") in ("might", "speed"):
+            self._steal_trinket(engine, target, attacker)
+
+    # ------------------------------------------------------------- bot
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        """机器人策略：轨道够高就"用"（理智检定），不够高就"破解"先抬轨。"""
+        if action_id == "tap_trinkets":
+            return engine._haunt_track_value("trinket_progress") >= self.USE_TRINKET_MIN
+        if action_id == "use_trinket":
+            return engine._haunt_track_value("trinket_progress") < self.USE_TRINKET_MIN
+        return False
+
+    def bot_stay_in_room(self, engine: Any, player: Any) -> bool:
+        """手里有小玩意的英雄在哪都能破解——没必要追着疯子满屋子跑。"""
+        if player.role != "hero":
+            return False
+        return bool(engine.tokens_held_by(player.id, self.TRINKET))
+
+    def bot_attack_blocked(self, engine: Any, player: Any, target: Any) -> bool:
+        """疯子袋里没小玩意了就别再捶他：打不掉血，只是白费一次攻击。"""
+        if _monster_id(target) != self.MADMAN:
+            return False
+        if player.role != "hero":
+            return True
+        return int(engine._haunt_flags().get("sack", 0)) <= 0
+
+    def bot_weapon_bonus(self, engine: Any, player: Any, target: Any, weapon_id: str | None) -> int:
+        """p73：摸疯子只换一件小玩意、**不造成任何伤害**——体力见底时别拿自伤
+        武器（献祭匕首/血匕首，攻击 +4 但要自伤 1）去换。
+
+        批次13 实测：seed137/3p 两名英雄都死在献祭匕首的 1 点自伤上，一件小玩意
+        都没摸到，疯子一路搜满四件纪念品。体力还厚时这笔交换是划算的（+4 攻击
+        更容易赢下抢袋子的对决），所以只在"速度+力量 ≤ 4"时才重罚。
+        """
+        if _monster_id(target) != self.MADMAN or not weapon_id:
+            return 0
+        weapon = engine.catalog.cards.get(weapon_id)
+        if weapon is None or int(weapon.data.get("self_damage", 0)) <= 0:
+            return 0
+        stamina = int(engine._effective_stat(player, "speed")) + int(
+            engine._effective_stat(player, "might")
+        )
+        return -60 if stamina <= 4 else 0
+
+    # ------------------------------------------------------------- UI
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        need = self._hero_count_at_start(engine)
+        tokens = int(engine._haunt_track_value("trinket_tokens"))
+        track = engine._haunt_track_value("trinket_progress")
+        lines = [f"理智检定令牌：{tokens}/{need}（回合/伤害轨 {track}/{self.TRACK_MAX}）"]
+        collected = len(engine._haunt_flags().get("souvenir_rooms", []))
+        lines.append(f"疯子已收集纪念品：{collected}/{self.SOUVENIR_NEEDED}")
+        lines.append(f"疯子袋中的小玩意：{int(engine._haunt_flags().get('sack', 0))} 件")
+        holders = [
+            p.name for p in engine.state.players if engine.tokens_held_by(p.id, self.TRINKET)
+        ]
+        if holders:
+            lines.append("英雄手中的小玩意：" + "、".join(holders))
+        return lines
+
+    # ------------------------------------------------------------- 胜负
+    def check_victory(self, engine: Any) -> bool:
+        need = self._hero_count_at_start(engine)
+        if int(engine._haunt_track_value("trinket_tokens")) >= need:
+            engine._set_winner("heroes", "小玩意的力量被彻底破解——疯子被送走了。")
+            return True
+        if int(engine._haunt_track_value("souvenir_count")) >= self.SOUVENIR_NEEDED:
+            engine._set_winner("traitor", "疯子集齐了四件纪念品——他转身走向门口。")
             return True
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "最后的英雄也消失了。")
@@ -21209,7 +22684,37 @@ class BagOfTricksMode(GenericModeHandler):
 
 
 class EternalGloryMode(GenericModeHandler):
-    """剧本 61 永恒荣耀（Eternal Glory）。"""
+    """剧本 61 永恒荣耀（Eternal Glory）。
+
+    权威原文：英雄手册 p72 / 叛徒手册 p143。
+
+    机制（逐条对照原文）：
+      · 开局：雕像令牌→画廊、石棺令牌→墓地、古甲令牌→酒窖（房间不在场则
+        拉进屋子）；盾牌令牌归叛徒；长矛放在作祟房间地上；幽灵战士
+        （Speed 3 / Might 5）绑定长矛。说服轨道与鼓舞轨道归零。
+      · 英雄胜线：把长矛带进任一遗物房，同房英雄每回合可做一次知识检定代替
+        攻击，**按总点分档**推说服轨道（≤2 拒绝不推 / 3-5 +1 / 6-8 +2 / 9+ +3）。
+        轨道达到「作祟时英雄数 × 2」时在该房放一枚安息印记，**两间不同房间**
+        各有一枚即获胜。长矛离开所在房间时轨道立刻归零（原文 reset to zero）。
+      · 叛徒胜线：与长矛同房时改为做知识或理智检定，6+ 记一次鼓舞；
+        累计 6 次即让幽灵重燃战意（叛徒胜）。盾牌在自己身上时多掷 2 骰
+        （封顶 8），但要让英雄看见「盾牌让幽灵兴奋起来」。
+      · 长矛控制：英雄回合开始时若手持长矛须做理智 4+；拾取或被交给长矛时
+        同样检定。失败则幽灵以「力量 4 攻击」打过来（幽灵输了不受损）；
+        受伤者掉矛，且本回合不能再拾起。
+      · 自动挥击：英雄进入或结束回合于长矛所在房间时须做速度 3+，失败吃
+        1 骰物理伤害（无人持矛时照样触发）。
+      · 幽灵只在**无人持矛**时行动（带矛游走并攻击）；持矛英雄不能攻击，
+        幽灵与长矛本身也不可被攻击（引擎本就没有针对令牌的攻击入口）。
+
+    已知简化：
+      · 盾牌只作为叛徒身上的携带令牌，未接通用物品层的「丢下/交易/被偷」
+        （bot 与人类都不会主动交出，与原文的差别仅在极端局面）。
+      · 「战斗中偷长矛需 ≥3 点物理伤害」沿用引擎通用的 special_steal 阈值
+        （净胜 >2），比原文严一格。
+      · 叛徒「化作虚体免除物理伤害、代价是丢光携带物」未建模——它牵动全局
+        伤害结算入口，按现状留作后续专项。
+    """
 
     mode = "ghost_warrior"
 
@@ -21218,12 +22723,102 @@ class EternalGloryMode(GenericModeHandler):
         ("sarcophagus_relic", "graveyard", "石棺"),
         ("ancient_armor", "wine_cellar", "古甲"),
     ]
+    INSPIRE_NEEDED = 6
 
-    def setup(self, engine, haunt, room_key):
+    # ------------------------------------------------------------- 工具
+    def _hero_count(self, engine: Any) -> int:
+        return sum(1 for p in engine.state.players if p.role == "hero")
+
+    def _spear(self, engine: Any) -> Any:
+        return next(iter(engine.tokens_of_kind("spear")), None)
+
+    def _spear_room(self, engine: Any) -> str | None:
+        """长矛当前所在房间（被携带时算携带者所在房间）。"""
+        token = self._spear(engine)
+        if token is None:
+            return None
+        if token.holder is not None:
+            holder = next((p for p in engine.state.players if p.id == token.holder), None)
+            return holder.room_key if holder is not None else None
+        return token.room_key or None
+
+    def _spear_holder(self, engine: Any) -> Any:
+        token = self._spear(engine)
+        if token is None or token.holder is None:
+            return None
+        return next((p for p in engine.state.players if p.id == token.holder), None)
+
+    def _relic_room_for(self, engine: Any, room_key: str) -> str | None:
+        relic_rooms = engine._haunt_flags().get("relic_rooms", {})
+        for token_kind, rk in relic_rooms.items():
+            if rk == room_key:
+                return token_kind
+        return None
+
+    def _drop_spear(self, engine: Any, player: Any) -> None:
+        token = self._spear(engine)
+        if token is None:
+            return
+        engine.place_token(token.uid, player.room_key)
+        engine._log(f"{player.name} 没能握住长矛——长矛脱手掉在地上。")
+
+    def _ghost_strike(self, engine: Any, player: Any) -> bool:
+        """p72：幽灵以「力量 4 攻击」打过来，幽灵输了不受任何损伤。"""
+        ghost_roll = engine.roll_dice(4, "幽灵战士")
+        hero_roll = engine._roll_attack(player, "might")
+        engine._log(f"幽灵战士挥矛刺向{player.name}：{ghost_roll} 对 {hero_roll}。")
+        if ghost_roll > hero_roll:
+            engine._deal_damage(player, "physical", ghost_roll - hero_roll, source="幽灵战士")
+            return True
+        return False
+
+    def _control_check(self, engine: Any, player: Any) -> bool:
+        """p72：持矛英雄理智 4+ 才能握稳；失败被幽灵攻击，受伤即掉矛。"""
+        roll = engine._roll_attack(player, "sanity")
+        if roll >= 4:
+            engine._log(f"{player.name} 握紧了命运之矛（理智 {roll}）。")
+            return True
+        engine._log(f"{player.name} 压不住长矛的挣扎（理智 {roll}）。")
+        hurt = self._ghost_strike(engine, player)
+        if hurt and not player.dead:
+            self._drop_spear(engine, player)
+            lock = engine._haunt_flags().setdefault("spear_locked", {})
+            lock[str(player.id)] = int(engine._haunt_flags().get("turn_seq", 0))
+        return False
+
+    def _wild_spear(self, engine: Any, player: Any) -> None:
+        """p72：进入/结束回合于长矛所在房间须做速度 3+，否则 1 骰物理伤害。"""
+        if player.dead or player.role != "hero":
+            return
+        if engine.tokens_held_by(player.id, "spear"):
+            return
+        if player.room_key != self._spear_room(engine):
+            return
+        roll = engine._roll_attack(player, "speed")
+        if roll >= 3:
+            engine._log(f"{player.name} 避开了乱舞的长矛（速度 {roll}）。")
+            return
+        amount = engine.roll_dice(1, "长矛乱舞")
+        engine._log(f"长矛在{player.name}面前疯狂乱舞（速度 {roll}）——{amount} 点物理伤害。")
+        engine._deal_damage(player, "physical", amount, source="疯狂的长矛")
+
+    # ------------------------------------------------------------- setup
+    def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
         flags = engine._haunt_flags()
-        flags["rest_tokens_rooms"] = []
-        flags["spear_held_by"] = None
-        flags["ghost_alive"] = True
+        flags["rest_token_rooms"] = []
+        flags["inspire_count"] = 0
+        flags["spear_locked"] = {}
+        flags["turn_seq"] = 0
+        flags["hero_count_at_start"] = self._hero_count(engine)
+        engine._set_haunt_track_value("persuasion_track", 0)
+        engine._set_haunt_track_value("inspire_track", 0)
+        # p72：达标线 = 2 × 作祟时英雄数，按人数动态钉进轨道（UI 才能显示对）。
+        engine._haunt_tracks().setdefault("persuasion_track", {})["target"] = (
+            2 * int(flags["hero_count_at_start"])
+        )
+
+        # p72：三件遗物落进画廊/墓地/酒窖；房间不在场时先拉进屋子
+        # （作祟后探险者不再主动探索，否则遗物可能整局不出现）。
         relic_rooms = flags.setdefault("relic_rooms", {})
         for token_kind, template_id, label in self.RELICS:
             key = next((k for k, r in engine.state.board.items() if r.template_id == template_id), None)
@@ -21232,27 +22827,149 @@ class EternalGloryMode(GenericModeHandler):
             if key:
                 engine.spawn_token(token_kind, label=label, role="marker", room_key=key)
                 relic_rooms[token_kind] = key
+
+        # 长矛放在作祟房间的地上（无人持有时幽灵才带着它游走）。
         engine.spawn_token("spear", label="命运之矛", role="marker", room_key=room_key)
+        flags["last_spear_room"] = room_key
+
         spec = next((s for s in haunt.rule_data.get("monsters", []) if s.get("template_id") == "ghost"), {})
         spec = dict(spec)
         spec["name"] = "幽灵战士"
-        monster = engine._spawn_single_haunt_monster(spec, room_key)
-        if monster is not None:
-            spear = next((t for t in engine.state.tokens if t.kind == "spear"), None)
-            if spear:
-                engine.give_token(spear.uid, int(monster.id.split("_")[-1]))
+        engine._spawn_single_haunt_monster(spec, room_key)
+
+        # p143：盾牌令牌归叛徒，可丢可交易可被偷（本仓库只做携带令牌）。
+        traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+        if traitor is not None:
+            engine.spawn_token("shield", label="盾牌", role="carried", holder=traitor.id)
         engine._log('幽灵战士手持长矛现身——"谁能与我匹敌！"')
 
-    def _relic_room_for(self, engine, room_key):
-        relic_rooms = engine._haunt_flags().get("relic_rooms", {})
-        for token_kind, rk in relic_rooms.items():
-            if rk == room_key:
-                return token_kind
-        return None
+    # ------------------------------------------------------------- 生命周期
+    def on_turn_start(self, engine: Any, player: Any) -> None:
+        flags = engine._haunt_flags()
+        if not flags.get("relic_rooms"):
+            return
+        flags["turn_seq"] = int(flags.get("turn_seq", 0)) + 1
+        # p72：长矛一旦离开所在房间，说服轨道清零（跨房间累计必须重新来过）。
+        room_key = self._spear_room(engine)
+        if room_key != flags.get("last_spear_room"):
+            flags["last_spear_room"] = room_key
+            if engine._haunt_track_value("persuasion_track") > 0:
+                engine._set_haunt_track_value("persuasion_track", 0)
+                engine._log("长矛离开了原来的房间，说服进度全部作废。")
+        if player.dead or player.role != "hero":
+            return
+        # p72：回合开始时手持长矛须通过理智 4+
+        if engine.tokens_held_by(player.id, "spear"):
+            self._control_check(engine, player)
 
-    def on_monster_move(self, engine, monster, rolled):
+    def on_turn_end(self, engine: Any, player: Any) -> None:
+        self._wild_spear(engine, player)
+
+    def on_enter_room(self, engine: Any, player: Any, room: Any) -> None:
+        self._wild_spear(engine, player)
+
+    # ------------------------------------------------------------- 行动
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        actions = super().available_actions(engine, player)
+        flags = engine._haunt_flags()
+        locked = flags.get("spear_locked", {})
+        held = bool(engine.tokens_held_by(player.id, "spear"))
+        result = []
+        for action in actions:
+            if action.id == "persuade_ghost":
+                if not held:
+                    continue
+                if self._relic_room_for(engine, player.room_key) is None:
+                    continue
+            elif action.id == "pick_up_spear":
+                if held or not engine.tokens_in_room(player.room_key, "spear"):
+                    continue
+                if locked.get(str(player.id)) == int(flags.get("turn_seq", 0)):
+                    continue
+            elif action.id == "inspire_ghost":
+                if held or not engine.tokens_in_room(player.room_key, "spear"):
+                    continue
+            result.append(action)
+        return result
+
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        """机器人眼里不可用的剧本行动（与 available_actions 同源，但不看位置）。"""
+        flags = engine._haunt_flags()
+        held = bool(engine.tokens_held_by(player.id, "spear"))
+        if action_id == "persuade_ghost":
+            if not held:
+                return True
+            # 本房已经留下安息印记：再劝也没有意义，机器人必须换到下一间遗物房
+            # （批 13 实测：不挡这一条时，英雄在画廊把说服轨道刷到封顶 20 后
+            # 站了 60 多个回合，第二枚印记永远拿不到）。
+            if player.room_key in set(flags.get("rest_token_rooms", [])):
+                return True
+            return False
+        if action_id == "pick_up_spear":
+            if held:
+                return True
+            return bool(self._spear_holder(engine))
+        if action_id == "inspire_ghost":
+            return held
+        return False
+
+    def bot_leave_after_action(self, engine: Any, player: Any) -> bool:
+        """本房已留下安息印记 → 立刻动身去下一间遗物房（否则原地空转）。"""
+        if player.role != "hero":
+            return False
+        if not engine.tokens_held_by(player.id, "spear"):
+            return False
+        return player.room_key in set(engine._haunt_flags().get("rest_token_rooms", []))
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """英雄：没矛去长矛所在房，有矛去还没放印记的遗物房。
+
+        叛徒：去长矛所在房刷鼓舞（凑满 6 次是它的主动胜线），
+        长矛被英雄拿着时改追持矛者。
+        """
+        flags = engine._haunt_flags()
+        relic_rooms = flags.get("relic_rooms", {})
+        if not relic_rooms:
+            return []
+        if player.role == "hero":
+            if engine.tokens_held_by(player.id, "spear"):
+                done = set(flags.get("rest_token_rooms", []))
+                # 注意：bot_goal_rooms 返回的**房间 key 必须带 `__room__` 前缀**，
+                # 否则会被当成模板 id 去找同模板的房间（批 13 实测：英雄拿着
+                # 长矛在地下室绕了 20 回合，遗物房一次都没去过）。
+                pending = ["__room__" + rk for rk in relic_rooms.values() if rk not in done]
+                return pending
+            spear_room = self._spear_room(engine)
+            return ["__room__" + spear_room] if spear_room else []
+        # 叛徒
+        carrier = self._spear_holder(engine)
+        if carrier is not None:
+            return ["__room__" + carrier.room_key]
+        spear_room = self._spear_room(engine)
+        return ["__room__" + spear_room] if spear_room else []
+
+    def bot_attack_blocked(self, engine: Any, player: Any, target: Any) -> bool:
+        """p72：幽灵战士不可被攻击——英雄打它只会白费一回合（原文"never stunned"）。
+
+        批 13 实测：不加这一条时英雄每回合去捶幽灵（Might 5 打不动），
+        长矛一直躺在地上没人捡。
+        """
+        if getattr(target, "template_id", "") == "ghost" and player.role == "hero":
+            return True
+        return False
+
+    def attack_allowed(self, engine: Any, attacker: Any, target: Any) -> bool:
+        """p72：手持长矛的英雄不能做任何攻击（剧本规则要求的除外）。"""
+        if attacker.role == "hero" and engine.tokens_held_by(attacker.id, "spear"):
+            return False
+        return True
+
+    def on_monster_move(self, engine: Any, monster: Any, rolled: int) -> bool:
         if getattr(monster, "name", "") != "幽灵战士":
             return False
+        # p143：只有长矛无人持有时，幽灵才会带着它游走并攻击。
+        if self._spear_holder(engine) is not None:
+            return True
         target = engine._find_monster_target(monster)
         if target is None:
             return True
@@ -21260,6 +22977,9 @@ class EternalGloryMode(GenericModeHandler):
         if len(path) > 1:
             steps = engine.roll_dice(getattr(monster, "speed", 3), "幽灵移动")
             monster.room_key = path[min(len(path) - 1, steps)]
+            token = self._spear(engine)
+            if token is not None and token.holder is None:
+                engine.place_token(token.uid, monster.room_key)
         if target.room_key == monster.room_key:
             ghost_roll = engine._roll_monster_attack(monster, "might")
             hero_roll = engine._roll_attack(target, "might")
@@ -21267,52 +22987,89 @@ class EternalGloryMode(GenericModeHandler):
                 engine._deal_damage(target, "physical", ghost_roll - hero_roll, source="幽灵战士")
         return True
 
-    def available_actions(self, engine, player):
-        actions = super().available_actions(engine, player)
-        result = []
-        for action in actions:
-            if action.id == "persuade_ghost" and not engine.tokens_held_by(player.id, "spear"):
-                continue
-            if action.id == "pick_up_spear":
-                if engine.tokens_held_by(player.id, "spear"):
-                    continue
-                if not engine.tokens_in_room(player.room_key, "spear"):
-                    continue
-            result.append(action)
-        return result
-
-    def perform_action(self, engine, player, action_id, data):
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
         flags = engine._haunt_flags()
         if action_id == "pick_up_spear":
             token = next(iter(engine.tokens_in_room(player.room_key, "spear")), None)
             if token is None:
                 return False
             engine.give_token(token.uid, player.id)
-            flags["spear_held_by"] = player.id
-            engine._log(f"{player.name} 拾取了长矛。")
+            flags["last_spear_room"] = player.room_key
+            engine._log(f"{player.name} 拾起了命运之矛。")
+            # p72：接到长矛时必须立刻做同样的理智检定。
+            self._control_check(engine, player)
             return True
         if action_id == "persuade_ghost":
             if not engine.tokens_held_by(player.id, "spear"):
                 return False
-            relic = self._relic_room_for(engine, player.room_key)
-            if not relic:
+            if self._relic_room_for(engine, player.room_key) is None:
                 return False
-            ok = super().perform_action(engine, player, action_id, data)
-            if ok and engine.last_haunt_action_succeeded():
-                engine._advance_haunt_track("persuasion_track", 1)
-                new_track = engine._haunt_track_value("persuasion_track")
-                target_track = 2 * sum(1 for p in engine.state.players if p.role == "hero")
-                rooms = flags.setdefault("rest_tokens_rooms", [])
-                if player.room_key not in rooms:
-                    rooms.append(player.room_key)
-                engine._log(f"说服进度（{new_track}/{target_track}，房间 {len(rooms)}）。")
-                if new_track >= target_track and len(rooms) >= 2:
-                    engine._set_winner("heroes", "幽灵战士终于安息了。")
-                    engine.check_victory()
-            return ok
+            self._persuade(engine, player)
+            return True
+        if action_id == "inspire_ghost":
+            self._inspire(engine, player)
+            return True
         return super().perform_action(engine, player, action_id, data)
 
-    def check_victory(self, engine):
+    # ------------------------------------------------------------- 结算
+    def _persuade(self, engine: Any, player: Any) -> None:
+        """p72：知识检定按总点分档推进；达标放印记，两间不同房间即胜。"""
+        roll = engine._roll_attack(player, "knowledge")
+        if roll <= 2:
+            engine._log(f"{player.name} 试图唤起幽灵的回忆，但幽灵拒绝倾听（知识 {roll}）。")
+            return
+        delta = 1 if roll <= 5 else (2 if roll <= 8 else 3)
+        value = engine._advance_haunt_track("persuasion_track", delta)
+        flags = engine._haunt_flags()
+        need = 2 * int(flags.get("hero_count_at_start", self._hero_count(engine)))
+        engine._log(f"{player.name} 的劝说起了作用：说服进度 {value}/{need}（知识 {roll}，+{delta}）。")
+        if value < need:
+            return
+        rooms = flags.setdefault("rest_token_rooms", [])
+        if player.room_key in rooms:
+            return
+        rooms.append(player.room_key)
+        engine.spawn_token("rest_token", label="安息印记", role="check", room_key=player.room_key)
+        engine._log(f"遗物房里的幽灵战士动摇了（安息印记 {len(rooms)}/2）。")
+        if len(rooms) >= 2:
+            engine._set_winner("heroes", "幽灵战士终于放下长矛，永远安息了。")
+
+    def _inspire(self, engine: Any, player: Any) -> None:
+        """p143：知识或理智 6+；盾牌在身上可多掷 2 骰（封顶 8 枚）。"""
+        flags = engine._haunt_flags()
+        has_shield = bool(engine.tokens_held_by(player.id, "shield"))
+        stat = max(("knowledge", "sanity"), key=lambda name: engine._effective_stat(player, name))
+        dice = max(1, min(8, engine._effective_stat(player, stat) + (2 if has_shield else 0)))
+        roll = engine.roll_dice(dice, "鼓舞幽灵")
+        if has_shield:
+            engine._log("盾牌闪着幽光——幽灵的战意被点燃了，英雄们也看在眼里。")
+        if roll < 6:
+            engine._log(f"{player.name} 讲述旧日荣耀，但幽灵战士毫无反应（{stat} {roll}）。")
+            return
+        flags["inspire_count"] = int(flags.get("inspire_count", 0)) + 1
+        engine._advance_haunt_track("inspire_track", 1)
+        engine._log(f"幽灵战士的战意被点燃（鼓舞 {flags['inspire_count']}/{self.INSPIRE_NEEDED}）。")
+        if flags["inspire_count"] >= self.INSPIRE_NEEDED:
+            engine._set_winner("traitor", "幽灵战士在战吼中重拾长矛——他将为永恒荣耀而战。")
+
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        flags = engine._haunt_flags()
+        if not flags.get("relic_rooms"):
+            return []
+        lines = []
+        rooms = flags.get("rest_token_rooms", [])
+        lines.append(f"安息印记：{len(rooms)}/2 间遗物房")
+        holder = self._spear_holder(engine)
+        if holder is not None:
+            lines.append(f"长矛在{holder.name}手上")
+        elif self._spear_room(engine):
+            room = engine.state.board.get(self._spear_room(engine))
+            lines.append(f"长矛掉在{room.name if room else '未知房间'}")
+        if int(flags.get("inspire_count", 0)):
+            lines.append(f"幽灵的战意：{flags['inspire_count']}/{self.INSPIRE_NEEDED}")
+        return lines
+
+    def check_victory(self, engine: Any) -> bool:
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
             engine._set_winner("traitor", "幽灵战士的最后一击命中了。")
             return True

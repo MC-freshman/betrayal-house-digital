@@ -767,6 +767,106 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["riddle_race", "sphinx_toll", "clue_hunt"]},
     },
+    61: {
+        "hero": {
+            # p72：幽灵战士与长矛都**不可被直接攻击**——英雄的唯一出路是把
+            # 长矛带进遗物房做知识检定。68/69 号踩过的坑：靠搬运/集结取胜的
+            # 剧本必须显式关掉 attack_monsters（+100 常驻会压过 +95 剧本目标）。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "从长矛所在房间拾矛，再把它带进两间不同的遗物房做知识检定",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "prefer_weak_targets": False,
+            # 叛徒的主动胜线是"与长矛同房鼓舞幽灵 6 次"，追人 +130 会压过它。
+            "chase_heroes": False,
+            "victory_focus": "跟着长矛走，同房做知识/理智 6+ 攒够 6 次鼓舞",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {
+            "tokens": ["命运之矛", "盾牌", "雕像", "石棺", "古甲"],
+            "special_rules": ["spear_control", "relic_persuasion", "inspire_race"],
+        },
+    },
+    62: {
+        "hero": {
+            # p73：疯子在房间里可以被攻击——每造成 1 点物理伤害就能从他袋子里
+            # 掏走一件小玩意；但他免疫远程（左轮）与炸药伤害。
+            "attack_monsters": True,
+            "attack_traitor_players": False,
+            "victory_focus": "贴住疯子做知识 6+ 抬高轨道，再用理智检定把小玩意换成检定令牌",
+        },
+        "traitor": {
+            # p144：疯子**不能做常规攻击**，胜利靠收集 4 件纪念品。
+            "attack_heroes": False,
+            "chase_heroes": False,
+            "victory_focus": "在带物品符号的房间做速度 4+ 收集 4 件纪念品",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["疯子"], "special_rules": ["trinket_race", "souvenir_hunt"]},
+    },
+    63: {
+        "hero": {
+            # p74：英雄的主线是在预兆房间做知识 5+ 锚定（锚网 = 含锚房间 +
+            # 与之连通的房间，门槛按人数 12/15/19/21）。虚空怪物（星界灵力量 5
+            # / 幽灵理智 5 / 魅影力量 4）打不赢也不该打——实测 attack_monsters=True
+            # 时英雄被贴脸后全程缠斗、整局 0/15 锚定（seed113/4p），
+            # attack_monsters=False 才会边挨打边往预兆房走。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "在未锚的预兆房间做知识 5+，把房间连成锚网；没有可达的预兆房就去翻新房间",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "chase_heroes": True,
+            "victory_focus": "驱使虚空怪物杀光英雄——它们能穿过虚空跨孤岛追击",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {
+            "tokens": ["锚"],
+            "special_rules": ["nether_decay", "anchor_race", "nether_monsters"],
+        },
+    },
+    64: {
+        "hero": {
+            "attack_monsters": True,
+            "attack_traitor_players": True,
+            "victory_focus": "守住女孩、关掉传送门，撑到恶魔不耐烦（计时轨 7）",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "prefer_weak_targets": False,
+            # 叛徒的胜线是「贴着女孩打满 5 次」，追人 +130 会压过它。
+            "chase_heroes": False,
+            "victory_focus": "黏住女孩用力量攻击累计 5 点伤，把她献出去",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {
+            "tokens": ["女孩", "邪教徒", "蝙蝠"],
+            "special_rules": ["protect_girl", "demon_timer", "portal_summon"],
+        },
+    },
+    65: {
+        "hero": {
+            # p76：骚灵免疫力量，速度攻击只能抢物品、理智攻击只在持戒指/骷髅/铃铛时
+            # 才降轨道——**打它拿不到任何进度**，追着它跑纯属浪费回合。英雄主线只有
+            # 一条：找蜡烛 → 在作祟层点火攒知识令牌。同 63/69 号，关掉追怪。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "厨房/餐厅/小教堂/画廊找蜡烛，在作祟层点燃做知识 5+ 攒够仪式令牌",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "chase_heroes": True,
+            "victory_focus": "把骚灵往杂物间/储藏室/图书馆一类房间带（回合伤害轨每回合 +1），先把英雄磨死",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {
+            "tokens": ["蜡烛", "骚灵"],
+            "special_rules": ["candle_hunt", "track_dice", "boost_rooms"],
+        },
+    },
     69: {
         "hero": {
             # p80：追上小精灵才是唯一胜利条件——打它毫无意义（它不攻击、

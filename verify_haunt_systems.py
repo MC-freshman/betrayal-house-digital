@@ -8451,67 +8451,539 @@ def verify_haunt61_eternal_glory() -> None:
 
 
 def verify_haunt62_bag_of_tricks() -> None:
-    """剧本 62：叛徒移除/疯子生成/破解进度/胜利条件（p73/p144）。"""
+    """剧本 62：叛徒移除/疯子/纪念品/小玩意双检定/偷取/胜负（p73/p144）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=62)
     handler = engine._mode_handler()
     assert isinstance(handler, BagOfTricksMode)
     flags = engine._haunt_flags()
 
-    # 叛徒已移除
+    # p73：叛徒角色按规则从游戏中移除（不是被打倒）
     traitor = next(p for p in engine.state.players if p.role == "traitor")
     assert traitor.dead, "叛徒应已从游戏移除"
+    assert flags.get("traitor_removed") is True
 
-    # 疯子怪物在场
+    # p144：疯子在作祟房间，Speed 4 / Might 3
     madman = engine._monster_by_template("madman")
     assert madman is not None, "疯子怪物应已生成"
+    assert (madman.speed, madman.might) == (4, 3), "疯子应为 Speed 4 / Might 3"
+
+    # 轨道目标：令牌 = 作祟时英雄数；回合/伤害轨 8；纪念品 4
+    hero_count = int(flags["hero_count_at_start"])
+    assert engine._haunt_track_target("trinket_tokens") == hero_count
+    assert engine._haunt_track_target("trinket_progress") == BagOfTricksMode.TRACK_MAX
+    assert engine._haunt_track_target("souvenir_count") == BagOfTricksMode.SOUVENIR_NEEDED
 
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
-
-    # 破解小玩意
     hero.room_key = madman.room_key
     _set_current(engine, hero)
-    with patch.object(engine, "_resolve_check", return_value=True):
-        assert handler.perform_action(engine, hero, "tap_trinkets", {}) is True
-    assert engine._haunt_track_value("trinket_progress") == 1
 
-    # 胜利：进度满
-    engine._set_haunt_track_value("trinket_progress", engine._haunt_track_target("trinket_progress"))
+    # p73：与疯子同房即可做检定；轨道太低时理智检定无意义 → 只出现"破解"
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert ids == {"tap_trinkets"}, f"轨道 0 时只该有破解：{ids}"
+    engine._set_haunt_track_value("trinket_progress", BagOfTricksMode.USE_TRINKET_MIN - 1)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "use_trinket" not in ids, "轨道低于门槛时不该给理智检定（白掷一回合）"
+    engine._set_haunt_track_value("trinket_progress", 0)
+
+    # 破解成功 → 回合/伤害轨 +1
+    with patch.object(engine, "roll_dice", return_value=BagOfTricksMode.TAP_TARGET):
+        assert handler.perform_action(engine, hero, "tap_trinkets", {}) is True
+    assert engine._haunt_track_value("trinket_progress") == 1, "知识 6+ 应把轨道抬一格"
+
+    # 破解失败 → 不推轨
+    with patch.object(engine, "roll_dice", return_value=1):
+        assert handler.perform_action(engine, hero, "tap_trinkets", {}) is True
+    assert engine._haunt_track_value("trinket_progress") == 1, "检定失败不该推轨"
+
+    # 理智检定成功（roll < 轨道）→ 得令牌，轨道降一格
+    engine._set_haunt_track_value("trinket_progress", 4)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "use_trinket" in ids, "轨道达到门槛时理智检定应可用"
+    with patch.object(engine, "roll_dice", return_value=0):
+        assert handler.perform_action(engine, hero, "use_trinket", {}) is True
+    assert engine._haunt_track_value("trinket_tokens") == 1
+    assert engine._haunt_track_value("trinket_progress") == 3, "理智成功应把轨道降一格"
+
+    # 理智检定失败（roll ≥ 轨道）→ 不推进
+    with patch.object(engine, "roll_dice", return_value=9):
+        handler.perform_action(engine, hero, "use_trinket", {})
+    assert engine._haunt_track_value("trinket_tokens") == 1, "理智没过不该给令牌"
+
+    # p73：小玩意被摸走后，"与小玩意同房"= 在哪都能做检定
+    handler._steal_trinket(engine, madman, hero)
+    assert engine.tokens_held_by(hero.id, BagOfTricksMode.TRINKET), "应摸到一件小玩意"
+    away = next(k for k in engine.state.board if k != madman.room_key)
+    hero.room_key = away
+    engine._set_haunt_track_value("trinket_progress", 0)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "tap_trinkets" in ids, "手持小玩意时在任意房间都能破解"
+    # 同房每件小玩意给知识检定结果 +1（5 + 1 = 6 → 成功）
+    with patch.object(engine, "roll_dice", return_value=5):
+        handler.perform_action(engine, hero, "tap_trinkets", {})
+    assert engine._haunt_track_value("trinket_progress") == 1, "小玩意应给检定结果 +1"
+
+    # 令牌攒满 → 英雄胜
+    engine._set_haunt_track_value("trinket_tokens", hero_count)
     assert handler.check_victory(engine) is True
     assert engine.state.winner == "heroes"
 
+    # ---- 疯子胜线 + 挨打不死（另开一局，避免上面的 winner 干扰）----
+    engine2 = _run_until_haunt(seed=109, players=3, haunt_id=62)
+    handler2 = engine2._mode_handler()
+    madman2 = engine2._monster_by_template("madman")
+    assert madman2 is not None
+    item_rooms = [
+        key for key, room in engine2.state.board.items() if getattr(room, "symbol", None) == "item"
+    ]
+    if len(item_rooms) < BagOfTricksMode.SOUVENIR_NEEDED:
+        # 单元测试不赌探索运气：凑不满物品符号房间时直接指定几间。
+        for key, room in engine2.state.board.items():
+            if key in item_rooms:
+                continue
+            room.symbol = "item"
+            item_rooms.append(key)
+            if len(item_rooms) >= BagOfTricksMode.SOUVENIR_NEEDED:
+                break
+    assert len(item_rooms) >= BagOfTricksMode.SOUVENIR_NEEDED
+
+    # p144：速度 4+ → 该房放一枚纪念品；同一房间不能重复搜
+    madman2.room_key = item_rooms[0]
+    with patch.object(engine2, "roll_dice", return_value=4):
+        assert handler2._collect_souvenir(engine2, madman2) is True
+    assert engine2.tokens_in_room(item_rooms[0], BagOfTricksMode.SOUVENIR), "成功应留下纪念品"
+    assert engine2._haunt_track_value("souvenir_count") == 1
+    with patch.object(engine2, "roll_dice", return_value=6):
+        assert handler2._collect_souvenir(engine2, madman2) is False, "同一房间不能重复搜"
+
+    # 速度不够 → 不推进
+    madman2.room_key = item_rooms[1]
+    with patch.object(engine2, "roll_dice", return_value=1):
+        assert handler2._collect_souvenir(engine2, madman2) is False
+    assert engine2._haunt_track_value("souvenir_count") == 1, "速度不够不该记纪念品"
+
+    # 搜满 4 枚 → 叛徒胜
+    engine2.state.winner = None
+    with patch.object(engine2, "roll_dice", return_value=4):
+        for key in item_rooms[: BagOfTricksMode.SOUVENIR_NEEDED]:
+            madman2.room_key = key
+            handler2._collect_souvenir(engine2, madman2)
+    assert engine2._haunt_track_value("souvenir_count") == BagOfTricksMode.SOUVENIR_NEEDED
+    assert engine2.state.winner == "traitor", "集齐四件纪念品 → 叛徒胜"
+
+    # p73/p144：打中疯子不掉血、不昏迷，但英雄摸走一件小玩意
+    engine3 = _run_until_haunt(seed=137, players=3, haunt_id=62)
+    handler3 = engine3._mode_handler()
+    madman3 = engine3._monster_by_template("madman")
+    hero3 = next(p for p in engine3.state.players if p.role == "hero" and not p.dead)
+    sack_before = int(engine3._haunt_flags().get("sack", 0))
+    assert sack_before > 0
+    assert handler3.on_monster_defeated(engine3, madman3, 3) is True, "疯子不该被击晕"
+    assert madman3.stunned_turns == 0, "疯子挨打不昏迷"
+    engine3._last_attack_attr = "might"
+    handler3.on_attack_resolved(engine3, hero3, madman3, True)
+    assert int(engine3._haunt_flags().get("sack", 0)) == sack_before - 1, "应摸走一件小玩意"
+    assert engine3.tokens_held_by(hero3.id, BagOfTricksMode.TRINKET), "小玩意应挂到英雄身上"
+    # 袋空后机器人不再捶疯子；而且疯子防守得手要让英雄回合立刻结束
+    engine3._haunt_flags()["sack"] = 0
+    assert handler3.bot_attack_blocked(engine3, hero3, madman3) is True
+    assert handler3.monster_counterattack_disabled(engine3, madman3) is True
+    handler3.on_attack_resolved(engine3, hero3, madman3, False)
+    assert hero3.steps_remaining == 0 and hero3.movement_stopped, "疯子防守得手应结束英雄回合"
+    # 体力见底时不该拿自伤武器（献祭匕首/血匕首）去换小玩意
+    hero3.stats["speed"], hero3.stats["might"] = 1, 2
+    assert handler3.bot_weapon_bonus(engine3, hero3, madman3, "item_sacrificial_dagger") < 0
+    assert handler3.bot_weapon_bonus(engine3, hero3, madman3, None) == 0
+    hero3.stats["speed"], hero3.stats["might"] = 5, 5
+    assert handler3.bot_weapon_bonus(engine3, hero3, madman3, "item_sacrificial_dagger") == 0
+    # 英雄死在自伤武器上时不该再摸走小玩意
+    hero3.dead = True
+    engine3._haunt_flags()["sack"] = 2
+    handler3.on_attack_resolved(engine3, hero3, madman3, True)
+    assert int(engine3._haunt_flags().get("sack", 0)) == 2, "死人拿不动小玩意"
+
+
+
+def _nether_omen_room(engine: GameEngine, hero) -> str:
+    """找一间预兆房；探索运气不保证有，实在没有就把英雄脚下改成预兆房。"""
+    for key, room in engine.state.board.items():
+        if getattr(room, "symbol", None) == "omen":
+            return key
+    room = engine.state.board[hero.room_key]
+    room.symbol = "omen"
+    return hero.room_key
 
 
 def verify_haunt63_twisting_nether() -> None:
-    """剧本 63：锚定房间/溶解/胜负条件（p74/p145）。"""
+    """剧本 63：锚定/锚网连通/按人数的胜利门槛/虚空怪物/收回房间（p74/p145）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=63)
     handler = engine._mode_handler()
     assert isinstance(handler, TwistingNetherMode)
     flags = engine._haunt_flags()
-
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
-    traitor = next(p for p in engine.state.players if p.role == "traitor")
 
-    # 锚定房间
+    # p74：胜利门槛按人数（3 人 12 / 4 人 15 / 5 人 19 / 6 人 21）
+    assert engine._haunt_track_target("anchor_progress") == 12, "3 人应锚定 12 间"
+    for players, expected in ((4, 15), (5, 19), (6, 21)):
+        other = _run_until_haunt(seed=113, players=players, haunt_id=63)
+        assert other._haunt_track_target("anchor_progress") == expected, (
+            f"{players} 人应锚定 {expected} 间"
+        )
+    assert flags.get("nether_spawned") is False
+
+    # ---- 锚定地点闸门：只有预兆符号房间能锚 ----
     _set_current(engine, hero)
+    plain_key = None
+    for key, room in engine.state.board.items():
+        if getattr(room, "symbol", None) != "omen":
+            plain_key = key
+            break
+    if plain_key is not None:
+        hero.room_key = plain_key
+        ids = {a.id for a in handler.available_actions(engine, hero)}
+        assert "anchor_room" not in ids, "非预兆房间不该出现锚定行动"
+
+    omen_key = _nether_omen_room(engine, hero)
+    hero.room_key = omen_key
     ids = {a.id for a in handler.available_actions(engine, hero)}
-    assert "anchor_room" in ids, "应能锚定当前房间"
-    with patch.object(engine, "_resolve_check", return_value=True):
+    assert "anchor_room" in ids, "预兆房间应能锚定"
+
+    # p74：知识 5+ 成功 → 留下锚令牌、房间进入锚定名单
+    with patch.object(engine, "roll_dice", return_value=TwistingNetherMode.ANCHOR_MIN):
         assert handler.perform_action(engine, hero, "anchor_room", {}) is True
-    assert hero.room_key in flags.get("anchored_rooms", [])
-    # 同房不能再次锚定
-    engine._reset_player_turn_state(hero)
-    ids = {a.id for a in handler.available_actions(engine, hero)}
-    assert "anchor_room" not in ids, "已锚定房间不能再锚定"
+    assert engine.tokens_in_room(omen_key, TwistingNetherMode.ANCHOR_TOKEN), "成功应留下锚"
+    assert omen_key in flags["anchored_rooms"]
+    region = handler._anchored_region(engine)
+    assert omen_key in region
+    # 锚网 = 含锚房间 + 与它连通的房间；逐间核对可达性
+    graph = engine._build_graph()
+    assert region == engine._reachable_nodes(omen_key, graph) | {omen_key} | region.intersection(
+        region
+    ), "锚定区域应是含锚房间的连通闭包"
+    for key in region:
+        assert key in engine._reachable_nodes(omen_key, graph), (
+            f"{key} 不与锚点连通却算作已锚定"
+        )
+    assert engine._haunt_track_value("anchor_progress") == len(region)
 
-    # 叛徒溶解
-    dissolved_before = len(flags.get("dissolved_rooms", []))
-    handler.on_turn_start(engine, traitor)
-    assert len(flags.get("dissolved_rooms", [])) > dissolved_before, "叛徒应溶解房间"
+    # 检定失败 → 不发锚；同房不能重复锚定
+    engine2 = _run_until_haunt(seed=113, players=3, haunt_id=63)
+    handler2 = engine2._mode_handler()
+    hero2 = next(p for p in engine2.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine2, hero2)
+    omen2 = _nether_omen_room(engine2, hero2)
+    hero2.room_key = omen2
+    with patch.object(engine2, "roll_dice", return_value=1):
+        assert handler2.perform_action(engine2, hero2, "anchor_room", {}) is True
+    assert not engine2.tokens_in_room(omen2, TwistingNetherMode.ANCHOR_TOKEN), (
+        "检定没过不该留下锚"
+    )
+    with patch.object(engine2, "roll_dice", return_value=6):
+        handler2.perform_action(engine2, hero2, "anchor_room", {})
+    engine2._reset_player_turn_state(hero2)
+    ids = {a.id for a in handler2.available_actions(engine2, hero2)}
+    assert "anchor_room" not in ids, "已锚定的房间不能再锚"
 
-    # 锚定满 → 英雄胜
-    engine._set_haunt_track_value("anchor_progress", engine._haunt_track_target("anchor_progress"))
-    assert handler.check_victory(engine) is True
-    assert engine.state.winner == "heroes"
+    # p74：骷髅 +1 骰、通灵板 +2 骰（通灵板那 +2 是它自己的卡牌 bonus）
+    engine3 = _run_until_haunt(seed=113, players=3, haunt_id=63)
+    handler3 = engine3._mode_handler()
+    hero3 = next(p for p in engine3.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine3, hero3)
+    hero3.room_key = _nether_omen_room(engine3, hero3)
+    hero3.items.clear()
+    hero3.stats["knowledge"] = 2
+    with patch.object(engine3, "roll_dice", return_value=1) as mock:
+        handler3.perform_action(engine3, hero3, "anchor_room", {})
+    bare = mock.call_args[0][0]
+    assert bare == max(1, min(8, 2 + engine3._check_bonus(hero3, "knowledge"))), (
+        "无器具时骰数应为知识值"
+    )
+    hero3.items.append("omen_skull")
+    with patch.object(engine3, "roll_dice", return_value=1) as mock:
+        handler3.perform_action(engine3, hero3, "anchor_room", {})
+    with_skull = mock.call_args[0][0]
+    assert with_skull - bare == 1, "骷髅应给锚定检定 +1 骰"
+    hero3.items.append("omen_spirit_board")
+    with patch.object(engine3, "roll_dice", return_value=1) as mock:
+        handler3.perform_action(engine3, hero3, "anchor_room", {})
+    with_board = mock.call_args[0][0]
+    assert with_board - with_skull == 2, "通灵板应给锚定检定 +2 骰"
+
+    # ---- 虚空怪物：星界灵常驻；英雄 ≥3 加 Specter、≥4 加 Ghost、5 人加 Phantom ----
+    engine4 = _run_until_haunt(seed=113, players=4, haunt_id=63)
+    handler4 = engine4._mode_handler()
+    traitor4 = next(p for p in engine4.state.players if p.role == "traitor")
+    assert not engine4.state.monsters, "怪物应由叛徒首回合生成（deferred）"
+    handler4.on_turn_start(engine4, traitor4)
+    templates = sorted(m.template_id for m in engine4.state.monsters)
+    assert templates == ["astral_spirit", "spectre"], (
+        f"4 人局（3 名英雄）应放星界灵 + Specter，实际 {templates}"
+    )
+    assert engine4._haunt_flags()["nether_spawned"] is True
+    spirit = engine4._monster_by_template("astral_spirit")
+    assert (spirit.might, spirit.speed, spirit.knowledge, spirit.sanity) == (5, 3, 4, 5), (
+        "p145：星界灵 力量5/速度3/知识4/理智5"
+    )
+    handler4.on_turn_start(engine4, traitor4)  # 幂等：不会重复生成
+    assert len(engine4.state.monsters) == 2
+
+    engine5 = _run_until_haunt(seed=113, players=5, haunt_id=63)
+    handler5 = engine5._mode_handler()
+    handler5.on_turn_start(
+        engine5, next(p for p in engine5.state.players if p.role == "traitor")
+    )
+    assert sorted(m.template_id for m in engine5.state.monsters) == [
+        "astral_spirit",
+        "ghost",
+        "spectre",
+    ], "5 人局（4 名英雄）应再加放 Ghost"
+
+    engine6 = _run_until_haunt(seed=113, players=6, haunt_id=63)
+    handler6 = engine6._mode_handler()
+    handler6.on_turn_start(
+        engine6, next(p for p in engine6.state.players if p.role == "traitor")
+    )
+    assert sorted(m.template_id for m in engine6.state.monsters) == [
+        "astral_spirit",
+        "ghost",
+        "shadow",
+        "spectre",
+    ], "6 人局（5 名英雄）应再加放 Phantom"
+
+    # p145：Specter 打速度或知识 <4 的目标多掷 1 骰
+    specter = engine4._monster_by_template("spectre")
+    weak = next(p for p in engine4.state.players if p.role == "hero" and not p.dead)
+    weak.stats["speed"] = 3
+    weak.stats["knowledge"] = 5
+    assert handler4.monster_attack_roll_bonus(engine4, specter, weak) == 1
+    weak.stats["speed"] = 4
+    weak.stats["knowledge"] = 4
+    assert handler4.monster_attack_roll_bonus(engine4, specter, weak) == 0
+    assert handler4.monster_attack_roll_bonus(engine4, spirit, weak) == 0, (
+        "只有 Specter 有这个加值"
+    )
+
+    # p145：Ghost 以理智攻击（精神伤害）；持戒指的英雄才能以理智打它
+    engine7 = _run_until_haunt(seed=113, players=5, haunt_id=63)
+    handler7 = engine7._mode_handler()
+    handler7.on_turn_start(
+        engine7, next(p for p in engine7.state.players if p.role == "traitor")
+    )
+    ghost = engine7._monster_by_template("ghost")
+    specter7 = engine7._monster_by_template("spectre")
+    ghost.sanity = 5
+    victim = next(p for p in engine7.state.players if p.role == "hero" and not p.dead)
+    victim.room_key = ghost.room_key
+    victim.stats["sanity"] = 5
+    assert handler7.on_monster_turn_attack(engine7, specter7) is False, (
+        "非 Ghost 不该接管攻击"
+    )
+    with patch.object(engine7, "_roll_monster_attack", return_value=6), patch.object(
+        engine7, "_roll_attack", return_value=2
+    ), patch.object(engine7, "_deal_damage") as dealer:
+        assert handler7.on_monster_turn_attack(engine7, ghost) is True
+    assert dealer.call_count == 1, "Ghost 应造成一次伤害"
+    assert dealer.call_args[0][1] == "mental", "Ghost 造成的是精神伤害"
+    assert dealer.call_args[0][0] is victim
+
+    ring_hero = next(
+        p for p in engine7.state.players if p.role == "hero" and not p.dead and p is not victim
+    )
+    ring_hero.room_key = ghost.room_key
+    ring_hero.attack_used = False
+    assert engine7.attack_would_be_allowed(ring_hero, ghost, ignore_position=True) is False, (
+        "没有戒指时英雄打不动 Ghost（免疫力量）"
+    )
+    ring_hero.items.append("omen_ring")
+    assert engine7.attack_would_be_allowed(ring_hero, ghost, ignore_position=True) is True, (
+        "持戒指的英雄应以理智攻击 Ghost"
+    )
+    assert handler7.attack_attr_override(engine7, ring_hero, ghost, "might") == "sanity"
+    assert handler7.attack_attr_override(engine7, ring_hero, spirit, "might") is None
+
+    # p145：Phantom 行动前瞬移到有别的怪物或叛徒的房间
+    engine8 = _run_until_haunt(seed=113, players=6, haunt_id=63)
+    handler8 = engine8._mode_handler()
+    traitor8 = next(p for p in engine8.state.players if p.role == "traitor")
+    handler8.on_turn_start(engine8, traitor8)
+    phantom = engine8._monster_by_template("shadow")
+    assert phantom is not None
+    phantom.room_key = next(
+        k for k in sorted(engine8.state.board) if k != traitor8.room_key
+    )
+    candidates = {
+        m.room_key for m in engine8.state.monsters if m is not phantom
+    } | {traitor8.room_key}
+    candidates &= set(engine8.state.board)
+    assert handler8.on_monster_turn_start(engine8, phantom) is False, "瞬移后仍要正常行动"
+    assert phantom.room_key in candidates, (
+        "Phantom 应瞬移到有别的怪物或叛徒的房间，实际去了 "
+        f"{engine8.state.board[phantom.room_key].name}"
+    )
+
+    # ---- 收回房间：锚定房与占用房不受影响；断连房被回收且房内卡牌回到牌堆 ----
+    engine9 = _run_until_haunt(seed=113, players=3, haunt_id=63)
+    handler9 = engine9._mode_handler()
+    hero9 = next(p for p in engine9.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine9, hero9)
+    anchor_room = _nether_omen_room(engine9, hero9)
+    hero9.room_key = anchor_room
+    with patch.object(engine9, "roll_dice", return_value=6):
+        handler9.perform_action(engine9, hero9, "anchor_room", {})
+    before = set(engine9.state.board)
+    removed = handler9._purge(engine9)
+    assert anchor_room in engine9.state.board, "含锚的房间不该被虚空吞掉"
+    assert all(key in engine9.state.board for key in before - set(removed)), (
+        "_purge 只应移除它判定断连的房间"
+    )
+    # 回收单间：房内预兆卡必须洗回牌堆，而不是凭空消失
+    empty_key = next(
+        (
+            key
+            for key in sorted(engine9.state.board)
+            if key != anchor_room
+            and not engine9.tokens_in_room(key)
+            and not any(
+                p.room_key == key and not p.dead for p in engine9.state.players
+            )
+            and not engine9._monsters_in_room(key)
+            and engine9.state.board[key].template_id
+            not in TwistingNetherMode.FIXED_ROOMS
+        ),
+        None,
+    )
+    if empty_key is not None:
+        engine9.state.room_items[empty_key] = ["omen_skull"]
+        handler9._recycle_room(engine9, empty_key)
+        assert empty_key not in engine9.state.board, "被回收的板块应离场"
+        assert "omen_skull" in engine9.state.card_decks.get("omen", []), (
+            "房内的预兆卡应洗回预兆牌堆"
+        )
+
+    # ---- p74 选项 3「穿越虚空」：跨孤岛的唯一通道（英雄胜线的命门）----
+    # 开场 "Right Now" 按原文把房子撕成几座孤岛，预兆房落在哪座岛上是随机的。
+    # 没有这条行动，英雄永远够不到别的岛上的预兆房，anchor_progress 一局钉死在 0。
+    engine13 = _run_until_haunt(seed=113, players=3, haunt_id=63)
+    handler13 = engine13._mode_handler()
+    hero13 = next(p for p in engine13.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine13, hero13)
+    rooms13 = handler13._unexplored_door_rooms(engine13)
+    assert len(rooms13) >= 2, "开场清查后场上应还有未探索的门口"
+    start13, destination13 = rooms13[0], rooms13[1]
+    hero13.room_key = start13
+
+    # 成功：知识 4+ → 落到选定的"还有未探索门口"的房间
+    with patch.object(engine13, "roll_dice", return_value=TwistingNetherMode.SEEK_MIN):
+        assert handler13.perform_action(
+            engine13, hero13, "nether_seek", {"room": destination13}
+        ) is True
+    assert hero13.room_key == destination13, "检定过就该落到目的地"
+
+    # 失败：p74 选项 1「随机坠入虚空」——跌进一块不与任何房间连通的新板块
+    before13 = set(engine13.state.board)
+    with patch.object(engine13, "roll_dice", return_value=1):
+        assert handler13.perform_action(
+            engine13, hero13, "nether_seek", {"room": start13}
+        ) is True
+    assert hero13.room_key not in before13, "检定没过应跌进一块新板块"
+    assert all(engine13._path_length(hero13.room_key, key) >= 9999 for key in before13), (
+        "p74 选项 1 放进来的板块不应与任何现有房间连通"
+    )
+
+    # 门槛一：站在预兆房里就没必要穿越虚空（否则会变成"行动摆出来却没人用"）
+    engine14 = _run_until_haunt(seed=113, players=3, haunt_id=63)
+    handler14 = engine14._mode_handler()
+    hero14 = next(p for p in engine14.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine14, hero14)
+    omen14 = _nether_omen_room(engine14, hero14)
+    hero14.room_key = omen14
+    assert "nether_seek" not in {
+        a.id for a in handler14.available_actions(engine14, hero14)
+    }, "够得着预兆房时不该给出穿越虚空"
+
+    # 门槛二：跨孤岛（够不到预兆房）时才给出，且挑"落在预兆房那座岛上"的落点
+    rest14 = [key for key in handler14._unexplored_door_rooms(engine14) if key != omen14]
+    assert len(rest14) >= 2, "应至少有两个可作落点的房间"
+    stranded14, bridge14 = rest14[0], rest14[1]
+    hero14.room_key = stranded14
+
+    def island_path(a: str, b: str) -> int:
+        # 只有 omen14 与 bridge14 之间有通路（模拟"预兆房在隔壁孤岛"）
+        if a == omen14 and b == omen14:
+            return 0
+        if {a, b} == {omen14, bridge14}:
+            return 1
+        return 9999
+
+    with patch.object(engine14, "_path_length", side_effect=island_path):
+        actions14 = handler14.available_actions(engine14, hero14)
+    seek14 = next((a for a in actions14 if a.id == "nether_seek"), None)
+    assert seek14 is not None, "够不到预兆房时该给出穿越虚空"
+    assert seek14.data.get("room") in {omen14, bridge14}, (
+        "落点应挑在预兆房所在的孤岛上，实际 " + str(seek14.data.get("room"))
+    )
+
+    # ---- p74/p145："shuffle the room tiles back into the room stack" ----
+    # `_detach_room(return_to_deck=True)` 是 `insert(0, ...)`，而抽牌是
+    # `room_deck.pop()`（从尾部拿）——不洗一次，回收的板块会排到整副牌的最后，
+    # 预兆房等于被雪藏（seed151/4p 实测：回收 39 块后连翻 12 间没有一间预兆房）。
+    engine15 = _run_until_haunt(seed=113, players=3, haunt_id=63)
+    handler15 = engine15._mode_handler()
+    spare15 = next(
+        template
+        for template in engine15.catalog.room_templates.values()
+        if template.id in set(engine15.state.room_deck)
+    )
+    engine15.state.room_deck.remove(spare15.id)
+    slot15 = TwistingNetherMode._isolated_slot(engine15, spare15.floor)
+    assert slot15 is not None, "应能找出一格四邻皆空的坐标"
+    placed15 = engine15._place_room(
+        engine15._build_rotated_template(spare15, 0), slot15[0], slot15[1], 0
+    )
+    with patch.object(
+        engine15, "_shuffle_room_piles", wraps=engine15._shuffle_room_piles
+    ) as shuffle15:
+        removed15 = handler15._purge(engine15)
+    assert placed15.key in removed15, "没人、没锚、不连通的孤岛应被虚空回收"
+    assert shuffle15.call_count == 1, "回收板块后必须把牌堆洗匀（p74 明文）"
+    assert placed15.template_id in (
+        set(engine15.state.room_deck) | set(engine15.state.room_discard)
+    ), "被回收的板块应回到房间牌堆"
+
+    # ---- 胜负 ----
+    # 轨道值是现场推导的（锚点连通闭包大小），所以"锚满"必须真的去锚
+    engine10 = _run_until_haunt(seed=113, players=3, haunt_id=63)
+    handler10 = engine10._mode_handler()
+    hero10 = next(p for p in engine10.state.players if p.role == "hero" and not p.dead)
+    _set_current(engine10, hero10)
+    hero10.items.clear()
+    hero10.stats["knowledge"] = 8
+    hero10.room_key = _nether_omen_room(engine10, hero10)
+    assert handler10.check_victory(engine10) is False, "零锚点不该判胜"
+    assert engine10.state.winner is None
+    with patch.object(engine10, "roll_dice", return_value=6):
+        handler10.perform_action(engine10, hero10, "anchor_room", {})
+    region = handler10._anchored_region(engine10)
+    assert region, "应至少锚下一间房"
+    assert engine10._haunt_track_value("anchor_progress") == len(region)
+    engine10._haunt_tracks()["anchor_progress"]["target"] = len(region)
+    assert handler10.check_victory(engine10) is True
+    assert engine10.state.winner == "heroes", "锚够房间 → 英雄胜"
+
+    engine11 = _run_until_haunt(seed=113, players=3, haunt_id=63)
+    handler11 = engine11._mode_handler()
+    for player in engine11.state.players:
+        if player.role == "hero":
+            player.dead = True
+    assert handler11.check_victory(engine11) is True
+    assert engine11.state.winner == "traitor", "英雄全灭 → 叛徒胜"
+
+    # 叛徒死亡不构成英雄胜（p74/p145 只认锚定足够房间）
+    engine12 = _run_until_haunt(seed=113, players=3, haunt_id=63)
+    handler12 = engine12._mode_handler()
+    next(p for p in engine12.state.players if p.role == "traitor").dead = True
+    engine12.state.winner = None
+    engine12.check_victory()
+    assert engine12.state.winner is None, "叛徒倒下不等于英雄达成锚定目标"
 
 
 
@@ -8527,6 +8999,7 @@ def verify_haunt64_blood_offering() -> None:
     assert girl, "女孩 token 应已放置"
     girl_room = flags.get("girl_room")
     assert girl_room is not None
+    assert girl[0].room_key == girl_room, "女孩应站在作祟房间"
 
     # 邪教徒和蝙蝠已布点
     cultists = [m for m in engine.state.monsters if m.template_id == "cultist"]
@@ -8537,15 +9010,42 @@ def verify_haunt64_blood_offering() -> None:
     assert handler.check_victory(engine) is True
     assert engine.state.winner == "heroes"
 
-    # 邪教徒到达女孩房间 → 叛徒胜
+    # p146：叛徒胜线是**亲手用力量攻击把女孩打满 5 点伤**。
+    # 旧版这里断言 `flags["girl_sacrificed"]`——那个标在实现里根本不存在，
+    # 原文也没有"邪教徒走到女孩房间即献祭"这条，是写测试时的占位臆想。
     engine.state.winner = None
     engine.state.phase = "HAUNT_PHASE"
-    flags["girl_sacrificed"] = False
     engine._set_haunt_track_value("demon_timer", 0)
-    cultist = cultists[0]
-    cultist.room_key = girl_room
-    handler.on_monster_turn_start(engine, cultist)
-    assert flags.get("girl_sacrificed") is True
+    engine._set_haunt_track_value("girl_wounds", 0)
+    flags["girl_dead"] = False
+    flags["girl_stunned"] = 0
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    traitor.room_key = girl_room
+    traitor.attack_used = False
+    _set_current(engine, traitor)
+    assert "attack_girl" in {a.id for a in handler.available_actions(engine, traitor)}, (
+        "叛徒与女孩同房时应能动手"
+    )
+
+    # 英雄没有这条行动（p146 是叛徒专属胜线）
+    decoy = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    decoy.room_key = girl_room
+    _set_current(engine, decoy)
+    assert "attack_girl" not in {a.id for a in handler.available_actions(engine, decoy)}, (
+        "英雄不该有杀女孩的行动"
+    )
+    _set_current(engine, traitor)
+
+    # 前 4 点伤只记伤，第 5 点才判胜
+    with patch.object(engine, "_roll_attack", return_value=8), patch.object(
+        engine, "roll_dice", return_value=1
+    ):
+        for expected in range(1, 5):
+            assert handler.perform_action(engine, traitor, "attack_girl", {}) is True
+            assert engine._haunt_track_value("girl_wounds") == expected
+            assert not flags.get("girl_dead"), f"{expected} 点伤不该直接判胜"
+        assert handler.perform_action(engine, traitor, "attack_girl", {}) is True
+    assert flags.get("girl_dead") is True, "满 5 点伤 → 女孩死亡"
     assert engine.state.winner == "traitor"
 
 
