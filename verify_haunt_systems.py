@@ -5388,6 +5388,19 @@ def verify_haunt46_front_door_and_victory() -> None:
     entrance = next(r for r in engine.state.board.values() if r.template_id == "entrance_hall")
     victim = next(m for m in engine.state.monsters if m.template_id == "victim")
     victim.room_key = hero.room_key = entrance.key
+
+    # ---- M10-58 回归：门厅不再提供"护送"（目的地就是门厅，纯空转）
+    # 修前 escort_victim 与 send_victim_out 同时提供，而 rule_data 里前者排在前、
+    # 机器人打分相同取先出现的那个 ⇒ 永远选护送；护送在门厅又是"假成功"
+    # （打一句日志 + return True），整回合的剧本行动被白吃，正门开了也送不出人
+    # （探针实测：send_victim_out 出现 4 次、执行 0 次）。
+    ids_here = {a.id for a in handler.available_actions(engine, hero)}
+    assert "send_victim_out" in ids_here, "门厅 + 门开 + 身边有受害者 → 应能送出门"
+    assert "escort_victim" not in ids_here, "已在门厅不该再给护送（空转）"
+    assert handler.perform_action(engine, hero, "escort_victim", {}) is False, (
+        "护送在门厅是空转，必须返回 False（不能白吃整回合）"
+    )
+
     assert handler.perform_action(engine, hero, "send_victim_out", {}) is True
     assert flags["victims_escaped"] == 1 and flags["victim_escaped_any"] is True
     assert all(m.id != victim.id for m in engine.state.monsters), "逃出的受害者应移出游戏"
@@ -5412,6 +5425,21 @@ def verify_haunt46_front_door_and_victory() -> None:
     assert engine.token_by_uid(corpse.uid) is None, "吃掉的尸体应移出游戏"
     assert flags["victim_corpses"] == 0
     assert traitor.movement_stopped, "进食应花掉整回合"
+
+    # ---- M10-58 回归：见血后胜利路线 B 关闭，英雄目标转向狂徒与叛徒
+    # 修前 bot_goal_rooms 只认"门没开→找受害者、门开了→去门厅"，见血后仍在
+    # 满屋护送受害者（18 局采样 6 局全部见血、英雄胜 1/18），而画像的
+    # victory_focus 早就写着"见血就转杀光狂徒"。
+    flags["blood_spilled"] = True
+    goals = handler.bot_goal_rooms(engine, hero)
+    allowed = {
+        f"__room__{m.room_key}"
+        for m in engine.state.monsters
+        if m.template_id == "cannibal_freak"
+    } | {f"__room__{traitor.room_key}"}
+    assert goals and all(g in allowed for g in goals), (
+        f"见血后目标应指向狂徒/叛徒：{goals}"
+    )
 
     # 胜负：叛徒死 + 狂徒还在 → 吸收兜底（不判英雄胜，游戏继续）
     traitor.dead = True
@@ -5479,6 +5507,21 @@ def verify_haunt47_worm_ouroboros_setup() -> None:
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
     other = next(h for h in handler._heads(engine))
     assert handler.attack_allowed(engine, hero, other) is False
+
+    # ---- M10-59 回归：机器人目标与关键牌声明（p58 的"捡骷髅→施咒"链）
+    # bot_goal_rooms 只追【未削弱】的蛇头（都削弱完就没目标，交给围攻）；
+    # rule_data 的 required_cards 声明骷髅，泛用"关键牌掉地上就去捡"才会生效。
+    goals = handler.bot_goal_rooms(engine, hero)
+    assert goals and all(g == f"__room__{other.room_key}" for g in goals), (
+        f"应追未削弱的蛇头：{goals}"
+    )
+    flags["weakened_heads"] = sorted({h.id for h in handler._heads(engine)})
+    assert handler.bot_goal_rooms(engine, hero) == [], "蛇头全部削弱后不再追（改围攻）"
+    flags["weakened_heads"] = []
+    assert handler.bot_goal_rooms(engine, traitor) == [], "叛徒开局已出局，无此目标"
+    assert "omen_skull" in ((engine.state.haunt.rule_data or {}).get("required_cards") or []), (
+        "骷髅必须声明为 required_cards，机器人才会主动去捡"
+    )
 
 
 def verify_haunt47_spell_and_bodies() -> None:
@@ -5625,8 +5668,51 @@ def verify_haunt48_cursed_weapon_flow() -> None:
             assert handler.perform_action(engine, hero, "study_cursed_weapon", {}) is True
     assert flags["cursed_weapon_understood"] is True
 
-    # p59：理解用法后用该诅咒武器击败 → 永久死亡 + 英雄胜
+    # ---- M10-60 回归：研究允许"与武器同房间"的英雄（p59），不是只有持有者
+    # 旧实现要求武器在自己背包里 ⇒ 6 人局要一个人成功 6 次（seed107/6p 实测
+    # 研究 38 次、进度仍 0）；原文是"a hero in the same room as the cursed weapon"。
     jack = handler._jack(engine)
+    assert jack is not None
+    other = next(
+        (p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead),
+        None,
+    )
+    if other is not None:
+        flags["cursed_weapon_understood"] = False
+        other.room_key = hero.room_key
+        with patch.object(engine, "_resolve_check", return_value=True):
+            assert handler.perform_action(engine, other, "study_cursed_weapon", {}) is True, (
+                "同房间的队友也应能研究（p59）"
+            )
+        other.room_key = next(k for k in engine.state.board if k != hero.room_key)
+        assert handler.perform_action(engine, other, "study_cursed_weapon", {}) is False, (
+            "不在武器房间不能研究"
+        )
+        flags["cursed_weapon_understood"] = True
+
+    # ---- M10-60 回归：机器人不该用别的武器喂杰克（打散一次 = 他更强地回来）
+    assert handler.bot_attack_blocked(engine, hero, jack) is False, "已理解 + 持武器 → 可以打"
+    assert handler.bot_weapon_bonus(engine, hero, jack, weapon) == 300, "打杰克该用那把诅咒武器"
+    assert handler.bot_weapon_bonus(engine, hero, jack, None) < 0, "空手/别件武器应被压分"
+    flags["cursed_weapon_understood"] = False
+    assert handler.bot_attack_blocked(engine, hero, jack) is True, (
+        "未理解用法前白打只会让杰克更强地回归"
+    )
+    flags["cursed_weapon_understood"] = True
+    traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+    if traitor is not None:
+        assert handler.bot_attack_blocked(engine, traitor, jack) is False, "叛徒不受此限"
+
+    # ---- M10-60 回归：有武器未理解时，机器人去武器所在房间集合研究
+    flags["cursed_weapon_understood"] = False
+    goals = handler.bot_goal_rooms(engine, hero)
+    assert goals == [f"__room__{hero.room_key}"], f"应指向武器所在房间：{goals}"
+    flags["cursed_weapon_understood"] = True
+    assert handler.bot_goal_rooms(engine, hero) == [f"__room__{jack.room_key}"], (
+        "已理解 → 去打杰克"
+    )
+
+    # p59：理解用法后用该诅咒武器击败 → 永久死亡 + 英雄胜
     assert jack is not None
     hero.room_key = jack.room_key  # 攻击需要同房间
     assert handler.monster_killed_on_defeat(engine, jack, hero, "might", weapon) is True
@@ -5766,6 +5852,26 @@ def verify_haunt50_night_murder_setup() -> None:
     handler.on_turn_end(engine, traitor)
     assert engine._haunt_track_value("night_timer") == 9
     assert all((s.speed, s.might, s.sanity) == (6, 6, 6) for s in handler._servants(engine))
+
+    # ---- M10-61 回归：英雄不跟仆人换命（p61 的活法是撑到日出，不是清场）
+    # 仆人是普通怪物：被击败只昏迷一回合、下回合照回来；而英雄落败要按 p20 吃
+    # 差值反击。实测（6 局诊断 + seed109/4p 逐回合）英雄全灭在夜晚 1-3/10，
+    # 死因正是 2 对 3、0 对 1、3 对 6 这类自己发起的交换。
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    servant = handler._servants(engine)[0]
+    servant.stunned_turns = 0
+    for card_id in list(hero.items):
+        hero.items.remove(card_id)  # 先清空装备，用裸属性判定
+    if hero.stats.get("might", 0) <= servant.might:
+        assert handler.bot_attack_blocked(engine, hero, servant) is True, (
+            "近战骰数不超过仆人力量时不该出手（白送反击伤害）"
+        )
+    servant.stunned_turns = 1
+    assert handler.bot_attack_blocked(engine, hero, servant) is False, "昏迷的仆人是白送的窗口"
+    servant.stunned_turns = 0
+    assert handler._best_melee_dice(engine, hero) == hero.stats.get("might", 0), (
+        "裸手近战骰数 = 力量"
+    )
 
 
 def verify_haunt50_dawn_and_absorption() -> None:

@@ -13206,6 +13206,12 @@ class CannibalFeastMode(GenericModeHandler):
                 engine, player.room_key
             ):
                 continue
+            # 已到门厅：护送的目的地就是门厅，再"护送"是空转（M10-58 修）。
+            # rule_data 里 escort_victim 排在 send_victim_out 前面，机器人在门厅
+            # 会永远选中前者（两者打分相同、max 取先出现的），于是正门开了也
+            # 永远送不出受害者——探针实测 send_victim_out 出现 4 次、执行 0 次。
+            if aid == "escort_victim" and player.room_key == self._entrance_key(engine):
+                continue
             # 已逃出的英雄别再显示出逃
             if aid == "escape_house" and player.id in escaped:
                 continue
@@ -13298,8 +13304,11 @@ class CannibalFeastMode(GenericModeHandler):
             return False
         path = engine._shortest_path(player.room_key, entrance_key)
         if len(path) <= 1:
-            engine._log("已经在正门厅了——直接把受害者送出去吧。")
-            return True
+            # 已在门厅：护送无事可做，**不能**当作"执行成功"——否则整回合的
+            # 剧本行动被白白吃掉（M10-58 探针的"行动空转:send_victim_out"
+            # 就是这个假成功导致的）。真正的下一步是 send_victim_out。
+            engine._log("已经在正门厅了——该做的是把受害者送出门。")
+            return False
         steps = min(2, len(path) - 1)
         dest = path[steps]
         player.room_key = dest
@@ -13458,6 +13467,24 @@ class CannibalFeastMode(GenericModeHandler):
             return []
         if player.id in set(flags.get("escaped_hero_ids", [])):
             return []
+        # p57：一旦见血，零伤亡逃生路线（英雄胜线 B）永久关闭，只能杀光叛徒与
+        # 所有狂徒。画像的 victory_focus 早就写着"见血就转杀光狂徒"，但目标
+        # 房间没跟上：英雄还在满屋追受害者护送（18 局采样 6 局全部见血、
+        # 英雄胜 1/18；seed101/3p 里两名英雄被叛徒+狂徒围殴到死还在搬人）。
+        if flags.get("blood_spilled"):
+            targets = [
+                f"__room__{m.room_key}"
+                for m in engine.state.monsters
+                if m.template_id == self.FREAK
+            ]
+            traitor = next(
+                (p for p in engine.state.players if p.role == "traitor" and not p.dead),
+                None,
+            )
+            if traitor is not None:
+                targets.append(f"__room__{traitor.room_key}")
+            if targets:
+                return targets
         # 门没开时优先护送受害者（受害者在哪，英雄就去哪）；门开了直奔门厅
         if not flags.get("front_door_open"):
             return [
@@ -14058,11 +14085,31 @@ class CrimsonJackMode(GenericModeHandler):
         player.items.append(weapon_id)
         engine.rng.shuffle(deck)  # p59：取走后洗匀该堆
 
+    @staticmethod
+    def _weapon_here(engine: Any, player: Any, weapon: str) -> bool:
+        """p59：只要**与武器同房间**就能研究（自己拿着、队友拿着、或掉在地上）。"""
+        if weapon in player.items:
+            return True
+        if weapon in (engine.state.room_items.get(player.room_key) or []):
+            return True
+        return any(
+            other.id != player.id
+            and not other.dead
+            and other.room_key == player.room_key
+            and weapon in other.items
+            for other in engine.state.players
+        )
+
     def _study(self, engine: Any, player: Any) -> bool:
-        """p59：持诅咒武器者做力量 5+ 或知识 5+；成功 +1 枚研究令牌。"""
+        """p59：与诅咒武器同房间的英雄做力量 5+ 或知识 5+，成功 +1 枚研究令牌。
+
+        原文允许**所有同房间的英雄各试各的**（成功者的令牌记在自己角色卡上，
+        合计到玩家数即"理解用法"）；旧实现要求武器在自己背包里，等于只有拾取者
+        能研究——6 人局要一个人成功 6 次，实测 seed107/6p 研究 38 次、进度仍 0。
+        """
         flags = engine._haunt_flags()
         weapon = flags.get("cursed_weapon")
-        if not weapon or weapon not in player.items:
+        if not weapon or not self._weapon_here(engine, player, weapon):
             return False
         use_might = True
         if getattr(player, "control", "bot") != "bot":
@@ -14104,16 +14151,59 @@ class CrimsonJackMode(GenericModeHandler):
         return False
 
     # ------------------------------------------------------------- bot/UI
+    def bot_attack_blocked(self, engine: Any, attacker: Any, target: Any) -> bool:
+        """p59：用别的办法击败杰克只会让他**更强地回到门厅**——英雄不该白送。
+
+        引擎的击杀结算里，只有"理解用法 + 手里正是那把诅咒武器"才会永久杀死他
+        （`monster_killed_on_defeat`）；其余任何攻击（空手、左轮、别件武器）都走
+        `on_monster_defeated` 的"暂时消散"，顺带把 `jack_bonus` 抬 1——实测
+        seed127/6p 的杰克加成涨到 +6，多半是英雄自己喂出来的。叛徒不受此限
+        （杰克变强对他有利）。
+        """
+        if getattr(target, "template_id", "") != self.JACK:
+            return False
+        if getattr(attacker, "role", None) != "hero":
+            return False
+        flags = engine._haunt_flags()
+        weapon = flags.get("cursed_weapon")
+        if not flags.get("cursed_weapon_understood") or not weapon:
+            return True
+        return weapon not in (getattr(attacker, "items", None) or [])
+
+    def bot_weapon_bonus(self, engine: Any, player: Any, target: Any, weapon_id: str | None) -> int:
+        """p59：打杰克只该用那把诅咒武器——别的武器（甚至空手）只会把他打散，
+        而他下回合会**更强地**回到门厅（`jack_bonus` +1）。
+
+        引擎的击杀结算只认"理解用法 + 手里正是那把武器"（`monster_killed_on_defeat`），
+        所以机器人即使已经把武器揣在兜里，也可能按普通打分挑走左轮之类
+        （修正前 seed101/3p 一局把杰克打散 9 次、加成涨到 +9）。
+        """
+        if getattr(target, "template_id", "") != self.JACK:
+            return 0
+        weapon = engine._haunt_flags().get("cursed_weapon")
+        if weapon and weapon_id == weapon:
+            return 300
+        return -300
+
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
         if player.role != "hero":
             return []
         flags = engine._haunt_flags()
-        # 已理解用法 → 去打杰克；没武器 → 去搜索房找武器
+        # 已理解用法 → 去打杰克
         if flags.get("cursed_weapon_understood"):
             jack = self._jack(engine)
             return [f"__room__{jack.room_key}"] if jack is not None else []
-        if not flags.get("cursed_weapon"):
+        weapon = flags.get("cursed_weapon")
+        if not weapon:
             return [r for r in self.SEARCH_ROOMS]
+        # 有武器但还没吃透：全体到武器所在房间一起研究（p59 允许同房间的英雄
+        # 各自尝试；旧实现只认拾取者，队友还在外面乱走）。M10-60 修。
+        for other in engine.state.players:
+            if weapon in other.items and not other.dead:
+                return [f"__room__{other.room_key}"]
+        for room_key, items in engine.state.room_items.items():
+            if weapon in items:
+                return [f"__room__{room_key}"]
         return []
 
     def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
@@ -14159,7 +14249,9 @@ class AstralSpiritMode(GenericModeHandler):
       接管为知识对决，差值即精神伤害；被击败则什么都不发生）。
     · 毁灭灵魂（p131）：叛徒攻击英雄（昏迷肉体）——电子版简化为标准
       攻击对决（原版无防御固定 2 骰精神伤）；精神属性被打到骷髅 =
-      灵魂被毁，该英雄出局，其肉体进入"无魂"名单，**从此不能被附身**。
+      灵魂被毁，该英雄出局，其肉体进入"无魂"名单——**那正是星界灵
+      尝试附身的目标**（p131 "the Astral Spirit can attempt a ritual
+      to enter that hero's soulless body"）。
     · 附身仪式（p131）：星界灵回合移向最近的无魂肉体，同房间做理智
       检定，结果须**高于**该探索者的起始理智；每次成功 +1 枚附身令牌，
       累计到玩家数 → 附身成功，叛徒胜。
@@ -14233,7 +14325,7 @@ class AstralSpiritMode(GenericModeHandler):
         return getattr(target, "template_id", "") == self.SPIRIT
 
     def on_player_died(self, engine: Any, player: Any) -> None:
-        """p131：灵魂被毁的英雄出局，其肉体进入无魂名单（不能被附身）。"""
+        """p131：灵魂被毁的英雄出局，其肉体进入无魂名单（星界灵会尝试附身它）。"""
         if player.role != "hero":
             return
         flags = engine._haunt_flags()
@@ -14496,6 +14588,47 @@ class NightMurderMode(GenericModeHandler):
         return False
 
     # ------------------------------------------------------------- bot/UI
+    def _best_melee_dice(self, engine: Any, player: Any) -> int:
+        """这名英雄用最趁手的近战武器能掷几枚骰（力量 + 武器加成）。"""
+        might = int((getattr(player, "stats", {}) or {}).get("might", 0))
+        best = might
+        for card_id in getattr(player, "items", []):
+            card = engine.catalog.cards.get(card_id)
+            if card is None or "weapon" not in card.tags or "ranged" in card.tags:
+                continue
+            best = max(best, might + int((card.bonus or {}).get("attack", 0)))
+        return best
+
+    def _has_ranged_weapon(self, engine: Any, player: Any) -> bool:
+        for card_id in getattr(player, "items", []):
+            card = engine.catalog.cards.get(card_id)
+            if card is not None and "weapon" in card.tags and "ranged" in card.tags:
+                return True
+        return False
+
+    def bot_attack_blocked(self, engine: Any, player: Any, target: Any) -> bool:
+        """p61：英雄的活法是**撑到日出**，不是清场——仆人被打只是击晕，下回合照回来。
+
+        实测（6 局诊断 + seed109/4p 逐回合）：英雄全灭在"夜晚 1-3/10"，死因是自己的
+        送死攻击——`2 对 3`、`0 对 1`、`3 对 6`、`2 对 4` 这类交换落败后按 p20 吃差值
+        反击，一个个倒下（seed109 里两名英雄都是这么死的），而仆人只是昏迷一回合。
+
+        阈值取"骰数**不超过**仆人力量就别打"（比 29/30 号的 `<` 更严）：本剧本英雄的
+        目标是活到天亮，连五五开的交换都不划算。A/B（18 局口径）：松档 1 胜、严格档
+        1 胜、完全不打 0 胜、再加险区 1 胜 —— 胜率不动（夜晚进度中位仅 3-4/10），说明
+        真正的瓶颈是引擎怪物持续追击 + 仆人 3/3/3→6/6/6 递增 + 要撑满 10 轮，属结构性
+        难度；这里保留严格档只是让机器人打得更像人（不白送反击伤害）。
+        """
+        if getattr(player, "role", None) != "hero":
+            return False
+        if _monster_id(target) != self.SERVANT:
+            return False
+        if getattr(target, "stunned_turns", 0) > 0:
+            return False  # 已昏迷：白送的输出窗口
+        if self._has_ranged_weapon(engine, player):
+            return False  # p20：远程攻击落败不受伤
+        return self._best_melee_dice(engine, player) <= int(getattr(target, "might", 0))
+
     def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
         current = engine._haunt_track_value("night_timer")
         lines = [f"夜晚进度：{current}/{self.DAWN}（撑到日出即英雄胜）。"]

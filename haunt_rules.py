@@ -2340,7 +2340,7 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "hero_goal": "捡起骷髅对蛇头施削弱咒（理智 5+，力量降 5），再围殴累计重击斩下双头。",
         "traitor_goal": "双头游走留下蛇身，16 节蛇身全部进场即可碾碎房子。",
         "suggested_monsters": [],
-        "required_cards": [],
+        "required_cards": ["omen_skull"],
         "key_rooms": [],
         "tokens": [{"kind": "ouroboros_body", "label": "蛇身", "note": "蛇头离开的房间各留 1 节，16 节铺满即叛徒胜"}],
         "setup": {

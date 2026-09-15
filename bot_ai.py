@@ -406,6 +406,12 @@ class BotController:
                 if not engine.attack_would_be_allowed(player, target, weapon_id):
                     continue
                 score = self._target_score(engine, player, target, profile) + bonus
+                # 剧本可给"该用哪件武器打这个目标"加权（duck-typed
+                # `bot_weapon_bonus`，默认不实现 → 行为不变）。48 号 p59：
+                # 只有那把诅咒武器能永久杀死血腥杰克，别的打法只会让他更强地回来。
+                preference = getattr(engine._mode_handler(), "bot_weapon_bonus", None)
+                if callable(preference):
+                    score += int(preference(engine, player, target, weapon_id) or 0)
                 if captor is not None and target is captor:
                     score += 200
                 if ranged:
