@@ -2596,8 +2596,14 @@ class GameEngine:
                 self.check_victory()
                 return True
             if isinstance(target, Player) and not ranged and diff >= 2 and self._can_steal(target):
-                if self.prompter.confirm("偷窃", f"造成了 {diff} 点伤害。要改为偷取物品吗？"):
-                    self._steal_from_target(attacker, target)
+                # 机器人不会自己弹窗。剧本可以用 duck-typed `bot_wants_steal`
+                # 指定"该抢哪一件"——39 号继承人的胜线是从叛徒手里夺回戒指/
+                # 长矛，而机器人默认"赢下战斗照常结算伤害、从不偷牌"，
+                # 关键牌攥在敌人手上就永远赢不了。返回 None → 沿用默认不偷；
+                # 人类玩家的确认框不受影响。
+                wanted = self._bot_steal_choice(attacker, target)
+                if wanted or self.prompter.confirm("偷窃", f"造成了 {diff} 点伤害。要改为偷取物品吗？"):
+                    self._steal_from_target(attacker, target, prefer=wanted)
                     if weapon is not None:
                         self._resolve_attack_weapon_use(attacker, weapon)
                     attacker.attack_used = True
@@ -2681,14 +2687,33 @@ class GameEngine:
         attacker = self.current_player
         return bool(self._steal_candidates(attacker, target))
 
-    def _steal_from_target(self, attacker: Player, target: Player) -> None:
+    def _bot_steal_choice(self, attacker: Player, target: Player) -> str | None:
+        """机器人偷窃：剧本可用 duck-typed `bot_wants_steal` 指定该抢哪一件。
+
+        机器人默认不偷（BotDecisionProvider 对"偷窃"一律回否）——"弃伤害改偷牌"
+        多数时候是亏的。但"关键牌在敌人手上"的剧本（39 号继承人：戒指常整局攥在
+        叛徒手里）不抢就永远赢不了。人类玩家的确认框不受影响。
+        """
+        if getattr(attacker, "control", "") != "bot":
+            return None
+        wants_steal = getattr(self._mode_handler(), "bot_wants_steal", None)
+        if not callable(wants_steal):
+            return None
+        card_id = wants_steal(self, attacker, target)
+        return str(card_id) if card_id else None
+
+    def _steal_from_target(self, attacker: Player, target: Player, prefer: str | None = None) -> None:
         candidates = self._steal_candidates(attacker, target)
         if not candidates:
             return
-        idx = self.prompter.choose_from_list("偷窃", "要偷哪一件？", [self.catalog.cards[card_id].name for card_id in candidates])
-        if idx is None:
-            return
-        steal_id = candidates[idx]
+        if prefer is not None and prefer in candidates:
+            # 剧本点名要抢的那张（机器人不知道自己在偷什么，得有人告诉它）
+            steal_id = prefer
+        else:
+            idx = self.prompter.choose_from_list("偷窃", "要偷哪一件？", [self.catalog.cards[card_id].name for card_id in candidates])
+            if idx is None:
+                return
+            steal_id = candidates[idx]
         target.items.remove(steal_id)
         attacker.items.append(steal_id)
         if "companion" in self.catalog.cards[steal_id].tags:

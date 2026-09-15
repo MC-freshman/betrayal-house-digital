@@ -5128,8 +5128,12 @@ class DeathCheckmateMode(GenericModeHandler):
     · 古书：持有者知识检定 +1 骰（上限 8）。
     · 死神赢 1-2 → 全英雄 -1 理智；3-4 → -1 力量；5+ → -1 理智 -1 力量。
     · 弃赛（p119）：死神房间无英雄 → 叛徒胜。
-    · 简化：叛徒不可进死神房间/不可用铃/枪/炸药未在引擎层拦截
-      （bot 自然不会进）；圣印可被叛徒偷取未建模。
+    · 机器人（M10-50 补）：坐庄制——知识最高的英雄守着棋盘（bot_stay_in_room
+      钉在房里），其余人去破圣印；叛徒 bot 进不了死神房间（bot_blocked_rooms，
+      p119"你不能进这间房"）。缺这三条时英雄没有目标，作祟后 3 个回合房间就空，
+      18/18 全败且从未下过一盘棋。
+    · 简化：叛徒用铃/枪/炸药远程影响房内英雄未在引擎层拦截；圣印可被叛徒
+      偷取未建模。
     """
 
     mode = "death_checkmate"
@@ -5141,6 +5145,17 @@ class DeathCheckmateMode(GenericModeHandler):
         flags = engine._haunt_flags()
         flags["seals_broken"] = 0
         flags["death_dice_reduction"] = 0
+        # p119：死神放"有英雄的房间"（原文由叛徒挑选）——引擎按 spawn:"haunt_room"
+        # 生成在揭露房，而揭露者本人就是叛徒：英雄不在那间时，死神第一个回合
+        # 直接触发弃赛判负（seed101/3p 实测 t51 揭示、t54 英雄全败，一局棋都没下）。
+        # bot 取"英雄最多的房间"，同数取房间 key 最小的一间，保证种子可复现。
+        death = self._death(engine)
+        hero_rooms = [
+            p.room_key for p in engine.state.players if p.role == "hero" and not p.dead
+        ]
+        if death is not None and hero_rooms and death.room_key not in hero_rooms:
+            crowded = sorted(set(hero_rooms), key=lambda k: (-hero_rooms.count(k), k))
+            death.room_key = crowded[0]
         # p119：圣印放五个房间（在场即放，否则等发现时补放）
         seal_rooms = ["vault", "crypt", "research_laboratory", "operating_laboratory", "game_room"]
         for template_id in seal_rooms:
@@ -5199,6 +5214,10 @@ class DeathCheckmateMode(GenericModeHandler):
                 engine.remove_token(token.uid)
                 flags = engine._haunt_flags()
                 flags["seals_broken"] = int(flags.get("seals_broken", 0)) + 1
+                # 轨道与旗标同步：rule_data 把"已破解圣印 5"声明成 UI 进度条
+                # （●○ 由 tracks 渲染），此前只写旗标，进度条永远是 0/5
+                # （M10-50 实测 18 局全为 0，而骰数惩罚其实已经生效）。
+                engine._advance_haunt_track("seals_broken", 1)
                 engine._log(f"圣印碎裂了！死神的力量被削弱（已破 {flags['seals_broken']} 枚）。")
             return ok
         return super().perform_action(engine, player, action_id, data)
@@ -5244,23 +5263,104 @@ class DeathCheckmateMode(GenericModeHandler):
             return True
         diff = death_roll - hero_roll
         if diff <= 2:
-            for p in engine.state.players:
-                if p.role == "hero" and not p.dead:
-                    engine._apply_stat_loss(p, "sanity", 1)
+            losses = (("sanity", 1),)
             engine._log("死神吃了一枚兵——所有英雄理智 -1。")
         elif diff <= 4:
-            for p in engine.state.players:
-                if p.role == "hero" and not p.dead:
-                    engine._apply_stat_loss(p, "might", 1)
+            losses = (("might", 1),)
             engine._log("死神吃了一枚重要棋子——所有英雄力量 -1。")
         else:
-            for p in engine.state.players:
-                if p.role == "hero" and not p.dead:
-                    engine._apply_stat_loss(p, "sanity", 1)
-                    engine._apply_stat_loss(p, "might", 1)
+            losses = (("sanity", 1), ("might", 1))
             engine._log('死神冷冷地说："Check." ——所有英雄理智 -1、力量 -1。')
+        for p in list(engine.state.players):
+            if p.role != "hero" or p.dead:
+                continue
+            for stat, amount in losses:
+                engine._apply_stat_loss(p, stat, amount)
+            # p48 的损失与战斗伤害一样会把属性打到骷髅上：归零即倒下。缺这一步
+            # 时坐庄英雄会带着 0/0 永远坐在棋盘前——叛徒又进不了死神房间，
+            # 对局再也收不了场（M10-50 seed127/3p 实测 300 回合跑不完，
+            # 属性停在 理智0/力量0 而人还活着）。
+            engine._check_player_death(p)
         engine.check_victory()
         return True
+
+    # ------------------------------------------------------------- 机器人
+    def _unbroken_seal_rooms(self, engine: Any) -> list[str]:
+        """场上还没破解的圣印所在房间（p48：5 枚；破一枚死神少掷 1~2 颗骰）。"""
+        return sorted(
+            {
+                token.room_key
+                for token in engine.state.tokens
+                if getattr(token, "kind", "") == "holy_seal" and token.room_key
+            }
+        )
+
+    def _board_sitter(self, engine: Any) -> Any | None:
+        """该坐庄的英雄：全场知识最高者（同值取 id 小者，保持可复现）。
+
+        死神每个回合都与"房里知识最高的英雄"对弈（p119），知识最高的人本来就
+        是最该长期坐在棋盘前的人。
+        """
+        heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        if not heroes:
+            return None
+        return max(heroes, key=lambda p: (engine._effective_stat(p, "knowledge"), -p.id))
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p48/p119：棋盘上必须一直有人，否则弃赛判负。
+
+        实测（seed101/3p）：作祟后英雄各走各的，死神第一个回合（揭露后仅 3 个
+        玩家回合）房间就空了——一局棋都没下完就输（探针 18/18 全败）。像人的打法
+        只有一种：留一个人坐着，其余人去破解圣印（每破一枚死神少掷 1~2 颗骰，
+        是唯一能把胜率拉回五五开的路）。这里按三种局面给目标。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        death = self._death(engine)
+        sitter = self._board_sitter(engine)
+        if death is None or sitter is None:
+            return []
+        board = death.room_key
+        heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        seals = self._unbroken_seal_rooms(engine)
+        sitters_here = [p for p in heroes if p.room_key == board]
+        # ① 棋盘空着：坐庄的人立刻去坐，其余人照旧去破圣印
+        if not sitters_here:
+            if player.id == sitter.id:
+                return [f"__room__{board}"]
+            return [f"__room__{k}" for k in seals] or [f"__room__{board}"]
+        # ② 我到了棋盘、而且我就是坐庄的人：守住（别跟着队友去凑热闹）
+        if player.id == sitter.id and player.room_key == board:
+            return [f"__room__{board}"]
+        # ③ 其余英雄：先去破还没破的圣印；都破完（或圣印房不在场）再回棋盘
+        if seals:
+            return [f"__room__{k}" for k in seals]
+        return [f"__room__{board}"]
+
+    def bot_stay_in_room(self, engine: Any, player: Any) -> bool:
+        """坐庄的人一旦落座就不再移动——离开等于把棋赛让给死神。"""
+        if player.dead or player.role != "hero":
+            return False
+        death = self._death(engine)
+        sitter = self._board_sitter(engine)
+        return bool(
+            death is not None
+            and sitter is not None
+            and player.id == sitter.id
+            and player.room_key == death.room_key
+        )
+
+    def bot_blocked_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p119：叛徒不许进死神房间（原文"你既不能进这间房，也不能用铃铛/左轮/
+        炸药影响里面的英雄"）。
+
+        旧注释写"bot 自然不会进"——那时没有英雄会坐在那儿。现在坐庄的英雄常驻，
+        叛徒 bot 会跟进房间把人捶死（棋赛随即弃权判负），必须显式挡掉。
+        """
+        if getattr(player, "role", None) != "traitor":
+            return []
+        death = self._death(engine)
+        return [death.room_key] if death is not None else []
 
     # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:
@@ -5379,6 +5479,25 @@ class HeirAssassinMode(GenericModeHandler):
         if heir is None or heir.dead:
             return None
         return heir.id
+
+    def bot_wants_steal(self, engine: Any, attacker: Any, target: Any) -> str | None:
+        """p50：矛与戒必须落到继承人手里——打赢了就从持有者身上抢回来。
+
+        机器人默认"赢下战斗照常结算伤害、从不偷牌"，而 39 号的胜线是"继承人在
+        王座上同时持有长矛与戒指"。实测 seed101/103/107/109/127（3 人局）：
+        戒指 5/6 局整局攥在叛徒手里，英雄全程不还手也不夺牌 → 18/18 全败、
+        胜线在 AI 层断开。队友抢到也行：`quest_carrier` 会把牌转交给继承人。
+        """
+        if getattr(attacker, "role", None) != "hero" or getattr(target, "role", None) != "traitor":
+            return None
+        heir = self._heir(engine)
+        if heir is None or heir.dead:
+            return None
+        held = getattr(target, "items", None) or []
+        for card_id in ("omen_spear", "omen_ring"):
+            if card_id in held and card_id not in heir.items:
+                return card_id
+        return None
 
     # ------------------------------------------------------------- 机器人
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
@@ -5634,8 +5753,31 @@ class BuriedAliveMode(GenericModeHandler):
 
     # ------------------------------------------------------------- 回合结束
     def on_turn_end(self, engine: Any, player: Any) -> None:
-        """p122：叛徒回合结束时推进 Turn/Damage 轨并结算被埋者的伤害。"""
-        if player.dead or player.role != "traitor":
+        """p122：叛徒回合结束时推进 Turn/Damage 轨并结算被埋者的伤害。
+
+        叛徒出局后由轮转顺序里第一位存活玩家代推（项目惯例，同 22/30/33 号）：
+        泥土下的倒计时是剧本自身的钟——叛徒倒下不等于朋友得救。缺这条时，
+        力 1 的英雄（1 骰永远够不到 4+）会永远卡在"挖不动"上，对局再也收不了场
+        （M10-52 seed107/3p 实测 300 回合跑不完，两人在地下室里挖了 40 个回合）。
+        """
+        if player.dead:
+            return
+        traitor_alive = any(p.role == "traitor" and not p.dead for p in engine.state.players)
+        if player.role == "traitor":
+            advance = True
+        elif not traitor_alive:
+            first_alive = next(
+                (
+                    pid
+                    for pid in engine.state.turn_order
+                    if any(p.id == pid and not p.dead for p in engine.state.players)
+                ),
+                None,
+            )
+            advance = player.id == first_alive
+        else:
+            advance = False
+        if not advance:
             return
         flags = engine._haunt_flags()
         timer = int(flags.get("bury_timer", 0)) + 1
@@ -5643,6 +5785,7 @@ class BuriedAliveMode(GenericModeHandler):
         rolled = engine.roll_dice(timer, f"活埋伤害（轨位 {timer}）")
         engine._advance_haunt_track("burial_damage", rolled)
         engine._log(f"泥土下面传来沉闷的声响——被埋的人挨过了 {rolled} 点伤害。")
+        engine.check_victory()
 
     # ------------------------------------------------------------- 行动
     def available_actions(self, engine: Any, player: Any) -> list[Any]:

@@ -433,6 +433,23 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["capture_and_carry", "vault_lockup"]},
     },
+    39: {
+        "hero": {
+            # p50：胜线是"继承人在王座上同时持有长矛与戒指"，而戒指常常整局
+            # 攥在叛徒手里（6 局实测 5 局如此）。默认 `attack_traitor_players:
+            # False` 让英雄被打死也不还手、更不会去夺牌——配合 handler 的
+            # `bot_wants_steal`（打赢即抢回矛/戒），胜线才接得上。
+            "attack_monsters": True,
+            "attack_traitor_players": True,
+            "victory_focus": "帮继承人凑齐长矛与戒指（叛徒手里就打赢抢回来），再护送他登上雕像走廊的王座",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "靠刺客与自己的攻击找出并杀死继承人（英雄全灭也算赢）",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"special_rules": ["hidden_assassins", "protect_heir"]},
+    },
     46: {
         "hero": {
             # p57：零伤亡才能走"全员逃生"路线；bot_goal_rooms 会先追受害者再护送到门厅。
@@ -743,9 +760,11 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
             # 动态给出（见 handoff §6 第 6 条）。
             "target_rooms": [],
             "attack_monsters": False,
-            # 杀叛徒不算赢（p51 只认"挖出朋友"）——别把回合浪费在追打叛徒上。
-            "attack_traitor_players": False,
-            "victory_focus": "逐间搜查地下室找到埋葬室，再轮流力量 4+ 挖掘——杀死叛徒不算赢",
+            # 杀叛徒不算赢（p51 只认"挖出朋友"），但**必须能还手**：叛徒会
+            # 主动追杀（30 局实测"全程无人还手"时 16 败 2 胜），被打死就更挖
+            # 不动了。放开还手后同口径 8 败 9 胜——反击是自保，不是放弃挖土。
+            "attack_traitor_players": True,
+            "victory_focus": "逐间搜查地下室找到埋葬室，再轮流力量 4+ 挖掘；被叛徒缠上时先还手自保——杀死叛徒不算赢",
         },
         "traitor": {
             "attack_heroes": True,

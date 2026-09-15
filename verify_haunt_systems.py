@@ -4807,6 +4807,76 @@ def verify_haunt37_checkmate() -> None:
     assert handler.on_monster_turn_start(engine, death) is True
     assert engine.state.winner == "traitor", "死神房间无英雄应弃赛判负"
 
+    # ---- M10-50 回归：坐庄制（p48/p119 棋盘不能空）
+    # 修前 18 局全败且从未下过一盘棋：作祟后英雄各走各的，死神第一个回合房间
+    # 就空了（弃赛判负）；叛徒还会跟进房间把坐庄的人捶死。
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    board = death.room_key
+    for p in engine.state.players:
+        if p.role == "hero":
+            p.dead = False
+    sitter = handler._board_sitter(engine)
+    other = next(p for p in engine.state.players if p.role == "hero" and p.id != sitter.id)
+    away = [k for k in engine.state.board if k != board]
+    sitter.room_key = away[0]
+    other.room_key = away[1 % len(away)]
+    assert handler.bot_goal_rooms(engine, sitter) == [f"__room__{board}"], (
+        "棋盘空着时坐庄者必须去坐（否则弃赛判负）"
+    )
+    assert handler.bot_stay_in_room(engine, sitter) is False, "还没坐下就不算守住"
+    sitter.room_key = board
+    assert handler.bot_goal_rooms(engine, sitter) == [f"__room__{board}"], "坐庄者应守住棋盘"
+    assert handler.bot_stay_in_room(engine, sitter) is True, "落座后不再移动"
+    assert handler.bot_stay_in_room(engine, other) is False, "非坐庄者不受守擂约束"
+    seals_left = handler._unbroken_seal_rooms(engine)
+    other_goals = handler.bot_goal_rooms(engine, other)
+    if seals_left:
+        assert other_goals and all(g in {f"__room__{k}" for k in seals_left} for g in other_goals), (
+            f"棋盘有人时其余英雄应去破圣印：{other_goals}"
+        )
+    else:
+        assert other_goals == [f"__room__{board}"], "圣印破完后回棋盘"
+    traitor_seat = next(p for p in engine.state.players if p.role == "traitor")
+    traitor_seat.dead = False
+    assert handler.bot_blocked_rooms(engine, traitor_seat) == [board], (
+        "p119：叛徒不许踏进死神房间（否则坐庄英雄被捶死 → 弃赛判负）"
+    )
+    assert handler.bot_blocked_rooms(engine, sitter) == [], "英雄不受禁区限制"
+
+    # ---- M10-50 回归：棋局损失要打到骷髅上（属性归零即倒下）
+    # 缺 _check_player_death 时坐庄英雄会带着 0/0 永远坐着：叛徒进不了房间、
+    # 英雄也死不了，对局再也收不了场（seed127/3p 实测 300 回合跑不完）。
+    doomed = sitter
+    doomed.dead = False
+    sanity_track = engine._stat_track(doomed, "sanity")
+    doomed.stat_positions["sanity"] = 0  # 已在轨道最左格：再来 1 点就掉到骷髅
+    doomed.stats["sanity"] = sanity_track[0]
+    doomed.overflow["sanity"] = 0
+    doomed.room_key = board
+    engine.state.winner = None
+    with patch.object(engine, "roll_dice", side_effect=lambda count, label="": 0), patch.object(
+        engine.rng, "choice", side_effect=lambda seq: 2
+    ):
+        assert handler.on_monster_turn_start(engine, death) is True
+    assert doomed.dead, "棋局损失把理智打到 0 应倒下（p48 与战斗伤害同源）"
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+
+    # ---- M10-50 回归：死神必须落在有英雄的房间（p119 由叛徒挑选）
+    # 引擎按 spawn:"haunt_room" 生成在揭露房，而揭露者本人就是叛徒——房里没有
+    # 英雄时死神第一个回合直接弃赛判负（seed101/3p 实测 t51 揭示、t54 收场）。
+    for p in engine.state.players:
+        if p.role == "hero":
+            p.dead = False
+    crowd = away[0]
+    for p in engine.state.players:
+        if p.role == "hero":
+            p.room_key = crowd
+    death.room_key = board
+    handler.setup(engine, engine.state.haunt, board)
+    assert death.room_key == crowd, "死神应落到有英雄的房间"
+
 
 def verify_haunt39_heir() -> None:
     """剧本 39：雕像走廊/继承人/刺客偷袭/矛与戒指胜利（p50/p121）。"""
@@ -4864,6 +4934,38 @@ def verify_haunt39_heir() -> None:
     heir.dead = True
     assert handler.check_victory(engine) is True
     assert engine.state.winner == "traitor"
+
+    # ---- M10-51 回归：机器人也要会抢关键牌（默认"从不偷牌"，胜线会断）
+    # 实测 6 局（3 人局）戒指 5 局整局攥在叛徒手里、英雄既不还手也不夺牌
+    # → 18/18 全败、胜线在 AI 层断开。队友抢到也算：quest_carrier 会转交。
+    engine.state.winner = None
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    for p in engine.state.players:
+        if p.role == "hero":
+            p.dead = False
+    traitor.dead = False
+    heir.items[:] = [c for c in heir.items if c not in ("omen_ring", "omen_spear")]
+    traitor.items[:] = [c for c in traitor.items if c not in ("omen_ring", "omen_spear")]
+    traitor.items.append("omen_ring")
+    assert handler.bot_wants_steal(engine, heir, traitor) == "omen_ring", (
+        "继承人缺戒指而叛徒拿着 → 必须点名去抢"
+    )
+    assert handler.bot_wants_steal(engine, traitor, heir) is None, "叛徒不抢英雄的东西"
+    heir.items.append("omen_ring")
+    assert handler.bot_wants_steal(engine, heir, traitor) is None, "继承人有戒指就不再抢"
+    heir.items.remove("omen_ring")
+    traitor.items.append("omen_spear")
+    picked = handler.bot_wants_steal(engine, heir, traitor)
+    assert picked in {"omen_spear", "omen_ring"} and picked not in heir.items, (
+        "矛戒都缺时抢回任意一件缺失的关键牌"
+    )
+    # 引擎侧：只有机器人走这条通道，人类玩家仍然自己弹窗
+    heir.control = "human"
+    assert engine._bot_steal_choice(heir, traitor) is None, "人类玩家不替其决定"
+    heir.control = "bot"
+    assert engine._bot_steal_choice(heir, traitor) == picked, (
+        "机器人由剧本指定该抢哪张（不靠随机挑第一件）"
+    )
 
 
 def verify_haunt41_invisible_traitor() -> None:
@@ -8639,6 +8741,40 @@ def verify_haunt40_buried_alive() -> None:
     assert handler.bot_goal_rooms(engine, hero) == [f"__room__{burial}"], (
         "找到后应直奔埋葬室"
     )
+
+    # ---- M10-52 回归：叛徒出局后埋人钟不停（p122 的倒计时是剧本自身的钟，
+    # 由轮转顺序里第一位存活玩家代推，惯例同 22/30/33 号）。缺这条时力 1 的
+    # 英雄（1 骰永远够不到 4+）会永远卡在"挖不动"上——seed107/3p 实测 300 回合
+    # 收不了场：两人在地下室里挖了 40 个回合，挖掘进度始终 0。
+    engine.state.winner = None
+    engine._set_haunt_track_value("burial_damage", 0)
+    engine._set_haunt_track_value("dig_progress", 0)
+    flags["bury_timer"] = 0
+    traitor.dead = True
+    for p in engine.state.players:
+        if p.role == "hero":
+            p.dead = False
+    alive_order = [
+        pid
+        for pid in engine.state.turn_order
+        if any(p.id == pid and not p.dead for p in engine.state.players)
+    ]
+    assert len(alive_order) >= 2, "本用例需要至少两名存活玩家"
+    first = next(p for p in engine.state.players if p.id == alive_order[0])
+    second = next(p for p in engine.state.players if p.id == alive_order[1])
+    handler.on_turn_end(engine, first)
+    assert int(flags.get("bury_timer", 0)) == 1, "叛徒出局后应由轮转首位存活玩家代推"
+    timer_once = int(flags["bury_timer"])
+    damage_once = engine._haunt_track_value("burial_damage")
+    handler.on_turn_end(engine, second)
+    assert int(flags["bury_timer"]) == timer_once, "同一轮里其他人不得重复推钟"
+    assert engine._haunt_track_value("burial_damage") == damage_once, "一轮只结算一次伤害"
+    handler.on_turn_end(engine, traitor)
+    assert int(flags["bury_timer"]) == timer_once, "死者的回合结束不该推钟"
+    engine._set_haunt_track_value("burial_damage", 12)
+    engine.state.winner = None
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "traitor", "钟走到 12 点仍是叛徒胜（p122）"
 
 
 def verify_haunt33_fresh_tile_and_explore_gate() -> None:
