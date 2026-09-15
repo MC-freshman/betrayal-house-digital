@@ -417,6 +417,22 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["poison_atmosphere", "clue_gathering"]},
     },
+    34: {
+        "hero": {
+            # p45：英雄胜 = 随从全被关（或杀）+ 叛徒被关（或杀）。默认画像的
+            # `attack_traitor_players: False` 让英雄永远不出手打叛徒，而"抓
+            # 叛徒"当前未实现、保险库开启此前又是死分支——三条叠加成死局
+            # （seed101/4p 实测 300 回合收不了场）。放开还手，杀叛徒这条
+            # 才走得通。
+            "attack_traitor_players": True,
+            "victory_focus": "力量攻击击败随从后抓住，扛到（已打开的）保险库关起来；再杀死叛徒",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "victory_focus": "带着随从围攻元老院议员（英雄），别让他们把随从一个个扛走",
+        },
+        "scenario": {"special_rules": ["capture_and_carry", "vault_lockup"]},
+    },
     46: {
         "hero": {
             # p57：零伤亡才能走"全员逃生"路线；bot_goal_rooms 会先追受害者再护送到门厅。

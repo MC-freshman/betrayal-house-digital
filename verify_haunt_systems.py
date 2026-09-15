@@ -4562,16 +4562,46 @@ def verify_haunt34_mad_world() -> None:
     # 背负入房 2 格
     assert handler.movement_cost_multiplier(engine, hero) == 2
 
-    # 锁入：在保险库房间花整回合
+    # 锁入：保险库必须"真的被打开"（引擎把开启状态写在房间数据里）。
+    # 回归（M10-49）：过去这里查 flags["vault_open"]，而全项目没有任何地方
+    # 会把它置 True，于是 lock_up 是死行动——英雄背着俘虏在库里站到 300
+    # 回合也关不进去（seed101/4p 实测）。
     hero.room_key = vault
     _set_current(engine, hero)
-    engine._haunt_flags()["vault_open"] = True
+    vault_room = engine.state.board[vault]
+    vault_room.data.pop("opened", None)
+    engine._haunt_flags()["vault_open"] = False
+    assert "lock_up" not in {a.id for a in handler.available_actions(engine, hero)}, (
+        "保险库还锁着时不能关人"
+    )
+    vault_room.data["opened"] = True  # 走真实开启路径（_apply_vault 的落点）
     ids = {a.id for a in handler.available_actions(engine, hero)}
-    assert "lock_up" in ids, "在保险库背着俘虏应能锁入"
+    assert "lock_up" in ids, "在（已打开的）保险库背着俘虏应能锁入"
     assert handler.perform_action(engine, hero, "lock_up", {}) is True
     assert len(flags.get("locked_up", [])) == 1, "随从应已锁入（1 人）"
     assert not handler._is_captive_carrier(engine, hero), "锁入后释放背负者"
     assert hero.movement_stopped, "锁入花整回合"
+
+    # 背负者阵亡 → 俘虏挣脱回场。
+    # 回归（M10-49）：过去没有 on_player_died，阵亡携带者会永久占住俘虏，
+    # "随从全部被处置"永远凑不齐（seed101/4p：机器人3 背着随从阵亡，剩下
+    # 两名英雄在酒窖↔地下室平台打转到 300 回合）。
+    carrier = next(
+        (p for p in engine.state.players if p.role == "hero" and not p.dead and p.id != hero.id),
+        None,
+    )
+    remaining = handler._servants(engine)
+    if carrier is not None and remaining:
+        lost = remaining[0]
+        handler._captors(engine)[str(carrier.id)] = "servant"
+        engine.state.monsters = [
+            m for m in engine.state.monsters if getattr(m, "id", None) != getattr(lost, "id", None)
+        ]
+        before = len(handler._servants(engine))
+        carrier.dead = True
+        handler.on_player_died(engine, carrier)
+        assert handler._captive_kind(engine, carrier) is None, "阵亡携带者不再持有俘虏"
+        assert len(handler._servants(engine)) == before + 1, "随从应挣脱回场继续游荡"
 
     # 胜利：模拟全部随从+叛徒已被处置
     for s in handler._servants(engine):
@@ -7239,6 +7269,61 @@ def verify_haunt31_heart_brain_spear() -> None:
         "杀叛徒≠英雄胜（房子仍活，抗体仍由 bot 驱动）"
     traitor.dead = False
 
+    # ---- M10-49 回归：预判路径必须纯净（bot 决策阶段不得掷骰/改状态/刷日志）
+    # 引擎的 attack_would_be_allowed(log=False) 预判路径会把 engine._attack_query
+    # 置 True；31 号攻大脑的理智检定是"真打才许发生"的副作用——过去放在预判里
+    # 会反复掷骰、清空移动力、把日志刷满"只有长矛能伤到心脏"（实测一局 80-120 行、
+    # 机器人在走位评分阶段被自己的查询冻结）。
+    if "omen_spear" not in hero.items:
+        hero.items.append("omen_spear")
+    hero.attack_used = False
+    hero.movement_stopped = False
+    hero.steps_remaining = 5
+    hero.room_key = attic_key  # 与大脑同房：让断言落在长矛/理智闸门而不是位置闸门
+    probe_calls = {"n": 0}
+    real_check = engine._resolve_check
+
+    def _counting_check(player, stat, target, label):
+        probe_calls["n"] += 1
+        return real_check(player, stat, target, label)
+
+    with patch.object(engine, "_resolve_check", side_effect=_counting_check):
+        assert engine.attack_would_be_allowed(hero, brain) is True, \
+            "预判：持矛者理论上打得着大脑（理智检定留到真打）"
+        assert probe_calls["n"] == 0, "预判不得触发理智检定（不得掷骰）"
+        assert hero.attack_used is False and hero.movement_stopped is False, \
+            "预判不得改写回合状态"
+        assert hero.steps_remaining == 5, "预判不得清空剩余移动力"
+    if "omen_spear" in hero.items:
+        hero.items.remove("omen_spear")
+    hero.room_key = organ_key  # 与心脏同房：无矛时被闸门（而非位置）挡住
+    quiet: list[str] = []
+    orig_log_fn = engine._log
+    engine._log = lambda m, category="": (quiet.append(m), orig_log_fn(m, category))
+    try:
+        assert engine.attack_would_be_allowed(hero, heart) is False, "无矛预判应不可攻击"
+    finally:
+        engine._log = orig_log_fn
+    assert not [m for m in quiet if "只有长矛" in m], \
+        "预判不得刷『只有长矛能伤到心脏』日志"
+    # 真打：仍走理智检定，失败则回合结束且不攻击
+    hero.items.append("omen_spear")
+    hero.attack_used = False
+    hero.movement_stopped = False
+    hero.steps_remaining = 5
+    hero.room_key = attic_key
+    engine.state.turn_order = [hero.id]
+    engine.state.turn_index = 0
+    with patch.object(engine, "_resolve_check", return_value=False) as real_mock:
+        assert engine.attack(hero, brain) is False, "理智失败：不得发起攻击"
+        assert real_mock.called, "真打必须掷理智检定"
+    assert hero.attack_used is True and hero.movement_stopped is True
+    assert hero.steps_remaining == 0, "攻脑失败应清空剩余移动力（p113）"
+    if "omen_spear" in hero.items:
+        hero.items.remove("omen_spear")
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+
     # ---- 英雄全灭 → 叛徒胜（p113：让活房子消化杀死所有英雄）
     saved_dead = {p.id: p.dead for p in engine.state.players}
     for p in engine.state.players:
@@ -7466,13 +7551,35 @@ def verify_haunt32_lost_dimension() -> None:
     assert h2._bonus(engine2, hero2)[0] == base2 + 2, "p43：书在风琴房 +2"
     hero2.items.remove("omen_book")
 
-    # ---- bot 目标：先补线索再进风琴房；叛徒先跑干扰房
+    # ---- bot 目标：先补线索再进风琴房（只列**在场**的线索房）；叛徒先跑干扰房
+    # M10-49 实测（seed101/3p）：p114 的房屋重排把三间线索房卷回牌堆，旧实现仍
+    # 返回这三条不在场的模板 id——等于没有目标，英雄黏在风琴房反复弹奏
+    # （加值恒为"预兆房 +2"，合计 3-8 对门槛 15+），一局线索 0/3 找到。
+    in_play = {room.template_id for room in engine2.state.board.values()}
     goals = h2.bot_goal_rooms(engine2, hero2)
     assert "organ_room" in goals
     for room_id, flag in (("library", "clue_books"), ("game_room", "clue_trophy"), ("tower", "clue_stars")):
         if not f2.get(flag):
-            assert room_id in goals, f"未找到的线索房应在目标里：{room_id}"
+            if room_id in in_play:
+                assert room_id in goals, f"在场且未找到的线索房应在目标里：{room_id}"
+            else:
+                assert room_id not in goals, f"不在场的线索房不该占目标位：{room_id}"
+    # 线索房不在场且有牌可翻 → 必须先探索把它们翻出来（翻出的预兆房还各 +1 弹奏）
+    off_board = [
+        rid
+        for fid, rid in (
+            ("clue_books", "library"),
+            ("clue_trophy", "game_room"),
+            ("clue_stars", "tower"),
+        )
+        if not f2.get(fid) and rid not in in_play
+    ]
+    if off_board and any(engine2.has_remaining_room_cards(floor) for floor in (-1, 0, 1)):
+        assert h2.bot_wants_explore(engine2, hero2) is True, (
+            "线索房不在场且牌堆有牌 → 英雄必须先翻新房间"
+        )
     f2["clue_books"] = f2["clue_trophy"] = f2["clue_stars"] = True
+    assert h2.bot_wants_explore(engine2, hero2) is False, "线索集齐后不再强制探索"
     assert h2.bot_goal_rooms(engine2, hero2) == ["organ_room"], "线索集齐后只去风琴房"
     t_goals = h2.bot_goal_rooms(engine2, t2)
     assert "chapel" not in t_goals, "已干扰过的房间不再作为目标"

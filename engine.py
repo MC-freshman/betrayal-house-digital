@@ -2496,7 +2496,17 @@ class GameEngine:
                 self._log("青蛙不能攻击。")
             return False
         # 剧本可禁止攻击（如剧本 2 p13：降灵会完成前谁都不许动手）。
-        if not self._mode_handler().attack_allowed(self, attacker, target):
+        # 查询路径（bot 的 attack_would_be_allowed，log=False）要把"这是预判、
+        # 不是真打"告诉剧本：31 号攻大脑前须掷理智 4+，掷骰与"回合就此结束"
+        # 都是真打才许发生的副作用——放在预判里会反复掷骰、清空移动力、刷日志
+        # （实测一局 80-120 行"只有长矛能伤到心脏"噪声，机器人还会在评分阶段
+        # 被自己的查询冻结）。瞬态标记只在本调用期间有效；不读它的剧本行为不变。
+        self._attack_query = not log
+        try:
+            allowed = self._mode_handler().attack_allowed(self, attacker, target)
+        finally:
+            self._attack_query = False
+        if not allowed:
             if log:
                 self._log(f"{attacker.name} 此刻不能攻击。")
             return False

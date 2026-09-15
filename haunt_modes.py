@@ -3953,6 +3953,14 @@ class MadWorldMode(GenericModeHandler):
       （p116 "Neither you nor the Servants take damage … if you are
       defeated when you attack"——attack_loss_damage_disabled 对随从/叛徒
       主动攻击也生效）。
+    · 已知简化（M10-49 更正）：**叛徒当前无法被"抓"**（p45 允许对叛徒用
+      力量攻击改为抓住）——`_captors` 只会写 "servant"，`check_victory` 里
+      `"traitor" in locked` / `traitor_carried` 两个分支实际不可达；英雄要赢
+      只能**杀死**叛徒（画像因此开 attack_traitor_players）或关押随从后杀他。
+      抓捕叛徒需要引擎在"玩家被击败但未死"处开钩子，留待后续批次。
+    · 保险库开启状态读引擎房间数据 `room.data["opened"]`（M10-49 修：此前
+      查 handler 旗标 `flags["vault_open"]`，全项目无人置位，"关进保险库"
+      整条胜线曾是死代码）。
     """
 
     mode = "mad_world"
@@ -4016,6 +4024,51 @@ class MadWorldMode(GenericModeHandler):
 
     def _vault_room(self, engine: Any) -> str | None:
         return engine._haunt_flags().get("vault_room")
+
+    def _vault_is_open(self, engine: Any) -> bool:
+        """p45：保险库必须先被打开才能关人。
+
+        开启状态是**引擎的房间数据**（`_apply_vault`：知识 4+ →
+        `room.data["opened"]=True` 并抽两张物品），不是本 handler 的旗标——
+        过去这里查 `flags["vault_open"]`，而全项目没有任何地方会把它置 True，
+        于是 `lock_up` 永远不出现在行动列表里（seed101/4p 实测：英雄背着俘虏
+        在库里站到 300 回合也关不进去）。这里改读房间数据；旧存档/既有测试
+        仍认旗标，两者取或。
+        """
+        flags = engine._haunt_flags()
+        if flags.get("vault_open") is True:
+            return True
+        vault = self._vault_room(engine)
+        room = engine.state.board.get(vault) if vault else None
+        return bool(room is not None and room.data.get("opened"))
+
+    def on_player_died(self, engine: Any, player: Any) -> None:
+        """背负者阵亡 → 俘虏挣脱。
+
+        p45 只规定"被背着的俘虏不能行动"，没说背着的人倒下怎么办；电子版按
+        "没人制住他了"处理：随从回场继续游荡，叛徒只是恢复自由。缺这条时
+        `captor` 里的死携带者会永久占住俘虏——俘虏既不能行动也不会回场，
+        "随从全部被处置"永远凑不齐（seed101/4p 实测：机器人3 背着随从阵亡，
+        剩下两名英雄在酒窖↔地下室平台打转到 300 回合）。
+        """
+        kind = self._captive_kind(engine, player)
+        if kind is None:
+            return
+        self._drop_captive(engine, player)
+        room_key = getattr(player, "room_key", "")
+        if kind == "servant" and room_key in engine.state.board:
+            spec = {
+                "template_id": self.SERVANT,
+                "name": "疯人院随从",
+                "speed": 3,
+                "might": 3,
+                "sanity": 1,
+            }
+            if engine._spawn_single_haunt_monster(dict(spec), room_key) is not None:
+                engine._log(f"背着俘虏的{player.name}倒下了——随从挣脱出来，重新在屋里游荡。")
+        else:
+            engine._log(f"背着俘虏的{player.name}倒下了——叛徒挣脱了束缚。")
+        engine.check_victory()
 
     def _servants(self, engine: Any) -> list:
         return [m for m in engine.state.monsters if _monster_id(m) == self.SERVANT]
@@ -4114,7 +4167,7 @@ class MadWorldMode(GenericModeHandler):
                     continue
                 if player.room_key != vault:
                     continue
-                if engine._haunt_flags().get("vault_open") is not True:
+                if not self._vault_is_open(engine):
                     continue
             if action.id == "pass_captive":
                 if player.role != "hero" or not self._is_captive_carrier(engine, player):
@@ -4135,6 +4188,9 @@ class MadWorldMode(GenericModeHandler):
         if action_id == "lock_up":
             if not self._is_captive_carrier(engine, player) or player.room_key != vault:
                 engine._log("需要在保险库房间背着俘虏才能锁入。")
+                return False
+            if not self._vault_is_open(engine):
+                engine._log("保险库还锁着——得先把它打开才能把人关进去。")
                 return False
             kind = self._captive_kind(engine, player)
             captive_desc = "叛徒" if kind == "traitor" else "随从"
@@ -6212,17 +6268,26 @@ class LakeRescueMode(GenericModeHandler):
         if isinstance(fresh, dict):
             fresh.pop(str(player.id), None)
         if player.role == "traitor":
-            # p115：溺水计时
-            current = int(engine._haunt_track_value("drown_timer")) + 1
-            engine._set_haunt_track_value("drown_timer", current)
-            threshold = int(flags.get("drown_threshold", 10))
-            roll = engine.roll_dice(current, "溺水计时")
-            engine._log(f"女孩在水下的时间又长了一拍（{current}）：掷出 {roll}（溺亡线 {threshold}+）。")
-            if roll >= threshold:
-                flags["girl_drowned"] = True
-                engine._set_winner("traitor", "湖面重归平静——女孩再也没有浮上来。")
-                engine.check_victory()
+            self._drown_clock(engine)
             return
+        # 叛徒出局后：计时改由轮转顺序里第一位存活玩家代推（惯例，同 22/30 号）。
+        # 缺这条时计时随叛徒一起冻结——英雄又常常划不动水（速度 2 < 每砖 3 格），
+        # 女孩既不溺亡也救不上岸，对局永远收不了场（seed107/3p 实测 300 回合、
+        # 溺水轨道停在 10；本 handler 的 check_victory 注释本就写明"叛徒死后
+        # 湖怪照常拖人下水"，这里把时钟补齐）。
+        traitor_alive = any(p.role == "traitor" and not p.dead for p in engine.state.players)
+        if not traitor_alive:
+            first_alive = next(
+                (
+                    pid
+                    for pid in engine.state.turn_order
+                    if any(p.id == pid and not p.dead for p in engine.state.players)
+                ),
+                None,
+            )
+            if player.id == first_alive:
+                self._drown_clock(engine)
+                return
         # 英雄在湖面砖上：回合开始自动游泳检定，然后搜索
         if self._is_lake_tile(engine, player.room_key):
             roll = engine._roll_attack(player, "might")
@@ -6230,6 +6295,21 @@ class LakeRescueMode(GenericModeHandler):
             flags["swim_cost"][str(player.id)] = cost
             engine._log(f"{player.name} 的游泳检定：{roll}（每砖 {cost} 格）。")
             self._search_roll(engine, player)
+
+    def _drown_clock(self, engine: Any) -> None:
+        """p115：推进溺水计时并掷等量骰——到达阈值女孩溺亡（叛徒胜）。"""
+        flags = engine._haunt_flags()
+        if flags.get("girl_rescued") or flags.get("girl_drowned"):
+            return
+        current = int(engine._haunt_track_value("drown_timer")) + 1
+        engine._set_haunt_track_value("drown_timer", current)
+        threshold = int(flags.get("drown_threshold", 10))
+        roll = engine.roll_dice(current, "溺水计时")
+        engine._log(f"女孩在水下的时间又长了一拍（{current}）：掷出 {roll}（溺亡线 {threshold}+）。")
+        if roll >= threshold:
+            flags["girl_drowned"] = True
+            engine._set_winner("traitor", "湖面重归平静——女孩再也没有浮上来。")
+            engine.check_victory()
 
     def _search_bonus(self, engine: Any, player: Any) -> int:
         flags = engine._haunt_flags()
@@ -11716,14 +11796,26 @@ class LivingHouseMode(GenericModeHandler):
 
     # ============================================================= 心脏 / 大脑
     def attack_allowed(self, engine: Any, attacker: Any, target: Any) -> bool:
-        """仅持长矛者可攻击心脏/大脑；攻击大脑前须先 Sanity 4+，否则回合结束且不攻击。"""
+        """仅持长矛者可攻击心脏/大脑；攻击大脑前须先 Sanity 4+，否则回合结束且不攻击。
+
+        本方法会被 bot 的**预判**路径调用（`attack_would_be_allowed`，引擎在
+        该路径把 `engine._attack_query` 置 True）。预判必须无副作用——不能掷骰、
+        不能改 `attack_used/movement_stopped/steps_remaining`、也不要刷日志，
+        否则机器人在走位评分阶段就被自己的查询冻结、日志还会被"只有长矛能伤到
+        心脏"刷屏（M10-49 实测一局 80-120 行）。预判阶段对持矛者一律返回 True
+        （"理论上打得着"），理智检定留到真打那一次。
+        """
         mid = _monster_id(target)
         if mid not in (self.HEART, self.BRAIN):
             return True
+        query = bool(getattr(engine, "_attack_query", False))
         if self.SPEAR not in (getattr(attacker, "items", None) or []):
-            engine._log(f"只有长矛能伤到{'心脏' if mid == self.HEART else '大脑'}。")
+            if not query:
+                engine._log(f"只有长矛能伤到{'心脏' if mid == self.HEART else '大脑'}。")
             return False
-        if mid == self.BRAIN and not engine._resolve_check(attacker, "sanity", 4, "直视房屋的大脑"):
+        if mid == self.BRAIN and not query and not engine._resolve_check(
+            attacker, "sanity", 4, "直视房屋的大脑"
+        ):
             # p113：“his or her turn ends without attacking”。引擎移动闸门只看
             # dead/movement_stopped（不看 attack_used），故必须同时停移动、清空剩余
             # 移动力，否则英雄攻脑失败后仍能带完整步数白嫖离开阁楼。
@@ -12248,24 +12340,60 @@ class LostDimensionMode(GenericModeHandler):
 
     # ------------------------------------------------------- bot 目标（寻路）
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
-        """p43/p114：英雄先把三条线索跑齐再去风琴房；叛徒先跑完五间干扰房。"""
+        """p43/p114：英雄先把三条线索跑齐再去风琴房；叛徒先跑完五间干扰房。
+
+        实测（seed101/3p）：p114 的房屋重排把三间线索房卷回了牌堆（作祟揭示时
+        全屋只剩 8 间），而旧实现仍返回这三条**不在场**的模板 id——等于没目标，
+        英雄只能黏在风琴房反复弹奏（加值只有"预兆房 +2"，合计 3-8 对门槛 15+），
+        三条线索整局 0 次找到。这里只列**在场**的线索房；不在场的交给
+        `bot_wants_explore`（翻新房间把线索房重新抽出来）。
+        """
         flags = engine._haunt_flags()
         if player.role == "traitor":
             left = [r for r in self.SABOTAGE_ROOMS if r not in flags.get("sabotage_rooms", [])]
             return list(left) if left else []
+        in_play = {room.template_id for room in engine.state.board.values()}
         pending: list[str] = []
         for flag_id, room_id in (
             ("clue_books", "library"),
             ("clue_trophy", "game_room"),
             ("clue_stars", "tower"),
         ):
-            if not flags.get(flag_id):
+            if not flags.get(flag_id) and room_id in in_play:
                 pending.append(room_id)
-        # 线索找齐（或场上没有那间房）就去风琴房
+        # 线索找齐（或线索房还没翻出来）就去风琴房
         if not pending:
             return [self.ORGAN_ROOM]
         # 还差 1-2 条时先补线索：门槛 15+ 靠裸掷骰不可能达到
         return pending + [self.ORGAN_ROOM]
+
+    def bot_wants_explore(self, engine: Any, player: Any) -> bool:
+        """p114/p43：线索房被叛徒的重排卷回牌堆时，英雄必须靠探索把它们翻回来。
+
+        少了这条，英雄没有任何信号去翻新房间：`bot_goal_rooms` 的目标全不在场、
+        通用换算也不认"被撤走的房间"——实测三局线索 0/3 找到、弹奏加值恒为
+        "预兆房 +2~+3"，合计 3-8 对门槛 15-18，必输。翻新房间还有双重收益：
+        每条线索 +2，每翻出一间预兆符号房弹奏再 +1。
+        """
+        if player.role != "hero" or player.dead:
+            return False
+        flags = engine._haunt_flags()
+        pending = [
+            room_id
+            for flag_id, room_id in (
+                ("clue_books", "library"),
+                ("clue_trophy", "game_room"),
+                ("clue_stars", "tower"),
+            )
+            if not flags.get(flag_id)
+        ]
+        if not pending:
+            return False
+        in_play = {room.template_id for room in engine.state.board.values()}
+        missing = [room_id for room_id in pending if room_id not in in_play]
+        if not missing:
+            return False  # 线索房都在场：走 bot_goal_rooms 去那几间，不必探索
+        return any(engine.has_remaining_room_cards(floor) for floor in (-1, 0, 1))
 
     # ------------------------------------------------------------- 进度
     def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
