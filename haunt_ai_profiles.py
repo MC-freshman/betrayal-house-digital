@@ -433,6 +433,42 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["capture_and_carry", "vault_lockup"]},
     },
+    41: {
+        "hero": {
+            # p52：英雄唯一的胜线是"叛徒死亡"，而默认画像
+            # `attack_traitor_players: False` 让英雄永远不出手——配合
+            # `bot_goal_rooms`（循侦测线索奔向叛徒）才追得上。
+            # M10-56 实测 seed109/6p：修前英雄每回合只做"侦测叛徒"（217 次）、
+            # 从不攻击，300 回合收不了场。
+            "attack_monsters": False,
+            "attack_traitor_players": True,
+            "victory_focus": "侦测叛徒（知识 3+）锁定位置，追上并杀死 TA；打不过就分散逃命拖时间",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "利用隐形逐个偷袭落单英雄（sneak attack 无防御）",
+        },
+        "scenario": {"special_rules": ["invisible_traitor", "detection"]},
+    },
+    42: {
+        "hero": {
+            # p53：英雄胜线是"激活雕像 → 推着它去撞叛徒 → 削弱到可以攻击 → 击杀"。
+            # `attack_traitor_players: False`（默认）让最后一步永远走不到：
+            # 雕像把叛徒削到 0 之后 `attack_allowed` 已经放行，机器人却根本
+            # 不把叛徒当目标。`required_cards` 同时补了四件圣物，配合
+            # `bot_goal_rooms`（雕像房间）才凑得出这条链。
+            "attack_monsters": False,
+            "attack_traitor_players": True,
+            "victory_focus": "先捡圣物给雕像激活（圣徽/斧/水晶球/古书），再推着雕像去撞叛徒削属性，最后收尾击杀",
+        },
+        "traitor": {
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "无敌期间杀英雄并把尸体搬到地窖/深渊/五芒星室，掷理智或知识 4+ 打开地狱门",
+        },
+        "scenario": {"special_rules": ["invulnerable_traitor", "animated_statue"]},
+    },
     39: {
         "hero": {
             # p50：胜线是"继承人在王座上同时持有长矛与戒指"，而戒指常常整局

@@ -2134,11 +2134,11 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "tokens": [],
         "setup": {
             "tracks": {"detections": {"label": "侦测次数", "target": 10, "side": "heroes"}},
-            "flags": {"detected_by": []},
+            "flags": {"detected_by": [], "detected_room": None},
         },
         "monsters": [],
         "actions": [
-            {"id": "detect_traitor", "side": "heroes", "label": "侦测叛徒", "detail": "知识 3+ 探知叛徒所在房间（p52）。", "stat": "knowledge", "target": 3},
+            {"id": "detect_traitor", "side": "heroes", "label": "侦测叛徒", "detail": "知识 3+ 探知叛徒所在房间（p52）。", "stat": "knowledge", "target": 3, "progress": "detections"},
         ],
         "win_conditions": [
             {"winner": "heroes", "type": "traitor_dead", "reason": "隐形叛徒被反杀了。"}
@@ -2158,7 +2158,7 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "hero_goal": "阻止地狱之门打开。",
         "traitor_goal": "打开地狱之门。",
         "suggested_monsters": [],
-        "required_cards": [],
+        "required_cards": ["omen_holy_symbol", "item_axe", "omen_crystal_ball", "omen_book"],
         "key_rooms": [],
         "tokens": [],
         "setup": {"tracks": {"progress": {"label": "进度", "target": 10, "side": "heroes"}}, "flags": {}},
@@ -2186,7 +2186,7 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "required_cards": [],
         "key_rooms": ["pentagram_chamber", "catacombs", "chapel", "library", "research_laboratory", "balcony", "garden", "graveyard", "patio", "tower"],
         "tokens": [],
-        "setup": {"tracks": {"progress": {"label": "进度", "target": 10, "side": "heroes"}}, "flags": {"ritual_found": False, "shadow_bound": {}, "pentagram_reached": []}},
+        "setup": {"tracks": {"ritual_progress": {"label": "光明仪式", "target": "player_count", "side": "heroes"}}, "flags": {"ritual_found": False, "shadow_bound": {}, "pentagram_reached": [], "ritual_rooms_used": []}},
         "monsters": [{"template_id": "ghost", "name": "影子", "spawn": "deferred", "count": "player_count", "speed": 3, "might": 0, "sanity": 0, "invulnerable": False}],
         "actions": [
             {"id": "find_ritual", "side": "heroes", "label": "寻找仪式", "detail": "在地窖/教堂/图书馆/实验室做知识 4+（p54）。", "stat": "knowledge", "target": 4, "rooms": ["catacombs", "chapel", "library", "research_laboratory"], "requires_flags": {"ritual_found": False}, "set_flags": {"ritual_found": True}},
@@ -2234,8 +2234,8 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "key_rooms": [],
         "tokens": [],
         "setup": {
-            "tracks": {"progress": {"label": "time_bomb", "target": 10, "side": "heroes"}},
-            "flags": {"bomb_defused": [], "big_bomb_timer": 0},
+            "tracks": {"big_bomb_timer": {"label": "大炸弹倒计时", "target": 12, "side": "traitor"}},
+            "flags": {"has_bomb": [], "bomb_defused": [], "big_bomb_armed": False},
         },
         "monsters": [],
         "actions": [

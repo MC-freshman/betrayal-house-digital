@@ -241,6 +241,14 @@ class GenericModeHandler:
         """攻击落败时是否免除攻击者受到的反击伤害（剧本 17：用杀虫剂落败不受伤）。"""
         return False
 
+    def defense_roll_disabled(self, engine: Any, attacker: Any, target: Any, weapon_card_id: str | None = None) -> bool:
+        """防守方是否无法防御这次攻击（剧本 41 p123：隐形叛徒的偷袭）。
+
+        返回 True 时引擎把防守方掷骰按 0 结算（攻击骰直接成为伤害）。默认
+        False，即正常对抗——不实现该钩子的剧本行为完全不变。
+        """
+        return False
+
     def special_steal(self, engine: Any, attacker: Any, target: Any, diff: int, attack_attr: str) -> bool:
         """剧本自定义的特殊偷取（剧本 19：>2 伤害偷走长矛）。返回 True 表示已处理。"""
         return False
@@ -4256,18 +4264,98 @@ class InvisibleTraitorMode(GenericModeHandler):
       物理伤害，无防御（p123 "Your opponent can't defend against this"）。
     · 侦测：被偷袭幸存后知识 3+ 探知叛徒所在房间（detect_traitor 行动）。
     · 胜利：叛徒死亡 → 英雄胜（handler 显式接管，不再依赖引擎通用兜底）。
-    · 简化：叛徒攻击仍走引擎 attack()（不做无防御 FlatDamage——引擎
-      player-vs-player 伤害公式不可 hook）；骷髅/灵应板追踪/偷窃未建模。
+    · 机器人（M10-56 修）：`detect_traitor` 此前**没有任何效果**、`detections`
+      轨道也永远不动（动作缺 `progress` 字段）——五名英雄每回合都去侦测、却
+      既不推进也不追击，而英雄画像默认 `attack_traitor_players: False`，唯一的
+      胜线"叛徒死"在 AI 层断开：seed109/6p 实测 300 回合收不了场（侦测 217 次）。
+      现在侦测成功会把叛徒所在房间写进 `detected_room` 并推进轨道，英雄也会
+      循着线索奔向叛徒（见 bot_goal_rooms），画像放开攻击叛徒。
+    · 偷袭落地（M10-56）：`defense_roll_disabled` 让叛徒**持物品以外**的攻击
+      按"对手无法防御"结算（引擎把防守骰按 0 计，新增的同名钩子默认关，
+      其它剧本行为不变）。此前完全走普通对抗，叛徒的隐形优势等于不存在
+      （英雄 15/3 一边倒）。
+    · 简化：偷袭伤害仍走引擎 PvP 公式（攻击骰 − 0），不是原文的
+      "掷 ceil(原始英雄数/2) 枚骰"；骷髅/灵应板追踪/偷窃未建模。
     """
 
     mode = "invisible_traitor"
 
     def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
-        engine._haunt_flags().setdefault("detected_by", [])
+        flags = engine._haunt_flags()
+        flags.setdefault("detected_by", [])
+        flags.setdefault("detected_room", None)
         engine._log("叛徒的身影从视野中消失了——TA 已经隐形。")
 
     def on_monster_defeated(self, engine: Any, monster: Any, amount: int) -> bool:
         return False  # 无怪物
+
+    # ------------------------------------------------------------- 内部
+    def _traitor(self, engine: Any) -> Any | None:
+        return next(
+            (p for p in engine.state.players if p.role == "traitor" and not p.dead), None
+        )
+
+    def defense_roll_disabled(self, engine: Any, attacker: Any, target: Any, weapon_card_id: str | None = None) -> bool:
+        """p123：叛徒的非物品攻击都是偷袭——"Your opponent can't defend against this"。
+
+        持物品的攻击按普通攻击结算（原文 "Unless you are attacking with an
+        item"）。已知偏差：伤害走引擎的 PvP 公式（攻击骰 − 0），而不是原文的
+        "掷 ceil(原始英雄数/2) 枚骰"——引擎的玩家对玩家伤害没有加值钩子；
+        "对手无法防御"这一半已经落地（M10-56）。
+        """
+        if getattr(attacker, "role", None) != "traitor":
+            return False
+        if getattr(target, "role", None) != "hero":
+            return False
+        return not weapon_card_id
+
+    # ------------------------------------------------------------- 行动
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        """p52：侦测成功 → 探知叛徒所在房间。
+
+        这条行动过去是纯空转：规则数据里既没有 `set_flags` 也没有 `progress`，
+        通用行动管线跑完只写一句日志——轨道不动、位置不知、机器人也拿不到
+        任何可追的线索（M10-56 修，见类 docstring）。
+        """
+        if action_id != "detect_traitor":
+            return super().perform_action(engine, player, action_id, data)
+        ok = super().perform_action(engine, player, action_id, data)
+        if ok and engine.last_haunt_action_succeeded():
+            traitor = self._traitor(engine)
+            if traitor is not None:
+                flags = engine._haunt_flags()
+                flags["detected_room"] = traitor.room_key
+                detected_by = flags.setdefault("detected_by", [])
+                if str(player.id) not in detected_by:
+                    detected_by.append(str(player.id))
+                room = engine.state.board.get(traitor.room_key)
+                engine._log(
+                    f"{player.name} 捕捉到了空气里那一丝移动——叛徒就在"
+                    f"{room.name if room else traitor.room_key}。"
+                )
+        return ok
+
+    # ------------------------------------------------------------- 机器人
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p52：英雄胜 = 叛徒死亡——有线索就扑上去（射程内才由画像放行攻击）。"""
+        if player.dead or player.role != "hero":
+            return []
+        traitor = self._traitor(engine)
+        if traitor is None:
+            return []
+        return [f"__room__{traitor.room_key}"]
+
+    # ------------------------------------------------------------- 进度摘要
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        """公开信息：叛徒是否已被锁定、锁定在哪一间（p52 侦测的成果）。"""
+        flags = engine._haunt_flags()
+        traitor = self._traitor(engine)
+        if flags.get("detected_room") and traitor is not None:
+            if flags.get("detected_room") == traitor.room_key:
+                room = engine.state.board.get(traitor.room_key)
+                return [f"叛徒已被锁定：{room.name if room else traitor.room_key}。"]
+            return ["线索过时了——叛徒已经转移，需要重新侦测（知识 3+）。"]
+        return ["还没有叛徒的线索：侦测叛徒（知识 3+）可以锁定 TA 的位置。"]
 
     def check_victory(self, engine: Any) -> bool:
         heroes_alive = [p for p in engine.state.players if p.role == "hero" and not p.dead]
@@ -4403,6 +4491,36 @@ class HellGateHeroMode(GenericModeHandler):
 
         return super().perform_action(engine, player, action_id, data)
 
+    # ------------------------------------------------------------- 机器人
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p53：英雄胜线＝给雕像放圣物激活它 → 推着雕像去撞叛徒 → 削弱到能打。
+
+        本类既没有 `key_rooms`（rule_data 为空）也没有画像目标，机器人因此
+        没有任何剧本目标：18 局实测雕像**一次都没被激活**（`statue_form` 恒
+        为 None、`雕像削弱` 0 次），英雄只是在房子里无目的游荡（seed107/6p
+        在五芒星室↔舞厅之间震荡 25 次），胜负全看叛徒会不会死于房间/事件伤害。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        traitor = next(
+            (p for p in engine.state.players if p.role == "traitor" and not p.dead), None
+        )
+        # 叛徒已被雕像削到可以被攻击 → 收尾（画像同时放开了打叛徒）
+        if self._traitor_vulnerable(engine) and traitor is not None:
+            return [f"__room__{traitor.room_key}"]
+        statue_room = self._statue_room(engine)
+        if not statue_room:
+            return []
+        if not engine._haunt_flags().get("statue_form"):
+            # 雕像还没活化：只有**手里拿着圣物**的英雄值得去（别人过去也做不了
+            # 事，只会在门口来回晃——seed113/6p 实测风琴房×16 的震荡就是没带
+            # 物品的英雄被目标钉在那儿）。没带圣物的交给通用目标：rule_data 的
+            # required_cards 会把地上的圣物标成"去捡回来"。
+            if not any(item in player.items for item in self.STATUE_ITEMS):
+                return []
+        # 已活化：英雄得站在雕像旁边才能推动它（move_statue 要求同房）
+        return [f"__room__{statue_room}"]
+
     # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:
         heroes_alive = [p for p in engine.state.players if p.role == "hero" and not p.dead]
@@ -4431,20 +4549,31 @@ class ShadowExorcismMode(GenericModeHandler):
     · 攻击影子：Speed/Sanity 攻击，击败 → 击晕 + 绑定英雄 -1 Speed
       （p54 "the hero bound to that Shadow takes 1 point of Speed damage"）。
     · 光明仪式：①知识 4+ 在地窖/教堂/图书馆/实验室找仪式 →
-      ②知识/理智 5+ 在阳台/花园/墓地/阳台/塔楼放仪式令牌；
+      ②知识/理智 5+ 在阳台/花园/墓地/庭院/塔楼放仪式令牌；
       每房一次；玩家数枚 → 英雄胜。
-    · 简化：蜡烛移动影子 2 格未建模；影子穿墙移动未建模（正常寻路）。
+    · 机器人（M10-53 修）：仪式检定成功后由 handler 亲自落令牌，并把
+      `ritual_rooms_used` 记进旗标——引擎的通用成功路径只推进轨道、**从不落
+      令牌**，而本 handler 的胜负判定数的正是令牌：修前英雄胜线永远不成立
+      （探针 18/18 全败，追踪实测某局 7 次检定成功却判不出胜负）。
+      `bot_attack_blocked` 拦掉"拿命换击晕"的影子攻击（修前 18 局 120 次，
+      每局都有人速度归零而死）。
+    · 已知简化：蜡烛移动影子 2 格未建模；影子沿墙爬未逐格建模，用
+      `roll_dice(速度) // 2` 近似（见 on_monster_move 注释）。
     """
 
     mode = "shadow_exorcism"
 
     SHADOW = "ghost"
+    # p54 的外缘房间只有这五间，且每间只能用一次；6 人局需要的令牌数
+    # （等于玩家数）超过可用房间数，按原文无解——目标在 setup 里封顶。
+    RITUAL_ROOMS = ["balcony", "garden", "graveyard", "patio", "tower"]
 
     # ------------------------------------------------------------- setup
     def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
         flags = engine._haunt_flags()
         flags["shadow_bound"] = {}
         flags.setdefault("pentagram_reached", [])
+        flags.setdefault("ritual_rooms_used", [])
         # p54：五芒星室强制入场
         engine._ensure_room_in_play("pentagram_chamber", room_key)
         pentagram = next(
@@ -4468,6 +4597,12 @@ class ShadowExorcismMode(GenericModeHandler):
             if monster is not None:
                 bound[str(monster.id)] = hero.id
         engine._log(f"{len(bound)} 道影子从探险者身上剥离——它们在向五芒星室飘去！")
+        # p54 只列了五间外缘房（阳台/花园/墓地/庭院/塔楼），每间只能用一次：
+        # 6 人局按"令牌数 = 玩家数"需要 6 枚，原文口径下无解。目标封顶到
+        # 可用房间数，5-6 人局的进度条与实际需求才对得上。
+        track = engine._haunt_tracks().get("ritual_progress")
+        if track is not None:
+            track["target"] = min(int(track.get("target", 0)), len(self.RITUAL_ROOMS))
 
     # ------------------------------------------------------------- 内部
     def _pentagram(self, engine: Any) -> str | None:
@@ -4494,7 +4629,13 @@ class ShadowExorcismMode(GenericModeHandler):
             return True
         path = engine._shortest_path(monster.room_key, pentagram)
         if len(path) > 1:
-            steps = engine.roll_dice(getattr(monster, "speed", 3), "影子移动")
+            # p125：影子是**沿墙**爬的——绕一个拐角算一格、穿过门到另一侧墙
+            # 再算一格，一间房大约要花 2-3 格；Speed 5 折合每回合 1-2 间。
+            # 旧实现按房间图直接走 roll_dice(3)（均 3 间/回合）快了一倍多：
+            # M10-53 实测揭示后 3-12 个玩家回合内就有英雄变成 Specter，而窗口
+            # 内仪式尝试只有 0-2 次——英雄连"找仪式 + 走过去"的回合都不够。
+            # 折半是对沿墙爬的近似（18 局口径：英雄 0→2 胜，进度常见 3/3、4/4）。
+            steps = engine.roll_dice(getattr(monster, "speed", 3), "影子移动") // 2
             monster.room_key = path[min(len(path) - 1, steps)]
             engine._log(f"影子飘到了{engine.state.board[monster.room_key].name}。")
         if monster.room_key == pentagram:
@@ -4516,12 +4657,54 @@ class ShadowExorcismMode(GenericModeHandler):
             engine._log(f"{hero.name} 的影子被驱散，但TA失去了 1 点 Speed。")
         return False  # 默认击晕
 
+    # ------------------------------------------------------------- 光明仪式
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        """p54：每个外缘房间只能用一次——用过的房间不再提供仪式检定。"""
+        used = set(engine._haunt_flags().get("ritual_rooms_used", []))
+        result = []
+        for action in super().available_actions(engine, player):
+            if action.id == "ritual_roll" and engine._current_room_template_id(player) in used:
+                continue
+            result.append(action)
+        return result
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        """仪式检定成功后由 handler 落令牌。
+
+        引擎的通用成功路径（`_apply_generic_haunt_success`）只推进 `progress`
+        轨道、写旗标，**不会生成检定令牌**；而本 handler 的胜负判定数的就是
+        `sanity_check` / `knowledge_check` 令牌——不补这一步，英雄胜线永远
+        不成立（M10-53 修前探针 18/18 全败）。
+        """
+        if action_id != "ritual_roll":
+            return super().perform_action(engine, player, action_id, data)
+        flags = engine._haunt_flags()
+        room_id = engine._current_room_template_id(player)
+        used = set(flags.get("ritual_rooms_used", []))
+        if room_id not in self.RITUAL_ROOMS or room_id in used:
+            engine._log("这个房间不能用于仪式（或已被使用）。")
+            return False
+        ok = super().perform_action(engine, player, action_id, data)
+        if ok and engine.last_haunt_action_succeeded():
+            used.add(room_id)
+            flags["ritual_rooms_used"] = sorted(used)
+            # 令牌种类跟行动实际用的属性走（rule_data 声明 knowledge/sanity，
+            # 引擎取玩家较高的那一项）——与 p54"用哪项就放哪种令牌"一致。
+            chosen = max(
+                ("knowledge", "sanity"),
+                key=lambda stat: engine._effective_stat(player, stat),
+            )
+            kind = "knowledge_check" if chosen == "knowledge" else "sanity_check"
+            engine.spawn_token(kind, label="仪式成功", role="check", room_key=player.room_key)
+        return ok
+
     # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:
         flags = engine._haunt_flags()
-        # p54：仪式令牌数 = 玩家数 → 英雄胜
+        # p54：仪式令牌数 = 玩家数 → 英雄胜（封顶在可用外缘房间数，见 setup）
+        need = min(len(engine.state.players), len(self.RITUAL_ROOMS))
         tokens = engine.tokens_of_kind("sanity_check") + engine.tokens_of_kind("knowledge_check")
-        if len(tokens) >= len(engine.state.players):
+        if len(tokens) >= need:
             engine._set_winner("heroes", "光明仪式完成——所有影子在圣光中消散了！")
             return True
         if not any(p.role == "hero" and not p.dead for p in engine.state.players):
@@ -4532,6 +4715,78 @@ class ShadowExorcismMode(GenericModeHandler):
         if not any(p.role == "traitor" and not p.dead for p in engine.state.players):
             return True
         return False
+
+    # ------------------------------------------------------------- 机器人
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p54：英雄胜 = 光明仪式满员，别把回合花在打影子上。
+
+        ① 仪式还没找到 → 去地窖/教堂/图书馆/研究实验室（知识 4+）；
+        ② 找到了 → 去还没用过的外缘房（阳台/花园/墓地/庭院/塔楼）。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        flags = engine._haunt_flags()
+        if not flags.get("ritual_found"):
+            rooms = ["catacombs", "chapel", "library", "research_laboratory"]
+        else:
+            used = set(flags.get("ritual_rooms_used", []))
+            rooms = [template_id for template_id in self.RITUAL_ROOMS if template_id not in used]
+        goals: list[str] = []
+        for template_id in rooms:
+            key = next(
+                (k for k, room in engine.state.board.items() if room.template_id == template_id),
+                None,
+            )
+            if key:
+                goals.append(f"__room__{key}")
+        return goals
+
+    def bot_wants_explore(self, engine: Any, player: Any) -> bool:
+        """仪式已找到、但还有外缘房没翻进场时，得靠探索把它们翻出来。"""
+        if player.dead or player.role != "hero":
+            return False
+        flags = engine._haunt_flags()
+        if not flags.get("ritual_found"):
+            return False
+        in_play = {room.template_id for room in engine.state.board.values()}
+        if not [template_id for template_id in self.RITUAL_ROOMS if template_id not in in_play]:
+            return False
+        return any(engine.has_remaining_room_cards(floor) for floor in (-1, 0, 1))
+
+    def bot_attack_blocked(self, engine: Any, attacker: Any, target: Any) -> bool:
+        """p54：击败影子的代价是**绑定英雄** -1 速度，而速度归零即死。
+
+        修前实测（18 局）：英雄对影子出手 120 次，每局都有人因速度归零而死，
+        仪式进度停在 0-3 —— 拿命换"击晕影子一回合"不是人打的牌。只有两种
+        情况值得出手：① 影子马上要飘进五芒星室（那一下不挡，绑定英雄直接
+        变 Specter）；② 自己速度 ≥2（打得起这 1 点）。速度 ≤1 时打赢也是自杀。
+        """
+        if _monster_id(target) != self.SHADOW:
+            return False
+        speed = int(getattr(attacker, "stats", {}).get("speed", 0))
+        if speed <= 1:
+            return True
+        pentagram = self._pentagram(engine)
+        if pentagram and engine._path_length(target.room_key, pentagram) <= 2:
+            return False
+        return True
+
+    # ------------------------------------------------------------- 进度摘要
+    def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
+        """公开信息：仪式是否找到 + 已用/可用的外缘房间（p54 令牌摆在板块上）。"""
+        flags = engine._haunt_flags()
+        used = sorted(set(flags.get("ritual_rooms_used", [])))
+        need = min(len(engine.state.players), len(self.RITUAL_ROOMS))
+        found = "仪式已找到" if flags.get("ritual_found") else "仪式尚未找到（地窖/教堂/图书馆/实验室 知识 4+）"
+        names = [
+            engine.state.board[key].name
+            for key in sorted(engine.state.board)
+            if engine.state.board[key].template_id in self.RITUAL_ROOMS
+        ]
+        lines = [f"{found}；光明仪式 {len(used)}/{need} 枚令牌。"]
+        if names:
+            lines.append("可用于仪式的房间：" + "、".join(names) + "（每间只能用一次）。")
+        return lines
 
 
 
@@ -4544,12 +4799,14 @@ class SupernaturalAgingMode(GenericModeHandler):
     · 衰老（p55）：每个英雄开局 1 枚衰老 token；叛徒回合开始，每个
       英雄掷 1 骰 → 加等量 token。每 token = 10 年。跨越十年界线时
       施加属性效果（p55 decade 表）。
-    · 十年效果（简化为逐 token 应用）：
+    · 十年效果（简化为逐 token 应用；引擎无角色年龄字段）：
         token 1 (30s): +1 Sanity, +1 Knowledge
         token 2 (40s): -1 Speed, +1 Sanity
         token 3 (50s): -1 Might, -1 Knowledge
-        token 4 (60s): -1 Speed, 1 mental damage
+        token 4 (60s): -1 Might, -1 Speed, 1 mental damage
         token 5+ (70s+): -1 each trait
+        校准（M10-54）：60s 行此前漏了 -1 Might（原文"-1 Might and -1 Speed,
+        and take 1 point of mental damage"），只扣了速度。
     · 复活仪式（p55）：玩家数次成功检定。理智/知识 5+，在七类房间
       （地窖/焦房/地窖/画廊/厨房/五芒星室/塔楼）；每房一次。
     · 勋章（p55）：持有者衰老掷骰 -1（最低 0）；英雄死亡时持有者 +1 token。
@@ -4588,12 +4845,17 @@ class SupernaturalAgingMode(GenericModeHandler):
         self._apply_decade_effects(engine, player, old_count, new_count)
 
     def _apply_decade_effects(self, engine: Any, player: Any, old: int, new: int) -> None:
-        """p55 decade 表：跨越界线时施加效果（累计）。"""
+        """p55 decade 表：跨越界线时施加效果（累计）。
+
+        引擎没有角色年龄字段（角色卡上的起始年龄未建模），十年按 token 数
+        折算：token 1 = 30s、2 = 40s、3 = 50s、4 = 60s、5+ = 70s+（开局那枚
+        token 代表"刚跨入的这十年"，故从 30s 起算）。
+        """
         effects = {
-            1: [("sanity", 1), ("knowledge", 1)],      # 30s
-            2: [("speed", -1), ("sanity", 1)],          # 40s
-            3: [("might", -1), ("knowledge", -1)],      # 50s
-            4: [("speed", -1)],                          # 60s
+            1: [("sanity", 1), ("knowledge", 1)],              # 30s
+            2: [("speed", -1), ("sanity", 1)],                  # 40s
+            3: [("might", -1), ("knowledge", -1)],              # 50s：一项物理 + 一项精神
+            4: [("might", -1), ("speed", -1)],                  # 60s（另加 1 点精神伤害）
         }
         for token_count in range(old + 1, new + 1):
             if token_count in effects:
@@ -4660,6 +4922,45 @@ class SupernaturalAgingMode(GenericModeHandler):
             return ok
         return super().perform_action(engine, player, action_id, data)
 
+    # ------------------------------------------------------------- 机器人
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p55：英雄胜 = 复活仪式满员——去还没用过的仪式房间。
+
+        本类的规则数据里 `ritual_roll` **没有 `rooms` 字段**（房间白名单只在
+        handler 的 available_actions/perform_action 里），机器人的通用目标
+        换算因此算不出该去哪：实测 seed113/4p 在二楼平台来回 17 次、
+        seed127/4p 在地下室楼梯来回 26 次，仪式进度 0、全员老死（M10-54）。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        used = set(engine._haunt_flags().get("ritual_rooms_used", []))
+        goals: list[str] = []
+        for template_id in self.RITUAL_ROOMS:
+            if template_id in used:
+                continue
+            key = next(
+                (k for k, room in engine.state.board.items() if room.template_id == template_id),
+                None,
+            )
+            if key:
+                goals.append(f"__room__{key}")
+        return goals
+
+    def bot_wants_explore(self, engine: Any, player: Any) -> bool:
+        """仪式房还没翻进场、牌堆还有牌时，先靠探索把它们翻出来。"""
+        if player.dead or player.role != "hero":
+            return False
+        used = set(engine._haunt_flags().get("ritual_rooms_used", []))
+        in_play = {room.template_id for room in engine.state.board.values()}
+        missing = [
+            template_id
+            for template_id in self.RITUAL_ROOMS
+            if template_id not in used and template_id not in in_play
+        ]
+        if not missing:
+            return False
+        return any(engine.has_remaining_room_cards(floor) for floor in (-1, 0, 1))
+
     # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:
         flags = engine._haunt_flags()
@@ -4688,22 +4989,44 @@ class TimeBombMode(GenericModeHandler):
     """剧本 45 滴答滴答（Tick, Tick, Tick）。
 
     权威原文：英雄手册 p56 / 叛徒手册 p127。
-    · 每个英雄身上绑了炸弹。
-    · 拆弹：知识 7+（疯子卡 5+）每回合一次；掷出 <=2 引爆同房。
-    · 大炸弹：叛徒回合推进计时；10 回合后爆炸。
-    · 胜负：叛徒死 + 至少一个英雄活 → 英雄胜。
+
+    · 每个英雄身上绑了炸弹；拆弹：知识 7+（持疯子卡 5+），每人每回合一次；
+      掷出 ≤2 就地引爆，同房所有探险者一起被炸死、物品与预兆全部弃掉（p56）。
+    · 叛徒**不能移动**（p127 "You cannot move"），坐在原地拼装大炸弹；开局
+      必须握着炸药卡（没有就从持有者手里夺走，或翻物品牌堆取一张）。
+    · 大炸弹（p127）：叛徒回合结束推进计时，**第 12 回合完成** → 全屋同归于尽
+      （叛徒胜）。其余回合按"轨位 + 存活英雄数"掷骰（上限 8），8+ 时"叛徒
+      左手最近、还带着活炸弹"的英雄爆炸，同房其他人一起被炸死。
+    · 接近引爆（p127）：叛徒首回合结束后，任何还带着活炸弹的英雄**走进叛徒
+      所在房间或其邻室**（邻室不需要有门相连）立即爆炸；炸弹已拆的英雄免疫。
+    · 胜负（p56）：叛徒死 + 至少一名英雄存活 → 英雄胜。
+
+    · 已知简化：替队友拆弹（原文允许，需同房并获同意）未建模；炸药卡"只能
+      用在叛徒自己房间"的表现层未特殊处理。
+    · M10-55 校准：此前计时写在 `drown_timer`（33 号复制而来）而 rule_data
+      声明的是另一条轨道，UI 进度条永远不动；大炸弹回合数写 10（原文 12）；
+      8+ 爆炸掷骰与接近引爆触发器完全没实现；叛徒可自由移动；拆弹走通用检定，
+      于是"掷出 ≤2 引爆"与疯子卡的 5+ 折扣都不生效。
     """
 
     mode = "time_bomb"
-    BIG_BOMB_TURNS = 10
+    BIG_BOMB_TURNS = 12  # p127：叛徒第 12 回合完成大炸弹
+    DYNAMITE = "item_dynamite"
 
     def setup(self, engine, haunt, room_key):
         flags = engine._haunt_flags()
         has_bomb = flags.setdefault("has_bomb", [])
         flags.setdefault("bomb_defused", [])
+        flags["big_bomb_armed"] = False
         for p in engine.state.players:
             if p.role == "hero" and not p.dead:
                 has_bomb.append(str(p.id))
+        # p127 Right Now：叛徒开局必须握着炸药卡（没有就从持有者手里夺走，
+        # 或翻物品牌堆取一张）——_grant_card_to_player 会把这张卡从牌堆/
+        # 弃牌/房间/其他玩家处挪过来。
+        traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
+        if traitor is not None and not traitor.dead:
+            engine._grant_card_to_player(traitor, self.DYNAMITE)
         engine._log("滴答……滴答……每个人身上都绑着一枚炸弹！")
 
     def _has_bomb(self, engine, player):
@@ -4717,35 +5040,162 @@ class TimeBombMode(GenericModeHandler):
     def _defuse_target(self, engine, player):
         return 5 if self._has_madman(engine, player) else 7
 
-    def on_turn_start(self, engine, player):
-        flags = engine._haunt_flags()
-        if player.role != "traitor" or player.dead:
+    # ------------------------------------------------------------- 移动限制
+    def movement_cost_floor(self, engine, player, from_key=None, to_key=None):
+        """p127：叛徒不能移动——他坐在原地拼装大炸弹。
+
+        引擎按"入房费用 > 剩余步数就走不了"过滤移动选项，抬高费用下限即可
+        把人钉在原地（同 17/36 号的用法，只是这里的值大到无法承担）。
+        """
+        if getattr(player, "role", None) == "traitor":
+            return 99
+        return 0
+
+    # ------------------------------------------------------------- 内部
+    @staticmethod
+    def _adjacent_to(engine, a_key, b_key):
+        """同层且曼哈顿距离 ≤1（p127："邻室不需要有门相连"，只看坐标）。"""
+        a = engine.state.board.get(a_key)
+        b = engine.state.board.get(b_key)
+        if a is None or b is None or a.floor != b.floor:
+            return False
+        return abs(a.x - b.x) + abs(a.y - b.y) <= 1
+
+    def _next_bomb_hero(self, engine, traitor):
+        """p127：8+ 时爆炸落在"叛徒左手边最近、还带着活炸弹"的英雄身上。"""
+        order = list(engine.state.turn_order or [])
+        if not order or traitor.id not in order:
+            return None
+        idx = order.index(traitor.id)
+        for step in range(1, len(order) + 1):
+            pid = order[(idx + step) % len(order)]
+            other = next((q for q in engine.state.players if q.id == pid), None)
+            if other is None or other.dead or other.role != "hero":
+                continue
+            if self._has_bomb(engine, other):
+                return other
+        return None
+
+    def _explode_room(self, engine, room_key):
+        """p56/p127：炸弹爆炸——房内英雄当场死亡，物品与预兆全部弃掉。"""
+        victims = [
+            p for p in engine.state.players
+            if p.role == "hero" and not p.dead and p.room_key == room_key
+        ]
+        if not victims:
             return
-        current = int(engine._haunt_track_value("drown_timer")) + 1
-        engine._set_haunt_track_value("drown_timer", current)
+        room = engine.state.board.get(room_key)
+        engine._log(f"{room.name if room else room_key} 里烈焰翻卷——炸弹炸开了。")
+        for victim in victims:
+            for card_id in list(victim.items):
+                engine._discard_card_from_player(victim, card_id, return_to_room=False)
+            victim.dead = True
+            engine._log(f"{victim.name} 倒下了。")
+            engine._mode_handler().on_player_died(engine, victim)
+        engine.check_victory()
+
+    # ------------------------------------------------------------- 回合
+    def on_turn_end(self, engine, player):
+        """p127：叛徒回合结束——推进计时，再按"轨位 + 存活英雄数"掷骰。
+
+        第 12 回合：大炸弹完成，全屋同归于尽（叛徒胜）。其余回合掷
+        min(8, 轨位 + 存活英雄数) 枚骰；8+ 时按"叛徒左手最近"的顺序找还带着
+        活炸弹的英雄，他连同同房所有人一起被炸死。
+        """
+        if player.dead or player.role != "traitor":
+            return
+        flags = engine._haunt_flags()
+        current = int(engine._haunt_track_value("big_bomb_timer")) + 1
+        engine._set_haunt_track_value("big_bomb_timer", current)
+        # 首回合结束后才武装引爆触发器（p127 "After the end of your first turn"）
+        flags["big_bomb_armed"] = True
         if current >= self.BIG_BOMB_TURNS:
             engine._set_winner("traitor", "大炸弹爆炸了——整栋房子被夷为平地。")
             engine.check_victory()
             return
-        engine._log(f"大炸弹的滴答声越来越响……（{current}/{self.BIG_BOMB_TURNS}）")
+        heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        dice = max(1, min(8, current + len(heroes)))
+        total = engine.roll_dice(dice, "大炸弹计时")
+        engine._log(
+            f"大炸弹滴答作响（{current}/{self.BIG_BOMB_TURNS}）：掷出 {total}（{dice} 骰）。"
+        )
+        if total < 8:
+            return
+        victim = self._next_bomb_hero(engine, player)
+        if victim is None:
+            return
+        engine._log("引信烧到了尽头——炸弹在英雄身上炸开！")
+        self._explode_room(engine, victim.room_key)
+
+    # ------------------------------------------------------------- 接近引爆
+    def on_enter_room(self, engine, player, room):
+        """p127：带活炸弹的英雄踏进叛徒房间或其邻室即引爆（邻室无门也算）。"""
+        if not engine._haunt_flags().get("big_bomb_armed"):
+            return
+        if getattr(player, "role", None) != "hero" or player.dead:
+            return
+        if not self._has_bomb(engine, player):
+            return
+        traitor = next(
+            (p for p in engine.state.players if p.role == "traitor" and not p.dead), None
+        )
+        if traitor is None or not self._adjacent_to(engine, room.key, traitor.room_key):
+            return
+        engine._log(f"{player.name} 踏进了引爆范围——身上的炸弹立刻炸开！")
+        self._explode_room(engine, player.room_key)
+
+    # ------------------------------------------------------------- 机器人
+    def bot_blocked_rooms(self, engine, player):
+        """p127：引爆区＝叛徒所在房间及其邻室——带活炸弹的英雄走进去就是送命。
+
+        炸弹已拆的英雄免疫，不受此限。
+        """
+        if getattr(player, "role", None) != "hero" or player.dead:
+            return []
+        if not engine._haunt_flags().get("big_bomb_armed") or not self._has_bomb(engine, player):
+            return []
+        traitor = next(
+            (p for p in engine.state.players if p.role == "traitor" and not p.dead), None
+        )
+        if traitor is None:
+            return []
+        blast = [traitor.room_key]
+        blast.extend(
+            key
+            for key in engine.state.board
+            if key != traitor.room_key and self._adjacent_to(engine, key, traitor.room_key)
+        )
+        return blast
 
     def available_actions(self, engine, player):
         actions = super().available_actions(engine, player)
         return [a for a in actions if a.id != "defuse_bomb" or self._has_bomb(engine, player)]
 
     def perform_action(self, engine, player, action_id, data):
+        """p56：拆弹由 handler 自己掷骰。
+
+        通用检定只回一个成功/失败，看不到骰面，而"掷出 ≤2 就地引爆"和疯子卡
+        的 5+ 折扣都要看骰面（M10-55 修前两条都不生效）。
+        """
         if action_id == "defuse_bomb":
             if not self._has_bomb(engine, player):
                 engine._log("你身上没有炸弹（或已拆除）。")
                 return False
-            ok = super().perform_action(engine, player, action_id, data)
-            if ok and engine.last_haunt_action_succeeded():
+            target = self._defuse_target(engine, player)
+            dice = max(1, min(8, engine._effective_stat(player, "knowledge")))
+            total = engine.roll_dice(dice, "拆除炸弹")
+            engine._log(f"拆除炸弹：{player.name} 掷出 {total}（{dice} 骰），目标 {target}+。")
+            if total <= 2:
+                engine._log("剪错了线——炸弹被激活，当场炸开！")
+                self._explode_room(engine, player.room_key)
+                return True
+            if total >= target:
                 bomb_defused = engine._haunt_flags().setdefault("bomb_defused", [])
                 pid = str(player.id)
                 if pid not in bomb_defused:
                     bomb_defused.append(pid)
                 engine._log(f"{player.name} 成功拆除了身上的炸弹！")
-            return ok
+            return True
         return super().perform_action(engine, player, action_id, data)
 
     def check_victory(self, engine):

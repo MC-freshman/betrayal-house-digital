@@ -4981,6 +4981,30 @@ def verify_haunt41_invisible_traitor() -> None:
     ids = {a.id for a in handler.available_actions(engine, hero)}
     assert "detect_traitor" in ids, "侦测行动应可用"
 
+    # ---- M10-56 回归：侦测成功要留下线索并推进轨道
+    # 修前：动作既没有 set_flags 也没有 progress，跑完只有一句日志——
+    # 轨道恒 0/10、位置不知、机器人也无从追击（seed109/6p 300 回合收不了场）。
+    flags = engine._haunt_flags()
+    flags["detected_room"] = None
+    before = engine._haunt_track_value("detections")
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert handler.perform_action(engine, hero, "detect_traitor", {}) is True
+    assert flags.get("detected_room") == traitor.room_key, "侦测成功应锁定叛徒所在房间"
+    assert engine._haunt_track_value("detections") == before + 1, "侦测成功应推进 detections 轨道"
+    assert str(hero.id) in flags.get("detected_by", []), "应记录侦测者"
+
+    # ---- M10-56 回归：偷袭"对手无法防御"（p123）
+    assert handler.defense_roll_disabled(engine, traitor, hero) is True, "叛徒空手攻击是偷袭"
+    assert handler.defense_roll_disabled(engine, traitor, hero, "item_revolver") is False, (
+        "持物品的攻击按普通攻击结算（原文 Unless you are attacking with an item）"
+    )
+    assert handler.defense_roll_disabled(engine, hero, traitor) is False, "英雄攻击不受影响"
+
+    # ---- M10-56 回归：机器人循线索追击（英雄胜 = 叛徒死亡）
+    assert handler.bot_goal_rooms(engine, hero) == [f"__room__{traitor.room_key}"], (
+        "英雄应奔向叛徒所在房间"
+    )
+
     # 叛徒死亡 → 英雄胜（引擎兜底）
     traitor.dead = True
     engine.check_victory()
@@ -5034,6 +5058,39 @@ def verify_haunt42_hell_gate() -> None:
     traitor.stat_positions["knowledge"] = 0
     assert handler._traitor_vulnerable(engine) is True
     assert handler.attack_allowed(engine, hero, traitor) is True, "属性归零后应可被攻击"
+
+    # ---- M10-57 回归：机器人目标（p53 雕像链条）
+    # 修前：本类既没有 bot_goal_rooms（rule_data 的 key_rooms/required_cards 也是
+    # 空的），画像又缺 attack_traitor_players——18 局实测雕像一次都没被激活
+    # （圣物躺在地上没人捡）、英雄只在房里游荡，胜负全看叛徒会不会死于别的伤害。
+    for stat in ("speed", "might", "sanity", "knowledge"):
+        traitor.stats[stat] = 2
+        traitor.stat_positions[stat] = 1
+    assert handler._traitor_vulnerable(engine) is False, "先恢复成未破防状态"
+    statue_items = list(handler.STATUE_ITEMS)
+    for other in engine.state.players:
+        if other.role == "hero":
+            other.items[:] = [c for c in other.items if c not in statue_items]
+    saved_form = flags.get("statue_form")
+    flags["statue_form"] = None
+    assert handler.bot_goal_rooms(engine, hero) == [], (
+        "雕像未活化又没拿圣物时不该守在雕像房（交给通用目标去捡圣物）"
+    )
+    hero.items.append(statue_items[0])
+    assert handler.bot_goal_rooms(engine, hero) == [f"__room__{statue_room}"], (
+        "拿着圣物应去雕像房激活它"
+    )
+    flags["statue_form"] = saved_form or "judge"
+    assert handler.bot_goal_rooms(engine, hero) == [f"__room__{statue_room}"], (
+        "已活化：英雄要在雕像旁才推得动（move_statue 要求同房）"
+    )
+    assert handler.bot_goal_rooms(engine, traitor) == [], "叛徒没有这条目标"
+    for stat in ("speed", "might", "sanity", "knowledge"):
+        traitor.stats[stat] = 0
+        traitor.stat_positions[stat] = 0
+    assert handler.bot_goal_rooms(engine, hero) == [f"__room__{traitor.room_key}"], (
+        "叛徒被削到可攻击后转为收尾追击"
+    )
 
 
 def verify_haunt43_shadow_exorcism() -> None:
@@ -5153,7 +5210,7 @@ def verify_haunt44_supernatural_aging() -> None:
 
 
 def verify_haunt45_time_bomb() -> None:
-    """剧本 45：炸弹标记/拆弹/大炸弹计时/叛徒死胜利（p56/p127）。"""
+    """剧本 45：炸弹标记/拆弹/大炸弹计时与 8+ 爆炸/接近引爆/叛徒不动（p56/p127）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=45)
     handler = engine._mode_handler()
     assert isinstance(handler, TimeBombMode)
@@ -5162,23 +5219,91 @@ def verify_haunt45_time_bomb() -> None:
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
     traitor = next(p for p in engine.state.players if p.role == "traitor")
 
-    # 每人身上有炸弹
+    # 每人身上有炸弹；叛徒握着炸药卡（p127 Right Now）
     assert handler._has_bomb(engine, hero), "英雄应有炸弹"
+    assert handler.DYNAMITE in traitor.items, "叛徒开局应握着炸药卡"
 
-    # 拆弹
+    # ---- M10-55 回归：叛徒不能移动（p127 "You cannot move"）
+    assert handler.movement_cost_floor(engine, traitor) == 99, "叛徒应被钉在原地"
+    assert handler.movement_cost_floor(engine, hero) == 0, "英雄不受移动限制"
+
+    # 拆弹（M10-55 起由 handler 自掷骰：通用检定看不到骰面，≤2 引爆会失效）
     _set_current(engine, hero)
     ids = {a.id for a in handler.available_actions(engine, hero)}
     assert "defuse_bomb" in ids, "有炸弹应能拆弹"
-    with patch.object(engine, "_resolve_check", return_value=True):
+    with patch.object(engine, "roll_dice", side_effect=lambda c, l="": 9 if l == "拆除炸弹" else c):
         assert handler.perform_action(engine, hero, "defuse_bomb", {}) is True
     assert not handler._has_bomb(engine, hero), "拆弹后炸弹应移除"
 
-    # 大炸弹计时：叛徒回合推进
-    with patch.object(engine, "roll_dice", side_effect=lambda c, l="": c):
-        handler.on_turn_start(engine, traitor)
-    assert engine._haunt_track_value("drown_timer") == 1, "叛徒回合应推进大炸弹计时"
+    # p56：掷出 ≤2 → 炸弹被激活，同房探险者一起被炸死
+    other = next(
+        (p for p in engine.state.players if p.role == "hero" and not p.dead and p.id != hero.id),
+        None,
+    )
+    if other is not None:
+        _set_current(engine, other)
+        other.room_key = hero.room_key
+        with patch.object(engine, "roll_dice", side_effect=lambda c, l="": 0):
+            assert handler.perform_action(engine, other, "defuse_bomb", {}) is True
+        assert other.dead, "掷出 ≤2 应就地引爆、本人被炸死"
+
+    # ---- M10-55 回归：大炸弹计时在叛徒**回合结束**推进（不再写 drown_timer）
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    for p in engine.state.players:
+        if p.role == "hero":
+            p.dead = False
+    engine._set_haunt_track_value("big_bomb_timer", 0)
+    with patch.object(engine, "roll_dice", side_effect=lambda c, l="": 0 if l == "大炸弹计时" else c):
+        handler.on_turn_end(engine, traitor)
+    assert engine._haunt_track_value("big_bomb_timer") == 1, "叛徒回合结束应推进大炸弹计时"
+    assert flags.get("big_bomb_armed") is True, "首回合结束后引爆触发器才武装"
+
+    # p127：第 12 回合大炸弹完成 → 全屋同归于尽（叛徒胜）
+    engine._set_haunt_track_value("big_bomb_timer", handler.BIG_BOMB_TURNS - 1)
+    engine.state.winner = None
+    handler.on_turn_end(engine, traitor)
+    assert engine.state.winner == "traitor", "第 12 回合大炸弹完成应判叛徒胜"
+
+    # ---- M10-55 回归：8+ 时"叛徒左手最近、还带着活炸弹"的英雄爆炸
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    engine._set_haunt_track_value("big_bomb_timer", 0)
+    flags["bomb_defused"] = []
+    for p in engine.state.players:
+        if p.role == "hero":
+            p.dead = False
+    doomed = handler._next_bomb_hero(engine, traitor)
+    assert doomed is not None, "应能找到还带着活炸弹的英雄"
+    doomed.room_key = traitor.room_key  # 与叛徒同房：爆炸只波及本房
+    with patch.object(engine, "roll_dice", side_effect=lambda c, l="": 8):
+        handler.on_turn_end(engine, traitor)
+    assert doomed.dead, "8+ 时该英雄应被炸死"
+
+    # ---- M10-55 回归：接近引爆（p127 邻室"不需要有门相连"）
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    for p in engine.state.players:
+        if p.role == "hero":
+            p.dead = False
+    flags["bomb_defused"] = []
+    flags["big_bomb_armed"] = True
+    walker = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    walker.room_key = traitor.room_key
+    handler.on_enter_room(engine, walker, engine.state.board[traitor.room_key])
+    assert walker.dead, "带弹英雄踏进叛徒房间应立刻爆炸"
+    # 已拆弹的英雄免疫
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    walker.dead = False
+    flags["bomb_defused"] = [str(walker.id)]
+    walker.room_key = traitor.room_key
+    handler.on_enter_room(engine, walker, engine.state.board[traitor.room_key])
+    assert not walker.dead, "炸弹已拆的英雄走进引爆区不受影响"
 
     # 叛徒死 + 英雄活 → 英雄胜
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
     traitor.dead = True
     assert handler.check_victory(engine) is True
     assert engine.state.winner == "heroes"

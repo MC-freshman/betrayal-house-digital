@@ -2561,7 +2561,15 @@ class GameEngine:
             # 但被控者可以被打（解救），见 _apply_attack_damage 的半伤解控。
             defense_attr = attack_attr
             target_name = self._player_label(target)
-            target_roll = self._roll_attack(target, defense_attr)
+            if self._mode_handler().defense_roll_disabled(
+                self, attacker, target, weapon_card_id
+            ):
+                # 剧本 41 p123：隐形叛徒的偷袭"Your opponent can't defend
+                # against this"——防守方不掷骰，攻击骰直接当伤害。
+                target_roll = 0
+                self._log(f"{target_name} 来不及反应——攻击从暗处袭来。")
+            else:
+                target_roll = self._roll_attack(target, defense_attr)
         else:
             defense_attr = attack_attr
             target_name = target.name
