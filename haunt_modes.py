@@ -15015,8 +15015,16 @@ class SandsOfTimeMode(GenericModeHandler):
         )
 
     def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
-        """叛徒按情境选时间之力：同房才时停，轨道高才补充，有活可打就别吹风。"""
-        if player.dead or player.role != "traitor":
+        """叛徒按情境选时间之力：同房才时停，轨道高才补充，有活可打就别吹风。
+
+        英雄的欺骗命运带 `same_room:spectre`：不挡住的话，所有英雄都会把幽影房
+        当成剧本目标，没戒指的人围着打不了的怪转、不去杀叛徒。
+        """
+        if player.dead:
+            return False
+        if action_id == "cheat_fate":
+            return not self._cheat_fate_allowed(engine, player)
+        if player.role != "traitor":
             return False
         track = int(engine._haunt_flags().get("time_track", 0))
         hero_here = self._hero_here(engine, player)
@@ -15035,6 +15043,12 @@ class SandsOfTimeMode(GenericModeHandler):
                 return True
             return False
         return False
+
+    def bot_attack_blocked(self, engine: Any, player: Any, target: Any) -> bool:
+        """没戒指就别拿拳头捶免疫力量的幽影——真人会去打叛徒。"""
+        if getattr(target, "template_id", "") != self.SPECTRE:
+            return False
+        return self.RING not in getattr(player, "items", [])
 
     def bot_leave_after_action(self, engine: Any, player: Any) -> bool:
         """吹完命运之风必须去找人；原地等下一回合之风会把人钉死在同一间房。"""
@@ -15055,8 +15069,8 @@ class SandsOfTimeMode(GenericModeHandler):
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
         if player.role != "hero":
             return []
-        # 持戒指/奖章的英雄去缠幽影；其他人直奔叛徒
-        if self.RING in player.items or self.MEDALLION in player.items:
+        # 戒指把力量改成理智；水晶球能在同房骗命运。奖章只是落败免伤，围着转杀不死。
+        if self.RING in player.items or self.CRYSTAL_BALL in player.items:
             spectres = self._spectres(engine)
             if spectres:
                 return [f"__room__{spectres[0].room_key}"]
@@ -15235,7 +15249,8 @@ class NightfallMode(GenericModeHandler):
             engine._log(f"{monster.name} 在尖啸中碎成了黑烟——它被彻底摧毁了。")
             return True
         engine._log(f"{monster.name} 只是被打散了一瞬。")
-        return True  # 由 handler 全权：不足 2 点即击晕（引擎默认路径已跳过）
+        engine._stun_monster(monster, 1)
+        return True  # 全权接管：不足 2 点只击晕，引擎默认路径已跳过
 
     # ------------------------------------------------------- 噩梦回合
     def on_monster_turn_start(self, engine: Any, monster: Any) -> bool:
@@ -15433,6 +15448,18 @@ class NightfallMode(GenericModeHandler):
         if others:
             return [f"__room__{others[0].room_key}"]
         return []
+
+    def bot_goal_suppressed(self, engine: Any, player: Any) -> bool:
+        """叛徒没有剧本房间目标。不压住的话 key_rooms 保底会把熔炉房当成目的地。"""
+        return getattr(player, "role", None) == "traitor"
+
+    def bot_attack_blocked(self, engine: Any, player: Any, target: Any) -> bool:
+        """没火把就别在暮色里拿拳头捶噩梦——知识骰对 Might 2 的怪不划算，先去点火把。"""
+        if getattr(player, "role", None) != "hero":
+            return False
+        if getattr(target, "template_id", "") != self.NIGHTMARE:
+            return False
+        return not self._carries_torch(engine, player)
 
     def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
         flags = engine._haunt_flags()
@@ -15884,14 +15911,23 @@ class ForAThousandYearsMode(GenericModeHandler):
         return False
 
     def bot_attack_blocked(self, engine: Any, player: Any, target: Any) -> bool:
-        """徽章不在这只怪手里时别去捶女巫/使魔——反击会把护送线打崩。"""
+        """徽章不在这只怪手里时，别专门去追女巫/使魔。
+
+        例外：自己拿着徽章、怪就堵在雕像房——不打就永远挂不上去。真人会先清场再挂。
+        """
         if getattr(player, "role", None) != "hero":
             return False
         template = getattr(target, "template_id", "")
         if template not in (self.WITCH, self.BEAR, self.CAT, self.CULTIST):
             return False
         holder = engine._haunt_flags().get("medallion_holder", "") or ""
-        return holder != f"monster:{getattr(target, 'id', '')}"
+        if holder == f"monster:{getattr(target, 'id', '')}":
+            return False
+        if self._hero_holds(engine, player):
+            statue = self._statue_room(engine)
+            if statue and getattr(target, "room_key", None) == statue:
+                return False
+        return True
 
     def bot_leave_after_action(self, engine: Any, player: Any) -> bool:
         """持徽章就别在原地过夜：英雄赶去雕像，叛徒赶去塔楼/湖。"""
@@ -16209,14 +16245,20 @@ class BurningSandsMode(GenericModeHandler):
                 len(self._clues(engine, player)) >= 3 and player.room_key == haunt_room
             ):
                 continue
-            # 已经拿到的线索不要再出现：失败返回 False 不会消耗行动额度，
-            # 机器人会在垃圾房空点 100+ 回合（批次 12 seed101/4p）。
+            # 已经拿到的、或永远掷不出 4+ 的线索不要再出现：失败返回 False
+            # 不会消耗行动额度，机器人会在垃圾房空点 100+ 回合（批次 12 seed101/4p）。
             mine = self._clues(engine, player)
-            if aid == "clue_junk" and "might" in mine:
+            if aid == "clue_junk" and (
+                "might" in mine or not self._can_make_check(engine, player, "might", self.CLUE_TARGET)
+            ):
                 continue
-            if aid == "clue_gameroom" and "speed" in mine:
+            if aid == "clue_gameroom" and (
+                "speed" in mine or not self._can_make_check(engine, player, "speed", self.CLUE_TARGET)
+            ):
                 continue
-            if aid == "clue_organ" and "sanity" in mine:
+            if aid == "clue_organ" and (
+                "sanity" in mine or not self._can_make_check(engine, player, "sanity", self.CLUE_TARGET)
+            ):
                 continue
             result.append(action)
         return result
@@ -16297,6 +16339,13 @@ class BurningSandsMode(GenericModeHandler):
         if len(mine) >= 3:
             haunt_room = engine.state.meta["haunt_rule"].get("haunt_room")
             return player.room_key != haunt_room
+        if not any(
+            self._can_make_check(engine, player, stat, self.CLUE_TARGET)
+            for stat in self.ROLL_TOKENS
+            if stat not in mine
+        ):
+            # 剩下的线索永远掷不出：别被 leave 逼着在两间空房之间来回走。
+            return False
         return True
 
     def bot_hazard_rooms(self, engine: Any, player: Any) -> set:
@@ -16304,6 +16353,15 @@ class BurningSandsMode(GenericModeHandler):
         if getattr(player, "role", None) != "hero":
             return set()
         mine = self._clues(engine, player)
+        leftover_hittable = any(
+            self._can_make_check(engine, player, stat, self.CLUE_TARGET)
+            for stat in self.ROLL_TOKENS
+            if stat not in mine
+        )
+        # 解谜已经没戏时，斯芬克斯房不再是禁区——不去撞它们，对局就会空转到上限
+        # （seed113/4p：最后一名英雄力量 1，在酒窖⇄积尘走廊踱了 205 圈）。
+        if len(mine) < 3 and not leftover_hittable:
+            return set()
         needed = {tid for stat, tid in self.CLUE_ROOMS.items() if stat not in mine}
         haunt_room = engine.state.meta.get("haunt_rule", {}).get("haunt_room")
         if len(mine) >= 3 and haunt_room:
@@ -16349,7 +16407,46 @@ class BurningSandsMode(GenericModeHandler):
                 for p in engine.state.players
                 if p.role == "hero" and not p.dead and p.room_key
             ]
-        return leftover
+        # 英雄掷不出剩下的线索：解谜没戏。斯芬克斯不会进「只有英雄」的房间，
+        # 不去撞它们，对局就会空转到上限。真人不会在酒窖踱 200 圈。
+        return [
+            f"__room__{monster.room_key}"
+            for monster in engine.state.monsters
+            if monster.template_id == self.SPHINX and monster.room_key
+        ]
+
+    def bot_goal_suppressed(self, engine: Any, player: Any) -> bool:
+        """掷不出线索、场上又没有斯芬克斯时，空目标不能掉进 key_rooms 保底。"""
+        if player.dead or player.role != "hero":
+            return False
+        mine = self._clues(engine, player)
+        if len(mine) >= 3:
+            return False
+        if any(
+            self._can_make_check(engine, player, stat, self.CLUE_TARGET)
+            for stat in self.ROLL_TOKENS
+            if stat not in mine
+        ):
+            return False
+        return not any(m.template_id == self.SPHINX and m.room_key for m in engine.state.monsters)
+
+    def bot_stay_in_room(self, engine: Any, player: Any) -> bool:
+        """解谜没戏且已经站在斯芬克斯房（或场上没怪）时，别再踱步。"""
+        if player.dead or player.role != "hero":
+            return False
+        mine = self._clues(engine, player)
+        if len(mine) >= 3:
+            return False
+        if any(
+            self._can_make_check(engine, player, stat, self.CLUE_TARGET)
+            for stat in self.ROLL_TOKENS
+            if stat not in mine
+        ):
+            return False
+        sphinxes = [m for m in engine.state.monsters if m.template_id == self.SPHINX and m.room_key]
+        if not sphinxes:
+            return True
+        return any(m.room_key == player.room_key for m in sphinxes)
 
     def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
         flags = engine._haunt_flags()
@@ -19260,8 +19357,10 @@ class PortraitCurseMode(GenericModeHandler):
                 if action_id == "destroy_paint":
                     if player.role != "traitor" or getattr(player, "attack_used", False):
                         continue  # 已经攻击过就不能再"代替攻击"
-                elif self._in_gallery(engine, player):
-                    # 人都到画廊了，那就落笔，别再倒手颜料
+                elif self._in_gallery(engine, player) and self._can_make_check(
+                    engine, player, "knowledge", 4
+                ):
+                    # 人都到画廊了且掷得出 4+，那就落笔，别再倒手颜料
                     continue
                 elif not self._pass_targets(engine, player):
                     # 没人接得住就别放下：机器人只会"放下→再捡起"原地打转，
@@ -19274,22 +19373,37 @@ class PortraitCurseMode(GenericModeHandler):
         room = engine.state.board.get(player.room_key)
         return room is not None and room.template_id == self.GALLERY
 
-    def _pass_targets(self, engine: Any, player: Any) -> list[Any]:
-        """同房、没带颜料、且**知识更高**的英雄（p68：颜料可以交易）。
+    def _can_make_check(self, engine: Any, player: Any, stat: str, target: int) -> bool:
+        """Betrayal 骰子面值 0/1/2，骰数 ×2 仍 < 目标就永远掷不出。"""
+        try:
+            dice = int(engine._effective_stat(player, stat)) + int(engine._check_bonus(player, stat))
+        except Exception:
+            dice = int((player.stats or {}).get(stat, 0) or 0)
+        return max(1, min(8, dice)) * 2 >= int(target)
 
-        只交给"更可能重绘成功"的队友：不加这条限制，两个英雄会你递给我、
-        我递给你，把每回合一次的行动额度全花在传颜料上。
+    def _pass_targets(self, engine: Any, player: Any) -> list[Any]:
+        """同房、没带颜料的英雄（p68：颜料可以交易）。
+
+        自己掷得出 4+ 时只交给知识更高的队友；自己永远掷不出时交给任何能画的
+        空手队友——否则低知识的人抱着颜料在画廊空点到死。
         """
         if player.role != "hero":
             return []
         mine = int(player.stats.get("knowledge", 0))
-        return [
-            other for other in engine.state.players
-            if not other.dead and other.id != player.id
-            and other.role == "hero"
-            and other.room_key == player.room_key and not self._held_paint(engine, other)
-            and int(other.stats.get("knowledge", 0)) > mine
-        ]
+        can_paint = self._can_make_check(engine, player, "knowledge", 4)
+        result = []
+        for other in engine.state.players:
+            if (
+                other.dead or other.id == player.id or other.role != "hero"
+                or other.room_key != player.room_key or self._held_paint(engine, other)
+            ):
+                continue
+            if can_paint and int(other.stats.get("knowledge", 0)) <= mine:
+                continue
+            if not can_paint and not self._can_make_check(engine, other, "knowledge", 4):
+                continue
+            result.append(other)
+        return result
 
     def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
         held = self._held_paint(engine, player)
@@ -19387,14 +19501,42 @@ class PortraitCurseMode(GenericModeHandler):
         return lines
 
     def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
-        """放下颜料只给人类；机器人会「放下→再捡起」原地打转。"""
-        return action_id == "drop_paint"
+        """放下颜料只给人类；掷不出 4+ 就别在画廊空点重绘。"""
+        if action_id == "drop_paint":
+            return True
+        if action_id == "repaint_portrait":
+            return not self._can_make_check(engine, player, "knowledge", 4)
+        return False
+
+    def bot_leave_after_action(self, engine: Any, player: Any) -> bool:
+        """掷不出 4+ 时别被「下回合还能重绘」钉在画廊。"""
+        if player.dead or player.role != "hero":
+            return False
+        if self._held_paint(engine, player) and self._in_gallery(engine, player):
+            return not self._can_make_check(engine, player, "knowledge", 4)
+        return not self._in_gallery(engine, player) if self._held_paint(engine, player) else False
 
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
-        """手里有颜料就往画廊跑，没有就去搜颜料；叛徒同样追颜料（好把它毁掉）。"""
+        """手里有颜料就往画廊跑，没有就去搜颜料；叛徒同样追颜料（好把它毁掉）。
+
+        自己永远掷不出知识 4+ 时，去找能画的空手队友，而不是抱着罐子在画廊过夜。
+        """
         if player.dead:
             return []
         if self._held_paint(engine, player):
+            if player.role == "hero" and not self._can_make_check(engine, player, "knowledge", 4):
+                mates = [
+                    other
+                    for other in engine.state.players
+                    if other.role == "hero"
+                    and not other.dead
+                    and other.id != player.id
+                    and not self._held_paint(engine, other)
+                    and self._can_make_check(engine, other, "knowledge", 4)
+                    and other.room_key
+                ]
+                if mates:
+                    return [f"__room__{mates[0].room_key}"]
             gallery = self._gallery_key(engine)
             return [f"__room__{gallery}"] if gallery else []
         return [

@@ -668,6 +668,8 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         "hero": {
             # p69：暮色中不能力量/速度攻击（自动转知识攻击）；先去熔炉房点
             # 火把，再和同伴会合逐层驱散——三层清完就赢。
+            # 默认追怪 +130 会压过熔炉房；没火把时 handler 也挡住打噩梦。
+            "attack_monsters": False,
             "victory_focus": "先到熔炉房点起火把，再与同伴会合逐层驱散暮色（或围杀噩梦）",
         },
         "traitor": {
@@ -819,6 +821,8 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         "traitor": {
             # p139：毁满三罐颜料即胜，且自己绝不能进展厅（那是唯一能杀死他的地方）。
             "attack_heroes": True,
+            # 追人 +130 会压过颜料房；真人会先抢罐再毁，而不是满屋追杀。
+            "chase_heroes": False,
             "avoid_rooms": ["gallery"],
             "victory_focus": "抢到颜料就用它代替攻击销毁，毁满三罐即胜；离画廊越远越好",
         },

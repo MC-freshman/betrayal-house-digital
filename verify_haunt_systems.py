@@ -6408,6 +6408,18 @@ def verify_haunt56_sands_of_time_setup() -> None:
     assert handler.attack_attr_override(engine, hero, spectres[0], "might") is None
     assert handler.bot_action_blocked(engine, traitor, "time_stop_strike") is True
     assert handler.bot_leave_after_action(engine, traitor) is True
+    # 没戒指的英雄不该把幽影房当目标、也不该空手捶免疫力量的幽影。
+    # 欺骗命运要同房幽影才开放；先把人挪开，避免开局恰好站在作祟房里假失败。
+    elsewhere = next(
+        (k for k in engine.state.board if k != spectres[0].room_key),
+        hero.room_key,
+    )
+    hero.room_key = elsewhere
+    assert handler.bot_action_blocked(engine, hero, "cheat_fate") is True
+    assert handler.bot_attack_blocked(engine, hero, spectres[0]) is True
+    hero.items.append(handler.RING)
+    assert handler.bot_attack_blocked(engine, hero, spectres[0]) is False
+    hero.items.remove(handler.RING)
     # p67：持奖章者与幽影对决落败免伤
     hero.items.append(handler.MEDALLION)
     assert handler.attack_loss_damage_disabled(engine, hero, spectres[0]) is True
@@ -6636,6 +6648,13 @@ def verify_haunt57_repaint_and_immunity() -> None:
     _set_current(engine, hero)
     available = {a.id for a in handler.available_actions(engine, hero)}
     assert {"pass_paint", "drop_paint"} <= available, "有更强的队友接得住时才提供传/放"
+    assert handler.bot_action_blocked(engine, hero, "drop_paint") is True
+    saved_knowledge = hero.stats.get("knowledge", 0)
+    hero.stats["knowledge"] = 1
+    assert handler.bot_action_blocked(engine, hero, "repaint_portrait") is True
+    gallery_goals = handler.bot_goal_rooms(engine, hero)
+    assert f"__room__{other.room_key}" in gallery_goals, "掷不出 4+ 应去找能画的队友"
+    hero.stats["knowledge"] = saved_knowledge
     assert handler.perform_action(engine, hero, "pass_paint", {}) is True
     assert handler._held_paint(engine, other), "颜料应传到更懂行的队友手里"
 
@@ -6700,6 +6719,13 @@ def verify_haunt58_nightfall_setup() -> None:
     # p69：火把抵消所在房间的暮色
     assert handler.in_twilight(engine, other) is False
     flags["torches"] = {}
+    # 没火把别去追噩梦；叛徒没有剧本房间目标（否则熔炉房保底把它拖走）
+    assert handler.bot_attack_blocked(engine, hero, nightmare) is True
+    flags["torches"] = {str(hero.id): True}
+    assert handler.bot_attack_blocked(engine, hero, nightmare) is False
+    flags["torches"] = {}
+    assert handler.bot_goal_suppressed(engine, traitor) is True
+    assert handler.bot_goal_suppressed(engine, hero) is False
 
 
 def verify_haunt58_torch_banish_haunting() -> None:
@@ -6755,6 +6781,7 @@ def verify_haunt58_torch_banish_haunting() -> None:
     nm = h2._nightmares(engine2)[0]
     assert h2.on_monster_defeated(engine2, nm, 1) is True
     assert nm in h2._nightmares(engine2), "1 点伤害只应击晕，不该摧毁"
+    assert nm.stunned_turns >= 1, "1 点伤害应由 handler 击晕（返回 True 会跳过引擎默认击晕）"
     assert h2.on_monster_defeated(engine2, nm, 2) is True
     assert nm not in h2._nightmares(engine2), "2 点伤害应摧毁噩梦"
 
@@ -6841,6 +6868,16 @@ def verify_haunt59_medallion_flow() -> None:
     witch = next(m for m in engine.state.monsters if m.template_id == handler.WITCH)
     assert handler.bot_attack_blocked(engine, hero, witch) is True, "徽章不在怪手里时别去捶女巫"
     assert handler.bot_attack_blocked(engine, hero, traitor) is False, "持徽章的叛徒必须能打"
+    # 自己拿着徽章、女巫堵在雕像房：必须能清场，否则永远挂不上去
+    witch.room_key = statue_key
+    hero.items.append(handler.MEDALLION)
+    flags["medallion_holder"] = f"hero:{hero.id}"
+    traitor.items = [c for c in traitor.items if c != handler.MEDALLION]
+    assert handler.bot_attack_blocked(engine, hero, witch) is False, "雕像房挡路的怪必须能打"
+    hero.items = [c for c in hero.items if c != handler.MEDALLION]
+    flags["medallion_holder"] = f"traitor:{traitor.id}"
+    traitor.items.append(handler.MEDALLION)
+    witch.room_key = statue_key
     traitor.items = [c for c in traitor.items if c != handler.MEDALLION]
     hero.items.append(handler.MEDALLION)
     handler.on_attack_resolved(engine, hero, traitor, True)
@@ -6977,7 +7014,27 @@ def verify_haunt60_riddle_race() -> None:
     hero.stats["might"] = 1
     assert handler.bot_action_blocked(engine, hero, "clue_junk") is True
     assert "junk_room" not in handler.bot_goal_rooms(engine, hero)
+    saved_speed = hero.stats.get("speed", 0)
+    saved_sanity = hero.stats.get("sanity", 0)
+    hero.stats["speed"] = 1
+    hero.stats["sanity"] = 1
+    unhittable_goals = handler.bot_goal_rooms(engine, hero)
+    assert "junk_room" not in unhittable_goals
+    assert "game_room" not in unhittable_goals
+    assert "organ_room" not in unhittable_goals
+    sphinx_goals = {
+        f"__room__{m.room_key}"
+        for m in engine.state.monsters
+        if m.template_id == handler.SPHINX and m.room_key
+    }
+    assert unhittable_goals and set(unhittable_goals) <= sphinx_goals, (
+        "三条都掷不出时应去撞斯芬克斯，别把线索房当死循环"
+    )
+    assert handler.bot_goal_suppressed(engine, hero) is False, "有斯芬克斯时不要压掉自定义目标"
+    hero.stats["speed"] = saved_speed
+    hero.stats["sanity"] = saved_sanity
     hero.stats["might"] = saved_might
+    assert handler.bot_goal_suppressed(engine, hero) is False
     events_before = len(engine.state.card_discards.get("event", []))
     with patch.object(engine, "_resolve_check", return_value=True), patch.object(
         engine, "_draw_event", return_value=None
