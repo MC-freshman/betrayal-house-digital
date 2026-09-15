@@ -548,6 +548,31 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "scenario": {"special_rules": ["exorcise_seal", "invulnerable_firebats"]},
     },
+    52: {
+        "hero": {
+            # p63：英雄胜 = 破解戒指（把 Turn/Damage 轨打光，归零后佩戴者昏迷）
+            # + 场上无恶魔。戒指开局就戴在叛徒手上，所以"同房"既是破解的前提，
+            # 也是顺手揍它的机会（p134 叛徒只以固定 3 骰防守，但每次受伤 −1）。
+            # 默认画像让英雄永远不出手打玩家，实测 seed109/6p 整局 0 次攻击：
+            # 英雄只是走来走去挨附魔与沸血，戒指轨停在 4/5。
+            # attack_monsters=False：本剧本的怪只有恶魔领主（Might 7，命中
+            # 6-9 点物理伤害），追它等于送死——留给 handler 的 bot_goal_rooms
+            # 把人引向戒指与五芒星室，恶魔过来时再就地还手。
+            "objective_type": "disenchant_ring",
+            "attack_monsters": False,
+            "attack_traitor_players": True,
+            "victory_focus": "持魔法尘与戴戒指的叛徒同房破解戒指，并驱逐恶魔领主",
+        },
+        "traitor": {
+            # p134：叛徒不能做常规攻击（只能施法）、受伤 −1、固定 3 骰防守；
+            # 主线是在五芒星室放弃整回合召唤恶魔领主，再用附魔/沸血磨死英雄。
+            "objective_type": "summon_demon",
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "召唤恶魔领主，用法术与恶魔杀光英雄",
+        },
+        "scenario": {"special_rules": ["magic_dust", "anti_magic_field", "turn_damage_track"]},
+    },
     50: {
         "hero": {
             # p61：没有别的胜利条件——活到日出即可。仆人夜越深越强，
@@ -598,6 +623,33 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
             "victory_focus": "用僵尸群拖住英雄，阻止其净化骷髅",
         },
         "scenario": {"special_rules": ["ritual_progress", "zombie_horde"]},
+    },
+    55: {
+        "hero": {
+            # p66：英雄胜 = 驱魔数达到玩家数。影子不会被打死——打它反而让
+            # 自己吃 1 骰精神伤害，所以英雄的目标只有一个：把没用过的驱魔源
+            # 走一遍（handler.bot_goal_rooms 给具体房间，走国王之路更快）。
+            # 默认画像"追最近的怪"权重 +130 高于剧本目标 +125：实测
+            # seed127/4p 两名英雄在花园/墓地之间对撞 300 回合，进度停在 2/4。
+            "objective_type": "disenchant_roads",
+            "target_rooms": [
+                "research_laboratory",
+                "mystic_elevator",
+                "chapel",
+                "conservatory",
+                "crypt",
+            ],
+            "attack_monsters": False,
+            "victory_focus": "把没用过的驱魔源走一遍（实验室/电梯用知识、教堂/温室/地窖用理智），封住国王之路",
+        },
+        "traitor": {
+            # p137：叛徒要"所有英雄被附身或死亡"，靠影子追人与自己的攻击推进。
+            "objective_type": "possess_all",
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "让影子附身所有英雄（或用攻击把他们打光）",
+        },
+        "scenario": {"special_rules": ["kings_roads_travel", "spores", "shadow_possession"]},
     },
     56: {
         "hero": {

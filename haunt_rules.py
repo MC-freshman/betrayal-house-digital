@@ -2548,38 +2548,54 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
     52: {
         # 校准记录（2026-09-05，对照英雄手册 p63 / 叛徒手册 p134）：
         #   机制落在 CracklingAuraMode：
-        #   · 叛徒召唤恶魔领主（五芒星室，知识 5+，Might 7 Speed 5 Sanity 4）
+        #   · Turn/Damage 轨起步 = 作祟开始时的英雄数；英雄"破解戒指"逐点打掉，
+        #     归零则戒指失效、佩戴者昏迷（p63）
+        #   · 叛徒召唤恶魔领主（五芒星室，放弃整回合，知识 5+，Might 7 Speed 5 Sanity 4）
         #   · 魔法尘：英雄在事件房掷 3 骰（水晶球 4 骰）4+ → 获得魔法尘；
-        #     丢弃→ 反魔法场（叛徒不可在其中施法/召唤）
-        #   · 英雄胜：叛徒死 + 无恶魔在场
-        #   简化：叛徒法术系统（火球/传送/回程）未建模；
-        #     反魔法场回合清除未建模（持续到被覆盖）。
-        "version": 3,
+        #     丢弃→ 反魔法场（叛徒不可在其中施法/召唤，但叛徒每回合开始清除
+        #     自己所在房间与恶魔所在房间的反魔法场，p134）
+        #   · 英雄胜：戒指被破解 + 场上无恶魔；叛徒胜：英雄全灭
+        #   简化：传送法术（Blink/Return）与"戴面具 +1 骰攻击叛徒/神秘硬币
+        #     +1 骰防法术"未建模；"叛徒把物理伤害改为精神"由玩家选择，未建模。
+        "version": 4,
         "fidelity": "refined",
         "status": "playable",
         "mode": "ring_exorcism",
         "traitor_rule": "revealer",
-        "hero_goal": "搜索魔法尘创建反魔法场，杀死叛徒并驱逐所有恶魔。",
-        "traitor_goal": "召唤恶魔领主杀死所有英雄。",
+        "hero_goal": "搜索魔法尘；持尘与携带戒指者同房破解戒指（速度攻击成功不造成伤害、只让 Turn/Damage 轨 −1；轨归零戒指失效、叛徒昏迷），并驱逐恶魔。",
+        "traitor_goal": "施法猎杀英雄：附魔（知识对理智）、复原术自愈，在五芒星室召唤恶魔领主。",
         "suggested_monsters": ["giant"],
         "required_cards": [],
         "key_rooms": ["pentagram_chamber"],
         "tokens": ["magic_dust", "demon_lord"],
         "setup": {
             "tracks": {
-                "demon_slain": {"label": "已驱逐恶魔", "target": 10, "side": "heroes"},
+                "ring_track": {"label": "戒指魔力（Turn/Damage 轨）", "target": "hero_count", "side": "heroes"},
             },
-            "flags": {"anti_magic_rooms": [], "demon_alive": False},
+            "flags": {
+                "anti_magic_rooms": [],
+                "demon_alive": False,
+                "ring_disenchanted": False,
+                "spell_fireball": False,
+                "spell_boiling_blood": False,
+            },
         },
         "monsters": [
             {"template_id": "giant", "name": "恶魔领主", "spawn": "deferred", "count": 1, "speed": 5, "might": 7, "sanity": 4},
         ],
         "actions": [
+            {"id": "summon_demon", "side": "traitor", "label": "召唤恶魔领主", "rooms": ["pentagram_chamber"], "set_flags": {"demon_alive": True}, "detail": "在五芒星室放弃整个回合作知识 5+ 的召唤；成功则恶魔领主降临（p134）。"},
+            {"id": "restoration", "side": "traitor", "label": "复原术", "detail": "掷知识骰，把不超过点数的属性恢复到不超过起始值（p134）。"},
+            {"id": "enchant", "side": "traitor", "label": "附魔", "detail": "对同房间的英雄做知识攻击（对方用理智防守，伤害为精神）；造成 3+ 伤害时可顺手偷走一件物品（p134）。"},
+            {"id": "cast_fireball", "side": "traitor", "label": "火球术", "detail": "在烧焦的房间习得：视线内相邻房间的英雄做速度 5+，失败受 2 骰物理伤害（p134）。"},
+            {"id": "cast_boiling_blood", "side": "traitor", "label": "沸血术", "detail": "在血房间习得：视线内一名英雄做理智 4+，失败受 3 骰物理伤害（p134）。"},
             {"id": "search_dust", "side": "heroes", "label": "搜索魔法尘", "detail": "在有事件图标的房间掷 3 骰（水晶球 4 骰）4+（p63）。"},
             {"id": "drop_dust", "side": "heroes", "label": "散布魔法尘", "detail": "把魔法尘丢在地上创建反魔法场（p63）。"},
+            {"id": "disenchant_ring", "side": "heroes", "label": "破解戒指", "detail": "同房有戒指且自己持魔法尘时尝试：戒指在叛徒手上须做速度攻击（成功不造成伤害，Turn/Damage 轨 −1），不在叛徒手上则自动成功；尝试消耗携带的魔法尘（p63）。"},
+            {"id": "banish_demon", "side": "heroes", "label": "逆转召唤", "detail": "在恶魔被召唤的房间做知识 6+（持古书 +1 骰），成功即驱逐恶魔（p63）。"},
         ],
         "win_conditions": [
-            {"winner": "heroes", "type": "traitor_dead", "reason": "叛徒被杀，恶魔被驱逐。"}
+            {"winner": "heroes", "type": "flag", "flag": "ring_disenchanted", "value": True, "reason": "戒指失去魔力、叛徒昏迷，且恶魔已被驱逐。"}
         ],
         "source_pages": [63, 134],
     },
@@ -2665,10 +2681,16 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         #   机制落在 KingsRoadsMode：
         #   · 驱魔检定：知识 5+（实验室/电梯/水晶球）或理智 5+
         #     （教堂/温室/地窖/面具）；每房/每预兆一次
-        #   · 影子：每玩家一只，从最近入口追击英雄
-        #   · 国王之路：简化为影子正常追击（路网传送未建模）
-        #   · 英雄胜：驱魔数 = 玩家数；叛徒胜：英雄全灭
-        "version": 3,
+        #   · 国王之路：入口房之间花 1 格移动直达；英雄掷理智（4+ 安全并可再
+        #     做一次知识 4+ 的驱魔、3 通过受 1 骰精神、2 被扔回起点受 1 骰、
+        #     0-1 被拉到离影子最近的出口并结束回合）；用过者卡上放孢子
+        #   · 影子：每名英雄一只（Speed 3 / Might 5 / Sanity 5），只追只打
+        #     自己对应的英雄，用目标较低的那项属性对决；打赢＝附身（该英雄
+        #     变叛徒 +2 知识、影子离场）
+        #   · 英雄胜：驱魔数 = 玩家数；叛徒胜：英雄全部被附身或死亡
+        #   简化：传送按"每回合一次剧本行动"实现（原文是花 1 格移动）；
+        #     "外墙窗户房间"无房间数据标记未纳入入口；影子走国王之路未建模。
+        "version": 4,
         "fidelity": "refined",
         "status": "playable",
         "mode": "kings_roads",
@@ -2686,7 +2708,7 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
             "flags": {"used_sources": []},
         },
         "monsters": [
-            {"template_id": "ghost", "name": "影子", "spawn": "deferred", "count": "player_count", "speed": 3, "might": 0, "sanity": 0},
+            {"template_id": "shadow", "name": "影子", "spawn": "deferred", "count": "player_count", "speed": 3, "might": 5, "sanity": 5},
         ],
         "actions": [
             {"id": "disenchant_room", "side": "heroes", "label": "驱魔检定", "detail": "在实验室/教堂/温室/地窖做知识或理智 5+（p66）。", "stat": ["knowledge", "sanity"], "target": 5, "progress": "disenchant_progress"},

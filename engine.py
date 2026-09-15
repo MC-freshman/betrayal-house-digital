@@ -2569,7 +2569,16 @@ class GameEngine:
                 target_roll = 0
                 self._log(f"{target_name} 来不及反应——攻击从暗处袭来。")
             else:
-                target_roll = self._roll_attack(target, defense_attr)
+                # 剧本可规定"防守方按固定骰数结算"（剧本 52 p134：叛徒总是以
+                # 3 骰防守，与自身属性和攻击者所用武器无关）。钩子返回 None
+                # （所有未实现它的剧本）时走原来的常规掷骰，行为不变。
+                fixed_defense = self._mode_handler().defense_roll_override(
+                    self, attacker, target, weapon_card_id
+                )
+                if fixed_defense is None:
+                    target_roll = self._roll_attack(target, defense_attr)
+                else:
+                    target_roll = int(fixed_defense)
         else:
             defense_attr = attack_attr
             target_name = target.name
@@ -3456,7 +3465,9 @@ class GameEngine:
             self, player, amount, source, damage_type
         )
         if reduction > 0:
-            self._log(f"{player.name} 的护甲挡下了 {min(reduction, amount)} 点伤害。")
+            # 减免来源名由剧本给出（默认"护甲"，剧本 52 p134 是戒指的魔力）。
+            label = self._mode_handler().damage_reduction_label(self, player)
+            self._log(f"{player.name} 的{label}挡下了 {min(reduction, amount)} 点伤害。")
         return max(0, amount - reduction)
 
     def _resolve_haunt_check(self, revealer: Player) -> bool:

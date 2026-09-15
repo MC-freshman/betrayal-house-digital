@@ -5943,7 +5943,13 @@ def verify_haunt51_darker_than_night() -> None:
 
 
 def verify_haunt52_crackling_aura() -> None:
-    """剧本 52：魔法尘/反魔法场/恶魔召唤/驱逐胜利（p63/p134）。"""
+    """剧本 52：魔法尘/反魔法场/破解戒指/召唤与驱逐（p63/p134）。
+
+    M10-63 补上"破解戒指"整条英雄胜线：Turn/Damage 轨（初值 = 英雄数）、
+    戒指开局戴在叛徒手上、尝试即消耗魔法尘、轨归零 → 戒指失效 + 佩戴者
+    昏迷、叛徒固定 3 骰防守与受伤 −1、蜡烛/圣徽的理智驱逐、反魔法场回合
+    清除，以及"叛徒倒下 ≠ 英雄胜"这一条被旧实现写反的口径。
+    """
     engine = _run_until_haunt(seed=113, players=3, haunt_id=52)
     handler = engine._mode_handler()
     assert isinstance(handler, CracklingAuraMode)
@@ -5951,26 +5957,180 @@ def verify_haunt52_crackling_aura() -> None:
 
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
     traitor = next(p for p in engine.state.players if p.role == "traitor")
+    heroes_alive = sum(1 for p in engine.state.players if p.role == "hero")
 
-    # 搜索魔法尘（事件房）
+    # —— p63：Turn/Damage 轨起步 = 作祟开始时的英雄数；p134：戒指戴在叛徒手上
+    assert engine._haunt_track_target("ring_track") == heroes_alive
+    assert engine._haunt_track_value("ring_track") == heroes_alive
+    assert "omen_ring" in traitor.items, "戒指应开局戴在叛徒手上"
+
+    # —— p134：叛徒不能做常规攻击；英雄打叛徒时叛徒固定 3 骰防守、受伤 −1
+    assert handler.attack_allowed(engine, traitor, hero) is False
+    assert handler.attack_allowed(engine, hero, traitor) is True
+    fixed = handler.defense_roll_override(engine, hero, traitor)
+    assert isinstance(fixed, int) and 0 <= fixed <= 6, "叛徒应以固定 3 骰防守"
+    assert handler.defense_roll_override(engine, hero, hero) is None
+    assert handler.physical_damage_reduction(engine, traitor, 3, "攻击", "physical") == 1
+    assert handler.physical_damage_reduction(engine, hero, 3, "攻击", "physical") == 0
+
+    # —— 搜索魔法尘（事件房）与"多枚合一"
     event_room = next((r for r in engine.state.board.values() if r.symbol == "event"), None)
-    if event_room is not None:
-        hero.room_key = event_room.key
-        _set_current(engine, hero)
-        ids = {a.id for a in handler.available_actions(engine, hero)}
-        assert "search_dust" in ids, "在事件房应能搜索魔法尘"
-        with patch.object(engine, "roll_dice", side_effect=lambda c, l="": 5 if l == "魔法尘" else c):
-            assert handler.perform_action(engine, hero, "search_dust", {}) is True
-        assert engine.tokens_held_by(hero.id, "magic_dust"), "搜索成功应获得魔法尘"
+    assert event_room is not None, "本局应翻出过事件房"
+    hero.room_key = event_room.key
+    _set_current(engine, hero)
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "search_dust" in ids, "在事件房应能搜索魔法尘"
+    with patch.object(engine, "roll_dice", side_effect=lambda c, l="": 5 if l == "魔法尘" else c):
+        assert handler.perform_action(engine, hero, "search_dust", {}) is True
+    assert engine.tokens_held_by(hero.id, "magic_dust"), "搜索成功应获得魔法尘"
+    with patch.object(engine, "roll_dice", side_effect=lambda c, l="": 5 if l == "魔法尘" else c):
+        assert handler.perform_action(engine, hero, "search_dust", {}) is True
+    assert len(engine.tokens_held_by(hero.id, "magic_dust")) == 1, "p63：多枚魔法尘合并成一枚"
+    assert "search_dust" not in {a.id for a in handler.available_actions(engine, hero)}, \
+        "手里已经有尘：不该再提供搜索（搜到也会合并掉）"
 
-        # 丢弃 → 反魔法场
-        assert handler.perform_action(engine, hero, "drop_dust", {}) is True
-        assert event_room.key in flags.get("anti_magic_rooms", []), "丢弃应创建反魔法场"
+    # —— 破解戒指：同房 + 持尘 → 速度攻击对固定 3 骰；成功只掉轨、不造成伤害、必耗尘
+    hero.room_key = traitor.room_key
+    ids = {a.id for a in handler.available_actions(engine, hero)}
+    assert "disenchant_ring" in ids, "与戴戒指的叛徒同房且持尘应能破解"
+    assert "search_dust" not in ids, "能就地破解时不该再提供搜索"
+    hp_before = dict(traitor.stats)
+    with patch.object(engine, "roll_dice", side_effect=lambda c, l="": 0 if l == "戒指防守" else 6):
+        assert handler.perform_action(engine, hero, "disenchant_ring", {}) is True
+    assert engine._haunt_track_value("ring_track") == heroes_alive - 1
+    assert not engine.tokens_held_by(hero.id, "magic_dust"), "尝试破解即消耗携带的魔法尘"
+    assert dict(traitor.stats) == hp_before, "破解成功不造成伤害"
 
-    # 叛徒死 + 无恶魔 → 英雄胜
-    traitor.dead = True
-    assert handler.check_victory(engine) is True
-    assert engine.state.winner == "heroes"
+    # —— 被挡下同样消耗尘，轨道不动
+    engine.spawn_token("magic_dust", label="魔法尘", role="carried", holder=hero.id)
+    with patch.object(engine, "roll_dice", side_effect=lambda c, l="": 6 if l == "戒指防守" else 0):
+        assert handler.perform_action(engine, hero, "disenchant_ring", {}) is True
+    assert not engine.tokens_held_by(hero.id, "magic_dust"), "被挡下也要消耗尘"
+    assert engine._haunt_track_value("ring_track") == heroes_alive - 1, "被挡下不该推进轨道"
+
+    # —— 轨归零：戒指失效 + 佩戴者昏迷；无恶魔 → 英雄胜
+    engine._set_haunt_track_value("ring_track", 1)
+    engine.spawn_token("magic_dust", label="魔法尘", role="carried", holder=hero.id)
+    with patch.object(engine, "roll_dice", side_effect=lambda c, l="": 0 if l == "戒指防守" else 6):
+        assert handler.perform_action(engine, hero, "disenchant_ring", {}) is True
+    assert flags.get("ring_disenchanted") is True
+    assert engine._haunt_track_value("ring_track") <= 0
+    assert traitor.dead is True, "戒指失效时佩戴者昏迷"
+    assert engine.state.winner == "heroes", "戒指失效 + 无恶魔 → 英雄胜"
+
+    # —— 被旧实现写反的口径：叛徒倒下（戒指未破解）不算英雄胜
+    engine2 = _run_until_haunt(seed=113, players=3, haunt_id=52)
+    handler2 = engine2._mode_handler()
+    traitor2 = next(p for p in engine2.state.players if p.role == "traitor")
+    traitor2.dead = True
+    assert handler2.check_victory(engine2) is True
+    assert not engine2.state.winner, "戒指未破解时叛徒倒下不该判英雄胜"
+
+    # —— 恶魔领主：召唤（放弃整回合）、反魔法场回合清除、知识 6+ 逆转召唤
+    engine3 = _run_until_haunt(seed=113, players=3, haunt_id=52)
+    handler3 = engine3._mode_handler()
+    flags3 = engine3._haunt_flags()
+    traitor3 = next(p for p in engine3.state.players if p.role == "traitor")
+    hero3 = next(p for p in engine3.state.players if p.role == "hero" and not p.dead)
+    pentagram = handler3._pentagram_key(engine3)
+    assert pentagram is not None, "本局应已翻出五芒星室"
+    traitor3.room_key = pentagram
+    _set_current(engine3, traitor3)
+    traitor3.steps_remaining = 4
+    ids = [a.id for a in handler3.available_actions(engine3, traitor3)]
+    assert ids == ["summon_demon"], f"机器人能召唤时只该看到召唤：{ids}"
+    with patch.object(engine3, "roll_dice", return_value=6):
+        assert handler3.perform_action(engine3, traitor3, "summon_demon", {}) is True
+    assert flags3.get("demon_alive") is True
+    assert handler3._demon(engine3) is not None, "知识 5+ 应召出恶魔领主"
+    assert traitor3.steps_remaining == 0, "p134：召唤要放弃整个回合"
+    assert "summon_demon" not in {a.id for a in handler3.available_actions(engine3, traitor3)}, \
+        "场上已有恶魔时不能再召唤"
+
+    # 反魔法场：叛徒回合开始清除自己所在房间的场（旧实现做成永久）
+    flags3["anti_magic_rooms"] = [pentagram]
+    engine3.spawn_token("magic_dust", label="魔法尘", role="marker", room_key=pentagram)
+    handler3.on_turn_start(engine3, traitor3)
+    assert pentagram not in flags3.get("anti_magic_rooms", []), \
+        "叛徒回合开始应清掉自己房间的反魔法场"
+
+    hero3.room_key = pentagram
+    _set_current(engine3, hero3)
+    ids = [a.id for a in handler3.available_actions(engine3, hero3)]
+    assert ids == ["banish_demon"], f"恶魔在场且站在召唤室：机器人只该看到逆转召唤：{ids}"
+    with patch.object(engine3, "roll_dice", return_value=6):
+        assert handler3.perform_action(engine3, hero3, "banish_demon", {}) is True
+    assert flags3.get("demon_alive") is False
+    assert handler3._demon(engine3) is None, "知识 6+ 应把恶魔驱逐"
+
+    # —— 常规攻击只把恶魔打晕；持蜡烛/圣徽的理智攻击造成伤害即驱逐（p63）
+    demon = engine3._spawn_single_haunt_monster(
+        {"template_id": "giant", "name": "恶魔领主", "might": 7, "speed": 5, "sanity": 4},
+        pentagram,
+    )
+    assert demon is not None
+    flags3["demon_alive"] = True
+    engine3._last_attack_attr = "might"
+    assert handler3.on_monster_defeated(engine3, demon, 3) is False, "常规伤害只能打晕"
+    assert handler3._demon(engine3) is not None
+    hero3.items.append("item_candle")
+    assert handler3.attack_attr_override(engine3, hero3, demon, "might") == "sanity"
+    assert handler3.attack_loss_damage_disabled(engine3, hero3, demon) is True
+    engine3._last_attack_attr = "sanity"
+    assert handler3.on_monster_defeated(engine3, demon, 3) is True, "理智攻击造成伤害即驱逐"
+    assert flags3.get("demon_alive") is False and handler3._demon(engine3) is None
+
+    # —— bot 决策面：有尘要去追戒指；能就地破解就留下；叛徒不受这条约束
+    engine4 = _run_until_haunt(seed=113, players=3, haunt_id=52)
+    handler4 = engine4._mode_handler()
+    hero4 = next(p for p in engine4.state.players if p.role == "hero" and not p.dead)
+    traitor4 = next(p for p in engine4.state.players if p.role == "traitor")
+    engine4.spawn_token("magic_dust", label="魔法尘", role="carried", holder=hero4.id)
+    assert handler4.bot_leave_after_action(engine4, hero4) is True, "有尘且不在戒指旁：该去找人"
+    assert handler4.bot_leave_after_action(engine4, traitor4) is False
+    hero4.room_key = handler4._ring_room(engine4)
+    assert handler4._can_disenchant(engine4, hero4) is True
+    assert handler4.bot_leave_after_action(engine4, hero4) is False, "正站在戒指旁：留下动手"
+
+    # —— 期望值小工具（骰面 0/1/2 各 1/3 的精确概率）
+    assert handler4._p_at_least(0, 1) == 0.0
+    assert abs(handler4._p_at_least(1, 1) - 2 / 3) < 1e-9
+    assert abs(handler4._contest_net(1, 0) - 1.0) < 1e-9
+    assert handler4._contest_net(4, 1) > handler4._contest_net(2, 1)
+
+    # —— 复原术补属性不超起始值；附魔是知识对理智、伤害为精神、落败吃差值
+    engine5 = _run_until_haunt(seed=113, players=3, haunt_id=52)
+    handler5 = engine5._mode_handler()
+    traitor5 = next(p for p in engine5.state.players if p.role == "traitor")
+    hero5 = next(p for p in engine5.state.players if p.role == "hero" and not p.dead)
+    engine5._apply_stat_loss(traitor5, "might", 2)
+    with patch.object(engine5, "roll_dice", return_value=2):
+        assert handler5.perform_action(engine5, traitor5, "restoration", {}) is True
+    assert traitor5.stats["might"] <= handler5._starting_stats(engine5, traitor5)["might"]
+    hero5.room_key = traitor5.room_key
+    rolls = iter([6, 0])
+    dealt: list[tuple] = []
+    with patch.object(engine5, "roll_dice", side_effect=lambda c, l="": next(rolls)):
+        with patch.object(
+            engine5, "_deal_damage",
+            side_effect=lambda p, t, a, source="": dealt.append((p.id, t, a, source)),
+        ):
+            assert handler5.perform_action(
+                engine5, traitor5, "enchant", {"target": hero5.id}
+            ) is True
+    assert dealt and dealt[0][0] == hero5.id and dealt[0][1] == "mental" and dealt[0][2] == 6, \
+        "附魔：知识 6 对理智 0 → 6 点精神伤害"
+    rolls = iter([0, 5])
+    dealt.clear()
+    with patch.object(engine5, "roll_dice", side_effect=lambda c, l="": next(rolls)):
+        with patch.object(
+            engine5, "_deal_damage",
+            side_effect=lambda p, t, a, source="": dealt.append((p.id, t, a, source)),
+        ):
+            assert handler5.perform_action(
+                engine5, traitor5, "enchant", {"target": hero5.id}
+            ) is True
+    assert dealt and dealt[0][0] == traitor5.id, "附魔落败要承受差值（法术攻击同样是攻击）"
 
 
 def verify_haunt53_toxic_object_escape() -> None:
@@ -5992,6 +6152,7 @@ def verify_haunt53_toxic_object_escape() -> None:
     _set_current(engine, hero)
     ids = {a.id for a in handler.available_actions(engine, hero)}
     assert "clear_barricade" in ids, "在门厅应能清障碍"
+    assert "unlock_door" not in ids, "p64：障碍没清完不该提供解锁"
     with patch.object(engine, "_resolve_check", return_value=True):
         assert handler.perform_action(engine, hero, "clear_barricade", {}) is True
     assert engine._haunt_track_value("barricade_tokens") == 1
@@ -6020,6 +6181,56 @@ def verify_haunt53_toxic_object_escape() -> None:
         handler.perform_action(engine, hero2, "flee_house", {})
     assert handler.check_victory(engine) is True
     assert engine.state.winner == "heroes"
+
+    # ---- M10-62 回归：口径与归属修正（p64/p135）
+    # ① 两条轨道目标都按"作祟开始时的英雄数"算（旧版用 rule_data 的 player_count /
+    #    half_players_ceil，把叛徒也算了进去 ⇒ 每局多要一次力量 4+、3 人局多要 1 人）
+    heroes_count = sum(1 for p in engine.state.players if p.role == "hero")
+    assert engine._haunt_track_target("barricade_tokens") == heroes_count, "障碍目标应为英雄数"
+    assert engine._haunt_track_target("escaped_count") == -(-heroes_count // 2), (
+        "逃出目标应为 ceil(英雄数/2)"
+    )
+    # ② 死亡之物开局在叛徒手上（旧实现挂在"id 等于狗 id 后缀"的随机玩家身上）
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    token = handler._object_token(engine)
+    assert token is not None and token.holder == traitor.id, "死亡之物应由叛徒持有"
+    # ③ 携带者倒下 → 掉落原地；英雄进房 → 顺手捡起（净化线的入口）
+    token.room_key = ""
+    handler.on_player_died(engine, traitor)
+    assert token.holder is None and token.room_key == traitor.room_key
+    traitor.dead = True
+    hero.room_key = token.room_key
+    handler.on_enter_room(engine, hero, engine.state.board[hero.room_key])
+    assert token.holder == hero.id, "英雄进房应捡起掉落的死亡之物"
+    # ④ 偷取（p135 "like a regular item"）：打赢持有者（引擎只在 >2 优势时调用）
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    traitor.dead = False
+    token.holder = traitor.id
+    assert handler.special_steal(engine, hero, traitor, 3, "might") is True
+    assert token.holder == hero.id, "special_steal 应把死亡之物转给攻击者"
+    # ⑤ 叛徒胜 = 超过半数英雄死亡（不是全灭）
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    flags["object_cleansed"] = False
+    flags["escaped"] = []
+    alive = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    while alive and len(alive) * 2 >= heroes_count:
+        alive.pop().dead = True
+    assert handler.check_victory(engine) is True
+    assert engine.state.winner == "traitor", "超过半数英雄死亡应判叛徒胜"
+    # ⑥ 机器人不打狗（打它毫无收益）；flee_house 与 escaped_count 轨道同步
+    engine.state.winner = None
+    engine.state.phase = "HAUNT_PHASE"
+    dog = engine._monster_by_template("dog")
+    if dog is not None:
+        assert handler.bot_attack_blocked(engine, hero, dog) is True, "打狗毫无收益"
+    engine._set_haunt_track_value("escaped_count", 0)
+    flags["escaped"] = []
+    hero.dead = False
+    engine._reset_player_turn_state(hero)
+    handler.perform_action(engine, hero, "flee_house", {})
+    assert engine._haunt_track_value("escaped_count") == 1, "逃离应推进 escaped_count 轨道"
 
 
 def verify_haunt54_arkanok_skull() -> None:
@@ -6063,15 +6274,31 @@ def verify_haunt54_arkanok_skull() -> None:
 
 
 def verify_haunt55_kings_roads() -> None:
-    """剧本 55：影子追击/驱魔检定/每房一次/胜利条件（p66/p137）。"""
+    """剧本 55：影子追击/驱魔检定/国王之路/孢子/附身/胜利条件（p66/p137）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=55)
     handler = engine._mode_handler()
     assert isinstance(handler, KingsRoadsMode)
     flags = engine._haunt_flags()
 
-    # 影子已布点
-    shadows = [m for m in engine.state.monsters if m.template_id == "ghost"]
+    # 影子已布点（M10-64：改用 shadow 模板，Speed 3 / Might 5 / Sanity 5）
+    shadows = [m for m in engine.state.monsters if m.template_id == "shadow"]
     assert len(shadows) >= 1, "至少应有一只影子"
+    heroes_alive = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    assert len(shadows) == len(heroes_alive), "p66：每名英雄一只影子"
+    assert all(m.speed == 3 and m.might == 5 and m.sanity == 5 for m in shadows), \
+        "p66：影子 Speed 3 / Might 5 / Sanity 5"
+    targets = flags.get("shadow_targets", {})
+    assert set(targets.values()) == {p.id for p in heroes_alive}, \
+        "p66：每只影子只盯自己对应的英雄"
+
+    # p66：作祟揭示者的角色卡上先有孢子，回合开始在自己房间放一枚
+    revealer_id = engine.state.haunt_revealer_id
+    assert revealer_id in set(flags.get("spore_cards", [])), "揭示者卡上应有孢子"
+    revealer = next(p for p in engine.state.players if p.id == revealer_id)
+    before = len(engine.tokens_of_kind("spore"))
+    handler.on_turn_start(engine, revealer)
+    assert len(engine.tokens_of_kind("spore")) == before + 1, \
+        "p66：卡上有孢子的玩家，回合开始在自己房间放一枚"
 
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
 
@@ -6090,6 +6317,64 @@ def verify_haunt55_kings_roads() -> None:
         engine._reset_player_turn_state(hero)
         ids = {a.id for a in handler.available_actions(engine, hero)}
         assert "disenchant_room" not in ids, "同房不能再次驱魔"
+        # p66：房间与预兆各只支持一种属性（实验室=知识、教堂/温室/地窖=理智）
+        if dis_room.template_id in handler.SANITY_ROOMS:
+            assert handler._disenchant_stats(engine, hero) == ["sanity"] \
+                or "omen_crystal_ball" in hero.items
+        else:
+            assert "knowledge" in handler._disenchant_stats(engine, hero)
+
+    # —— M10-64：国王之路（入口房之间花 1 格移动直达）
+    entrances = handler._entrances(engine)
+    assert flags.get("roads_hub") in entrances, "作祟揭示房也是入口"
+    hero.room_key = entrances[0]
+    hero.steps_remaining = max(1, hero.steps_remaining)
+    _set_current(engine, hero)
+    roads = [a for a in handler.available_actions(engine, hero) if a.id == "roads_travel"]
+    assert roads, "在入口房应能走国王之路"
+    destination = roads[0].data["room"]
+    with patch.object(engine, "_resolve_room_entry_if_needed", return_value=None):
+        with patch.object(engine, "_resolve_check", return_value=True):
+            with patch.object(engine, "roll_dice", return_value=4):
+                assert handler.perform_action(
+                    engine, hero, "roads_travel", {"room": destination}
+                ) is True
+    assert hero.room_key == destination, "理智 4+ 应安全抵达另一个入口"
+    assert hero.id in set(flags.get("spore_cards", [])), "用过国王之路要在卡上放孢子"
+    assert hero.id in set(flags.get("road_cards", [])), "p66：路上驱魔每人限一次"
+
+    # —— M10-64：附身（影子打赢 = 该英雄变叛徒、影子离场、+2 知识）
+    possess_engine = _run_until_haunt(seed=113, players=3, haunt_id=55)
+    possess_handler = possess_engine._mode_handler()
+    possess_flags = possess_engine._haunt_flags()
+    shadow = possess_handler._shadows(possess_engine)[0]
+    victim = next(
+        p for p in possess_engine.state.players
+        if p.id == possess_flags["shadow_targets"][shadow.id]
+    )
+    victim.room_key = shadow.room_key
+    knowledge_before = victim.stats["knowledge"]
+    with patch.object(possess_engine, "roll_dice", return_value=6):
+        with patch.object(possess_engine, "_roll_attack", return_value=0):
+            assert possess_handler.on_monster_turn_attack(possess_engine, shadow) is True
+    assert victim.role == "traitor", "p66：被影子打赢就是附身"
+    assert shadow.id not in {m.id for m in possess_engine.state.monsters}, "附身的影子要离场"
+    assert victim.stats["knowledge"] >= knowledge_before, "p137：附身后 +2 知识"
+
+    # p66：影子不会被打死（吸收击败）；打它只会让英雄吃 1 骰精神伤害
+    assert possess_handler.on_monster_defeated(possess_engine, shadow, 3) is True
+    attacker = next(
+        p for p in possess_engine.state.players if p.role == "hero" and not p.dead
+    )
+    assert possess_handler.bot_attack_blocked(possess_engine, attacker, shadow) is True
+    dealt: list[tuple] = []
+    with patch.object(possess_engine, "roll_dice", return_value=1):
+        with patch.object(
+            possess_engine, "_deal_damage",
+            side_effect=lambda p, t, a, source="": dealt.append((p.id, t, a)),
+        ):
+            possess_handler.on_attack_resolved(possess_engine, attacker, shadow, True)
+    assert dealt and dealt[0][1] == "mental", "p66：攻击影子的英雄受 1 骰精神伤害"
 
     # 胜利：驱魔满
     engine._set_haunt_track_value("disenchant_progress", engine._haunt_track_target("disenchant_progress"))
@@ -8602,7 +8887,15 @@ def verify_fixed_haunt_semantics() -> None:
     assert engine.state.winner is None, "引擎整体判定下也必须保持未结束"
     engine.state.monsters.remove(demon)  # type: ignore[arg-type]
     engine.check_victory()
-    assert engine.state.winner == "heroes", "叛徒死 + 无恶魔 → 英雄胜"
+    # M10-63：p63 的胜利条件是"戒指被破解 **且** 无恶魔"。叛徒倒下只是让戒指
+    # 掉进房间，英雄仍须就地把它破解掉——旧实现把"叛徒死"直接当英雄胜，正好
+    # 反了（实测因此虚增了 5 局英雄胜：真正走完破解线的不到一半）。
+    assert engine.state.winner is None, "戒指未破解时，叛徒倒下 + 无恶魔也不判英雄胜"
+    flags = engine._haunt_flags()
+    flags["ring_disenchanted"] = True
+    engine._set_haunt_track_value("ring_track", 0)
+    engine.check_victory()
+    assert engine.state.winner == "heroes", "戒指被破解 + 无恶魔 → 英雄胜"
 
     # ---- #26 吹笛人的代价：零放置守卫 ----
     engine = _force_haunt(seed=113, players=4, haunt_id=26)
@@ -8722,9 +9015,11 @@ def verify_traitor_death_semantics_sweep() -> None:
     叛徒阵亡才算英雄胜；其余剧本必须继续打到目标完成。
     """
     # 原文把"叛徒死亡"写进英雄胜利条件（p44/p115 等）→ 判英雄胜
-    hero_win_on_traitor_death = (5, 41, 42, 45, 51, 52, 56, 57, 70)
+    hero_win_on_traitor_death = (5, 41, 42, 45, 51, 56, 57, 70)
     # 原文另有条件、叛徒死不等于结束 → 绝不判英雄胜
-    keeps_playing = (1, 20, 33, 34, 35, 36, 37, 39, 43, 44, 61, 63, 64, 65)
+    # （52 号 M10-63 移入本组：p63 要求"戒指被破解 且 无恶魔"，叛徒倒下只是
+    # 让戒指掉进房间，英雄仍须就地破解——旧实现把它写成了"叛徒死即英雄胜"。）
+    keeps_playing = (1, 20, 33, 34, 35, 36, 37, 39, 43, 44, 52, 61, 63, 64, 65)
     for haunt_id in hero_win_on_traitor_death:
         engine = _force_haunt(seed=113, players=4, haunt_id=haunt_id)
         traitor = next((p for p in engine.state.players if p.role == "traitor"), None)
