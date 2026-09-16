@@ -2595,7 +2595,8 @@ class GameEngine:
         diff = abs(attacker_roll - target_roll)
         attacker_wins = attacker_roll > target_roll
         if attacker_wins:
-            if self._haunt5_try_silver_bullet_kill(attacker, target, weapon):
+            # 剧本可接管击杀结算（剧本 5 p15：银弹打中狼人/狼犬即死）。
+            if self._mode_handler().attack_kill_override(self, attacker, target, weapon):
                 if weapon is not None:
                     self._resolve_attack_weapon_use(attacker, weapon)
                 attacker.attack_used = True
@@ -2626,8 +2627,9 @@ class GameEngine:
                     attacker.attack_used = True
                     return True
             self._apply_attack_damage(target, diff, attack_attr, attacker=attacker, weapon_id=weapon_card_id or "")
-            if isinstance(target, Player) and attacker.role == "traitor" and target.role == "hero":
-                self._haunt5_infect(target)
+            if isinstance(target, Player):
+                # 剧本可在英雄被击中后追加副作用（剧本 5 p14：被叛徒打中即感染）。
+                self._mode_handler().on_hero_damaged(self, attacker, target)
         else:
             if ranged:
                 # p20 词汇表："当你攻击骰结果低于对手时不受到伤害"——远程攻击
@@ -3202,264 +3204,21 @@ class GameEngine:
     def clear_tokens(self) -> None:
         self.state.tokens = []
 
-    def _haunt1_girl_start_room(self, haunt_room_key: str) -> str | None:
-        """剧本 1：女孩令牌的起始房间。
-
-        叛徒手册 p83 原文：
-            "Put the Girl token (crimson) in any room on the same floor as the
-             room where the haunt was and at least five tiles away from the
-             Mummy. If no rooms are at least five tiles away, place her as far
-             away as possible on that floor."
-
-        按 key 排序遍历，保证同一种子每次都选到同一个房间。
-        """
-        room = self.state.board.get(haunt_room_key)
-        if room is None:
-            return None
-        best_key: str | None = None
-        best_distance = -1
-        for key in sorted(self.state.board):
-            other = self.state.board[key]
-            if other.key == room.key or other.floor != room.floor:
-                continue
-            distance = self._path_length(room.key, other.key)
-            if 5 <= distance < 9999:  # 9999 是 _path_length 表示不可达的哨兵值
-                return other.key
-            if distance > best_distance:
-                best_key, best_distance = other.key, distance
-        return best_key
-
-    def _available_haunt1_actions(self, player: Player) -> list[HauntAction]:
-        actions: list[HauntAction] = []
-        room_id = self._current_room_template_id(player)
-        step = self._haunt_track_value("banishment_steps")
-        if player.role == "hero":
-            if step < 1 and room_id in {"catacombs", "research_laboratory", "library"}:
-                actions.append(HauntAction("h1_learn_true_name", "调查木乃伊真名", "知识 6+，成功后获得第一枚调查进度。"))
-            if step == 1 and self._has_item(player, "omen_book"):
-                actions.append(HauntAction("h1_learn_spell", "在书中学习咒语", "知识 6+，成功后获得第二枚调查进度。"))
-            mummy = self._monster_by_template("mummy")
-            if step >= 2 and mummy and mummy.room_key == player.room_key and self._has_item(player, "omen_book") and not player.attack_used:
-                actions.append(HauntAction("h1_banish_mummy", "放逐木乃伊", "与木乃伊进行理智战斗，胜利则英雄获胜。"))
-        elif player.role == "traitor":
-            mummy = self._monster_by_template("mummy")
-            if mummy and mummy.room_key == player.room_key:
-                for card_id in ("omen_girl", "omen_ring", "omen_holy_symbol"):
-                    if card_id in player.items:
-                        card = self.catalog.cards[card_id]
-                        actions.append(
-                            HauntAction(
-                                "h1_give_mummy_card",
-                                f"交给木乃伊：{card.name}",
-                                "木乃伊可以保管女孩、戒指或圣徽。",
-                                {"card_id": card_id},
-                            )
-                        )
-                if self._haunt1_mummy_ready_to_win(mummy):
-                    actions.append(HauntAction("h1_finish_wedding", "完成木乃伊婚礼", "木乃伊带着女孩和仪式物返回石棺房，叛徒获胜。"))
-        return actions
-
-    def _perform_haunt1_action(self, player: Player, action_id: str, data: dict) -> bool:
-        if action_id == "h1_learn_true_name":
-            if player.role != "hero" or self._haunt_track_value("banishment_steps") >= 1:
-                return False
-            if self._current_room_template_id(player) not in {"catacombs", "research_laboratory", "library"}:
-                return False
-            if self._resolve_check(player, "knowledge", 6, "调查木乃伊真名"):
-                self._set_haunt_track_value("banishment_steps", 1)
-                self._log("英雄找到了木乃伊真名的线索。")
-            return True
-        if action_id == "h1_learn_spell":
-            if player.role != "hero" or self._haunt_track_value("banishment_steps") != 1 or not self._has_item(player, "omen_book"):
-                return False
-            if self._resolve_check(player, "knowledge", 6, "学习放逐咒语"):
-                self._set_haunt_track_value("banishment_steps", 2)
-                self._log("英雄从书中学会了放逐咒语。")
-            return True
-        if action_id == "h1_banish_mummy":
-            mummy = self._monster_by_template("mummy")
-            if player.role != "hero" or not mummy or mummy.room_key != player.room_key or not self._has_item(player, "omen_book"):
-                return False
-            if self._haunt_track_value("banishment_steps") < 2 or player.attack_used:
-                return False
-            hero_roll = self._roll_attack(player, "sanity")
-            mummy_roll = self._roll_monster_attack(mummy, "sanity")
-            self._log(f"放逐木乃伊：{player.name} 掷出 {hero_roll}，木乃伊掷出 {mummy_roll}。")
-            player.attack_used = True
-            if hero_roll > mummy_roll:
-                self.state.winner = "heroes"
-                self.state.winner_reason = "英雄念出了木乃伊真名并完成放逐咒语。"
-                self.state.phase = "GAME_OVER"
-                self._log("英雄获胜。")
-            elif mummy_roll > hero_roll:
-                self._deal_damage(player, "mental", mummy_roll - hero_roll, source="木乃伊的诅咒")
-            else:
-                self._log("咒语暂时没有压过木乃伊。")
-            return True
-        if action_id == "h1_give_mummy_card":
-            mummy = self._monster_by_template("mummy")
-            card_id = data.get("card_id")
-            if player.role != "traitor" or not mummy or mummy.room_key != player.room_key or card_id not in {"omen_girl", "omen_ring", "omen_holy_symbol"}:
-                return False
-            if card_id not in player.items:
-                return False
-            player.items.remove(card_id)
-            if card_id in player.companions:
-                player.companions.remove(card_id)
-            mummy.items.append(card_id)
-            self._log(f"{player.name} 把 {self.catalog.cards[card_id].name} 交给了木乃伊。")
-            self._check_haunt1_traitor_victory()
-            return True
-        if action_id == "h1_finish_wedding":
-            mummy = self._monster_by_template("mummy")
-            if player.role != "traitor" or not mummy or not self._haunt1_mummy_ready_to_win(mummy):
-                return False
-            self._set_winner("traitor", "木乃伊带着女孩和仪式物回到了石棺房。")
-            return True
-        return False
-
-    def _haunt1_mummy_ready_to_win(self, mummy: Monster) -> bool:
-        haunt_room = self._haunt_rule_state().get("haunt_room", "")
-        has_bride = "omen_girl" in mummy.items
-        has_relic = "omen_ring" in mummy.items or "omen_holy_symbol" in mummy.items
-        return bool(haunt_room and mummy.room_key == haunt_room and has_bride and has_relic)
-
-    def _check_haunt1_traitor_victory(self) -> None:
-        mummy = self._monster_by_template("mummy")
-        if mummy and self._haunt1_mummy_ready_to_win(mummy):
-            self._set_winner("traitor", "木乃伊带着女孩和仪式物回到了石棺房。")
-
-    def _available_haunt5_actions(self, player: Player) -> list[HauntAction]:
-        actions: list[HauntAction] = []
-        if player.role != "hero":
-            return actions
-        room_id = self._current_room_template_id(player)
-        flags = self._haunt_flags()
-        silver_holder = flags.get("silver_bullets_holder")
-        if room_id in {"attic", "game_room", "junk_room", "master_bedroom", "vault"} and not self._card_is_controlled("item_revolver"):
-            actions.append(HauntAction("h5_find_revolver", "搜索左轮手枪", "知识 5+，成功后从物品牌堆取得左轮手枪。"))
-        if room_id in {"research_laboratory", "furnace_room"} and silver_holder is None:
-            actions.append(HauntAction("h5_make_silver_bullets", "制作银弹", "知识 5+，成功后获得银弹令牌。"))
-        if silver_holder == player.id:
-            for other in self.state.players:
-                if other.id != player.id and not other.dead and other.room_key == player.room_key and other.role == "hero":
-                    actions.append(
-                        HauntAction(
-                            "h5_give_silver_bullets",
-                            f"交出银弹给 {other.name}",
-                            "把银弹令牌交给同房间英雄。",
-                            {"target_id": other.id},
-                        )
-                    )
-        return actions
-
-    def _perform_haunt5_action(self, player: Player, action_id: str, data: dict) -> bool:
-        flags = self._haunt_flags()
-        if action_id == "h5_find_revolver":
-            if player.role != "hero" or self._current_room_template_id(player) not in {"attic", "game_room", "junk_room", "master_bedroom", "vault"}:
-                return False
-            if self._card_is_controlled("item_revolver"):
-                return False
-            if self._resolve_check(player, "knowledge", 5, "搜索左轮手枪"):
-                if self._grant_card_to_player(player, "item_revolver"):
-                    flags["revolver_found"] = True
-            return True
-        if action_id == "h5_make_silver_bullets":
-            if player.role != "hero" or self._current_room_template_id(player) not in {"research_laboratory", "furnace_room"}:
-                return False
-            if flags.get("silver_bullets_holder") is not None:
-                return False
-            if self._resolve_check(player, "knowledge", 5, "制作银弹"):
-                flags["silver_bullets_created"] = True
-                flags["silver_bullets_holder"] = player.id
-                self._set_haunt_track_value("silver_bullets", 1)
-                self._log(f"{player.name} 制作出了银弹。")
-            return True
-        if action_id == "h5_give_silver_bullets":
-            if flags.get("silver_bullets_holder") != player.id:
-                return False
-            target_id = int(data.get("target_id", -1))
-            if not (0 <= target_id < len(self.state.players)):
-                return False
-            target = self.state.players[target_id]
-            if target.dead or target.room_key != player.room_key or target.role != "hero":
-                return False
-            flags["silver_bullets_holder"] = target.id
-            self._log(f"{player.name} 把银弹交给了 {target.name}。")
-            return True
-        return False
-
     def _apply_start_of_turn_haunt_effects(self, player: Player) -> None:
         if not self.state.haunt or player.dead:
             return
         # 剧本专属的回合开始效果（诅咒发作、计时器等）由 mode handler 提供。
         self._mode_handler().on_turn_start(self, player)
 
-    def _haunt5_start_of_turn(self, player: Player) -> None:
-        """剧本 5 的回合开始效果（供 WerewolfHuntMode 调用）。"""
-        if player.role == "traitor":
-            self._increase_stat(player, "speed", 1)
-            self._increase_stat(player, "might", 1)
-        flags = self._haunt_flags()
-        infected = set(flags.get("infected", []))
-        if player.role == "hero" and player.id in infected:
-            if self._resolve_check(player, "sanity", 4, "抵抗狼人诅咒"):
-                self._log(f"{player.name} 暂时压住了狼人诅咒。")
-            else:
-                self._haunt5_convert_to_werewolf(player)
-
-    def _haunt5_infect(self, player: Player) -> None:
-        if not self.state.haunt or self.state.haunt.id != 5 or player.dead or player.role != "hero":
-            return
-        flags = self._haunt_flags()
-        infected = list(flags.get("infected", []))
-        if player.id not in infected:
-            infected.append(player.id)
-            flags["infected"] = infected
-            self._log(f"{player.name} 被狼人诅咒感染。")
-
-    def _haunt5_convert_to_werewolf(self, player: Player) -> None:
-        player.role = "traitor"
-        for card_id in list(player.items):
-            self._discard_card_from_player(player, card_id, return_to_room=True)
-        player.companions.clear()
-        self._log(f"{player.name} 变成了狼人，加入叛徒阵营。")
-        self.check_victory()
-
-    def _haunt5_has_silver_bullets(self, player: Player) -> bool:
-        return self._haunt_flags().get("silver_bullets_holder") == player.id
-
-    def _haunt5_is_werewolf_target(self, target: object) -> bool:
-        if isinstance(target, Player):
-            return target.role == "traitor" and not target.dead
-        if isinstance(target, Monster):
-            return target.template_id == "dog"
-        return False
-
-    def _haunt5_try_silver_bullet_kill(self, attacker: Player, target: object, weapon: Card | None) -> bool:
-        if not self.state.haunt or self.state.haunt.id != 5:
-            return False
-        if weapon is None or weapon.id != "item_revolver" or not self._haunt5_has_silver_bullets(attacker):
-            return False
-        if not self._haunt5_is_werewolf_target(target):
-            return False
-        if isinstance(target, Player):
-            target.dead = True
-            self._log(f"{attacker.name} 用银弹击杀了 {target.name}。")
-            self._drop_inventory_on_death(target)
-        elif isinstance(target, Monster):
-            self.state.monsters = [monster for monster in self.state.monsters if monster.id != target.id]
-            self._log(f"{attacker.name} 用银弹击杀了 {target.name}。")
-        return True
-
     def _adjust_damage_for_haunt(self, player: Player, amount: int, source: str, damage_type: str = "physical") -> int:
         if amount <= 0:
             return amount
-        if self.state.haunt and self.state.haunt.id == 5 and player.role == "traitor" and source != "银弹":
-            reduced = max(1, (amount + 1) // 2)
-            if reduced != amount:
-                self._log("狼人抗性让伤害减半。")
-            return reduced
+        # 剧本可整体改写伤害数值（剧本 5 p85：狼人受到的非银弹伤害减半，至少 1 点）。
+        override = self._mode_handler().damage_amount_override(
+            self, player, amount, source, damage_type
+        )
+        if override is not None:
+            return override
         # 剧本可减免伤害（剧本 15 p26：古董护甲对非火焰物理伤害 -5）。
         reduction = self._mode_handler().physical_damage_reduction(
             self, player, amount, source, damage_type
@@ -3885,8 +3644,9 @@ class GameEngine:
             # 返回 False 才走默认的物理伤害。
             if not self._mode_handler().on_monster_attack(self, monster, target, amount):
                 self._deal_damage(target, "physical", amount, source=monster.name)
-            if monster.template_id == "dog":
-                self._haunt5_infect(target)
+            if isinstance(target, Player):
+                # 剧本可在英雄被怪物击中后追加副作用（剧本 5 p14：狼犬咬中即感染）。
+                self._mode_handler().on_hero_damaged(self, monster, target)
         elif monster_roll < target_roll:
             self._stun_monster(monster, 1)
         else:

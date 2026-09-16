@@ -275,9 +275,10 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
             {"template_id": "dog", "name": "狗", "spawn": "haunt_room", "speed": 6, "might": 4, "sanity": 3}
         ],
         "actions": [
-            # id 必须与 engine._available_haunt5_actions / _perform_haunt5_action
-            # 使用的 h5_ 前缀一致（这两条此前写成无前缀版本，成了永远不会被
-            # 执行到的死数据——M10-15 测试扩容时补 5 号专项测试才发现）。
+            # id 必须与 haunt_modes.WerewolfHuntMode.available_actions /
+            # perform_action 使用的 h5_ 前缀一致（这两条此前写成无前缀版本，
+            # 成了永远不会被执行到的死数据——M10-15 测试扩容时补 5 号专项
+            # 测试才发现）。
             {"id": "h5_find_revolver", "side": "heroes", "stat": "knowledge", "target": 5,
              "rooms": ["attic", "game_room", "junk_room", "master_bedroom", "vault"]},
             {"id": "h5_make_silver_bullets", "side": "heroes", "stat": "knowledge", "target": 5,

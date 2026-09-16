@@ -267,6 +267,30 @@ class GenericModeHandler:
         """剧本自定义的特殊偷取（剧本 19：>2 伤害偷走长矛）。返回 True 表示已处理。"""
         return False
 
+    def attack_kill_override(self, engine: Any, attacker: Any, target: Any, weapon: Any) -> bool:
+        """剧本接管这次攻击的击杀结算（剧本 5 p15：银弹打中狼人/狼犬即死）。
+
+        返回 True 表示目标已由剧本处理——引擎跳过常规伤害结算，只结算武器
+        损耗、攻击占用与胜负检查；返回 False（默认）走常规流程。
+        """
+        return False
+
+    def on_hero_damaged(self, engine: Any, attacker: Any, target: Any) -> None:
+        """英雄被击中后的剧本副作用（剧本 5 p14：被叛徒或狼犬打中即感染）。
+
+        attacker 可能是玩家（玩家攻击路径）也可能是怪物（怪物攻击路径），
+        来源判断由剧本自己做。只在目标确为英雄时调用。
+        """
+        return None
+
+    def damage_amount_override(self, engine: Any, player: Any, amount: int, source: str, damage_type: str) -> int | None:
+        """剧本整体改写一次伤害的数值（剧本 5 p85：狼人受到的非银弹伤害减半）。
+
+        返回 None（默认）表示不改写，继续走常规的减免逻辑（护甲等）。
+        返回整数则直接以该值作为最终伤害。
+        """
+        return None
+
     def extra_move_options(self, engine: Any, player: Any, options: list) -> list:
         """追加额外移动选项（剧本 33：湖面砖扩展）。"""
         return []
@@ -420,11 +444,151 @@ class BanishmentEscortMode(GenericModeHandler):
 
     mode = "banishment_escort"
 
+    SEARCH_ROOMS = {"catacombs", "research_laboratory", "library"}
+    BRIDE_CARD = "omen_girl"
+    RELIC_CARDS = ("omen_ring", "omen_holy_symbol")
+
+    # ------------------------------------------------- 调查 / 放逐（p12/p83）
+
+    def _girl_start_room(self, engine: Any, haunt_room_key: str) -> str | None:
+        """女孩令牌的起始房间。
+
+        叛徒手册 p83 原文：
+            "Put the Girl token (crimson) in any room on the same floor as the
+             room where the haunt was and at least five tiles away from the
+             Mummy. If no rooms are at least five tiles away, place her as far
+             away as possible on that floor."
+
+        按 key 排序遍历，保证同一种子每次都选到同一个房间。
+        （M10-72 自 engine._haunt1_girl_start_room 迁入。）
+        """
+        room = engine.state.board.get(haunt_room_key)
+        if room is None:
+            return None
+        best_key: str | None = None
+        best_distance = -1
+        for key in sorted(engine.state.board):
+            other = engine.state.board[key]
+            if other.key == room.key or other.floor != room.floor:
+                continue
+            distance = engine._path_length(room.key, other.key)
+            if 5 <= distance < 9999:  # 9999 是 _path_length 表示不可达的哨兵值
+                return other.key
+            if distance > best_distance:
+                best_key, best_distance = other.key, distance
+        return best_key
+
+    def _mummy_ready_to_win(self, engine: Any, mummy: Any) -> bool:
+        """p83：木乃伊带着女孩 + 戒指/圣徽之一回到作祟揭示的房间即叛徒胜。"""
+        haunt_room = engine._haunt_rule_state().get("haunt_room", "")
+        has_bride = self.BRIDE_CARD in mummy.items
+        has_relic = any(card_id in mummy.items for card_id in self.RELIC_CARDS)
+        return bool(haunt_room and mummy.room_key == haunt_room and has_bride and has_relic)
+
+    def _check_traitor_victory(self, engine: Any) -> None:
+        mummy = engine._monster_by_template("mummy")
+        if mummy and self._mummy_ready_to_win(engine, mummy):
+            engine._set_winner("traitor", "木乃伊带着女孩和仪式物回到了石棺房。")
+
     def available_actions(self, engine: Any, player: Any) -> list[Any]:
-        return engine._available_haunt1_actions(player)
+        actions: list[Any] = []
+        room_id = engine._current_room_template_id(player)
+        step = engine._haunt_track_value("banishment_steps")
+        if player.role == "hero":
+            if step < 1 and room_id in self.SEARCH_ROOMS:
+                actions.append(HauntAction("h1_learn_true_name", "调查木乃伊真名", "知识 6+，成功后获得第一枚调查进度。"))
+            if step == 1 and engine._has_item(player, "omen_book"):
+                actions.append(HauntAction("h1_learn_spell", "在书中学习咒语", "知识 6+，成功后获得第二枚调查进度。"))
+            mummy = engine._monster_by_template("mummy")
+            if (
+                step >= 2 and mummy and mummy.room_key == player.room_key
+                and engine._has_item(player, "omen_book") and not player.attack_used
+            ):
+                actions.append(HauntAction("h1_banish_mummy", "放逐木乃伊", "与木乃伊进行理智战斗，胜利则英雄获胜。"))
+        elif player.role == "traitor":
+            mummy = engine._monster_by_template("mummy")
+            if mummy and mummy.room_key == player.room_key:
+                for card_id in (self.BRIDE_CARD,) + self.RELIC_CARDS:
+                    if card_id in player.items:
+                        card = engine.catalog.cards[card_id]
+                        actions.append(
+                            HauntAction(
+                                "h1_give_mummy_card",
+                                f"交给木乃伊：{card.name}",
+                                "木乃伊可以保管女孩、戒指或圣徽。",
+                                {"card_id": card_id},
+                            )
+                        )
+                if self._mummy_ready_to_win(engine, mummy):
+                    actions.append(HauntAction("h1_finish_wedding", "完成木乃伊婚礼", "木乃伊带着女孩和仪式物返回石棺房，叛徒获胜。"))
+        return actions
 
     def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
-        return engine._perform_haunt1_action(player, action_id, data)
+        if action_id == "h1_learn_true_name":
+            if player.role != "hero" or engine._haunt_track_value("banishment_steps") >= 1:
+                return False
+            if engine._current_room_template_id(player) not in self.SEARCH_ROOMS:
+                return False
+            if engine._resolve_check(player, "knowledge", 6, "调查木乃伊真名"):
+                engine._set_haunt_track_value("banishment_steps", 1)
+                engine._log("英雄找到了木乃伊真名的线索。")
+            return True
+        if action_id == "h1_learn_spell":
+            if (
+                player.role != "hero"
+                or engine._haunt_track_value("banishment_steps") != 1
+                or not engine._has_item(player, "omen_book")
+            ):
+                return False
+            if engine._resolve_check(player, "knowledge", 6, "学习放逐咒语"):
+                engine._set_haunt_track_value("banishment_steps", 2)
+                engine._log("英雄从书中学会了放逐咒语。")
+            return True
+        if action_id == "h1_banish_mummy":
+            mummy = engine._monster_by_template("mummy")
+            if (
+                player.role != "hero" or not mummy or mummy.room_key != player.room_key
+                or not engine._has_item(player, "omen_book")
+            ):
+                return False
+            if engine._haunt_track_value("banishment_steps") < 2 or player.attack_used:
+                return False
+            hero_roll = engine._roll_attack(player, "sanity")
+            mummy_roll = engine._roll_monster_attack(mummy, "sanity")
+            engine._log(f"放逐木乃伊：{player.name} 掷出 {hero_roll}，木乃伊掷出 {mummy_roll}。")
+            player.attack_used = True
+            if hero_roll > mummy_roll:
+                engine._set_winner("heroes", "英雄念出了木乃伊真名并完成放逐咒语。")
+            elif mummy_roll > hero_roll:
+                engine._deal_damage(player, "mental", mummy_roll - hero_roll, source="木乃伊的诅咒")
+            else:
+                engine._log("咒语暂时没有压过木乃伊。")
+            return True
+        if action_id == "h1_give_mummy_card":
+            mummy = engine._monster_by_template("mummy")
+            card_id = data.get("card_id")
+            allowed = (self.BRIDE_CARD,) + self.RELIC_CARDS
+            if (
+                player.role != "traitor" or not mummy or mummy.room_key != player.room_key
+                or card_id not in allowed
+            ):
+                return False
+            if card_id not in player.items:
+                return False
+            player.items.remove(card_id)
+            if card_id in player.companions:
+                player.companions.remove(card_id)
+            mummy.items.append(card_id)
+            engine._log(f"{player.name} 把 {engine.catalog.cards[card_id].name} 交给了木乃伊。")
+            self._check_traitor_victory(engine)
+            return True
+        if action_id == "h1_finish_wedding":
+            mummy = engine._monster_by_template("mummy")
+            if player.role != "traitor" or not mummy or not self._mummy_ready_to_win(engine, mummy):
+                return False
+            engine._set_winner("traitor", "木乃伊带着女孩和仪式物回到了石棺房。")
+            return True
+        return False
 
     def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
         # 叛徒手册 p83："Set aside the Girl card." —— 先把女孩卡从预兆牌堆
@@ -443,7 +607,7 @@ class BanishmentEscortMode(GenericModeHandler):
             engine.spawn_token("mummy_marker", label="木乃伊", role="marker", room_key=mummy.room_key)
         # p83：女孩令牌放在同一楼层、距木乃伊至少 5 格的房间；
         #      没有这么远的就放在该楼层尽可能远处。
-        girl_room = engine._haunt1_girl_start_room(room_key)
+        girl_room = self._girl_start_room(engine, room_key)
         if girl_room:
             engine.spawn_token("girl", label="女孩", role="marker", room_key=girl_room)
         # 英雄手册 p12：预先拿出 2 枚知识检定令牌（三角形）
@@ -579,7 +743,7 @@ class BanishmentEscortMode(GenericModeHandler):
 
     def check_victory(self, engine: Any) -> bool:
         mummy = engine._monster_by_template("mummy")
-        if mummy and engine._haunt1_mummy_ready_to_win(mummy):
+        if mummy and self._mummy_ready_to_win(engine, mummy):
             engine._set_winner("traitor", "木乃伊带着女孩和仪式物回到了石棺房。")
             return True
         if engine._check_generic_haunt_victory():
@@ -593,20 +757,160 @@ class BanishmentEscortMode(GenericModeHandler):
 
 
 class WerewolfHuntMode(GenericModeHandler):
-    """剧本 5 我曾是少年狼人：感染转化 + 银弹击杀，胜负仍走通用 win_conditions。"""
+    """剧本 5 我曾是少年狼人（I Was a Teenage Werewolf）。
+
+    权威原文：英雄手册 p14 / 叛徒手册 p85。胜负仍走通用 win_conditions。
+
+    本 handler 实现的专属机制（M10-72 自 engine._haunt5_* 迁入，
+    引擎只保留 attack_kill_override / on_hero_damaged / damage_amount_override
+    三个 hook 的分派）：
+      · 感染链：被叛徒或狼犬打中的英雄带上狼人诅咒标记（p14）；
+      · 回合开始：叛徒力量与速度各 +1；被感染英雄理智 4+ 抵抗，
+        失败即变成狼人（装备全弃、阵营改叛徒）；
+      · 银弹：左轮 + 银弹令牌打中狼人或狼犬即死（p15）；
+      · 狼人抗性：狼人（叛徒）受到的非银弹伤害减半，至少剩 1 点（p85）；
+      · 行动：阁楼/游戏室/杂物间/主卧/金库搜左轮（知识 5+），
+        研究实验室/熔炉房制银弹（知识 5+），持弹者可把银弹交给同房英雄。
+    """
 
     mode = "werewolf_hunt"
 
-    def available_actions(self, engine: Any, player: Any) -> list[Any]:
-        return engine._available_haunt5_actions(player)
+    SEARCH_ROOMS = {"attic", "game_room", "junk_room", "master_bedroom", "vault"}
+    LAB_ROOMS = {"research_laboratory", "furnace_room"}
+    DOG = "dog"
 
-    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
-        return engine._perform_haunt5_action(player, action_id, data)
+    # ------------------------------------------------------- 感染 / 转化（p14）
+    def on_hero_damaged(self, engine: Any, attacker: Any, target: Any) -> None:
+        """英雄被击中：来源是叛徒（狼人）或狼犬 → 感染狼人诅咒。"""
+        if target.dead or target.role != "hero":
+            return
+        if getattr(attacker, "role", "") == "traitor" or _monster_id(attacker) == self.DOG:
+            self._infect(engine, target)
+
+    def _infect(self, engine: Any, player: Any) -> None:
+        if not engine.state.haunt or player.dead or player.role != "hero":
+            return
+        flags = engine._haunt_flags()
+        infected = list(flags.get("infected", []))
+        if player.id not in infected:
+            infected.append(player.id)
+            flags["infected"] = infected
+            engine._log(f"{player.name} 被狼人诅咒感染。")
+
+    def _convert_to_werewolf(self, engine: Any, player: Any) -> None:
+        player.role = "traitor"
+        for card_id in list(player.items):
+            engine._discard_card_from_player(player, card_id, return_to_room=True)
+        player.companions.clear()
+        engine._log(f"{player.name} 变成了狼人，加入叛徒阵营。")
+        engine.check_victory()
 
     def on_turn_start(self, engine: Any, player: Any) -> None:
         # 叛徒每回合开始时力量与速度各 +1；被感染的英雄做神志检定抵抗转化。
-        # 原本硬编码在 engine._apply_start_of_turn_haunt_effects 里，现迁到这里。
-        engine._haunt5_start_of_turn(player)
+        if player.role == "traitor":
+            engine._increase_stat(player, "speed", 1)
+            engine._increase_stat(player, "might", 1)
+        flags = engine._haunt_flags()
+        infected = set(flags.get("infected", []))
+        if player.role == "hero" and player.id in infected:
+            if engine._resolve_check(player, "sanity", 4, "抵抗狼人诅咒"):
+                engine._log(f"{player.name} 暂时压住了狼人诅咒。")
+            else:
+                self._convert_to_werewolf(engine, player)
+
+    # ------------------------------------------------------- 银弹 / 抗性（p15/p85）
+    def _has_silver_bullets(self, engine: Any, player: Any) -> bool:
+        return engine._haunt_flags().get("silver_bullets_holder") == player.id
+
+    def _is_werewolf_target(self, target: Any) -> bool:
+        # 玩家目标：狼人（叛徒阵营）且还活着；怪物目标：狼犬。
+        if getattr(target, "role", "") == "traitor" and not target.dead:
+            return True
+        return _monster_id(target) == self.DOG
+
+    def attack_kill_override(self, engine: Any, attacker: Any, target: Any, weapon: Any) -> bool:
+        # p15：银弹打中狼人或狼犬即死。
+        if weapon is None or weapon.id != "item_revolver" or not self._has_silver_bullets(engine, attacker):
+            return False
+        if not self._is_werewolf_target(target):
+            return False
+        if _monster_id(target):  # 怪物目标：狼犬
+            engine.state.monsters = [m for m in engine.state.monsters if m.id != target.id]
+        else:  # 玩家目标：狼人
+            target.dead = True
+            engine._drop_inventory_on_death(target)
+        engine._log(f"{attacker.name} 用银弹击杀了 {target.name}。")
+        return True
+
+    def damage_amount_override(self, engine: Any, player: Any, amount: int, source: str, damage_type: str) -> int | None:
+        # p85：狼人（叛徒）受到的非银弹伤害减半，至少剩 1 点。
+        if player.role != "traitor" or source == "银弹":
+            return None
+        reduced = max(1, (amount + 1) // 2)
+        if reduced != amount:
+            engine._log("狼人抗性让伤害减半。")
+        return reduced
+
+    # ------------------------------------------------------- 行动（p14）
+    def available_actions(self, engine: Any, player: Any) -> list[Any]:
+        actions: list[Any] = []
+        if player.role != "hero":
+            return actions
+        room_id = engine._current_room_template_id(player)
+        flags = engine._haunt_flags()
+        silver_holder = flags.get("silver_bullets_holder")
+        if room_id in self.SEARCH_ROOMS and not engine._card_is_controlled("item_revolver"):
+            actions.append(HauntAction("h5_find_revolver", "搜索左轮手枪", "知识 5+，成功后从物品牌堆取得左轮手枪。"))
+        if room_id in self.LAB_ROOMS and silver_holder is None:
+            actions.append(HauntAction("h5_make_silver_bullets", "制作银弹", "知识 5+，成功后获得银弹令牌。"))
+        if silver_holder == player.id:
+            for other in engine.state.players:
+                if other.id != player.id and not other.dead and other.room_key == player.room_key and other.role == "hero":
+                    actions.append(
+                        HauntAction(
+                            "h5_give_silver_bullets",
+                            f"交出银弹给 {other.name}",
+                            "把银弹令牌交给同房间英雄。",
+                            {"target_id": other.id},
+                        )
+                    )
+        return actions
+
+    def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
+        flags = engine._haunt_flags()
+        if action_id == "h5_find_revolver":
+            if player.role != "hero" or engine._current_room_template_id(player) not in self.SEARCH_ROOMS:
+                return False
+            if engine._card_is_controlled("item_revolver"):
+                return False
+            if engine._resolve_check(player, "knowledge", 5, "搜索左轮手枪"):
+                if engine._grant_card_to_player(player, "item_revolver"):
+                    flags["revolver_found"] = True
+            return True
+        if action_id == "h5_make_silver_bullets":
+            if player.role != "hero" or engine._current_room_template_id(player) not in self.LAB_ROOMS:
+                return False
+            if flags.get("silver_bullets_holder") is not None:
+                return False
+            if engine._resolve_check(player, "knowledge", 5, "制作银弹"):
+                flags["silver_bullets_created"] = True
+                flags["silver_bullets_holder"] = player.id
+                engine._set_haunt_track_value("silver_bullets", 1)
+                engine._log(f"{player.name} 制作出了银弹。")
+            return True
+        if action_id == "h5_give_silver_bullets":
+            if flags.get("silver_bullets_holder") != player.id:
+                return False
+            target_id = int(data.get("target_id", -1))
+            if not (0 <= target_id < len(engine.state.players)):
+                return False
+            target = engine.state.players[target_id]
+            if target.dead or target.room_key != player.room_key or target.role != "hero":
+                return False
+            flags["silver_bullets_holder"] = target.id
+            engine._log(f"{player.name} 把银弹交给了 {target.name}。")
+            return True
+        return False
 
 
 class SeanceRaceMode(GenericModeHandler):
