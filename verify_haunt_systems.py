@@ -2767,6 +2767,55 @@ def verify_haunt22_abyss_exorcism() -> None:
     assert handler.check_victory(engine) is True and engine.state.winner == "traitor"
 
 
+def verify_haunt22_abyss_rises_to_next_floor() -> None:
+    """剧本 22：整层塌完后深渊必须升到上一层（p104），否则会永久困在地下室。
+
+    这是引擎级机制缺口在剧本侧的收口：`_collapse_adjacent_rooms` 拿
+    `min(origin floors)` 当基准层，地下室一旦塌完，`candidate_floor > floor`
+    就恒成立 —— 跨层播种格永远选不出（升层分支成了死代码），上层的正常扩散
+    又被错加上"无人 + 有门"的播种过滤。实测 seed197/5p：地下室 9/9 塌完后
+    深渊再不动，英雄又刚好把所有来源耗尽 → 打满 300 回合无胜者。handler 的
+    `_collapse_abyss` 按原文重走"升层 + 上层扩散"这一步。
+    """
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=22)
+    handler = engine._mode_handler()
+    assert isinstance(handler, AbyssExorcismMode)
+
+    # 全员挪到楼上：塌地下室时别被顺带带走
+    upstairs = next(
+        key for key in sorted(engine.state.board)
+        if engine.state.board[key].floor == 0 and engine.state.board[key].revealed
+    )
+    for person in engine.state.players:
+        person.dead = False
+        person.room_key = upstairs
+
+    basement = [key for key, room in sorted(engine.state.board.items()) if room.floor == -1]
+    assert len(basement) >= 2, "地下室至少要有两间才够测"
+    for key in basement:
+        engine._collapse_room(key)
+    origins = {room.key for room in engine._collapsed_rooms()}
+    assert not [key for key in basement if not engine._is_collapsed(key)], "地下室应已整层塌完"
+    assert engine._abyss_candidates(origins, -1) == [], "本层再无邻格可扩"
+
+    # 引擎原方法在此时选不出任何格子。若这条断言将来失败，说明引擎已经修好
+    # 升层——那时可把 `_collapse_abyss` 退回直接调用引擎方法，本测试即可删。
+    assert engine._collapse_adjacent_rooms(1) == 0, "引擎此处升不了层（本测试的存在理由）"
+
+    # handler 必须升到上一层，且只挑"无人 + 留着未探索门口"的房间（p104）
+    assert handler._collapse_abyss(engine, 1) == 1, "整层塌完后应升层塌 1 间"
+    risen = ({room.key for room in engine._collapsed_rooms()} - origins).pop()
+    assert engine.state.board[risen].floor == 0, "应升到地下室上一层"
+    assert not any(p.room_key == risen and not p.dead for p in engine.state.players), "播种房必须无人"
+    assert handler._has_open_door(engine, risen), "播种房必须还留着未探索门口"
+
+    # 升上来之后，后续扩散回到"同层邻格"（不再套播种规则）
+    assert handler._collapse_abyss(engine, 1) == 1
+    second = ({room.key for room in engine._collapsed_rooms()} - origins - {risen}).pop()
+    assert engine.state.board[second].floor == 0
+    assert second in engine._grid_neighbors(risen), "升层后应按同层邻格扩散"
+
+
 def verify_haunt23_tentacled_horror() -> None:
     """剧本 23：配对布点/成长表/拖 1 格/挣脱对决/水晶球定位/一击摧毁头颅（p34/p105）。"""
     engine = _run_until_haunt(seed=109, players=4, haunt_id=23)
@@ -11360,6 +11409,7 @@ def main():
     verify_haunt20_ghost_bride()
     verify_haunt21_zombie_lord()
     verify_haunt22_abyss_exorcism()
+    verify_haunt22_abyss_rises_to_next_floor()
     verify_haunt23_tentacled_horror()
     verify_haunt24_bat_swarm()
     verify_haunt38_hellbeast_exorcism()

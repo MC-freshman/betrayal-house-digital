@@ -8915,7 +8915,11 @@ class AbyssExorcismMode(ExorcismMode):
     · 坍塌速率（p104）：每位玩家回合结束时——第 2 回合塌 1 间、第 3 回合掷 2 骰、
       第 4 回合 3 骰、第 5 回合起 4 骰（骰面 0-2，所以可能一间都不塌）。
       只能沿已有深渊的正交邻格扩散；整层塌完升到上一层，从"无人且留着未探索
-      门口"的房间开始。
+      门口"的房间开始。升层与上层扩散由 `_collapse_abyss` 亲自走（引擎的
+      `_collapse_adjacent_rooms` 在"地下室已塌完"后升不了层，见该方法说明）。
+      注意：叛徒阵亡后其回合消失，深渊回合轨随之冻结（p104 的速率只随该轨
+      上升），所以此时坍塌速率停在冻结值——但每个玩家回合照常塌房，深渊
+      仍会一路吃到英雄死光（p104 "eventually win even if you are killed"）。
     · 房内有人（含叛徒）：速度 4+ 逃进相邻、有门连通、已发现的房间，否则坠亡。
     · 圣徽拖延（p33）：持圣徽且站在深渊邻格，可弃掉圣徽代替翻牌，并阻止房屋
       继续坍塌到自己下个回合结束；深渊回合轨照常推进。
@@ -8996,7 +9000,82 @@ class AbyssExorcismMode(ExorcismMode):
             return
         count = 1 if turn == 1 else engine.roll_dice(min(4, turn), "深渊扩散")
         if count > 0:
-            engine._collapse_adjacent_rooms(count)
+            self._collapse_abyss(engine, count)
+
+    # ------------------------------------------------- 深渊扩散（p104）
+    def _has_open_door(self, engine: Any, room_key: str) -> bool:
+        """该房间是否还留着未探索的门口（相邻格尚未放板块）。"""
+        room = engine.state.board.get(room_key)
+        if room is None:
+            return False
+        for direction in room.doors:
+            if direction not in DIRECTION_DELTAS:
+                continue
+            dx, dy = DIRECTION_DELTAS[direction]
+            if engine.state.pos_index.get((room.floor, room.x + dx, room.y + dy)) is None:
+                return True
+        return False
+
+    def _collapse_abyss(self, engine: Any, count: int) -> int:
+        """p104 深渊扩散：在深渊**已占据的楼层**上沿邻格塌；某层整层塌完就升到
+        上一层，从"无人且留着未探索门口"的房间开始播种。
+
+        为什么这一步由 handler 自己走：引擎的 `_collapse_adjacent_rooms` 拿
+        `min(origin floors)` 当基准层，地下室一旦塌完，`candidate_floor > floor`
+        就恒成立 —— 于是 ① 跨层播种格永远选不出（升层分支成了死代码），
+        ② 上一层**每一次**扩散都被错加上"无人 + 有空门"的播种过滤（只有还留
+        未探索门口的边角房能塌）。实测 seed197/5p：地下室 9/9 塌完后深渊永久
+        困在地下室，英雄又已无来源可拿 → 300 回合无胜者；按原文重写后 40 回合
+        叛徒胜（深渊吃到二楼，英雄全灭）。`_abyss_candidates` 仍是同层邻格的
+        权威判据，照常复用。
+        """
+        done = 0
+        while done < count:
+            origins = {room.key for room in engine._collapsed_rooms()}
+            if not origins:
+                break
+            occupied = sorted({engine.state.board[key].floor for key in origins})
+            picked = ""
+            # ① 在深渊已占据的楼层上找邻格（自低向高，保证种子可复现）
+            for floor in occupied:
+                options = engine._abyss_candidates(origins, floor)
+                if options:
+                    picked = options[0]
+                    break
+            # ② 本层扩散不动：若某层已整层塌完，升到上一层，从"无人且有空门"
+            #    的房间播种（p104 "starting in an unoccupied room of your
+            #    choosing with an unexplored door"）。
+            if not picked:
+                engulfed = [
+                    floor for floor in occupied
+                    if not any(
+                        room.floor == floor and not engine._is_collapsed(key)
+                        for key, room in engine.state.board.items()
+                    )
+                ]
+                for floor in sorted(engulfed, reverse=True):
+                    upper = floor + 1
+                    if upper > 1:
+                        continue
+                    options = [
+                        key for key in engine._all_room_keys()
+                        if not engine._is_collapsed(key)
+                        and engine.state.board[key].floor == upper
+                        and not any(
+                            p.room_key == key and not p.dead for p in engine.state.players
+                        )
+                        and self._has_open_door(engine, key)
+                    ]
+                    options.sort(key=lambda key: (
+                        engine.state.board[key].y, engine.state.board[key].x))
+                    if options:
+                        picked = options[0]
+                        break
+            if not picked:
+                break
+            if engine._collapse_room(picked, cause="深渊"):
+                done += 1
+        return done
 
     # --------------------------------------------------------- 圣徽拖延
     def available_actions(self, engine: Any, player: Any) -> list[Any]:
