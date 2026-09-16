@@ -3408,8 +3408,20 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
             {"template_id": "story_dragon", "spawn": "deferred", "count": 1, "name": "恶龙", "speed": 5, "might": 7, "sanity": 4},
         ],
         "actions": [
-            {"id": "obtain_quest", "side": "heroes", "label": "寻找关键情节", "detail": "与入定的叛徒同房，知识加上故事进度达到 6+，抽取一个任务。"},
+            # 顺序即机器人的优先级（同分时取列表靠前者）。三项英雄行动的打分完全
+            # 相同（标签都不含打分器的加分词），所以"谁能先做"全靠这个顺序：
+            #   ① 有能立刻完成的任务 → 先完成。否则 bot 会一直抽新任务、抽满也
+            #      从不结算（实测英雄 0/33 胜、complete_quest 从不出现）；
+            #   ② 否则继续抽任务（这是英雄推进任务的唯一来源）；
+            #   ③ 抽不了时才偷窃。
+            # obtain_quest 与 steal_from_traitor 都要求"与入定叛徒同房"，同一回合
+            # 只可能选一个。⚠ 把 steal 提到 obtain 之前是错的：那样英雄会一直偷、
+            # 永不抽任务，任务链直接断掉（实测 complete_quest 彻底不出现）。
+            # "该偷伙伴时先偷"是**条件性**的（只有已抽到、且卡在某个伙伴上的任务
+            # 才需要），表达不了在静态顺序里，由 handler 的 bot_action_blocked
+            # 对 bot 单独屏蔽 obtain 来实现（人类玩家的选项不受影响）。
             {"id": "complete_quest", "side": "heroes", "label": "完成故事任务", "detail": "按已抽取任务的条件结算；完成数需达到开局英雄人数。"},
+            {"id": "obtain_quest", "side": "heroes", "label": "寻找关键情节", "detail": "与入定的叛徒同房，知识加上故事进度达到 6+，抽取一个任务。"},
             {"id": "steal_from_traitor", "side": "heroes", "label": "从入定者身上偷取", "detail": "代替攻击：与叛徒同房时自动偷走一件物品（含疯子、女孩、狗）。"},
             {"id": "plot_twist", "side": "traitor", "label": "剧情转折", "detail": "花费一枚尸体令牌，发动一次尚未用过的剧情转折。"},
         ],

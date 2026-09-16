@@ -16675,8 +16675,16 @@ class WispCaptureMode(GenericModeHandler):
 
     已知简化：
         · 小精灵"可像探索者一样探索新房间"未建模——它只在已探明房间内
-          逃窜（引擎没有怪物探索的通用层，47 号蛇头是手写特例）。
-        · "不能停止移动"按速度点数连续步进实现，遇到死路即停。
+          逃窜（引擎没有怪物探索的通用层，47 号蛇头是手写特例）。**这是本剧本
+          最深的一处缺口**：不能开新房间，它只能在已探明子图里跑，而它自己的
+          孢子又禁止回头，于是几个回合就被逼进死胡同。实测（2026-09-16，11 种子
+          × 3/4/5 人 = 33 局）：作祟阶段通常只撑 2~4 个回合、逃脱轨道最多到 2/6，
+          叛徒那条"活到轨道 6"的胜线一次都没打出来（唯一的叛徒胜是"英雄全灭"）。
+          机制本身没错，且英雄胜线 32/33 健康；要不要把探索补上属于下一步的
+          平衡决策，本次不改（补上很可能反向过头，变成叛徒必胜）。
+        · 小精灵"不能停止移动"按速度点数连续步进实现，遇到死路即停；方向由
+          `_flee_step` 选"离最近英雄最远"的邻房（旧实现固定挑楼层最低处，等于
+          直线钻地下室，英雄闭着眼都能堵住）。
         · 不能用神秘电梯/煤槽向上/坍塌房/舞厅→画廊未建模（常规门移动）。
         · 屏障房（如深渊）两侧各留一枚孢子未建模——只标记离开的那间。
         · 小精灵"免疫左轮"未建模：引擎 immune_to 按攻击属性判定，写
@@ -16808,8 +16816,7 @@ class WispCaptureMode(GenericModeHandler):
             options = [k for k in engine._door_neighbors(monster.room_key) if k not in spores]
             if not options:
                 break
-            options.sort(key=lambda k: (engine.state.board[k].floor, k))
-            dest = options[0]
+            dest = self._flee_step(engine, monster, options)
             # 离开的房间留下孢子
             spores = set(spores)
             spores.add(monster.room_key)
@@ -16817,6 +16824,42 @@ class WispCaptureMode(GenericModeHandler):
             monster.room_key = dest
         engine.check_victory()
         return False
+
+    def _flee_step(self, engine: Any, monster: Any, options: list[str]) -> str:
+        """小精灵往"离英雄最远"的方向逃。
+
+        p151 把这个角色整个交给叛徒玩家（"remove your figure... you want to fly,
+        faster and faster, up and away"），赢法是"stay free until the Turn/Damage
+        Track reaches 6"——所以它必须躲着追它的人跑。旧实现固定挑"楼层最低的
+        邻房"（`sort(key=floor)`），等于一条直线钻进地下室：seed3/3p 实测作祟
+        只撑 3 个回合就被两名英雄围住按死，逃脱轨道停在 2/6——叛徒那条胜线
+        在 33 局里一次都没出现过。
+
+        排序键（全部可复现）：离最近英雄的步数越远越好 → 门越多（别钻进死胡同）
+        → 楼层 → 房间 key。
+        """
+        heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+
+        def threat(room_key: str) -> int:
+            best = 9999
+            for hero in heroes:
+                distance = engine._path_length(hero.room_key, room_key)
+                if distance < best:
+                    best = distance
+            return best
+
+        def exits(room_key: str) -> int:
+            return len(engine._door_neighbors(room_key))
+
+        return max(
+            options,
+            key=lambda k: (
+                threat(k),
+                exits(k),
+                engine.state.board[k].floor,
+                k,
+            ),
+        )
 
     def on_monster_turn_attack(self, engine: Any, monster: Any) -> bool:
         """p151：小精灵不主动攻击（防守反击走引擎默认）。"""
@@ -16938,6 +16981,17 @@ class InhumanTransformationMode(GenericModeHandler):
         · "全场最低力量/速度提升到英雄最低值"简化为：物理属性一律恢复起始值。
         · 银弹/醋/园艺工具/喷枪/杀虫剂用 flags 记账（原版是实体令牌）。
         · 叛徒投放令牌"暴露本性"未做 UI 层隐藏（bot 对局不敏感）。
+        · bot 行为修正（2026-09-16，11 种子 × 3/4/5 人 = 33 局对照）：
+          ① `create_holy_water` 在"该房间已有圣水"时不再提供——它声明在
+             `dip_weapon` 之前，bot 同分取靠前者，英雄站在礼拜堂里会无限重复
+             制作圣水（实测 ×120），蘸水一次都排不上，吸血鬼那条英雄胜线整条
+             死掉；② `dip_weapon` 在"手上克制品全蘸过"后同样不再提供；
+          ③ 叛徒用 `bot_leave_after_action` 声明"投放令牌后继续挪窝"，并用
+             `bot_stay_in_room` 声明"吸血鬼访完房间后贴住英雄就别走"（否则
+             目标退化成当前房间、寻路失去牵引，`blood_drawn` 永远吸不到）。
+          修前完成 26/33、警 14（token_infect×85、create_holy_water×120、
+          300 回合僵局 ×7）；修后完成 33/33、警 1（仅 seed31/4p 的一处
+          "同房 15 次"震荡，恰在阈值上）。
     """
 
     mode = "inhuman_transformation"
@@ -17056,13 +17110,16 @@ class InhumanTransformationMode(GenericModeHandler):
         return result
 
     def _required_rooms(self, engine: Any) -> list[str]:
-        """该形态需要访遍的房间——只算场上存在**且可达**的那些。"""
+        """该形态需要访遍的房间——只算场上存在**且可达**的那些。
+
+        可达集合为空时退回"该形态声明的全部房间"：那时 `_ensure_room_in_play`
+        放的板块一个都走不到，硬报一个走不到的目标不如让它照常游荡等探索
+        把路打通（真出现这种情况本身就是地图孤岛问题，不该在这里掩盖）。
+        """
         form = self.FORMS[self._form(engine)]
         anchor = engine.state.meta["haunt_rule"].get("haunt_room") or ""
         present = self._reachable_template_rooms(engine, form["rooms"], anchor)
-        return present or self._reachable_template_rooms(
-            engine, form["rooms"], anchor
-        ) or list(form["rooms"])
+        return present or list(form["rooms"])
 
     def _record_visit(self, engine: Any, player: Any) -> None:
         if player.role != "traitor":
@@ -17190,13 +17247,23 @@ class InhumanTransformationMode(GenericModeHandler):
                 room = engine.state.board.get(player.room_key)
                 if room is None or room.template_id not in self.HOLY_ROOMS:
                     continue
+                if player.room_key in set(flags.get("holy_rooms", [])):
+                    # 这间房已经有圣水了：再做一次只会返回 True 却什么都不改，
+                    # 而 bot 的行动打分是"同分取声明靠前者"，create_holy_water 排在
+                    # dip_weapon 前面 → 英雄站在礼拜堂里（同时拿着圣徽与矛）会
+                    # 无限重复"制作圣水"，蘸水永远排不上（实测 create_holy_water×120、
+                    # dip_weapon 出现 54 次一次没执行，吸血鬼那条英雄胜线整条死掉）。
+                    continue
                 if not any(c in player.items for c in self.HOLY_TOOLS):
                     continue
             elif aid == "dip_weapon":
                 if player.room_key not in set(flags.get("holy_rooms", [])):
                     continue
-                if not any(c in player.items for c in self.TRAITOR_WEAPONS):
+                weapons = [c for c in self.TRAITOR_WEAPONS if c in player.items]
+                if not weapons:
                     continue
+                if all(c in set(flags.get("holy_weapons", [])) for c in weapons):
+                    continue  # 手上的家伙全蘸过了：再做一遍同样是空转
             elif aid == "create_silver_bullets":
                 room = engine.state.board.get(player.room_key)
                 if room is None or room.template_id not in self.LAB_ROOMS:
@@ -17424,6 +17491,44 @@ class InhumanTransformationMode(GenericModeHandler):
         return False
 
     # ------------------------------------------------------------- bot/UI
+    def bot_stay_in_room(self, engine: Any, player: Any) -> bool:
+        """吸血鬼的转变只差"贴住一个活人"：人都到跟前了就别再走开（p152）。
+
+        `bot_goal_rooms` 在访完房间后返回 `__room__<某个英雄的房间>`——可一旦
+        英雄自己走进叛徒所在的房间，这个目标就退化成"当前房间"，
+        `_next_steps_toward` 会跳过它、寻路失去牵引，叛徒于是又漂出去；而
+        `on_turn_end` 的吸血判定要求"结束回合时与英雄同房"。两下相抵，血量
+        永远吸不到。实测（seed251/3p）：三间形态房 t37 就访齐了，blood_drawn
+        直到 400 回合仍是 False，整局僵死（seed31/5p 同款）。
+        """
+        if player.role != "traitor" or player.dead:
+            return False
+        flags = engine._haunt_flags()
+        form = self.FORMS[self._form(engine)]
+        if not form["need_blood"] or flags.get("blood_drawn"):
+            return False
+        # 还没访完形态房：主线是跑房间，不是贴人
+        if not set(self._required_rooms(engine)).issubset(set(flags.get("visited", []))):
+            return False
+        return any(
+            p.role == "hero" and not p.dead and p.room_key == player.room_key
+            for p in engine.state.players
+        )
+
+    def bot_leave_after_action(self, engine: Any, player: Any) -> bool:
+        """叛徒投放干扰令牌之后必须继续挪窝（p152）。
+
+        `token_*` 的能力在"同房有英雄"时就一直可用，于是 `_pending_haunt_action_here`
+        每回合都判"下回合还能在这儿做"，`_run_turn` 的移动循环直接 break——叛徒
+        原地驻扎、一回合放一枚令牌，永远走不到还没访过的形态房间。实测
+        （seed3/4p）：token_trap×60、在仆人宿舍兜了 127 个来回、300 回合未分胜负；
+        seed197/5p：token_trap×53、地下湖 91 次、往返 180 次。
+
+        原文里这个能力对叛徒只是"代替攻击"的可选项，主线始终是访遍形态房间；
+        真人不会为了贴着一个英雄而放弃转变（27 号同款用法）。
+        """
+        return player.role == "traitor"
+
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
         flags = engine._haunt_flags()
         if player.role == "traitor":
@@ -20099,6 +20204,10 @@ class HellOnEarthMode(GenericModeHandler):
     圣徽若开局不在场则补发给揭示者（揭示者是叛徒则发给第一名英雄）；
     引擎每回合只能做一次剧本行动，持徽者充能成功且轨道仍 ≥1 时会立刻封闭当前房间
     （原文是本回合内可另选封闭，这里把两步并进同一次行动）。
+    bot 战术（`bot_stay_in_room` / `bot_action_blocked`）：持徽者与同房队友**站住充能**
+    ——站住才能让力量只增不减（旧行为每回合换房，充能 +1 立刻被封闭新房的 -1 抵掉，
+    力量恒在 2 上下、圣徽攻击必输）；封闭房里领主就在眼前时必须出手（`charge` 与
+    `attack` 的 bot 打分相同，不挡就会永远充能）。非持徽英雄去与持徽者会合。
     """
 
     mode = "hell_on_earth"
@@ -20230,24 +20339,55 @@ class HellOnEarthMode(GenericModeHandler):
         else:
             engine._log("平手。")
 
+    def bot_stay_in_room(self, engine, player):
+        """#66：站住不动，圣徽力量才会累积。
+
+        实测（seed3/4p）：持徽者每回合换一间房 → 每次充能成功得到的 +1 立刻
+        被用来封闭这间新房（封闭要扣 1），力量永远停在 2 上下，圣徽攻击必输
+        （英雄 0/33 胜）。站住以后所在房已封闭、无法重复封闭，力量只增不减；
+        领主会自己送上门（p148：够得着就必须打持徽者），届时在封闭房里出手。
+        """
+        if player.role != "hero" or player.dead:
+            return False
+        return self._holy_in_room(engine, player.room_key)
+
+    def bot_action_blocked(self, engine, player, action_id):
+        """#66：英雄胜线只有一条——在**封闭房间**里用圣徽打赢领主。
+
+        `charge_holy_symbol`（持徽者在任何房间都能充能）与
+        `holy_symbol_attack` 的 bot 打分相同（标签都不含打分器的加分词），
+        `max()` 取列表靠前者 → bot 永远充能、从不攻击（实测英雄 0/33 胜、
+        每局 `holy_symbol_attack` 出现却一次没用）。这里在"封闭房里领主就在
+        眼前、骰数也够看"时挡住充能，逼它出手；力量仍不足时允许继续充能攒力。
+        """
+        if action_id != "charge_holy_symbol":
+            return False
+        if not self._can_holy_attack(engine, player):
+            return False
+        sealed = set(engine._haunt_flags().get("sealed_rooms") or [])
+        # 封闭房里的每一次攻击都是"赢了就结束"的成败手；领主每回合都在打
+        # 持徽者，与其挨打攒力不如连续出手（圣徽力量不会因失败下降）。
+        return player.room_key in sealed
+
     def bot_goal_rooms(self, engine, player):
         if player.role != "hero" or player.dead:
             return []
         holder = self._holy_holder(engine)
-        lord = engine._monster_by_template(self.LORD)
-        if holder is not None and holder.id == player.id:
-            if lord is not None:
-                return [f"__room__{lord.room_key}"]
-            return []
-        if holder is not None:
+        if holder is None:
+            goals = [
+                f"__room__{room_key}"
+                for room_key, cards in engine.state.room_items.items()
+                if self.HOLY in cards
+            ]
+            return goals or [f"__room__{self.CHARGE_ROOMS[0]}"]
+        if holder.id != player.id:
+            # 队友去和持徽者会合（护送圣徽）。
             return [f"__room__{holder.room_key}"]
-        goals = []
-        for room_key, cards in engine.state.room_items.items():
-            if self.HOLY in cards:
-                goals.append(f"__room__{room_key}")
-        if not goals:
-            goals.extend(self.CHARGE_ROOMS)
-        return goals
+        # 我是持徽者：**站住充能**。持徽者在任何房间都能充能，而充能成功会
+        # 立刻把所在房封闭（原文的"充能后可封闭"由 handler 并进同一行动）。
+        # 旧逻辑让持徽者跑去追领主所在的**未封闭**房间，打赢也只能击退/击晕，
+        # 永远够不到"封闭房驱逐"这条唯一胜线（实测英雄 0/33）。
+        return [f"__room__{player.room_key}"]
 
     def progress_summary(self, engine, viewer):
         flags = engine._haunt_flags()
@@ -20462,6 +20602,22 @@ class StorybookTwistsMode(GenericModeHandler):
     · 「谁抽到了牙」简化为当前持有预兆「牙」的英雄。
     · 寻找任务 / 完成任务 / 偷窃 / 剧情转折共用引擎的「每回合一次剧本行动」槽。
     · 女巫每回合固定传送到最近英雄（原文可选传送或正常移动）。
+    · 告警口径（2026-09-16）：试玩诊断在 33 局里报出的 16 例
+      `steal_from_traitor(出现N/未用)` 是**指标假警报**，不是缺陷。诊断器把
+      `available_actions` 的输出一律记成 offered，而本剧本的偷窃是"合法却常常
+      无用"：入定的叛徒身上只挂着可交易的普通物件（钟/兔脚/戒指…），英雄已抽到的
+      任务缺的却是别的东西（疯子/女孩/瓶子/面具/骷髅…）。逐回合实测 seed251/3p：
+      与叛徒同房时 offered=[obtain_quest, steal_from_traitor]，按声明顺序取
+      obtain——因为手上没有"叛徒恰好持有其缺牌"的未完成任务，`bot_action_blocked`
+      不会挡它。**这正是正确打法**（原版也不会为了偷一件与任务无关的钟而放弃抽
+      任务）。真需要偷的时候（缺牌正攥在叛徒手上）`bot_action_blocked` 会挡掉
+      obtain，steal 自然落到 `max()` 手里。
+    · 平衡观察（2026-09-16，11 种子 × 3/4/5 人 = 33 局 bot 对局）：叛徒胜 33。
+      英雄胜线是结构性吃力，不是 bot 漏做——叛徒每回合推故事轨 1 格（约 7 回合
+      翻完），英雄要在此之前完成"开局人数"个任务（3/4/5 人局即 2/3/4 个），每个
+      任务都得先同房知识检定抽到、再凑齐限定物件/房间。33 局里 `obtain_quest` 与
+      `complete_quest` 都在真实使用、任务链走得通，只是赶不上故事的进度。按项目
+      惯例（只修 bug、不修平衡）接受为"难而非坏"。
     """
 
     mode = "storybook_twists"
@@ -20509,6 +20665,17 @@ class StorybookTwistsMode(GenericModeHandler):
         11: "拥抱命运",
         12: "打破蛊惑",
     }
+    # 任务 → "让它可以完成"所需先备的物件 / 同伴（`bot_goal_rooms` 用）。
+    QUEST_ITEM_CHOICES = {
+        0: ("item_bell", "omen_book", "item_candle"),
+        1: ("item_lucky_stone", "item_rabbit_foot"),
+        7: ("omen_skull",),
+        8: ("omen_spirit_board",),
+        10: ("item_amulet_of_the_ages", "item_healing_salve"),
+        11: ("item_bottle",),
+        12: ("omen_mask",),
+    }
+    QUEST_COMPANION = {2: "omen_bite", 5: "omen_madman", 6: "omen_girl"}
 
     def setup(self, engine, haunt, room_key):
         flags = engine._haunt_flags()
@@ -20666,19 +20833,101 @@ class StorybookTwistsMode(GenericModeHandler):
         engine._deal_damage(target, "physical", amount, source=monster.name)
         return True
 
+    def bot_action_blocked(self, engine, player, action_id):
+        """#67：英雄要的东西正攥在叛徒手上时，这一回合别抽新任务，改成先偷。
+
+        三项英雄行动的 bot 打分完全相同（标签都不含打分器的加分词），`max()`
+        取 rule_data 声明靠前者——"有任务能立刻完成 → 先完成"由声明顺序表达；
+        但"该不该偷"是**条件性**的，静态顺序表达不了（把 steal 提到 obtain
+        前面会让英雄一直偷、永不抽任务，任务链直接断掉）。
+
+        `bot_goal_rooms` / `_quest_prep_goals` 会把缺物件的英雄一路引到持有者
+        房里，而持有者常常正是入定的叛徒——他开局就拿着瓶子、幸运石、兔子脚、
+        头骨、通灵板、钟、蜡烛、面具这些任务要用的东西（实测 seed3/3p、
+        seed101/3p、seed251/3p）。人已经站到他面前却还在抽牌，任务就永远卡在
+        "缺少物件"上——这是英雄 0/33 胜的一处成因。
+        """
+        if action_id != "obtain_quest":
+            return False
+        flags = engine._haunt_flags()
+        obtained = [int(x) for x in (flags.get("obtained_quests") or [])]
+        completed = {int(x) for x in (flags.get("completed_quests") or [])}
+        traitor = self._traitor(engine)
+        if traitor is None:
+            return False
+        for qid in obtained:
+            if qid in completed:
+                continue
+            if any(card in traitor.items for card in self._missing_quest_cards(player, qid)):
+                return True
+        return False
+
+    def _missing_quest_cards(self, player, qid):
+        """该任务还缺、而玩家手上没有的关键牌（物件候选 + 伙伴）。
+
+        物件类任务是"多选一"（如任务 0 只要钟/书/蜡烛任一），所以只有玩家
+        一个候选都没拿到时才算缺；伙伴类任务要求伙伴在**自己**身上。
+        """
+        cards = []
+        choices = self.QUEST_ITEM_CHOICES.get(qid)
+        if choices and not any(c in player.items for c in choices):
+            cards.extend(choices)
+        companion = self.QUEST_COMPANION.get(qid)
+        if companion and companion not in player.items:
+            cards.append(companion)
+        return cards
+
     def bot_goal_rooms(self, engine, player):
-        if player.dead:
+        """把英雄推向"让已抽到的任务变得可完成"的地点。
+
+        ## 旧实现的死锁（实测英雄 0/33 胜、`complete_quest` 从不出现）
+        `_quest_ready` 判定的是"英雄**此刻就站在**目标房/满足条件"，
+        于是对**还没到位**的英雄永远返回 False → `_completable_quests`
+        恒空 → `bot_goal_rooms` 恒把英雄派去叛徒房抽任务 → 抽到也不走。
+        现在改为遍历"已抽未完成"的任务：先取所需物件，再进目标房。
+        """
+        if player.dead or player.role == "traitor":
             return []
-        if player.role == "traitor":
-            return []
+        flags = engine._haunt_flags()
+        obtained = [int(x) for x in (flags.get("obtained_quests") or [])]
+        completed = {int(x) for x in (flags.get("completed_quests") or [])}
         goals = []
-        for qid in self._completable_quests(engine, player):
-            goals.extend(self._quest_rooms(engine, qid, player))
+        for qid in obtained:
+            if qid in completed:
+                continue
+            goals.extend(self._quest_prep_goals(engine, player, qid))
         if not goals:
             traitor = self._traitor(engine)
             if traitor is not None:
                 goals.append(f"__room__{traitor.room_key}")
         return goals
+
+    def _quest_prep_goals(self, engine, player, qid):
+        goals = []
+        needed = self.QUEST_ITEM_CHOICES.get(qid)
+        if needed and not any(card in player.items for card in needed):
+            where = self._find_card(engine, needed)
+            # 缺少关键物件：先去把物件拿到手（在房间地上就过去捡，在别人手里
+            # 就过去会合）。物件还在牌堆里则本任务暂时无解，退回目标房碰运气。
+            if where is not None:
+                return [f"__room__{where}"]
+        companion = self.QUEST_COMPANION.get(qid)
+        if companion:
+            holder = self._holder(engine, companion)
+            if holder is not None and holder.id != player.id:
+                goals.append(f"__room__{holder.room_key}")
+        goals.extend(self._quest_rooms(engine, qid, player))
+        return goals
+
+    def _find_card(self, engine, card_ids):
+        for card_id in card_ids:
+            for room_key, cards in engine.state.room_items.items():
+                if card_id in cards:
+                    return room_key
+            holder = self._holder(engine, card_id)
+            if holder is not None:
+                return holder.room_key
+        return None
 
     def progress_summary(self, engine, viewer):
         flags = engine._haunt_flags()
@@ -23118,6 +23367,13 @@ class LabyrinthEscapeMode(GenericModeHandler):
           （见 67 号同款说明），要落地得先扩卡池并同步后端的数量断言。
         · 迷乱者的那一格位移固定在"她的回合结束"执行（原文是"回合内任何时刻"），
           且特殊移动所需的属性检定不免判（本引擎的特殊移动选项本就无需检定）。
+        · 平衡观察（2026-09-16，11 种子 × 3/4/5 人 = 33 局 bot 对局）：叛徒胜 32 /
+          英雄胜 1（seed151/4p 逃出 2 人）。这个比例是**规则本身**决定的，不是
+          bot 漏做：轨第 n 格掷 n 枚 0/1/2 骰求 ≥6，第 3 格起才有胜算（3 枚全 2 =
+          1/27），到第 5 格累计过 5 成、第 6~8 格必合拢——即英雄通常只有 5~8 个
+          回合；其间仆人还会用理智把持钥匙的英雄打成迷乱，叛徒每回合把这格
+          钥匙的持有者从入口大厅推出去。两条胜线都真实可达（英雄胜那一局
+          flee_labyrinth×2 + unlock_door×3 + grab_key×3 全部走通），属"难而非坏"。
         · 狗不能携带钥匙自动满足——本项目同伴卡不占物品栏、无法持物。
         · 拿/转交/放下/开锁/逃出共用引擎"每人每回合一次剧本行动"的限额；
           逃出在原版只花 2 点移动、不占行动。
@@ -23525,6 +23781,43 @@ class LabyrinthEscapeMode(GenericModeHandler):
         if confused:
             lines.append("神志不清：" + "、".join(confused))
         return lines
+
+    def bot_stay_in_room(self, engine: Any, player: Any) -> bool:
+        """拿着钥匙站进大厅就别再主动走出去。
+
+        p79 的开门条件是"所有钥匙都在**入口大厅里**英雄的手上"，而
+        `bot_goal_rooms` 在"人已经站在目标房间"时返回空集（`_next_steps_toward`
+        会跳过当前房间），寻路失去牵引；没有这道闸门，机器人会跟着通用目标
+        （保护揭示者一类）或空转漂出门外，把进度条自己清零。
+
+        注意：实测（seed3/4p 基线 33 局）里把持钥匙英雄**拖出**大厅的并不是
+        他自愿走动，而是 p150 的迷乱强制位移——仆人用理智打赢后，叛徒在英雄
+        回合结束时逼她白走一格，`_stumble_option` 的机器人分支专挑"离前门越远
+        越好"。所以这道闸门并不改变那批对局的结局（迷乱照旧生效），它只是堵住
+        "自愿走出去"这一条独立漏洞。
+
+        只有在"地面上还剩钥匙、且没有别的空手队友能去捡"时才离厅——那时
+        他不去就没人去了（队友阵亡后钥匙会落回房间）。
+        """
+        if player.role != "hero" or player.dead:
+            return False
+        if not self._in_hall(engine, player):
+            return False
+        flags = engine._haunt_flags()
+        if flags.get("door_unlocked"):
+            # 门已开：留在厅里（本回合移动点不够就下回合再花 2 点逃）
+            return True
+        if not engine.tokens_held_by(player.id, self.KEY):
+            return False  # 空手：该出去找钥匙，不该在厅里耗着
+        floor_keys = [token for token in engine.tokens_of_kind(self.KEY) if token.room_key]
+        if not floor_keys:
+            return True  # 钥匙都在人手上，等他们走过来
+        keyless_others = [
+            other for other in engine.state.players
+            if other.role == "hero" and not other.dead and other.id != player.id
+            and not engine.tokens_held_by(other.id, self.KEY)
+        ]
+        return len(floor_keys) <= len(keyless_others)
 
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
         """手里有钥匙（或门已开）就往入口大厅跑，空手就去搜钥匙。"""

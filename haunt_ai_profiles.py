@@ -723,7 +723,10 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         "hero": {
             # p78：目标随已抽取任务变化，不能写进静态 target_rooms。
             "target_rooms": [],
-            "attack_monsters": True,
+            # p78：英雄胜线是"抽任务 → 按任务条件完成 → 活到故事结束"。
+            # 打怪毫无收益，反而把自己耗死——猎蛛 Might 5 / 恶龙 Might 7，
+            # 英雄低力去拼就是送人头（实测英雄 0/33 胜，全部死于怪物）。
+            "attack_monsters": False,
             "attack_traitor_players": False,
             "victory_focus": "与入定叛徒同房抽任务，按任务条件完成；够数后活到故事结束",
         },

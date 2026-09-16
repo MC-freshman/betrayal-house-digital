@@ -7321,6 +7321,71 @@ def verify_haunt70_weapons_and_immunity() -> None:
     assert hero4.movement_stopped and hero4.attack_used, "检定失败应困住英雄"
 
 
+def verify_haunt70_bot_no_noop_actions() -> None:
+    """剧本 70：机器人不该把回合浪费在"做了等于没做"的行动上（p81/p152）。
+
+    三处实测过的空转：
+      · `create_holy_water` 在"这间房已经有圣水"时仍被提供，且它的声明顺序
+        排在 `dip_weapon` 前面——bot 打分同分取靠前者，于是英雄站在礼拜堂里
+        无限重复制作圣水（实测 ×120），蘸水一次都排不上，吸血鬼那条英雄胜线
+        整条死掉；
+      · `dip_weapon` 在"手上的克制品全蘸过"之后仍是空转；
+      · 叛徒的 `token_*` 只要同房有英雄就一直可用，`_pending_haunt_action_here`
+        于是每回合都让 `_run_turn` 原地 break——叛徒驻扎放令牌、永不访房间
+        （实测 token_trap×60、300 回合僵局）。
+    """
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=70)
+    handler = engine._mode_handler()
+    assert isinstance(handler, InhumanTransformationMode)
+    flags = engine._haunt_flags()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    _set_current(engine, hero)
+
+    # 形态房之外的圣水房不在场：手动保证一间在场
+    engine._ensure_room_in_play("chapel", engine.state.meta["haunt_rule"].get("haunt_room") or "")
+    chapel = next(
+        (k for k, r in sorted(engine.state.board.items()) if r.template_id == "chapel"), None
+    )
+    assert chapel, "测试需要一间礼拜堂"
+
+    hero.room_key = chapel
+    hero.items.append(handler.HOLY_TOOLS[0])
+    assert "create_holy_water" in {a.id for a in handler.available_actions(engine, hero)}
+    flags["holy_rooms"] = [chapel]
+    assert "create_holy_water" not in {a.id for a in handler.available_actions(engine, hero)}, \
+        "已有圣水的房间不该再提供制作圣水（否则空转）"
+
+    hero.items.append(handler.TRAITOR_WEAPONS[0])
+    assert "dip_weapon" in {a.id for a in handler.available_actions(engine, hero)}
+    # 探索阶段本就可能捡到别的武器：蘸第二件仍是正经进展，所以这里把
+    # "手上所有克制品"都记进 holy_weapons，才等于"全蘸过了"。
+    holds = [c for c in handler.TRAITOR_WEAPONS if c in hero.items]
+    flags["holy_weapons"] = list(holds)
+    assert "dip_weapon" not in {a.id for a in handler.available_actions(engine, hero)}, \
+        "武器全蘸过了不该再提供蘸水（否则空转）"
+
+    # 叛徒：投放令牌后必须继续挪窝（否则原地驻扎、永不访房间）
+    assert handler.bot_leave_after_action(engine, traitor) is True
+    assert handler.bot_leave_after_action(engine, hero) is False
+
+    # 吸血鬼：访完房间且英雄就在眼前 → 留守（回合结束才算吸到血）
+    flags["form"] = "vampire"
+    flags["blood_drawn"] = False
+    flags["visited"] = list(handler._required_rooms(engine))
+    traitor.room_key = hero.room_key
+    assert handler.bot_stay_in_room(engine, traitor) is True
+    flags["visited"] = []
+    assert handler.bot_stay_in_room(engine, traitor) is False, "还没访完房间：先跑房间"
+    flags["visited"] = list(handler._required_rooms(engine))
+    flags["blood_drawn"] = True
+    assert handler.bot_stay_in_room(engine, traitor) is False, "血已吸到：该去清场"
+    # 其他形态不需要吸血 → 永不因吸血而滞留
+    flags["form"] = "werewolf"
+    flags["blood_drawn"] = False
+    assert handler.bot_stay_in_room(engine, traitor) is False
+
+
 def verify_haunt5_werewolf_hunt() -> None:
     """剧本 5：狗的布点、叛徒回合强化、找左轮/制银弹两条行动线（p16/p87）。
 
@@ -9449,6 +9514,88 @@ def verify_haunt68_key_route_and_confusion() -> None:
     assert other.stat_positions == other_positions, "仆人不该在理智对决中吃亏"
 
 
+def verify_haunt68_bot_hall_guard() -> None:
+    """剧本 68：持钥匙站在入口大厅的机器人不该主动走出去（`bot_stay_in_room`）。
+
+    p79 的开门条件是"所有钥匙都在入口大厅里英雄的手上"。`bot_goal_rooms` 在
+    "人已经站在目标房间"时返回空集（`_next_steps_toward` 跳过当前房间），寻路
+    失去牵引，机器人会跟着通用目标漂出门外——这道闸门堵的就是那一步。
+    """
+    engine = _run_until_haunt(seed=23, players=5, haunt_id=68)
+    handler = engine._mode_handler()
+    assert isinstance(handler, LabyrinthEscapeMode)
+    hall = handler._hall_key(engine)
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    keys = engine.tokens_of_kind("key")
+    assert len(heroes) == 4 and len(keys) == 4
+
+    carrier, mate, spare, extra = heroes
+    off_hall = next(key for key in engine.state.board if key != hall)
+    for hero in heroes:
+        hero.room_key = off_hall
+
+    # 持钥匙 + 人站在大厅 → 留守（地上 3 把，3 个空手队友能去捡）
+    carrier.room_key = hall
+    engine.give_token(keys[0].uid, carrier.id)
+    assert sum(1 for t in keys if t.room_key) == 3
+    assert handler.bot_stay_in_room(engine, carrier) is True, "持钥匙站厅：留守"
+
+    # 同在大厅但空手 → 不留（他该出去找钥匙）
+    mate.room_key = hall
+    assert handler.bot_stay_in_room(engine, mate) is False
+
+    # 持钥匙但人不在大厅 → 不留
+    engine.give_token(keys[1].uid, extra.id)
+    assert sum(1 for t in keys if t.room_key) == 2
+    assert handler.bot_stay_in_room(engine, extra) is False
+
+    # 地上 2 把、还能去捡的空手队友也是 2 个 → 仍留守
+    assert handler.bot_stay_in_room(engine, carrier) is True
+
+    # 只剩 0 个能去捡的队友（另两名英雄已倒下），地上仍有 2 把 → 必须自己离厅补位
+    mate.dead = True
+    spare.dead = True
+    assert handler.bot_stay_in_room(engine, carrier) is False, "没人能顶替时他得出去捡"
+
+    # 门已开：无论手上有没有钥匙、地上还剩什么，都该留在厅里等 2 点移动逃出
+    engine._haunt_flags()["door_unlocked"] = True
+    assert handler.bot_stay_in_room(engine, carrier) is True
+    extra.room_key = hall
+    assert handler.bot_stay_in_room(engine, extra) is True, "门开后厅内空手英雄也该留守"
+
+
+def verify_haunt69_wisp_flees_heroes() -> None:
+    """剧本 69：小精灵该躲着英雄跑，而不是固定往楼层最低处钻（p151）。
+
+    旧实现 `options.sort(key=floor)` 让它在任何盘面上都朝同一个方向走——一条
+    直线，英雄追起来不用动脑。新实现改成"离最近英雄越远越好"，这条用例钉住
+    这个方向性。
+    """
+    engine = _run_until_haunt(seed=109, players=3, haunt_id=69)
+    handler = engine._mode_handler()
+    assert isinstance(handler, WispCaptureMode)
+    wisp = handler._wisp(engine)
+    assert wisp is not None
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    assert heroes
+
+    mid = next(key for key in sorted(engine.state.board) if len(engine._door_neighbors(key)) >= 2)
+    doors = sorted(engine._door_neighbors(mid))
+    near, far = doors[0], doors[1]
+
+    # 全部英雄塞进 near，小精灵站在 mid：它必须挑那条远离英雄的门
+    for hero in heroes:
+        hero.room_key = near
+    wisp.room_key = mid
+    assert handler._flee_step(engine, wisp, [near, far]) == far, "应往远离英雄的方向逃"
+    assert handler._flee_step(engine, wisp, [far, near]) == far, "方向选择不该依赖入参顺序"
+
+    # 反过来：英雄堵在 far，它就往 near 走
+    for hero in heroes:
+        hero.room_key = far
+    assert handler._flee_step(engine, wisp, [near, far]) == near
+
+
 def _force_haunt(seed: int, players: int, haunt_id: int) -> GameEngine:
     """零进度直接触发作祟（不复现探索过程），用于"触发瞬间"类断言。
 
@@ -11113,6 +11260,7 @@ def main():
     verify_haunt68_setup_and_seal()
     verify_haunt68_tile_rearrange()
     verify_haunt68_key_route_and_confusion()
+    verify_haunt68_bot_hall_guard()
     verify_haunt56_sands_of_time_setup()
     verify_haunt56_mask_sanity_floor()
     verify_haunt56_time_powers()
@@ -11123,9 +11271,11 @@ def main():
     verify_haunt60_burning_sands_setup()
     verify_haunt60_riddle_race()
     verify_haunt69_wisp_setup()
+    verify_haunt69_wisp_flees_heroes()
     verify_haunt69_catch_and_escape()
     verify_haunt70_transformation_setup()
     verify_haunt70_weapons_and_immunity()
+    verify_haunt70_bot_no_noop_actions()
     verify_haunt57_paint_setup()
     verify_haunt57_repaint_and_immunity()
     verify_haunt46_the_feast_setup()
