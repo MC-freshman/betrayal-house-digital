@@ -7295,6 +7295,76 @@ def verify_haunt69_catch_and_escape() -> None:
     assert h3.check_victory(engine3) is True and engine3.state.winner == "traitor"
 
 
+def verify_haunt69_wisp_explores_and_owns_turn() -> None:
+    """剧本 69：小精灵探索新房间 + 整回合接管（p151 "may explore new rooms as if it
+    were an explorer"，以及"逃跑结束后绝不能再被引擎的默认追击拽回英雄身边"）。
+
+    改动前实测（11 种子 × 3/4/5 人 = 33 局）：逃脱轨道最高只到 4/6、叛徒那条
+    "活到轨道 6"的胜线一次都没有——两个规则错叠加：`on_monster_turn_start` 返回
+    False 让引擎又把它往最近英雄方向拖（还无视孢子），以及不能开新房间导致
+    几步就把自己困死在已探明子图里。
+    """
+    import types  # noqa: PLC0415
+
+    engine = _run_until_haunt(seed=113, players=3, haunt_id=69)
+    handler = engine._mode_handler()
+    assert isinstance(handler, WispCaptureMode)
+    wisp = handler._wisp(engine)
+    board = engine.state.board
+
+    # p17/p151：移动力=步数（不再写死 5 点），每离开一间留一枚孢子
+    handler._set_spores(engine, [])
+    start = wisp.room_key
+    route = handler._flee_run(engine, wisp, 1)
+    assert route == [wisp.room_key] and wisp.room_key != start, "1 步只能走 1 间"
+    assert handler._spore_rooms(engine) == {start}, "走过的每一间都该留一枚孢子"
+
+    # p151：整回合跑完 → 返回 True，引擎不再补一次"追最近英雄"的移动
+    assert handler.on_monster_turn_start(engine, wisp) is True, "小精灵回合必须被完全接管"
+    decoy = types.SimpleNamespace(template_id="bat", room_key=start, speed=3)
+    assert handler.on_monster_turn_start(engine, decoy) is False, "别的怪物照旧走引擎默认"
+
+    # p151：已探明邻居全是孢子、只剩未知门口 → 翻开一块新板块（不抽牌）
+    #   挑一间"本层还有房间牌"的，否则开不出板块是牌堆枯竭、不是规则问题。
+    stuck = next(
+        r
+        for r in board.values()
+        if engine.has_remaining_room_cards(r.floor)
+        and handler._unknown_doors(engine, r)
+        and engine._door_neighbors(r.key)
+    )
+    rooms_before = len(board)
+    events_before = len(engine.state.card_decks["event"])
+    wisp.room_key = stuck.key
+    handler._set_spores(engine, engine._door_neighbors(stuck.key))
+    dest = handler._flee_step(engine, wisp, [], stuck)
+    assert dest is not None and len(board) == rooms_before + 1, "绝境时应像探索者一样开新房间"
+    assert stuck.key in engine._door_neighbors(dest), "新房间要与原房间门对门接上"
+    assert len(engine.state.card_decks["event"]) == events_before, "p151：小精灵探索不抽牌"
+
+    # p151：有更远的已探明落点时不该烧房间牌
+    handler._set_spores(engine, [])
+    pair = next(
+        (
+            (a, board[n])
+            for a in board.values()
+            for n in engine._door_neighbors(a.key)
+            if handler._threat(engine, n) > handler._threat(engine, a.key)
+        ),
+        None,
+    )
+    assert pair is not None, "总该有一个能把英雄甩远一步的落点"
+    far_from, away = pair
+    wisp.room_key = far_from.key
+    rooms_before = len(board)
+    assert handler._flee_step(engine, wisp, [away.key], far_from) == away.key
+    assert len(board) == rooms_before, "逃得开就不该开新房间"
+
+    # 无合法移动（没门邻居也开不出板块）才算真的停下
+    with patch.object(handler, "_open_new_room", return_value=None):
+        assert handler._flee_step(engine, wisp, [], far_from) is None
+
+
 def verify_haunt70_transformation_setup() -> None:
     """剧本 70：叛徒清空物品、形态秘密选定、形态房间在场、免疫拦截（p81/p152）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=70)
@@ -9662,13 +9732,14 @@ def verify_haunt69_wisp_flees_heroes() -> None:
     for hero in heroes:
         hero.room_key = near
     wisp.room_key = mid
-    assert handler._flee_step(engine, wisp, [near, far]) == far, "应往远离英雄的方向逃"
-    assert handler._flee_step(engine, wisp, [far, near]) == far, "方向选择不该依赖入参顺序"
+    here = engine.state.board[mid]
+    assert handler._flee_step(engine, wisp, [near, far], here) == far, "应往远离英雄的方向逃"
+    assert handler._flee_step(engine, wisp, [far, near], here) == far, "方向选择不该依赖入参顺序"
 
     # 反过来：英雄堵在 far，它就往 near 走
     for hero in heroes:
         hero.room_key = far
-    assert handler._flee_step(engine, wisp, [near, far]) == near
+    assert handler._flee_step(engine, wisp, [near, far], here) == near
 
 
 def _force_haunt(seed: int, players: int, haunt_id: int) -> GameEngine:
@@ -11456,6 +11527,7 @@ def main():
     verify_haunt69_wisp_setup()
     verify_haunt69_wisp_flees_heroes()
     verify_haunt69_catch_and_escape()
+    verify_haunt69_wisp_explores_and_owns_turn()
     verify_haunt70_transformation_setup()
     verify_haunt70_weapons_and_immunity()
     verify_haunt70_bot_no_noop_actions()

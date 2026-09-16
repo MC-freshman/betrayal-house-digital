@@ -17168,9 +17168,11 @@ class WispCaptureMode(GenericModeHandler):
       标记 dead 并由 handler 吸收"叛徒死 → 英雄胜"兜底——这是设计而非失败）；
       小精灵（Speed 5 / Might 6 / Sanity 6）放在作祟房；地下室楼梯未发现则
       取出放好；**小精灵先手**（轨道起点记为 1，等价它先推了一格）。
-    · 小精灵回合（p151）：回合开始推进轨道 +1 并**清除全部孢子**；然后
-      **不能停止移动**——耗尽 5 点移动力或无合法移动为止；离开的房间留下
-      一枚孢子；不能进入已有孢子的房间；不主动攻击（防守反击照常）。
+    · 小精灵回合（p151）：回合开始推进轨道 +1 并**清除全部孢子**；移动力按
+      p17 投速度骰，然后**不能停止移动**——耗尽步数或无合法移动为止；离开的
+      房间留下一枚孢子；不能进入已有孢子的房间；不主动攻击（防守反击照常）；
+      **可像探索者一样翻开新房间**（不抽牌、不因符号停步）。整回合由 handler
+      接管完毕，`on_monster_turn_start` 返回 True 挡掉引擎的默认追击。
     · 孢子迷雾（p80）：英雄每回合**第一次**尝试离开有孢子的房间时做理智
       检定：6+ 本回合免疫；2-5 本回合剩余每次离开孢子房多花 1 点移动；
       0-1 回合立即结束。实现在 movement_cost_floor 钩子（每步都会问一次）。
@@ -17180,18 +17182,17 @@ class WispCaptureMode(GenericModeHandler):
       英雄胜。叛徒角色出局是设计，吸收兜底（7/8 号怪物自主口径）。
 
     已知简化：
-        · 小精灵"可像探索者一样探索新房间"未建模——它只在已探明房间内
-          逃窜（引擎没有怪物探索的通用层，47 号蛇头是手写特例）。**这是本剧本
-          最深的一处缺口**：不能开新房间，它只能在已探明子图里跑，而它自己的
-          孢子又禁止回头，于是几个回合就被逼进死胡同。实测（2026-09-16，11 种子
-          × 3/4/5 人 = 33 局）：作祟阶段通常只撑 2~4 个回合、逃脱轨道最多到 2/6，
-          叛徒那条"活到轨道 6"的胜线一次都没打出来（唯一的叛徒胜是"英雄全灭"）。
-          机制本身没错，且英雄胜线 32/33 健康；要不要把探索补上属于下一步的
-          平衡决策，本次不改（补上很可能反向过头，变成叛徒必胜）。
-        · 小精灵"不能停止移动"按速度点数连续步进实现，遇到死路即停；方向由
-          `_flee_step` 选"离最近英雄最远"的邻房（旧实现固定挑楼层最低处，等于
-          直线钻地下室，英雄闭着眼都能堵住）。
-        · 不能用神秘电梯/煤槽向上/坍塌房/舞厅→画廊未建模（常规门移动）。
+        · 小精灵探索新房间**已建模（2026-09-16）**：逃不开时按"离英雄最远的
+          空门口"翻一块新板块（与 47 号蛇头同口径手写，引擎仍无怪物探索通用层）。
+          同一次改动还修掉了两处更致命的规则错：`on_monster_turn_start` 原先返回
+          False，逃跑结束后引擎默认怪物 AI 会把小精灵**往英雄方向拖**（既违反
+          "不能进入已有孢子的房间"，也违反"移动不受对手阻挡"），以及移动力被
+          写成固定 5 点而非投速度骰。
+        · 小精灵"不能停止移动"按步数连续步进实现，遇到死路且开不出新房间即停；
+          方向由 `_flee_step` 选"离最近英雄最远"的邻房（旧实现固定挑楼层最低处，
+          等于直线钻地下室，英雄闭着眼都能堵住）。
+        · 不能用神秘电梯/煤槽向上/坍塌房/舞厅→画廊未建模——逃跑只走**门邻居**
+          与**新板块**，密道/秘门/电梯天然不在候选里，故此条近似自动满足。
         · 屏障房（如深渊）两侧各留一枚孢子未建模——只标记离开的那间。
         · 小精灵"免疫左轮"未建模：引擎 immune_to 按攻击属性判定，写
           "speed" 会连带免疫徒手速度攻击（超范围），故留空并记录。
@@ -17204,7 +17205,6 @@ class WispCaptureMode(GenericModeHandler):
     STAIRS = "stairs_from_basement"
     ESCAPE_TRACK = 6
     CATCH_TARGET = 4
-    DELTAS = ((0, -1), (1, 0), (0, 1), (-1, 0))
 
     # ------------------------------------------------------------- 开局
     def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
@@ -17312,27 +17312,42 @@ class WispCaptureMode(GenericModeHandler):
         # p151：清除全部孢子
         self._set_spores(engine, [])
         engine._log(f"小精灵的回合：轨道 {flags['wisp_track']}/{self.ESCAPE_TRACK}，迷雾散尽。")
-        # p151：不能停止移动——耗尽移动力或无合法移动为止
-        steps = max(1, monster.speed)
+        # p151 + p17：移动力 = 速度骰；拿到步数就不能停，直到步数耗尽或无合法移动
+        steps = max(1, engine.roll_dice(monster.speed, "小精灵移动"))
+        route = self._flee_run(engine, monster, steps)
+        if route:
+            names = "→".join(engine.state.board[k].name for k in route)
+            engine._log(f"小精灵掠过 {names}，身后留下 {len(route)} 团迷雾。")
+        else:
+            engine._log("小精灵被迷雾围死了——一步也动不了。")
+        engine.check_victory()
+        # p151：整回合就是这条逃跑路线。**必须返回 True**：返回 False 会让引擎
+        # 接着跑默认怪物 AI（追最近英雄 + 房内对手加成），实测 seed101/4p 它
+        # 刚逃到塔楼就被拖回二楼平台，seed113 第二回合被拽进自己上回合的孢子房
+        # ——既违反"不能进入已有孢子的房间"，也违反"移动不受对手阻挡"。
+        return True
+
+    def _flee_run(self, engine: Any, monster: Any, steps: int) -> list[str]:
+        """按步数逃窜，返回途经房间（用于日志与孢子结算）。"""
+        route: list[str] = []
         for _ in range(steps):
             room = engine.state.board.get(monster.room_key)
             if room is None:
                 break
             spores = self._spore_rooms(engine)
+            # p151：不能进入已有孢子的房间
             options = [k for k in engine._door_neighbors(monster.room_key) if k not in spores]
-            if not options:
+            dest = self._flee_step(engine, monster, options, room)
+            if dest is None:
                 break
-            dest = self._flee_step(engine, monster, options)
-            # 离开的房间留下孢子
-            spores = set(spores)
-            spores.add(monster.room_key)
-            self._set_spores(engine, spores)
+            # p151：离开的房间留下一枚孢子
+            self._set_spores(engine, set(spores) | {monster.room_key})
             monster.room_key = dest
-        engine.check_victory()
-        return False
+            route.append(dest)
+        return route
 
-    def _flee_step(self, engine: Any, monster: Any, options: list[str]) -> str:
-        """小精灵往"离英雄最远"的方向逃。
+    def _flee_step(self, engine: Any, monster: Any, options: list[str], room: Any) -> str | None:
+        """一步的落点：能往更远处逃就逃，否则开新房间，都没有才回头。
 
         p151 把这个角色整个交给叛徒玩家（"remove your figure... you want to fly,
         faster and faster, up and away"），赢法是"stay free until the Turn/Damage
@@ -17341,31 +17356,96 @@ class WispCaptureMode(GenericModeHandler):
         只撑 3 个回合就被两名英雄围住按死，逃脱轨道停在 2/6——叛徒那条胜线
         在 33 局里一次都没出现过。
 
-        排序键（全部可复现）：离最近英雄的步数越远越好 → 门越多（别钻进死胡同）
-        → 楼层 → 房间 key。
+        已探明落点的排序键（全部可复现）：离最近英雄的步数越远越好 → 门越多
+        （别钻进死胡同）→ 楼层 → 房间 key。
         """
+        current = self._threat(engine, monster.room_key)
+        best: str | None = None
+        if options:
+            best = max(
+                options,
+                key=lambda k: (
+                    self._threat(engine, k),
+                    len(engine._door_neighbors(k)),
+                    engine.state.board[k].floor,
+                    k,
+                ),
+            )
+            if self._threat(engine, best) >= current:
+                return best
+        # 已探明的房间都逃不开了：p151 明文"可像探索者一样探索新房间"
+        opened = self._open_new_room(engine, room)
+        if opened is not None:
+            return opened
+        return best
+
+    def _threat(self, engine: Any, room_key: str) -> int:
+        """房间到最近存活英雄的步数（不可达为 9999）。"""
         heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        if not heroes:
+            return 9999
+        return min(engine._path_length(hero.room_key, room_key) for hero in heroes)
 
-        def threat(room_key: str) -> int:
-            best = 9999
-            for hero in heroes:
-                distance = engine._path_length(hero.room_key, room_key)
-                if distance < best:
-                    best = distance
-            return best
+    # ------------------------------------------------- 小精灵探索新房间
+    def _open_new_room(self, engine: Any, room: Any) -> str | None:
+        """p151："The wisp may explore new rooms as if it were an explorer, but
+        does not draw cards or end its movement when discovering a room
+        containing a symbol."
 
-        def exits(room_key: str) -> int:
-            return len(engine._door_neighbors(room_key))
+        引擎没有怪物探索的通用层，与 47 号蛇头同口径在 handler 里手写。放房
+        只走 `_place_room`、不经过 `move_player`，所以符号房的抽牌与"探索后
+        停止移动"两条结算都不会触发——原文的"但不抽牌、不停步"自动满足。
+        """
+        unknown = self._unknown_doors(engine, room)
+        if not unknown:
+            return None
+        direction = max(unknown, key=lambda d: self._away_score(engine, room, d))
+        dx, dy = DIRECTION_DELTAS[direction]
+        target_pos = (room.floor, room.x + dx, room.y + dy)
+        budget = len(engine.state.room_deck) + len(engine.state.room_discard) + 1
+        while budget > 0:
+            budget -= 1
+            template = engine._draw_room_template(room.floor)
+            if template is None:
+                return None
+            placements = engine._compute_explore_placements(template, direction, target_pos)
+            if not placements:
+                engine.state.room_discard.append(template.id)
+                continue
+            placement = placements[0]
+            rotated = engine._build_rotated_template(template, placement["rotation"])
+            new_room = engine._place_room(
+                rotated, target_pos[1], target_pos[2], placement["rotation"]
+            )
+            engine._log(f"小精灵撞开了未知区域：{new_room.name}")
+            return new_room.key
+        return None
 
-        return max(
-            options,
-            key=lambda k: (
-                threat(k),
-                exits(k),
-                engine.state.board[k].floor,
-                k,
-            ),
-        )
+    def _unknown_doors(self, engine: Any, room: Any) -> list[str]:
+        """该房通向未知区域的门（未占格、方向合法）。"""
+        unknown = []
+        for direction in sorted(room.doors):
+            if direction not in DIRECTION_DELTAS:
+                continue
+            dx, dy = DIRECTION_DELTAS[direction]
+            if engine.state.pos_index.get((room.floor, room.x + dx, room.y + dy)) is None:
+                unknown.append(direction)
+        return unknown
+
+    def _away_score(self, engine: Any, room: Any, direction: str) -> int:
+        """开新房间挑门口：新板块必在同层，故按格子的曼哈顿距离离英雄越远越好。"""
+        dx, dy = DIRECTION_DELTAS[direction]
+        pos = (room.x + dx, room.y + dy)
+        distances = []
+        for hero in engine.state.players:
+            if hero.role != "hero" or hero.dead:
+                continue
+            here = engine.state.board.get(hero.room_key)
+            if here is None:
+                continue
+            distances.append(abs(here.x - pos[0]) + abs(here.y - pos[1]))
+        return min(distances) if distances else 0
+
 
     def on_monster_turn_attack(self, engine: Any, monster: Any) -> bool:
         """p151：小精灵不主动攻击（防守反击走引擎默认）。"""
