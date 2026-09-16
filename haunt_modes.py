@@ -656,6 +656,30 @@ class SeanceRaceMode(GenericModeHandler):
             and "omen_spirit_board" in player.items
         )
 
+    def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
+        """降灵会还没出结果时，找骨头/安葬的房间不算寻路目标。
+
+        `find_bones` / `bury_bones` 的门槛写在 `requires`（`flag:ghost_summoned`
+        且 `flag:ghost_control=heroes`），而机器人的目标计算只看行动声明的
+        `rooms`——只要协议里列了阁楼/卧室/主卧/地窖/墓地，英雄从作祟第一回合
+        就朝这些房间走。站进"目标房间"后再也没有移动加分，整个人钉在原地：
+        五芒星室（降灵会唯一场地）永远没人去，`hero_seance` 卡在 0/2。实测
+        seed63/4p 打满 300 回合、同一房间往返 640 步、降灵进度全程为 0。
+
+        本钩子在 `bot_ai._haunt_goal_targets` 里也会被调用（用来剔除不作为
+        目标的行动），所以这一条同时修正"机器人选什么行动"和"机器人往哪走"。
+        """
+        if action_id not in ("find_bones", "bury_bones"):
+            return False
+        flags = engine._haunt_flags()
+        if not flags.get("ghost_summoned") or flags.get("ghost_control") != "heroes":
+            # p13：两条都是"If You Summon the Ghost First"之后的任务；
+            # 叛徒控鬼时安葬已失效（只剩摧毁幽灵一条路）。
+            return True
+        if action_id == "find_bones":
+            return bool(flags.get("bones_found"))
+        return not flags.get("bones_found")
+
     # ------------------------------------------------------------- setup
     def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
         # 英雄手册 p13：知识与神志检定令牌各"玩家数"枚，另有幽灵与尸体令牌
@@ -2480,17 +2504,50 @@ class DeathDanceMode(GenericModeHandler):
         return self.HOLY_SYMBOL in engine.state.card_decks.get("omen", [])
 
     def bot_action_blocked(self, engine: Any, player: Any, action_id: str) -> bool:
-        """圣徽不在自己手上时，"毁掉圣徽"的房间不算目标。
+        """给 bot 判寻路目标用：拿不到的那一步不算目的地。
 
-        毁圣徽要求先偷到手（requires: omen_holy_symbol），但机器人的寻路
-        目标只看行动声明的 rooms，于是叛徒把深渊/熔炉房/地下湖当常驻目标
-        来回巡视——圣徽还压在预兆牌堆里时它根本无从下手，实测 seed109/3p
-        在地下室三间房之间绕了 33 圈、整局拖到 133 回合。拿到手后行动
-        自然解锁（引擎本身也要求持徽才能执行）。
+        · 圣徽不在自己手上时，"毁掉圣徽"的房间不算目标（叛徒侧）。
+        · 圣徽不在任何存活英雄手上时，"放逐提琴手"的五芒星室也不算目标
+          （英雄侧）。p20 要求"同房任意英雄身上有圣徽"，而圣徽一旦落到
+          叛徒手里就再也拿不回来（p91 只给叛徒"2+ 伤害改偷"的权利，英雄
+          没有对等的抢夺条款）——英雄唯一的出路是**打死那个叛徒**，让圣徽
+          掉在地上再捡起来（引擎死亡掉落令牌/卡牌）。不做这条时英雄整局
+          钉在五芒星室里：实测 seed211/5p 打满 300 回合、全场只有 5 次攻击
+          且全部没有目标，放逐进度 0/5。
         """
-        if action_id == "destroy_holy_symbol" and self.HOLY_SYMBOL not in player.items:
-            return True
+        if action_id == "destroy_holy_symbol":
+            return self.HOLY_SYMBOL not in player.items
+        if action_id == "banish_fiddler":
+            return not self._hero_holds_symbol(engine)
         return False
+
+    def _hero_holds_symbol(self, engine: Any) -> bool:
+        return any(
+            p.role == "hero" and not p.dead and self.HOLY_SYMBOL in p.items
+            for p in engine.state.players
+        )
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """圣徽在叛徒手上时，英雄的目标就是**那个叛徒**。
+
+        p20 的放逐要求英雄把圣徽带进五芒星室，而圣徽可能被叛徒抢走/继承。
+        此时英雄不该继续往五芒星室跑，而该去打掉持徽的叛徒——他一死圣徽
+        就落在原地，谁进房谁捡（引擎 `_drop_inventory_on_death`）。
+        """
+        if player.dead or player.role != "hero":
+            return []
+        if engine._haunt_flags().get("holy_symbol_destroyed"):
+            return []
+        if self._hero_holds_symbol(engine):
+            return []  # 已在英雄手里：交给静态目标（五芒星室）
+        holder = next(
+            (
+                p for p in engine.state.players
+                if p.role == "traitor" and not p.dead and self.HOLY_SYMBOL in p.items
+            ),
+            None,
+        )
+        return [f"__room__{holder.room_key}"] if holder is not None else []
 
     def bot_goal_suppressed(self, engine: Any, player: Any) -> bool:
         """叛徒没持圣徽时没有任何剧本目标房间（见 bot_action_blocked）。
@@ -3755,6 +3812,34 @@ class OffspringMode(GenericModeHandler):
     def _spore_rooms(self, engine: Any) -> set[str]:
         return {t.room_key for t in engine.tokens_of_kind(self.SPORE) if t.room_key}
 
+    def _flower_token(self, engine: Any) -> Any:
+        return next(iter(engine.tokens_of_kind(self.FLOWER)), None)
+
+    def _loose_flower_room(self, engine: Any) -> str | None:
+        """落在地上（无人携带）的花所在房间。
+
+        持花英雄阵亡时引擎会把携带的令牌落在死亡房间（`_drop_inventory_on_death`），
+        但这株花过去**没有任何人捡得回来**：`find_flower` 已被
+        `requires_flags={"flower_found": False}` 关掉，`bot_goal_rooms` 又无条件
+        指向毒藤房间，于是全场没人踏进那片地——花和胜线一起烂在原地。
+        实测 seed3/4p 与 seed31/5p 两局都打满 300 回合收不了场。
+        """
+        token = self._flower_token(engine)
+        if token is not None and token.holder is None and token.room_key:
+            return token.room_key
+        return None
+
+    def on_enter_room(self, engine: Any, player: Any, room: Any) -> None:
+        """英雄走进散落着花的房间时自动捡起（剧本 1 女孩 / 20 号尸体的同款做法）。"""
+        if player.role != "hero" or player.dead:
+            return
+        if not engine._haunt_flags().get("flower_found"):
+            return
+        flower = next(iter(engine.tokens_in_room(room.key, self.FLOWER)), None)
+        if flower is not None:
+            engine.give_token(flower.uid, player.id)
+            engine._log(f"{player.name} 捡起了那朵薰衣草色的花。")
+
     def _in_spores(self, engine: Any, player: Any) -> bool:
         return player.room_key in self._spore_rooms(engine)
 
@@ -3888,11 +3973,18 @@ class OffspringMode(GenericModeHandler):
         return True
 
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
-        """没找到花就去温室/花园/墓地；找到了就把花带进毒藤房间削弱。"""
+        """没找到花就去温室/花园/墓地；找到了就把花带进毒藤房间削弱。
+
+        花落在地上时（持花者阵亡）**先去捡花**——否则全员继续往毒藤房间挤，
+        那朵花永远不会被带回战场（实测 seed3/4p / seed31/5p 两局 300 回合僵局）。
+        """
         if player.dead or player.role != "hero":
             return []
         flags = engine._haunt_flags()
         if flags.get("flower_found"):
+            loose = self._loose_flower_room(engine)
+            if loose:
+                return [f"__room__{loose}"]
             plant = flags.get("plant_room")
             return [f"__room__{plant}"] if plant else []
         return [
