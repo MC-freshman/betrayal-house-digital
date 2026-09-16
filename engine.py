@@ -4351,40 +4351,80 @@ class GameEngine:
     def _all_room_keys(self) -> list[str]:
         return sorted(self.state.board)
 
+    def _room_has_open_door(self, room_key: str) -> bool:
+        """该房间是否还留着未探索的门口（相邻格尚未放板块）。"""
+        room = self.state.board.get(room_key)
+        if room is None:
+            return False
+        for direction in room.doors:
+            if direction not in DIRECTION_DELTAS:
+                continue
+            dx, dy = DIRECTION_DELTAS[direction]
+            if self.state.pos_index.get((room.floor, room.x + dx, room.y + dy)) is None:
+                return True
+        return False
+
     def _collapse_adjacent_rooms(self, count: int, cause: str = "深渊") -> int:
-        """按 p104 的扩散规则翻掉 count 间房：只能从已有深渊的邻格里选；
-        整层塌完就升到上一层，从"无人且有空门"的房间开始。返回实际翻掉数。"""
+        """按 p104 的扩散规则翻掉 count 间房，返回实际翻掉数。
+
+        规则（p104 "Each Player Must Do This Every Turn"）：
+        ① 深渊只在它**已占据的楼层**上扩散，且只能吃与已有深渊正交相邻的房间
+          （不要求有门、不算斜角）——`_abyss_candidates` 是这条的权威判据；
+        ② 「If the Abyss engulfs a whole floor, it moves to the next floor up,
+          starting in an unoccupied room of your choosing with an unexplored
+          door」——某层**整层塌完**才升到上一层，从"无人且留着未探索门口"的
+          房间播种；播种之后回到 ① 按同层邻格继续扩散（"无人 + 有空门"只是
+          升层那一刻的选点条件，不是之后每一步的扩散条件）。
+
+        旧实现的坑（M10-71 修掉）：基准层取 `min(origin floors)`，地下室一旦
+        塌完该值恒为最小层，`candidate_floor > floor` 恒成立 —— 于是 ① 跨层
+        播种格永远选不出（升层分支成了死代码，深渊永久困在地下室），② 上层
+        的**每一次**扩散都被错加上播种过滤。实测剧本 22 seed197/5p：深渊吃完
+        地下室 9 间即停摆，够不到二楼英雄，而英雄又刚好无来源可拿 → 300 回合
+        无胜者。
+        """
         collapsed = 0
-        origins = {room.key for room in self._collapsed_rooms()}
-        if not origins:
-            return 0
         while collapsed < count:
-            floor = min({self.state.board[key].floor for key in origins})
+            origins = {room.key for room in self._collapsed_rooms()}
+            if not origins:
+                break
+            occupied = sorted({self.state.board[key].floor for key in origins})
             picked = ""
-            for candidate_floor in range(floor, 2):
-                options = self._abyss_candidates(origins, candidate_floor)
-                if candidate_floor > floor:
-                    # 整层已塌完：上一层里挑一间无人、且留着未探索门口的房间
-                    options = [
-                        key for key in options
-                        if not any(p.room_key == key and not p.dead for p in self.state.players)
-                        and any(
-                            self.state.pos_index.get(
-                                (self.state.board[key].floor,
-                                 self.state.board[key].x + DIRECTION_DELTAS[d][0],
-                                 self.state.board[key].y + DIRECTION_DELTAS[d][1])
-                            ) is None
-                            for d in self.state.board[key].doors if d in DIRECTION_DELTAS
-                        )
-                    ]
+            # ① 在深渊已占据的楼层上找邻格（自低向高，保证种子可复现）
+            for floor in occupied:
+                options = self._abyss_candidates(origins, floor)
                 if options:
                     picked = options[0]
                     break
+            # ② 本层扩散不动：若某层已整层塌完，升到上一层播种
+            if not picked:
+                engulfed = [
+                    floor for floor in occupied
+                    if not any(
+                        room.floor == floor and not self._is_collapsed(key)
+                        for key, room in self.state.board.items()
+                    )
+                ]
+                for floor in sorted(engulfed, reverse=True):
+                    upper = floor + 1
+                    if upper > 1:
+                        continue
+                    options = [
+                        key for key in self._all_room_keys()
+                        if not self._is_collapsed(key)
+                        and self.state.board[key].floor == upper
+                        and not any(p.room_key == key and not p.dead for p in self.state.players)
+                        and self._room_has_open_door(key)
+                    ]
+                    options.sort(key=lambda key: (
+                        self.state.board[key].y, self.state.board[key].x))
+                    if options:
+                        picked = options[0]
+                        break
             if not picked:
                 break
             if self._collapse_room(picked, cause=cause):
                 collapsed += 1
-                origins.add(picked)
         return collapsed
 
     # ------------------------------------------------------------------
