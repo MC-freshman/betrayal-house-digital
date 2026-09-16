@@ -6841,6 +6841,39 @@ def verify_haunt58_torch_banish_haunting() -> None:
     assert nm3.id not in f3["haunting"], "挣脱后不再被缠"
     assert nm3.room_key == target3.room_key
 
+    # p140：被缠梦的英雄**倒下**后，梦魇必须松开他回到场上。
+    # 不释放的后果是两条胜利线同时被掐断：attack_allowed 因 "id in haunting"
+    # 永久拒绝攻击这只梦魇，而 on_monster_turn_start 又让它整回合跳过；英雄这边
+    # "数位英雄同房 + 持火把"的驱散条件在只剩一人时本就不成立（p69 明文）。
+    # seed63/5p、seed3/5p 实测：场上仅存的梦魇全都缠着已死英雄，300 回合无胜者。
+    with patch.object(engine3, "_roll_monster_attack", return_value=9), patch.object(
+        engine3, "_roll_attack", return_value=2
+    ):
+        assert h3.on_monster_turn_attack(engine3, nm3) is True
+    assert f3["haunting"].get(nm3.id) == target3.id, "重新缠上以便验证「倒下即释放」"
+    foe_room = target3.room_key
+    target3.dead = True
+    h3.on_player_died(engine3, target3)
+    assert nm3.id not in f3["haunting"], "被缠梦的英雄倒下后梦魇必须松开"
+    assert nm3.room_key == foe_room, "松开的梦魇现身在倒下的英雄所在房间（同挣脱口径）"
+    assert h3.on_monster_turn_start(engine3, nm3) is False, (
+        "不再缠梦后噩梦恢复常规回合，不再整回合跳过"
+    )
+    # 释放是定向的：缠着别人的梦魇不受影响
+    if len(h3._nightmares(engine3)) >= 2:
+        other_nm = next(m for m in h3._nightmares(engine3) if m.id != nm3.id)
+        mate = next(
+            (p for p in engine3.state.players if p.role == "hero" and not p.dead),
+            None,
+        )
+        if mate is not None and mate.id != target3.id:
+            f3["haunting"][other_nm.id] = mate.id
+            mate.dead = True
+            h3.on_player_died(engine3, mate)
+            assert other_nm.id not in f3["haunting"], "倒下者的梦魇也应释放"
+            # 已被释放的 nm3 不该被这次死亡波及
+            assert nm3.id not in f3["haunting"]
+
 
 def verify_haunt59_badge_setup() -> None:
     """剧本 59：女巫/雕像布点、徽章归属、持徽章英雄限速 2 格（p70/p141）。"""
@@ -10215,18 +10248,50 @@ def verify_haunt39_spear_flow() -> None:
     # 收牌人 = 继承人（bot 的通用"交给持令牌队友"启发在这里不适用）
     assert handler.quest_carrier(engine) == heir.id
 
-    # bot 目标：先补缺的卡，再登王座；队友去和继承人会合
-    heir.items = ["omen_spear"]
+    # bot 目标：先去捡"躺在地上的"缺牌，地上没有就直奔王座等队友送来。
+    # （M10-70 改：旧版继承人会去追"持牌的队友"，而队友的目标本来就是
+    #   "继承人在哪"，两人互换房间互追、回合开始时永远不同房 → 交接永不发生。
+    #   seed79/5p 实测 250+ 回合对调。现在改为"继承人钉王座，队友送过来"。）
+    def _strip(card_id: str) -> None:
+        """把某个关键牌从所有玩家手里与所有房间地板上摘掉，保证夹具可复现。"""
+        for p in engine.state.players:
+            while card_id in p.items:
+                p.items.remove(card_id)
+        for k in list(engine.state.room_items):
+            items = [c for c in engine.state.room_items[k] if c != card_id]
+            if items:
+                engine.state.room_items[k] = items
+            else:
+                engine.state.room_items.pop(k, None)
+
     heir.room_key = spear_room
     throne = flags.get("throne_room")
+    # 夹具显式化：谁活着、谁持牌、在哪，全部摆明，不依赖本局的偶然状态。
+    for p in engine.state.players:
+        if p.role == "hero":
+            p.dead = False
+    _strip("omen_spear")
+    _strip("omen_ring")
+    heir.items = ["omen_spear"]
     assert handler.bot_goal_rooms(engine, heir) == [f"__room__{throne}"], (
-        "矛已在手时（戒指在地上）应优先去拿戒指或直奔王座"
+        "矛已在手、地上没有别的关键牌时应直奔王座（不再追持牌队友）"
     )
     heir.items = ["omen_spear", "omen_ring"]
     assert handler.bot_goal_rooms(engine, heir) == [f"__room__{throne}"], "两件齐了就去王座"
-    heir.items = []
-    assert handler.bot_goal_rooms(engine, heir) == [f"__room__{spear_room}"], (
-        "没有矛时先去矛房间"
+    # 关键牌躺在地上 → 继承人去捡（内容兜底把牌放到地板上，这条路必须走得通）
+    room_key = next(k for k in engine.state.board if k != throne)
+    heir.items = ["omen_spear"]
+    heir.room_key = throne
+    engine.state.room_items[room_key] = ["omen_ring"]
+    assert handler.bot_goal_rooms(engine, heir) == [f"__room__{room_key}"], (
+        "地上有关键牌时继承人应去捡，而不是站在王座上等"
+    )
+    assert handler.bot_stay_in_room(engine, heir) is False, (
+        "地上还有关键牌时继承人不能钉死在王座上（否则一步不动空转到回合上限）"
+    )
+    _strip("omen_ring")
+    assert handler.bot_stay_in_room(engine, heir) is True, (
+        "地上没有关键牌、人已经在王座上时应站住等队友送牌"
     )
     other = next(
         (p for p in engine.state.players if p.role == "hero" and not p.dead and p.id != heir.id),
@@ -10236,6 +10301,21 @@ def verify_haunt39_spear_flow() -> None:
         assert handler.bot_goal_rooms(engine, other) == [f"__room__{heir.room_key}"], (
             "队友应去和继承人会合"
         )
+        # 送牌方到站也得停：王座是死胡同，只剩 1 步时通用走位会把唯一的出口
+        # （回楼梯）选掉，进了又出 → 回合开始时不在王座，交接永远不发生
+        # （seed113/5p 实测：持矛者 62 个回合 0 次留在王座房）。
+        heir.items = []          # 继承人还缺矛，队友正带着它过来
+        other.items = ["omen_spear"]
+        other.room_key = heir.room_key
+        assert handler.bot_stay_in_room(engine, other) is True, (
+            "带着继承人所缺的牌站在继承人房里时应站住等交接"
+        )
+        other.room_key = room_key
+        assert handler.bot_stay_in_room(engine, other) is False, (
+            "不在继承人房里就不用站住"
+        )
+        other.items = []
+    heir.items = []
 
     # quest_carrier 让队友把矛/戒指交给继承人（同房间、且持牌方是当前回合玩家）
     if other is not None:
@@ -10259,6 +10339,66 @@ def verify_haunt39_spear_flow() -> None:
     engine.state.winner = None
     assert handler.check_victory(engine) is True
     assert engine.state.winner == "heroes"
+
+
+def verify_haunt39_deck_fallback() -> None:
+    """剧本 39 内容兜底：预兆来源真的枯竭时，压在牌堆里的关键牌落到王座脚下。
+
+    内容失衡（预兆牌 13 张 vs 带预兆符号的房间 7 间）让"戒指从未被抽到"成为
+    常事；房屋探满后连抽牌机会都没有，英雄胜利线物理不可达——seed63/4p 实测：
+    49 间全揭开、三层前沿全为 0、`_has_future_omen_source()` 为 False、戒指在
+    残余预兆牌里。兜底只在"确实再也抽不到预兆"时动手，正常对局行为不变。
+
+    这里用桩把"来源枯竭"这个条件固定下来（真跑去把房子探满既慢又不稳）；
+    端到端那条路已由 seed63/4p 由僵局变为 69 回合终局覆盖。
+    """
+    engine = _run_until_haunt(seed=63, players=4, haunt_id=39)
+    handler = engine._mode_handler()
+    assert isinstance(handler, HeirAssassinMode)
+    throne = engine._haunt_flags().get("throne_room")
+    assert throne and throne in engine.state.board
+
+    def _clear_ring() -> None:
+        for p in engine.state.players:
+            while "omen_ring" in p.items:
+                p.items.remove("omen_ring")
+        for k in list(engine.state.room_items):
+            kept = [c for c in engine.state.room_items[k] if c != "omen_ring"]
+            if kept:
+                engine.state.room_items[k] = kept
+            else:
+                engine.state.room_items.pop(k, None)
+        for deck in (*engine.state.card_decks.values(), *engine.state.card_discards.values()):
+            while "omen_ring" in deck:
+                deck.remove("omen_ring")
+
+    _clear_ring()
+    deck = engine.state.card_decks.setdefault("omen", [])
+    deck.append("omen_ring")
+    # 1) 还有未来预兆来源：兜底不许碰牌堆
+    has_source = lambda: True  # noqa: E731
+    real = engine._has_future_omen_source
+    engine._has_future_omen_source = has_source
+    try:
+        handler._ensure_required_cards_reachable(engine)
+        assert "omen_ring" in deck, "还有未来预兆来源时不该动牌堆"
+        assert "omen_ring" not in engine.state.room_items.get(throne, []), (
+            "来源没枯竭就不该把牌塞到王座脚下"
+        )
+        # 2) 来源枯竭：关键牌取出牌堆、放到王座脚下
+        engine._has_future_omen_source = lambda: False  # noqa: E731
+        handler._ensure_required_cards_reachable(engine)
+        assert "omen_ring" not in deck, "来源枯竭时应把关键牌取出牌堆"
+        assert "omen_ring" in engine.state.room_items.get(throne, []), (
+            "取出的关键牌应放在王座脚下（继承人本来就要去的地方）"
+        )
+        # 3) 幂等：再跑一次不会复制
+        handler._ensure_required_cards_reachable(engine)
+        assert engine.state.room_items[throne].count("omen_ring") == 1, (
+            "兜底必须幂等，不能每次回合开始都塞一张"
+        )
+    finally:
+        engine._has_future_omen_source = real
 
 
 def verify_all_haunts_win_branches_and_action_reachability() -> None:
@@ -11312,6 +11452,7 @@ def main():
     verify_character_interaction_matrix()
     verify_haunt33_fresh_tile_and_explore_gate()
     verify_haunt39_spear_flow()
+    verify_haunt39_deck_fallback()
     verify_all_haunts_win_branches_and_action_reachability()
     # M10-38：批次 1（剧本 1-5）审计新增的引擎能力与修复
     verify_haunt_action_success_flag()

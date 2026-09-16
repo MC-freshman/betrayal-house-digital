@@ -5955,6 +5955,9 @@ class HeirAssassinMode(GenericModeHandler):
 
     ASSASSIN = "cultist"
     THRONE_ROOM = "statuary_corridor"
+    # p50：英雄胜利要求"继承人在王座上同时持有长矛与戒指"。
+    # 与 rule_data.required_cards 声明的是同两张牌（改一处必须改两处）。
+    REQUIRED_CARDS = ("omen_spear", "omen_ring")
 
     # ------------------------------------------------------------- setup
     def setup(self, engine: Any, haunt: Any, room_key: str) -> None:
@@ -6057,63 +6060,140 @@ class HeirAssassinMode(GenericModeHandler):
 
     # ------------------------------------------------------------- 机器人
     def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
-        """p50：继承人先取矛与戒指，再登上王座；队友去和继承人会合。
+        """p50：继承人先捡地上的矛/戒，之后钉在王座上；队友把牌送去王座。
 
-        缺哪件、东西在谁手上都随对局变化，静态 key_rooms 表达不了
-        （见 handoff §6 第 6 条）。
+        关键的"不做什么"：继承人**不去追持牌队友**。队友的目标本来就是
+        "继承人在哪"，两个目标互相指对方会变成原地互换房间的互追——
+        seed79/5p 实测：持矛的 P0 与继承人 P2 在门厅／入口大厅之间对调了
+        250 多个回合，而 `_try_share_quest_items` 要求"回合开始时同房"，
+        两人永远凑不到一间，交接从未发生。
+        改成"继承人钉在王座等，队友带着牌过来"后交接必然发生（王座本就是
+        继承人的终点）。地上的牌照捡——它不会移动，没有互追风险。
         """
         if player.dead or player.role != "hero":
             return []
-        flags = engine._haunt_flags()
         throne = self._throne_room(engine)
         heir = self._heir(engine)
         if heir is None or heir.dead:
             return []
         if player.id != heir.id:
             return [f"__room__{heir.room_key}"]
-        if "omen_spear" not in player.items:
-            # 矛可能已经被队友捡走——目标跟着"矛现在在哪"走（队友身上/地上），
-            # 写死初始房间会让继承人对着一间空屋子来回跑（seed101/5p 实测）。
-            for other in engine.state.players:
-                if other.id != player.id and not other.dead and "omen_spear" in other.items:
-                    return [f"__room__{other.room_key}"]
+        for card_id in self.REQUIRED_CARDS:
+            if card_id in player.items:
+                continue
             for room_key, items in engine.state.room_items.items():
-                if "omen_spear" in items:
-                    return [f"__room__{room_key}"]
-            spear_room = flags.get("spear_room")
-            return [f"__room__{spear_room}"] if spear_room else []
-        if "omen_ring" not in player.items:
-            for other in engine.state.players:
-                if other.id != player.id and not other.dead and "omen_ring" in other.items:
-                    return [f"__room__{other.room_key}"]
-            for room_key, items in engine.state.room_items.items():
-                if "omen_ring" in items:
+                if card_id in items:
                     return [f"__room__{room_key}"]
         return [f"__room__{throne}"] if throne else []
 
-    def bot_wants_explore(self, engine: Any, player: Any) -> bool:
-        """p50：矛与戒都是"要在牌堆里找出来"的卡——凑不齐时得去翻新房间。
+    def bot_stay_in_room(self, engine: Any, player: Any) -> bool:
+        """p50：交接点上的人各自站住——关键牌要交到继承人手里。
 
-        39 号实测（seed109/4p）：戒指还压在预兆牌堆里、没人在探索，继承人在
-        王座前干等到 400 回合。这里声明"该去探索了"，bot 会给探索选项大幅加分；
-        只要还有一件既不在任何人手上、也不在地上，就必须靠抽牌拿到。
+        玩家的通用交接判定（`_try_share_quest_items`）只在**回合开始时**看
+        "两人是否同房"，所以两边都必须"到站就停"：
+
+        · 送牌的一方：王座是死胡同，走进去后若还剩步数，通用走位会把仅有的
+          出口（回楼梯）当唯一选项选掉——进了又出，回合开始时永远不在王座，
+          交接因此从未发生（seed113/5p 实测：持矛者 62 个回合 0 次留在王座房；
+          seed101/4p 同款）。
+        · 继承人：站在王座上等（它本来就是终点）。
+
+        两种例外都不能钉死：地上还有关键牌就得去捡（seed63/4p：兜底牌落到
+        十步外的地板，继承人一动不动空转到 300 回合）；只剩自己一个活人、
+        牌还压在牌堆里时得亲自去翻（seed197/5p）。
         """
-        if player.dead or player.role != "hero":
+        if getattr(player, "role", None) != "hero" or getattr(player, "dead", False):
             return False
-        flags = engine._haunt_flags()
-        if player.id != flags.get("heir_id"):
+        heir = self._heir(engine)
+        if heir is None or heir.dead:
             return False
-        if "omen_spear" in player.items and "omen_ring" in player.items:
+        # (1) 送牌方：带着继承人所缺的关键牌站在继承人房里 → 停下等交接。
+        if player.id != heir.id:
+            if player.room_key != heir.room_key:
+                return False
+            return any(
+                card_id in player.items and card_id not in heir.items
+                for card_id in self.REQUIRED_CARDS
+            )
+        # (2) 继承人：站在王座上等牌送来。
+        throne = self._throne_room(engine)
+        if not throne or player.room_key != throne:
             return False
-        for card_id in ("omen_spear", "omen_ring"):
+        for card_id in self.REQUIRED_CARDS:
             if card_id in player.items:
                 continue
-            if any(card_id in other.items for other in engine.state.players if not other.dead):
+            if any(card_id in items for items in engine.state.room_items.values()):
+                return False
+        if self._required_card_unaccounted(engine) and len(self._alive_heroes(engine)) < 2:
+            return False
+        return True
+
+    def _alive_heroes(self, engine: Any) -> list[Any]:
+        return [
+            p for p in engine.state.players if p.role == "hero" and not p.dead
+        ]
+
+    def _required_card_unaccounted(self, engine: Any) -> bool:
+        """还有关键牌既不在任何活人手上、也不在地上（＝只可能还压在牌堆里）。"""
+        for card_id in self.REQUIRED_CARDS:
+            if any(
+                card_id in p.items
+                for p in engine.state.players
+                if not p.dead
+            ):
                 continue
             if any(card_id in items for items in engine.state.room_items.values()):
                 continue
             return True
         return False
+
+    def bot_wants_explore(self, engine: Any, player: Any) -> bool:
+        """p50：矛与戒都是"要在牌堆里找出来"的卡——凑不齐时得去翻新房间。
+
+        39 号实测（seed109/4p）：戒指还压在预兆牌堆里、没人在探索，继承人在
+        王座前干等到 400 回合。这里声明"该去探索了"，bot 会给探索选项大幅加分。
+
+        本轮把这份差事交给**队友**：继承人要钉在王座上等牌送来（见
+        `bot_goal_rooms` / `bot_stay_in_room`），它一边守王座一边翻牌的话，
+        队友追着它跑又会退回互追。继承人只在"只剩自己一个活人"时才自己去翻。
+        """
+        if player.dead or player.role != "hero":
+            return False
+        if not self._required_card_unaccounted(engine):
+            return False
+        if player.id == engine._haunt_flags().get("heir_id"):
+            return len(self._alive_heroes(engine)) < 2
+        return True
+
+    # ------------------------------------------------------------- 牌堆兜底
+    def _ensure_required_cards_reachable(self, engine: Any) -> None:
+        """内容兜底：预兆来源真的枯竭时，把还压在牌堆里的关键牌放到王座脚下。
+
+        p50 / p121 都没有"搜牌堆"条款，引擎的通用搜牌通道
+        `_search_deck_for_required_card` 只在**抽预兆**的那一刻生效；而本仓库
+        预兆牌 13 张、带预兆符号的房间只有 7 间，房屋探满之后不可能再抽到任何
+        预兆（内容失衡见 handoff §11.x）。seed63/4p 实测：继承人已持矛，
+        `omen_ring` 静静躺在 6 张残余预兆牌里，49 间房全已揭开、三层前沿全为 0、
+        `_has_future_omen_source()` 为 False —— 英雄胜利线物理不可达。
+
+        只在"确实再也抽不到预兆"时才动手，且只挪牌堆里那张关键牌：正常对局
+        （前沿还在、预兆还能翻）行为完全不变。
+        """
+        deck = engine.state.card_decks.get("omen", [])
+        missing = [card_id for card_id in self.REQUIRED_CARDS if card_id in deck]
+        if not missing:
+            return
+        if engine._has_future_omen_source():
+            return
+        throne = self._throne_room(engine)
+        if not throne:
+            return
+        for card_id in missing:
+            deck.remove(card_id)
+            engine.state.room_items.setdefault(throne, []).append(card_id)
+            card = engine.catalog.cards.get(card_id)
+            name = card.name if card is not None else card_id
+            engine._log(f"再也翻不出新的预兆了——{name}被发现在王座脚下。")
 
     # ------------------------------------------------------------- 刺客暴露
     def on_enter_room(self, engine: Any, player: Any, room: Any) -> None:
@@ -6166,6 +6246,7 @@ class HeirAssassinMode(GenericModeHandler):
 
     # ------------------------------------------------------------- 计时
     def on_turn_start(self, engine: Any, player: Any) -> None:
+        self._ensure_required_cards_reachable(engine)
         flags = engine._haunt_flags()
         if player.role != "traitor" or player.dead:
             return
@@ -15343,6 +15424,31 @@ class NightfallMode(GenericModeHandler):
         engine._log(f"{monster.name} 只是被打散了一瞬。")
         engine._stun_monster(monster, 1)
         return True  # 全权接管：不足 2 点只击晕，引擎默认路径已跳过
+
+    def on_player_died(self, engine: Any, player: Any) -> None:
+        """p140：被缠梦的英雄倒下 → 梦魇必须松开他回到场上。
+
+        缠梦的标记是「把梦魇 token 放在该英雄的角色卡上」——卡随人离场，
+        梦魇不能继续贴着一张不存在的卡。不释放的后果是两条胜利线同时被掐断：
+        `attack_allowed` 因 `id in haunting` 永久拒绝攻击这只梦魇（原文
+        「Nightmares currently haunting a hero's dreams may not be attacked」），
+        而 `on_monster_turn_start` 又让它整回合跳过；英雄这边「数位英雄同房 +
+        持火把」的驱散条件在只剩一人时本就不成立（p69 明文）。
+        实测 seed63/5p、seed3/5p：全场只剩的梦魇都缠着已死英雄，300 回合无人能胜。
+        """
+        flags = engine._haunt_flags()
+        haunting = dict(flags.get("haunting", {}))
+        released = [mid for mid, hid in haunting.items() if hid == player.id]
+        if not released:
+            return
+        for mid in released:
+            haunting.pop(mid, None)
+            monster = next((m for m in engine.state.monsters if m.id == mid), None)
+            if monster is not None and player.room_key:
+                # 与「英雄挣脱后梦魇现身在英雄房间」同一口径（p140）。
+                monster.room_key = player.room_key
+        flags["haunting"] = haunting
+        engine._log("梦魇从倒下的英雄身上松开，重新在房间里凝出形体。")
 
     # ------------------------------------------------------- 噩梦回合
     def on_monster_turn_start(self, engine: Any, monster: Any) -> bool:
