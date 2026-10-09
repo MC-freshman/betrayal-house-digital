@@ -75,6 +75,8 @@ def build(dist: Path) -> int:
     dist.mkdir(parents=True, exist_ok=True)
     # PyInstaller 的中间产物留在 build/，不要污染 release/
     if BUILD_DIR.exists():
+        if BUILD_DIR.resolve().parent != REPO.resolve():
+            raise RuntimeError(f"构建清理路径越出源码目录：{BUILD_DIR}")
         shutil.rmtree(BUILD_DIR, ignore_errors=True)
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -86,6 +88,11 @@ def build(dist: Path) -> int:
         "--clean",
         "--onefile",
         "--windowed",
+        # 剧本包通过 importlib 按名称加载，PyInstaller 静态扫描无法发现。
+        "--paths",
+        str(REPO.parent),
+        "--collect-submodules",
+        "game.haunts",
         "--name",
         APP_NAME,
         "--distpath",

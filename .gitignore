@@ -13,3 +13,9 @@ build/
 saves/
 *.log
 *.tmp
+
+# 本机参考基线与发布包
+golden_replays.local.json
+dist/
+release/*.exe
+release/*.zip

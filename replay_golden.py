@@ -20,6 +20,9 @@ seed=23 五人局同样一致。且对局能真正推进到 GAME_OVER。
     python replay_golden.py --update     # 重新生成基准（确认改动是有意时）
     python replay_golden.py --verbose    # 显示每个用例的摘要
 
+基准文件默认是同目录 golden_replays.json；设置环境变量 GOLDEN_BASELINE_FILE
+可指向其他基准（例如换环境时先生成"本地参考基线"再对照，不覆盖已提交基准）。
+
 退出码：0 = 全部匹配；1 = 有差异；2 = 环境或用法错误。
 """
 
@@ -28,6 +31,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -43,7 +47,8 @@ else:  # pragma: no cover
     from .engine import GameEngine
     from .net.serialize import state_to_dict
 
-BASELINE_PATH = Path(__file__).resolve().parent / "golden_replays.json"
+BASELINE_PATH = Path(os.environ.get("GOLDEN_BASELINE_FILE")
+                     or Path(__file__).resolve().parent / "golden_replays.json")
 
 # 覆盖 3/4/5/6 人局，每档 2 个种子。刻意选不同人数，因为剧本的怪物数量、
 # 进度轨道目标值很多都按人数计算（half_players_floor / player_count 等），

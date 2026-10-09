@@ -8,7 +8,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 try:
     from .content import build_catalog
@@ -187,6 +187,12 @@ def _distance_hint(floor: int) -> str:
     return { -1: "地下室", 0: "一层", 1: "二层" }.get(floor, "未知楼层")
 
 
+# 存档格式版本：save_to_file 写入的版本号。load_from_file 拒绝更高版本，
+# 旧版本经 _SAVE_MIGRATIONS 逐级升级。结构变更时 +1 并登记迁移函数。
+SAVE_VERSION = 2
+_SAVE_MIGRATIONS: dict[int, Any] = {}  # {来自版本: Callable[[dict], dict]}，当前暂无历史版本
+
+
 class GameEngine:
     def __init__(
         self,
@@ -238,6 +244,7 @@ class GameEngine:
         data = json.loads(source.read_text(encoding="utf-8"))
         if data.get("format") != "betrayal_house_save":
             raise ValueError("不是有效的山中小屋存档。")
+        data = self._migrate_save_payload(data)
         self.state = state_from_dict(data.get("state") or {})
         rng_state = data.get("rng_state")
         if rng_state is not None:
@@ -246,6 +253,28 @@ class GameEngine:
             self.rng.seed(self.state.seed)
         self._next_monster_id = int(data.get("next_monster_id") or self._infer_next_monster_id())
         self._active_player_id = None
+
+    def _migrate_save_payload(self, data: dict) -> dict:
+        """存档版本守卫：拒绝过新版本，把旧版本沿迁移链升到当前版本。
+
+        version 字段缺失视为最早期存档（v2 之前从未写过其他结构，保持原样
+        直读，不因补守卫而拒绝历史存档）。未来改动存档结构时：SAVE_VERSION
+        +1，并在 _SAVE_MIGRATIONS 里登记 旧版本 -> 迁移函数。
+        """
+        if "version" not in data:
+            return data
+        version = int(data.get("version") or 1)
+        if version > SAVE_VERSION:
+            raise ValueError(
+                f"存档版本过新（v{version}，本程序支持到 v{SAVE_VERSION}），请先升级游戏。"
+            )
+        while version < SAVE_VERSION:
+            migrate = _SAVE_MIGRATIONS.get(version)
+            if migrate is None:
+                raise ValueError(f"存档版本 v{version} 缺少迁移路径，无法读取。")
+            data = migrate(data)
+            version = int(data.get("version") or version + 1)
+        return data
 
     def _tupleize_random_state(self, value):
         if isinstance(value, list):
@@ -2282,7 +2311,7 @@ class GameEngine:
             "If you use an item (such as the Bell or Spirit Board) that would
              normally allow the Traitor to move monsters closer to you ..."
             → 铃铛的用途是让怪物朝使用者靠近，而不是被动加值道具。
-              （被动的 +1 神志检定由 _check_bonus 另行结算。）
+              （被动的 +1 理智检定由 _check_bonus 另行结算。）
 
         各剧本对铃铛规定了免疫对象，精修对应剧本时需一并处理：
             p89（#7 食人常春藤）/ p105（#23 触手恐怖）：对被抓住的英雄无效
@@ -4471,6 +4500,15 @@ class GameEngine:
         self.state.log.append(message)
         if len(self.state.log) > 400:
             self.state.log = self.state.log[-400:]
+
+    # 供网络/后端等外部层使用的公开入口，避免跨模块直触下划线私有成员。
+    def log_message(self, message: str, category: str = "") -> None:
+        self._log(message, category)
+
+    @property
+    def active_player_id(self) -> int | None:
+        """当前正被引擎请求决策的玩家 id（None=无）。"""
+        return self._active_player_id
 
     def smoke_turn(self) -> None:
         player = self.current_player

@@ -942,7 +942,7 @@ class GameApp(tk.Tk):
         self.selected_player_index = 0
         self.current_move_options: list[ExitOption] = []
         self.current_attack_targets: list[object] = []
-        self._last_fp = None
+        self._panel_fps: dict[str, tuple] = {}
         self._bot_busy = False
         self.zoom = 1.0
         self._tooltip = None
@@ -2720,7 +2720,20 @@ class GameApp(tk.Tk):
         self.btn_load.config(state="normal")
         self._refresh_action_hint()
 
-    def _state_fingerprint(self):
+    # 轮询分组的"指纹 → 需要重建的面板"。原来是一个大指纹：任一变化（哪怕
+    # 日志多一行）就把六面板连同 266 行的棋盘全量重绘一遍。现在按归属拆成
+    # 三组、各自比对各自刷新：
+    #   log    —— 日志尾巴（最高频变化，单独走，避免牵连棋盘）
+    #   board  —— 棋盘重绘关心的一切：地形/门/怪物/玩家位置与步数/当前回合
+    #             （current_move_options 在重绘里现算，必须随回合与步数失效）
+    #   detail —— 状态栏/玩家面板/牌堆/按钮（吃玩家详情与剧本轨道）
+    _PANEL_REFRESH = {
+        "log": ("_refresh_log",),
+        "board": ("_redraw_board",),
+        "detail": ("_refresh_status", "_refresh_player_panel", "_refresh_deck_panel", "_refresh_buttons"),
+    }
+
+    def _panel_fingerprints(self) -> dict[str, tuple]:
         state = self.engine.state
         log_tail = tuple(state.log[-6:])
         players = tuple(
@@ -2734,6 +2747,7 @@ class GameApp(tk.Tk):
         )
         board = tuple(sorted((k, r.x, r.y, r.floor, r.revealed, tuple(r.doors)) for k, r in state.board.items()))
         monsters = tuple((m.id, m.room_key, m.stunned_turns) for m in state.monsters)
+        core = (state.phase, state.turn_count, state.turn_index, players, board, monsters)
         haunt_rule = state.meta.get("haunt_rule", {})
         haunt_tracks = tuple(
             sorted(
@@ -2741,11 +2755,13 @@ class GameApp(tk.Tk):
                 for key, value in haunt_rule.get("tracks", {}).items()
             )
         ) if isinstance(haunt_rule, dict) else ()
-        return (
-            state.phase, state.turn_count, state.turn_index, state.omens_drawn,
-            state.winner, state.haunt.id if state.haunt else None,
-            log_tail, players, board, monsters, haunt_tracks,
+        detail = (
+            core,
+            state.omens_drawn, state.winner,
+            state.haunt.id if state.haunt else None,
+            haunt_tracks,
         )
+        return {"log": log_tail, "board": core, "detail": detail}
 
     def _idle_poll(self) -> None:
         if getattr(self, "_closing", False):
@@ -2753,10 +2769,15 @@ class GameApp(tk.Tk):
         self._maybe_show_haunt_briefing()
         self._maybe_run_bot_turn()
         if hasattr(self, "board_canvas"):
-            fp = self._state_fingerprint()
-            if fp != self._last_fp:
-                self._last_fp = fp
-                self._refresh_ui()
+            for key, fp in self._panel_fingerprints().items():
+                if fp == self._panel_fps.get(key):
+                    continue
+                self._panel_fps[key] = fp
+                for method in self._PANEL_REFRESH[key]:
+                    try:
+                        getattr(self, method)()
+                    except Exception as exc:
+                        print(f"[本地] 刷新[{key}/{method}] 异常: {exc!r}")
         self._idle_after = self.after(300, self._idle_poll)
 
     def _maybe_show_haunt_briefing(self) -> None:

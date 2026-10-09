@@ -32,7 +32,6 @@ if __package__ in {None, ""}:
         NightmareDreamMode,
         BugSprayMode,
         BeastmasterMode,
-        BeastmasterMode,
         GhostBrideMode,
         ZombieLordMode,
         AbyssExorcismMode,
@@ -647,7 +646,7 @@ def verify_haunt1_secret_passage() -> None:
 
 
 def verify_haunt2_seance_race() -> None:
-    """剧本 2 降灵竞速：叛徒必须 1 知识 + 1 神志，不能两次同属性。
+    """剧本 2 降灵竞速：叛徒必须 1 知识 + 1 理智，不能两次同属性。
 
     叛徒手册 p84："When you've succeeded at one Knowledge roll and one
     Sanity roll, you've summoned the ghost."
@@ -658,7 +657,7 @@ def verify_haunt2_seance_race() -> None:
     flags = engine._haunt_flags()
     handler = engine._mode_handler()
 
-    # 预先设一个错误状态：叛徒已有 2 次知识成功、0 次神志——按原文不算完成
+    # 预先设一个错误状态：叛徒已有 2 次知识成功、0 次理智——按原文不算完成
     flags["traitor_seance_knowledge"] = 2
     flags["traitor_seance_sanity"] = 0
     flags["ghost_summoned"] = False
@@ -668,7 +667,7 @@ def verify_haunt2_seance_race() -> None:
     traitor.items.append("omen_spirit_board")  # p84：持通灵板才能降灵
     traitor.room_key = next(iter(engine.state.board))
 
-    # 机器人叛徒在缺神志时应被强制只能掷神志（options 收窄）
+    # 机器人叛徒在缺理智时应被强制只能掷理智（options 收窄）
     # 直接调用内部方法验证：
     saved = engine.prompter
     engine.prompter = engine.prompter  # 保持
@@ -676,7 +675,7 @@ def verify_haunt2_seance_race() -> None:
     assert ok, "降灵检定应正常执行"
     # 无论成败，都不该出现"两次知识就算完成"的情况
     assert not (flags.get("ghost_summoned") and flags.get("ghost_control") == "traitor" and flags.get("traitor_seance_sanity", 0) == 0 and flags.get("traitor_seance_knowledge", 0) >= 2), (
-        "叛徒两次知识成功不应视为完成降灵（p84 要求 1 知识 + 1 神志）"
+        "叛徒两次知识成功不应视为完成降灵（p84 要求 1 知识 + 1 理智）"
     )
 
 
@@ -857,7 +856,7 @@ def verify_haunt3_frog_lifecycle() -> None:
 
     hero.items.append("item_candle")
     before_room = hero.room_key
-    # 记录变蛙前的其他属性：原文只降力量与知识，速度与神志不受影响。
+    # 记录变蛙前的其他属性：原文只降力量与知识，速度与理智不受影响。
     # 注意不能断言"速度 > 0"——部分角色的速度起始位置本就在最低格。
     speed_before = hero.stat_positions.get("speed")
     sanity_before = hero.stat_positions.get("sanity")
@@ -867,7 +866,7 @@ def verify_haunt3_frog_lifecycle() -> None:
     assert hero.stat_positions["might"] == 0, "力量应降到最低格"
     assert hero.stat_positions["knowledge"] == 0, "知识应降到最低格"
     assert hero.stat_positions.get("speed") == speed_before, "速度不应被降（原文只降力量与知识）"
-    assert hero.stat_positions.get("sanity") == sanity_before, "神志不应被降"
+    assert hero.stat_positions.get("sanity") == sanity_before, "理智不应被降"
     assert not hero.items, "变蛙应掉落所有物品"
     assert engine.room_items(before_room), "掉落的物品应留在原房间"
     assert not engine.available_attack_targets(hero), "青蛙不能攻击"
@@ -9636,10 +9635,10 @@ def verify_haunt68_key_route_and_confusion() -> None:
     with patch.object(engine, "_roll_monster_attack", return_value=6), \
             patch.object(engine, "_roll_attack", return_value=1):
         assert handler.on_monster_turn_attack(engine, servant) is True
-    assert engine.tokens_held_by(victim.id, "confused"), "仆人打赢应放一枚神志检定令牌"
+    assert engine.tokens_held_by(victim.id, "confused"), "仆人打赢应放一枚理智检定令牌"
     assert victim.stat_positions == positions_before, "理智攻击双方都不掉属性（p150）"
 
-    # 迷乱者回合结束：被逼着白走一格（不花移动点），然后神志恢复
+    # 迷乱者回合结束：被逼着白走一格（不花移动点），然后理智恢复
     victim.room_key = hall
     start_room = victim.room_key
     steps_before = victim.steps_remaining = 4

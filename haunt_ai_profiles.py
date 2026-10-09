@@ -111,8 +111,16 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         "hero": {
             "objective_type": "rescue_then_escape",
             "needed_items": ["医疗包", "治疗药膏"],
-            "target_rooms": ["entrance_hall"],
-            "attack_monsters": True,
+            # p15：目标随"网破没破、卵毁没毁、门开没开"推进，不能写进静态
+            # target_rooms——静态表（+130）会压过剧本动态目标（+95），实测
+            # 英雄全挤在入口大厅来回踱步、毁卵行动 used=0。前门目标由
+            # open_front_door.rooms 走通用换算，去蛛网房由 WebEscapeMode
+            # .bot_goal_rooms 动态给出（同 68 号钥匙房口径）。
+            "target_rooms": [],
+            # 巨型蜘蛛按 Turn Traits 表长到 Might 7-8，而胜利清单里没有
+            # "杀死蜘蛛"——与它互殴只会把英雄耗死在倒计时结束前（实测
+            # 44 局全部死于蜘蛛或孵化）。躲着走清单才是人的打法。
+            "attack_monsters": False,
             "protect_humans": True,
             "victory_focus": "先打蛛网救揭示者，再摧毁卵并打开前门",
         },
@@ -715,7 +723,7 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "monster": {"mode": "nearest_hero"},
         "scenario": {
-            "tokens": ["钥匙", "神志检定"],
+            "tokens": ["钥匙", "理智检定"],
             "special_rules": ["turn_seal_roll", "confusion_force_move", "traitor_cannot_touch_keys", "escape_majority_win"],
         },
     },
@@ -788,7 +796,7 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "monster": {"mode": "nearest_hero"},
         "scenario": {
-            "tokens": ["命运之矛", "盾牌", "雕像", "石棺", "古甲"],
+            "tokens": ["命运之矛", "盾牌", "雕像", "石棺", "古代盔甲"],
             "special_rules": ["spear_control", "relic_persuasion", "inspire_race"],
         },
     },
@@ -990,7 +998,19 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
     return merged
 
 
+# 合并结果的只读缓存：每回合的移动/攻击打分都会取一次 profile，而合并
+# （含多层 deepcopy）与剧本无关、结果恒定，没必要每步重算。返回的是缓存
+# 对象本体，调用方必须只读（当前 bot_ai 只用 .get 读值）；需要改动时自行
+# deepcopy。
+_PROFILE_CACHE: dict[int | None, dict[str, Any]] = {}
+
+
 def get_haunt_ai_profile(haunt_id: int | None) -> dict[str, Any]:
-    if haunt_id is None:
-        return deepcopy(DEFAULT_HAUNT_AI_PROFILE)
-    return _deep_merge(DEFAULT_HAUNT_AI_PROFILE, HAUNT_AI_PROFILE_OVERRIDES.get(haunt_id, {}))
+    cached = _PROFILE_CACHE.get(haunt_id)
+    if cached is None:
+        if haunt_id is None:
+            cached = deepcopy(DEFAULT_HAUNT_AI_PROFILE)
+        else:
+            cached = _deep_merge(DEFAULT_HAUNT_AI_PROFILE, HAUNT_AI_PROFILE_OVERRIDES.get(haunt_id, {}))
+        _PROFILE_CACHE[haunt_id] = cached
+    return cached
