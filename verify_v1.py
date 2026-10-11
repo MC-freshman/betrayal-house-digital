@@ -746,6 +746,7 @@ def verify_ui_buttons_have_responses() -> None:
 
         app.engine.prompter = _ScriptedPrompter(choices=[player.items.index(pickup_card)])
         _force_ui_human_turn(app, player.id)
+        app.engine._reset_player_turn_state(player)  # 拾取后的下一个回合才可丢弃。
         app._refresh_ui()
         assert app.btn_drop["state"] == "normal"
         app.btn_drop.invoke()

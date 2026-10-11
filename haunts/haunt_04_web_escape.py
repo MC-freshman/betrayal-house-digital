@@ -58,11 +58,18 @@ class WebEscapeMode(GenericModeHandler):
                 None,
             )
             if trapped is not None:
-                return [trapped.room_key]
+                return ["__room__" + trapped.room_key]
             web = next(iter(engine.tokens_of_kind("web")), None)
             if web is not None and getattr(web, "room_key", None):
-                return [web.room_key]
+                return ["__room__" + web.room_key]
         return []
+
+    def bot_preserve_item(self, engine, player, card_id):
+        return (player.role == "hero" and not engine._haunt_flags().get("eggs_destroyed")
+                and card_id in ("item_medical_kit", "item_healing_salve"))
+
+    def bot_action_priority(self, engine, player, action_id):
+        return {"destroy_eggs_salve": 100, "destroy_eggs_medical_kit": 90}.get(action_id, 0)
 
     def bot_wants_explore(self, engine: Any, player: Any) -> bool:
         """网已破、卵还没毁、全队没人带医疗物品时：去翻新房间找医疗箱/药膏。
@@ -159,6 +166,10 @@ class WebEscapeMode(GenericModeHandler):
             # 卵已毁就别再显示销毁卵
             if action.id in {"destroy_eggs_medical_kit", "destroy_eggs_salve"} and flags.get("eggs_destroyed"):
                 continue
+            if action.id in {"destroy_eggs_medical_kit", "destroy_eggs_salve"}:
+                card = "item_healing_salve" if action.id.endswith("salve") else "item_medical_kit"
+                if not engine.item_action_available(card):
+                    continue
             # 门已开就别再显示开门；未解困/卵未毁不能开门
             if action.id == "open_front_door":
                 if flags.get("front_door_open"):
@@ -193,8 +204,12 @@ class WebEscapeMode(GenericModeHandler):
             flags = engine._haunt_flags()
             if flags.get("eggs_destroyed"):
                 return False
+            card = "item_healing_salve" if action_id.endswith("salve") else "item_medical_kit"
+            if not engine.item_action_available(card):
+                return False
             # 治疗药膏免检定（p15 "without a Knowledge roll"）
             if action_id == "destroy_eggs_salve":
+                engine._mark_item_action(card, "use")
                 for card_id in ("item_healing_salve",):
                     if card_id in player.items:
                         engine._discard_card_from_player(player, card_id, return_to_room=False)
@@ -203,6 +218,8 @@ class WebEscapeMode(GenericModeHandler):
                 engine.check_victory()
                 return True
             ok = super().perform_action(engine, player, action_id, data)
+            if ok:
+                engine._mark_item_action(card, "use")
             if engine.last_haunt_action_succeeded():
                 flags["eggs_destroyed"] = True
             return ok

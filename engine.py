@@ -527,6 +527,8 @@ class GameEngine:
         player.extra_speed_this_turn = 0
         player.extra_check_rerolls = 0
         player.ignore_first_physical_damage = False
+        self.state.meta.setdefault("room_attempts", {}).pop(str(player.id), None)
+        self.state.meta["item_actions"] = {}
         haunt_rule = self.state.meta.get("haunt_rule")
         if haunt_rule:
             used = haunt_rule.setdefault("actions_used", {})
@@ -568,6 +570,9 @@ class GameEngine:
         if self.state.winner or self.state.phase == "GAME_OVER":
             return
         player = self.current_player
+        if (not player.dead and not player.moved_this_turn
+                and self.current_room(player).template_id == "mystic_elevator"):
+            self._apply_mystic_elevator(player, self.current_room(player))
         haunt_triggered = False
         if self.state.phase == "EXPLORE" and self.state.haunt_pending:
             haunt_triggered = self._resolve_haunt_check(player)
@@ -1308,9 +1313,9 @@ class GameEngine:
             "room_furnace_room": "每次进入：受到 1 点物理伤害。",
             "room_coal_chute": "进入时：被送到地下室大厅并结束移动。",
             "room_mystic_elevator": "进入时：掷骰前往随机楼层（叛徒可自选）。",
-            "room_vault": "首次进入：知识检定（目标 4）通过抽 2 张物品卡，失败受 1 点物理伤害。",
+            "room_vault": "每回合可尝试一次知识 6+；成功取 2 件物品并放置空保险库标记。",
             "room_chasm": "进入时：速度检定（目标 4）失败受 1 点物理伤害并停下。",
-            "room_collapsed_room": "首次进入：受 1 点物理伤害并掉到地下室。",
+            "room_collapsed_room": "首次发现速度 5+；失败落入地下室并受一枚骰子的物理伤害。后来者可选择利用。",
             "room_tower": "进入时：速度检定（目标 4）失败受 1 点物理伤害。",
             "room_pentagram_chamber": "（无特殊效果）",
             "room_attic": "特殊房间：部分剧本中的失败检定可留在这里下回合重试。",
@@ -1612,34 +1617,54 @@ class GameEngine:
         self._log(f"[规则缺口] {room.name} 的房间效果 {effect} 尚未实现，已跳过。")
 
     def _apply_mystic_elevator(self, player: Player, room: PlacedRoom) -> None:
-        # 剧本 7 叛徒手册 p89：藤蔓尖端进入神秘电梯后，电梯停用直到它离开。
         if self._mode_handler().mystic_elevator_blocked(self, player):
-            self._log("神秘电梯卡住了——有什么东西盘踞在电梯井里。")
+            self._log("神秘电梯被剧本机制堵住。")
             return
-        if player.role == "traitor":
-            choice = self.prompter.choose_from_list(
-                "神秘电梯",
-                "叛徒进入神秘电梯时可以直接选择目标楼层。",
-                ["地下室", "一层", "二层"],
-            )
-            if choice is None:
-                return
-            floor = [-1, 0, 1][choice]
+        attempts = self.state.meta.setdefault("room_attempts", {}).setdefault(str(player.id), [])
+        if "elevator" in attempts:
+            return
+        controlled = isinstance(player, Monster) or getattr(player, "role", "") == "traitor"
+        if controlled and self.state.meta.get("elevator_group_turn") == self.state.turn_count:
+            return
+        attempts.append("elevator")
+        crew = [p for p in self.state.players if p.room_key == room.key and not p.dead]
+        if controlled:
+            self.state.meta["elevator_group_turn"] = self.state.turn_count
+            roll = 4
         else:
             roll = self.roll_dice(2, "神秘电梯")
-            if roll <= 4:
-                floor = -1
-            elif roll <= 8:
-                floor = 0
-            else:
-                floor = 1
-            self._log(f"神秘电梯骰出 {roll}，目标楼层为 {_distance_hint(floor)}。")
-
-        target_key = self._choose_elevator_target(floor, player.room_key)
-        if target_key:
-            self._move_to_room(player, target_key, via_effect=True)
+        if roll == 4:
+            choice = self.prompter.choose_from_list("神秘电梯", "选择目标楼层。", ["地下室", "一层", "二层"])
+            if choice is None:
+                return
+            floor = (-1, 0, 1)[choice]
         else:
-            self._log("神秘电梯没有找到合适的目标。")
+            floor = {0: -1, 1: -1, 2: 0, 3: 1}.get(roll, room.floor)
+        if roll == 0:
+            for explorer in crew:
+                self.deal_dice_damage(explorer, "physical", 1, source="神秘电梯")
+        slots = []
+        for key, anchor in sorted(self.state.board.items()):
+            if key == room.key or anchor.floor != floor or self._is_collapsed(key):
+                continue
+            for direction, (x, y) in self._free_slots_around(key):
+                rotation = self._rotation_facing(room.template_id, OPPOSITE[direction])
+                if rotation is not None:
+                    slots.append((anchor.name, x, y, rotation))
+        if not slots:
+            self._log("神秘电梯没有找到可连接的门，留在原处。")
+            return
+        choice = self.prompter.choose_from_list("神秘电梯", "选择电梯连接的位置。",
+                                               [f"{name}旁 ({x},{y})" for name, x, y, _ in slots])
+        if choice is None:
+            return
+        _name, x, y, rotation = slots[choice]
+        new_key = self._relocate_room(room.key, x, y, floor=floor)
+        if new_key:
+            self._set_room_orientation(new_key, rotation)
+            for explorer in crew:
+                self._mode_handler().on_player_moved(self, explorer)
+            self._log(f"神秘电梯连接到{_distance_hint(floor)}的新门，乘客随板块一起移动。")
 
     def _choose_elevator_target(self, floor: int, current_key: str) -> str | None:
         candidates = [
@@ -1654,14 +1679,20 @@ class GameEngine:
         return self.rng.choice(candidates)
 
     def _apply_vault(self, player: Player, room: PlacedRoom) -> None:
+        attempts = self.state.meta.setdefault("room_attempts", {}).setdefault(str(player.id), [])
+        attempt = "vault:" + room.key
+        if attempt in attempts or room.data.get("opened"):
+            return
+        attempts.append(attempt)
         self._log("保险库仍然锁着。")
-        if self._resolve_check(player, "knowledge", 4, "保险库检定"):
+        if self._resolve_check(player, "knowledge", 6, "保险库检定"):
             room.data["opened"] = True
+            self.spawn_token("empty_vault", label="空保险库", role="marker", room_key=room.key)
             self._log("保险库打开了。")
             self._draw_item(player)
             self._draw_item(player)
         else:
-            self._deal_damage(player, "physical", 1, source="保险库")
+            self._log("保险库检定失败，大门仍然锁着。")
 
     def _apply_chasm(self, player: Player, room: PlacedRoom) -> None:
         self._log("深渊需要小心跨过。")
@@ -1671,14 +1702,46 @@ class GameEngine:
             player.steps_remaining = 0
 
     def _apply_collapsed_room(self, player: Player, room: PlacedRoom) -> None:
-        if room.data.get("collapsed_resolved"):
-            return
+        first = not room.data.get("collapsed_resolved")
         room.data["collapsed_resolved"] = True
-        self._log("坍塌的地板把你往地下室带。")
-        self._deal_damage(player, "physical", 1, source="坍塌的房间")
-        self._move_to_room(player, "basement_landing", via_effect=True)
-        player.movement_stopped = True
-        player.steps_remaining = 0
+        traitor = player.role == "traitor"
+        if first and not traitor:
+            if self._resolve_check(player, "speed", 5, "塌方房间速度检定"):
+                self._log(f"{player.name} 避开了塌方。")
+                return
+        elif not self.prompter.confirm("塌方房间", "是否故意落入地下室？英雄仍须承受一枚骰子的物理伤害。"):
+            return
+        if not traitor:
+            self.deal_dice_damage(player, "physical", 1, source="塌方房间")
+        if player.dead:
+            return
+        below = room.data.get("below_key")
+        if below not in self.state.board or self._is_collapsed(below):
+            below = None
+            template = self._draw_room_template(-1)
+            if template:
+                # 抽牌已摘出牌堆；放置助手负责消费待放牌，先归入待放队列。
+                self.state.room_deck.insert(0, template.id)
+                for anchor in sorted(self.state.board.values(), key=lambda r: r.key):
+                    if anchor.floor == -1 and not self._is_collapsed(anchor.key):
+                        below = self._attach_template_adjacent(template.id, anchor.key)
+                        if below:
+                            break
+                if not below:
+                    self.state.room_deck.remove(template.id)
+                    self.state.room_discard.append(template.id)
+            if not below:
+                choices = [key for key, r in sorted(self.state.board.items())
+                           if r.floor == -1 and not self._is_collapsed(key)]
+                if not choices:
+                    self._log("地下室没有可落脚的房间。")
+                    return
+                index = self.prompter.choose_from_list("塌方落点", "选择地下室落点。", [self.state.board[key].name for key in choices])
+                below = choices[0 if index is None else index]
+            room.data["below_key"] = below
+            self.spawn_token("below_collapsed_room", label="塌方下方", role="marker", room_key=below)
+        self._log("坍塌的地板把探险者送入下方的地下室房间。")
+        self._move_to_room(player, below, via_effect=True)
 
     def _apply_tower(self, player: Player, room: PlacedRoom) -> None:
         self._log("塔楼风很大，需要稳住脚步。")
@@ -2158,9 +2221,26 @@ class GameEngine:
             self._log(f"{source} 让 {player.name} 受到 {amount} 点{ '物理' if damage_type == 'physical' else '精神' }伤害。")
         self._apply_damage_amounts(player, physical=amount if damage_type == "physical" else 0, mental=amount if damage_type == "mental" else 0, source=source)
 
+    def deal_dice_damage(self, player: Player, damage_type: str, dice: int, source: str = "", label: str = "") -> int:
+        """基础 A5：N 枚伤害骰的点数交给统一伤害入口，返回掷出点数。"""
+        if damage_type not in ("physical", "mental") or not isinstance(dice, int) or dice < 0:
+            raise ValueError("伤害类型须为 physical/mental，骰数须为非负整数")
+        if player.dead or dice == 0:
+            return 0
+        amount = self.roll_dice(dice, label or source)
+        self._deal_damage(player, damage_type, amount, source=source)
+        return amount
+
     # ------------------------------------------------------------------
     # Inventory management
     # ------------------------------------------------------------------
+    def item_action_available(self, card_id: str) -> bool:
+        """每件道具在本回合只可做一次主动操作。"""
+        return card_id not in self.state.meta.get("item_actions", {})
+
+    def _mark_item_action(self, card_id: str, operation: str) -> None:
+        self.state.meta.setdefault("item_actions", {})[card_id] = operation
+
     def _has_card(self, player: Player, card_id: str) -> bool:
         return card_id in player.items
 
@@ -2178,11 +2258,14 @@ class GameEngine:
         card = self.catalog.cards.get(card_id)
         if not card or card_id not in player.items:
             return False
+        if not self.item_action_available(card_id):
+            return False
         # p11："咬""狗""女孩""女士"不是道具，不能被丢弃（也不能被盗取或交易）。
         if "companion" in card.tags or card.id == "omen_bite":
             self._log(f"{card.name} 不能被丢弃。")
             return False
         self._discard_card_from_player(player, card_id, return_to_room=True)
+        self._mark_item_action(card_id, "drop")
         self._log(f"{player.name} 丢弃了 {card.name}。")
         # 剧本可对丢弃做后处理（剧本 33 p44：湖面上丢弃的物品直接沉没）。
         self._mode_handler().on_item_dropped(self, player, card_id)
@@ -2199,10 +2282,13 @@ class GameEngine:
         room_cards = self.state.room_items.get(player.room_key, [])
         if card_id not in room_cards:
             return False
+        if not self.item_action_available(card_id):
+            return False
         room_cards.remove(card_id)
         if not room_cards:
             self.state.room_items.pop(player.room_key, None)
         player.items.append(card_id)
+        self._mark_item_action(card_id, "pickup")
         if "companion" in self.catalog.cards[card_id].tags and card_id not in player.companions:
             player.companions.append(card_id)
         self._log(f"{player.name} 捡起了 {self.catalog.cards[card_id].name}。")
@@ -2210,6 +2296,10 @@ class GameEngine:
 
     def trade_item(self, player: Player, target: Player, card_id: str, target_card_id: str | None = None) -> bool:
         if card_id not in player.items:
+            return False
+        if not self.item_action_available(card_id):
+            return False
+        if target_card_id and target_card_id in target.items and not self.item_action_available(target_card_id):
             return False
         card = self.catalog.cards[card_id]
         if not card.tradeable:
@@ -2223,6 +2313,7 @@ class GameEngine:
             return False
         player.items.remove(card_id)
         target.items.append(card_id)
+        self._mark_item_action(card_id, "trade")
         if "companion" in card.tags:
             if card_id in player.companions:
                 player.companions.remove(card_id)
@@ -2233,6 +2324,7 @@ class GameEngine:
             if target_card.tradeable:
                 target.items.remove(target_card_id)
                 player.items.append(target_card_id)
+                self._mark_item_action(target_card_id, "trade")
                 self._log(f"{player.name} 与 {target.name} 交换了 {card.name} 和 {target_card.name}。")
                 return True
         self._log(f"{player.name} 把 {card.name} 交给了 {target.name}。")
@@ -2245,8 +2337,8 @@ class GameEngine:
             self._log(f"{player.name} 此刻不能使用物品。")
             return False
         card = self.catalog.cards[card_id]
-        if player.item_used and card.effect_id not in {"item_angel_feather", "item_bottle", "item_dark_dice"}:
-            self._log(f"{player.name} 这一回合已经用过一个物品了。")
+        if not self.item_action_available(card_id):
+            self._log(f"{card.name} 本回合已经做过一件事。")
             return False
         effect = card.effect_id
         success = False
@@ -2300,6 +2392,7 @@ class GameEngine:
             self._log(f"[规则缺口] {card.name}（{effect}）的主动效果尚未实现。")
             success = False
         if success:
+            self._mark_item_action(card_id, "use")
             player.item_used = True
         return success
 
@@ -2371,7 +2464,7 @@ class GameEngine:
         if idx is None:
             return False
         monster = monsters[idx]
-        monster.stunned_turns = max(monster.stunned_turns, int(card.data.get("stun", 2)))
+        self._stun_monster(monster, int(card.data.get("stun", 2)))
         self._discard_card_from_player(player, card.id, return_to_room=False)
         self._log(f"{monster.name} 被音乐盒迷住了。")
         return True
@@ -2422,6 +2515,7 @@ class GameEngine:
         steal_id = candidates[steal_idx]
         target.items.remove(steal_id)
         player.items.append(steal_id)
+        self._mark_item_action(steal_id, "steal")
         self._log(f"{player.name} 偷走了 {target.name} 的 {self.catalog.cards[steal_id].name}。")
         self._discard_card_from_player(player, card.id, return_to_room=False)
         return True
@@ -2553,7 +2647,14 @@ class GameEngine:
         params = self._derive_attack_params(attacker, target, weapon_card_id, ranged)
         if params is None:
             return False
+        if weapon_card_id and not self.item_action_available(weapon_card_id):
+            return False
         _ranged, attack_attr, weapon, attack_bonus = params
+        if (isinstance(target, Monster) and target.present_traits is not None
+                and attack_attr not in target.present_traits and getattr(target, attack_attr, 0) == 0):
+            if log:
+                self._log(f"{target.name} 没有 {attack_attr} 属性，不能用该属性攻击。")
+            return False
         # 怪物免疫：immune_to 列出的攻击属性对它无效（p17/p88：外星人免疫
         # 速度攻击如左轮；剧本 1 木乃伊同理；剧本 11 雾中人影免疫力量/速度）。
         if not isinstance(target, Player):
@@ -2681,6 +2782,7 @@ class GameEngine:
         return True
 
     def _resolve_attack_weapon_use(self, attacker: Player, weapon: Card) -> None:
+        self._mark_item_action(weapon.id, "use")
         self._deal_attack_weapon_cost(attacker, weapon)
         if weapon.one_shot:
             self._discard_card_from_player(attacker, weapon.id, return_to_room=False)
@@ -2728,6 +2830,7 @@ class GameEngine:
             card_id
             for card_id in target.items
             if self.catalog.cards[card_id].tradeable
+            and self.item_action_available(card_id)
             and not self._mode_handler().item_pickup_blocked(self, attacker, card_id)
         ]
 
@@ -2764,6 +2867,7 @@ class GameEngine:
             steal_id = candidates[idx]
         target.items.remove(steal_id)
         attacker.items.append(steal_id)
+        self._mark_item_action(steal_id, "steal")
         if "companion" in self.catalog.cards[steal_id].tags:
             if steal_id not in attacker.companions:
                 attacker.companions.append(steal_id)
@@ -2814,7 +2918,22 @@ class GameEngine:
 
     def _stun_monster(self, monster: Monster, turns: int) -> None:
         monster.stunned_turns += max(1, turns)
+        if monster.items:
+            self.state.room_items.setdefault(monster.room_key, []).extend(monster.items)
+            monster.items.clear()
         self._log(f"{monster.name} 被击晕了。")
+
+    def _monster_pickup_items(self, monster: Monster) -> None:
+        if not monster.can_carry_items or monster.stunned_turns > 0:
+            return
+        cards = self.state.room_items.get(monster.room_key, [])
+        for card_id in list(cards):
+            card = self.catalog.cards.get(card_id)
+            if card and card.tradeable and "companion" not in card.tags:
+                cards.remove(card_id)
+                monster.items.append(card_id)
+        if not cards:
+            self.state.room_items.pop(monster.room_key, None)
 
     def _kill_monster(self, monster: Monster, killer: object | None = None) -> None:
         """把怪物彻底移出对局（区别于 `_stun_monster` 的一回合击晕）。"""
@@ -3562,6 +3681,8 @@ class GameEngine:
             stunned_turns=0,
             can_carry_items=bool(spec.get("can_carry_items", template.can_carry_items)),
             tags=tuple(spec.get("tags", template.tags)),
+            present_traits=tuple(sorted(set(template.present_traits or STAT_NAMES)
+                                        | (set(spec) & set(STAT_NAMES)))),
         )
         self._next_monster_id += 1
         self.state.monsters.append(monster)
@@ -3586,6 +3707,7 @@ class GameEngine:
             # 该爬行物随之离场）。返回 True = 本怪物本回合不再行动。
             if self._mode_handler().on_monster_turn_start(self, monster):
                 continue
+            self._monster_pickup_items(monster)
             target = self._find_monster_target(monster)
             if target is None:
                 continue
@@ -3601,6 +3723,10 @@ class GameEngine:
                     new_index = self._monster_move_index(monster, path, steps)
                     monster.room_key = path[new_index]
                     self._log(f"{monster.name} 移动到 {self.state.board[monster.room_key].name}。")
+                    self._monster_pickup_items(monster)
+                    moved_room = self.state.board.get(monster.room_key)
+                    if moved_room and moved_room.effect_id == "room_mystic_elevator":
+                        self._apply_mystic_elevator(monster, moved_room)
             if monster.room_key == target.room_key:
                 self._monster_attack(monster, target)
         self.check_victory()
@@ -3801,6 +3927,30 @@ class GameEngine:
                 if value == old_key:
                     other.links[direction] = new_key
 
+        def replace(value):
+            if isinstance(value, str):
+                if value == old_key:
+                    return new_key
+                if value == "__room__" + old_key:
+                    return "__room__" + new_key
+                return value
+            if isinstance(value, dict):
+                for key, item in list(value.items()):
+                    mapped_key = replace(key)
+                    if mapped_key != key:
+                        value.pop(key)
+                    value[mapped_key] = replace(item)
+                return value
+            if isinstance(value, list):
+                value[:] = [replace(item) for item in value]
+                return value
+            if isinstance(value, tuple):
+                return tuple(replace(item) for item in value)
+            return value
+        replace(self.state.meta)
+        for other in self.state.board.values():
+            replace(other.data)
+
     def _evict_room(self, room_key: str, dest_key: str) -> int:
         """把房里的人、怪物、地上令牌与地面卡牌全挪到 dest_key，返回搬动件数。"""
         players, monsters, tokens = self._room_occupants(room_key)
@@ -3858,7 +4008,7 @@ class GameEngine:
         room.links = {**rotated.links, **dynamic}
         return True
 
-    def _relocate_room(self, room_key: str, x: int, y: int) -> str | None:
+    def _relocate_room(self, room_key: str, x: int, y: int, floor: int | None = None) -> str | None:
         """把一块板块搬到同层的 (x, y)，返回新 key（失败/位置被占返回 None）。
 
         板块上的人、怪物、令牌与地面卡牌随板块一起移动（key 变了，必须同步）。
@@ -3866,14 +4016,16 @@ class GameEngine:
         room = self.state.board.get(room_key)
         if room is None:
             return None
-        new_key = _room_key(room.floor, x, y)
-        occupant = self.state.pos_index.get((room.floor, x, y))
+        target_floor = room.floor if floor is None else floor
+        new_key = _room_key(target_floor, x, y)
+        occupant = self.state.pos_index.get((target_floor, x, y))
         if occupant is not None and occupant != room_key:
             return None
         self.state.pos_index.pop((room.floor, room.x, room.y), None)
         if new_key != room_key:
             self.state.board.pop(room_key, None)
         room.key = new_key
+        room.floor = target_floor
         room.x = x
         room.y = y
         self.state.board[new_key] = room
@@ -4330,6 +4482,10 @@ class GameEngine:
         if start_key == target_key:
             return [start_key]
         graph = self._build_graph(avoid_transit=avoid_transit, blocked=blocked)
+        if (avoid_transit and start_key in self.state.board
+                and self.state.board[start_key].template_id in self.NON_TRANSIT_TEMPLATES):
+            # 已在传送房内可以离开；「不把它当中转」不应把起点的所有出口抹掉。
+            graph[start_key] = self._build_graph(blocked=blocked).get(start_key, [])
         queue = deque([(start_key, [start_key])])
         visited = {start_key}
         while queue:

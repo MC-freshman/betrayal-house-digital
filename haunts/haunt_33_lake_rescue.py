@@ -3,6 +3,7 @@
 权威原文、已核对项与已知简化见下方类 docstring（原文未动）。
 """
 from __future__ import annotations
+from dataclasses import replace
 
 from typing import Any
 from .base import (  # noqa: F401  机械拆分：按引用自动生成
@@ -130,7 +131,7 @@ class LakeRescueMode(GenericModeHandler):
         template = engine.catalog.room_templates.get(template_id or "")
         if template is None:
             return None
-        room = engine._place_room(template, x, y, 0)
+        room = engine._place_room(replace(template, floor=floor), x, y, 0)
         room.name = self.LAKE_NAME
         room.symbol = None
         room.effect_id = "none"

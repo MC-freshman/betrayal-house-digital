@@ -2518,7 +2518,7 @@ class GameApp(tk.Tk):
         )
         self.player_info.insert(
             "end",
-            f"行动：步数 {current.steps_remaining}，攻击 {'已用' if current.attack_used else '未用'}，物品 {'已用' if current.item_used else '未用'}\n\n",
+            f"行动：步数 {current.steps_remaining}，攻击 {'已用' if current.attack_used else '未用'}；每件道具每回合可操作一次\n\n",
             "tr_label",
         )
         self.player_info.insert("end", "属性（卡尺）：\n", "tr_label")

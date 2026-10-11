@@ -93,6 +93,39 @@ class ZombieLordMode(GenericModeHandler):
         return players + len(occupied)
 
     # ---------------------------------------------------------- 战斗规则
+    bot_goal_exclusive = True
+
+    def quest_carrier(self, engine):
+        heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        if not heroes:
+            return None
+        def strength(hero):
+            bonus = max([0] + [engine._attack_bonus_from_inventory(hero, card)
+                              for card in hero.items if "weapon" in engine.catalog.cards[card].tags])
+            return hero.stats.get("might", 0) + bonus, -hero.id
+        return max(heroes, key=strength).id
+
+    def bot_goal_rooms(self, engine, player):
+        if player.dead or player.role != "hero":
+            return []
+        if self.MEDALLION in player.items:
+            carrier_id = self.quest_carrier(engine)
+            if player.id != carrier_id:
+                carrier = next(p for p in engine.state.players if p.id == carrier_id)
+                return ["__room__" + carrier.room_key]
+            return ["__room__" + m.room_key for m in engine.state.monsters if _monster_id(m) == self.LORD]
+        loose = ["__room__" + key for key, cards in engine.state.room_items.items() if self.MEDALLION in cards]
+        if loose:
+            return loose
+        holder = next((p for p in engine.state.players if not p.dead and self.MEDALLION in p.items), None)
+        if holder:
+            return ["__room__" + holder.room_key]
+        return []
+
+    def bot_wants_explore(self, engine, player):
+        return (player.role == "hero" and not any(self.MEDALLION in p.items for p in engine.state.players if not p.dead)
+                and not any(self.MEDALLION in cards for cards in engine.state.room_items.values()))
+
     def _holds(self, player: Any, card_id: str) -> bool:
         return card_id in (getattr(player, "items", None) or [])
 

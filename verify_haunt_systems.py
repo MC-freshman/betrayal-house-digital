@@ -691,6 +691,8 @@ def verify_haunt2_bones_require_summon() -> None:
         key for key, room in engine.state.board.items() if room.template_id in {"attic", "bedroom", "master_bedroom"}
     )
     hero.room_key = bone_room
+    _set_current(engine, hero)
+    engine._reset_player_turn_state(hero)
 
     # 未降灵：英雄看不到 find_bones
     actions = handler.available_actions(engine, hero)
@@ -921,6 +923,8 @@ def verify_haunt3_root_tokens() -> None:
     # 站到有草的房间，挖根
     root_room = roots[0].room_key
     hero.room_key = root_room
+    _set_current(engine, hero)
+    engine._reset_player_turn_state(hero)
     actions = {a.id for a in handler.available_actions(engine, hero)}
     assert "dig_root" in actions, "在有草的房间应能挖根"
 
@@ -1077,15 +1081,23 @@ def verify_bot_holds_position_for_next_step() -> None:
     assert hero.room_key == before_room, "同一房还有下一步时不该走开"
 
     # 没有待办时照常机动
-    engine._haunt_flags()["bats_sealed"] = True
+    engine.state.haunt.rule_data["actions"] = []  # 无待办；不置胜利 flag，否则使用道具即终局。
     # 上一回合可能已经把回合交给下一个人（引擎会拒绝"还没轮到该玩家"的行动），
     # 这里把回合交还给英雄；同时复位移动状态（抽牌会停移动，p6/p10）。
     _set_current(engine, hero)
     hero.steps_remaining = 5
     hero.movement_stopped = False
     assert controller._pending_haunt_action_here(engine, hero) is False, "封门后风琴房不再有行动"
-    controller._run_turn(engine, hero)
-    assert hero.room_key != before_room, "没有待办时应当继续移动"
+    movements = []
+    original_move = engine.move_player
+    def record_move(player, option):
+        ok = original_move(player, option)
+        if ok:
+            movements.append(option.target_key)
+        return ok
+    with patch.object(engine, "move_player", side_effect=record_move):
+        controller._run_turn(engine, hero)
+    assert movements, "没有待办时应当执行合法移动（多步后允许回到原房）"
 
 
 def verify_collapse_subsystem() -> None:
@@ -2240,7 +2252,10 @@ def verify_haunt17_bugs() -> None:
     hero.room_key = bug.room_key
     engine._active_player_id = hero.id
     assert handler.attack_attr_override(engine, hero, bug, "might") == "speed"
-    engine.attack(hero, bug)
+    with patch.object(engine, "_roll_attack", return_value=9), patch.object(
+        engine, "_roll_monster_attack", return_value=0
+    ):
+        assert engine.attack(hero, bug) is True
     assert bug not in engine.state.monsters, "持杀虫剂击败虫应直接杀死"
     assert engine._haunt_track_value("bugs_killed") == 1
     # 用杀虫剂落败不受伤
@@ -2378,7 +2393,7 @@ def verify_haunt18_offspring() -> None:
         flags["breath_active"][str(hero2.id)] = 1  # 模拟屏息最后一格
         spore_room = next(iter(handler._spore_rooms(engine)))
         engine._move_to_room(hero2, spore_room)
-        assert not hero2.dead or True  # 屏息期间不掉血：与未屏息对照即可
+        assert not hero2.dead, "屏息期间不应受到孢子伤害"
         handler.on_turn_start(engine, hero2)
         assert hero2.movement_stopped, "屏息后下一回合不能移动（可行动）"
 
@@ -2394,6 +2409,7 @@ def verify_haunt18_offspring() -> None:
     ), "温室/花园/墓地至少一间应在场"
     assert handler.bot_action_blocked(engine, hero, "hold_breath") is True
     assert handler.bot_action_blocked(engine, hero, "find_flower") is False
+    hero.dead = False
     flags["flower_found"] = False
     flower_goals = handler.bot_goal_rooms(engine, hero)
     assert flower_goals, "没找到花时应去寻花房间"
@@ -2733,7 +2749,10 @@ def verify_haunt22_abyss_exorcism() -> None:
     edge_key = next((k for k in engine._grid_neighbors(start) if not engine._is_collapsed(k)), "")
     assert edge_key, "深渊应还有未塌的邻格"
     holder.room_key = edge_key
-    far.room_key = next(k for k, room in engine.state.board.items() if k not in engine._grid_neighbors(start))
+    abyss_rooms = {room.key for room in engine._collapsed_rooms()}
+    far.room_key = next(k for k in engine.state.board
+                        if k not in abyss_rooms
+                        and not any(k in engine._grid_neighbors(origin) for origin in abyss_rooms))
     engine.state.turn_order = [holder.id]
     engine.state.turn_index = 0
     assert "sacrifice_holy_symbol" in {a.id for a in handler.available_actions(engine, holder)}
@@ -2988,6 +3007,7 @@ def verify_haunt24_bat_swarm() -> None:
     # p35/p106：宿主回合开始按贴附数各受 1 点物理伤害，并每只少走 1 格
     # （p35 的"盔甲少受 1 点"由引擎既有盔甲效果承担，本剧本不叠加减免）
     other = next(p for p in engine.state.players if p.role == "hero" and not p.dead and p is not hero)
+    other.room_key = next(k for k in engine.state.board if k != hero.room_key)
     for _ in range(2):
         free = next(b for b in handler._bats(engine) if handler._host_of(engine, b) is None)
         free.room_key = other.room_key
@@ -3225,17 +3245,18 @@ def verify_haunt25_voodoo() -> None:
 
     # ---- 时钟归属：英雄回合结束不推进；叛徒回合结束推进（p107）
     assert engine._haunt_track_value("turn_damage") == 0
-    with patch.object(engine, "roll_dice", return_value=8):
+    with patch.object(engine, "roll_dice", return_value=8), patch.object(handler, "_apply_effect"):
         handler.on_turn_end(engine, hero_a)
     assert engine._haunt_track_value("turn_damage") == 0, "英雄回合结束不该推进轨道"
-    with patch.object(engine, "roll_dice", return_value=8):
+    with patch.object(engine, "roll_dice", return_value=8), patch.object(handler, "_apply_effect"):
         handler.on_turn_end(engine, traitor)
     assert engine._haunt_track_value("turn_damage") == 1, "p107：叛徒回合结束把轨道推进到 1"
 
     # ---- 老坑吸收：叛徒死亡 ≠ 英雄胜，时钟由本轮最后一名存活玩家代推
     saved_traitor_dead = traitor.dead
     traitor.dead = True
-    with patch.object(engine, "roll_dice", return_value=8):
+    hero_a.dead = False
+    with patch.object(engine, "roll_dice", return_value=8), patch.object(handler, "_apply_effect"):
         handler.on_turn_end(engine, hero_a)
     assert engine._haunt_track_value("turn_damage") == 2, "叛徒出局后时钟由最后存活玩家代推"
     assert engine.state.winner is None, "叛徒死亡不等于英雄胜（老坑 15 号吸收者）"
@@ -3368,6 +3389,9 @@ def verify_haunt25_deferred_draw() -> None:
     # 起点不能写死入口大厅：它的三个门位在部分轨迹下已被占满，next() 会
     # StopIteration。测试验的是"探索不再强制停"，与具体是哪间房无关；
     # 挑一间地面层还有空门位的房间即可（厨房是地面层模板，抽牌补丁只对 0 层生效）。
+    # 明确构造有空门位且还有一张地面层牌的场景，不依赖探索期留下多少牌。
+    engine._place_room(engine.catalog.room_templates["foyer"], 60, 60, 0)
+    engine.state.room_deck.append("kitchen")
     frontier_options = engine.exploration_frontier_keys(0)
     assert frontier_options, "地面层应还有可探索的房间牌（否则本测试无法进行）"
     frontier = frontier_options[0]
@@ -3666,7 +3690,9 @@ def verify_haunt27_amok_flesh() -> None:
     assert len(flags["blob_rooms"]) > rooms_before, "p109：掷出 2 应再扩一圈"
 
     # ---- examine_blob：不邻 Blob 不可用；邻室检定累计玩家数次 → 弱点找到
-    hero.room_key = next(k for k in engine.state.board if k not in set(blob) | set(flags["blob_seeded"]))
+    blob_neighbors = {n for key in flags["blob_rooms"] for n in engine._door_neighbors(key)}
+    hero.room_key = next(k for k in engine.state.board
+                         if not handler._is_blob_room(engine, k) and k not in blob_neighbors)
     engine._reset_player_turn_state(hero)
     assert "examine_blob" not in {a.id for a in handler.available_actions(engine, hero)}, "不邻 Blob 不能检查"
     frontier = _haunt27_frontier(engine, handler, hero)
@@ -4293,9 +4319,13 @@ def verify_haunt30_dracula() -> None:
     assert (dracula.speed, dracula.might, dracula.sanity) == (5, 8, 6)
     assert (bride.speed, bride.might, bride.sanity) == (4, 4, 4)
     assert all("omen_girl" not in p.items for p in engine.state.players), "p112：女孩卡被弃"
-    face = engine.catalog.characters.get(traitor.character_id)
+    fresh = _force_haunt(seed=113, players=3, haunt_id=30)
+    fresh_traitor = next(p for p in fresh.state.players if p.role == "traitor")
+    face = fresh.catalog.characters[fresh_traitor.character_id]
     for stat in ("might", "speed", "sanity", "knowledge"):
-        assert traitor.stats[stat] >= min(face.stats[stat] + 1, 99), "p112：叛徒每项属性 +1"
+        track = fresh._stat_track(fresh_traitor, stat)
+        expected = next((value for value in track if value >= face.stats[stat] + 1), track[-1])
+        assert fresh_traitor.stats[stat] == expected, "p112：增加到至少 +1 的下一合法轨道值"
 
     # ---- 时钟：英雄回合开始不推进；叛徒回合开始 +1 并掷日出（ patched 不日出）
     assert engine._haunt_track_value("sun_track") == 0
@@ -4523,6 +4553,11 @@ def verify_haunt33_lake_rescue() -> None:
     traitor = next(p for p in engine.state.players if p.role == "traitor")
 
     # 湖面砖：hero 在地下湖时，extra_move_options 应包含 lake: 前缀选项
+    # 把湖放在无邻砖位置，保证测试的水缘未被种子探索占满。
+    lake_room = engine.state.board[lake]
+    engine.state.pos_index.pop((lake_room.floor, lake_room.x, lake_room.y))
+    lake_room.x, lake_room.y = 80, 80
+    engine.state.pos_index[(lake_room.floor, 80, 80)] = lake
     hero.room_key = lake
     hero.movement_stopped = False  # 停移动状态下钩子按规则返回空列表
     options = handler.extra_move_options(engine, hero, [])
@@ -4532,12 +4567,15 @@ def verify_haunt33_lake_rescue() -> None:
     engine._reset_player_turn_state(hero)
     hero.steps_remaining = max(hero.steps_remaining, 3)
     option = next(o for o in options if o.target_key.startswith("lake:"))
-    assert handler.lake_move(engine, hero, option) is True
+    # 此处只验证铺砖/移动；搜索表可能立即把人冲回岸上，下面单独测搜索。
+    with patch.object(handler, "_search_roll"):
+        assert handler.lake_move(engine, hero, option) is True
     assert handler._is_lake_tile(engine, hero.room_key), "移动后应在湖面砖上"
+    assert engine.current_room(hero).floor == engine.state.board[lake].floor, "面朝下砖必须放在湖所在楼层"
     assert engine.state.board[hero.room_key].name == "湖面", "砖名应为湖面"
 
     # 游泳检定：4+ → 每砖 2 格
-    with patch.object(engine, "_roll_attack", return_value=5):
+    with patch.object(engine, "_roll_attack", return_value=5), patch.object(handler, "_search_roll"):
         handler.on_turn_start(engine, hero)
     assert flags["swim_cost"].get(str(hero.id)) == 2, "游泳 5+ 应给 2 格"
 
@@ -4567,6 +4605,7 @@ def verify_haunt33_lake_rescue() -> None:
     if hero2 is not None:
         hero2.items.append("item_candle")
         hero2.room_key = hero.room_key  # 湖面砖上
+        engine._reset_player_turn_state(hero2)
         assert engine.drop_item(hero2, "item_candle") is True
         assert "item_candle" not in engine.room_items(hero2.room_key), "湖面丢弃应沉没"
         assert "item_candle" not in hero2.items
@@ -4844,7 +4883,9 @@ def verify_haunt37_checkmate() -> None:
     # 弃赛：死神房间无英雄 → 叛徒胜
     engine.state.winner = None
     engine.state.phase = "HAUNT_PHASE"
-    hero.room_key = next(k for k in engine.state.board if k != death.room_key)
+    for player in engine.state.players:
+        if player.role == "hero":
+            player.room_key = next(k for k in engine.state.board if k != death.room_key)
     assert handler.on_monster_turn_start(engine, death) is True
     assert engine.state.winner == "traitor", "死神房间无英雄应弃赛判负"
 
@@ -6468,10 +6509,17 @@ def verify_haunt56_sands_of_time_setup() -> None:
 
     # p138：幽影穿墙移动（同层正交邻格，无需门）
     spirit = spectres[0]
+    origin = engine._place_room(engine.catalog.room_templates["foyer"], 90, 90, 0)
+    destination = engine._place_room(engine.catalog.room_templates["foyer"], 91, 90, 0)
+    origin.doors = []
+    destination.doors = []
+    spirit.room_key = origin.key
+    spirit.speed = 1  # 单步隔离穿墙；多步允许原路返回，终点不能证明是否移动过。
+    hero.room_key = destination.key
     before = spirit.room_key
     handler.on_monster_turn_start(engine, spirit)
     after = spirit.room_key
-    assert after != before, "幽影应能穿墙移动（同房必有正交邻格）"
+    assert after == destination.key, "幽影应能无门穿到同层正交邻房"
     assert handler.on_monster_move(engine, spirit, 3) is True, "穿墙后应跳过引擎默认移动"
 
     # p67 失控检定：轨道 3、掷骰必低 → 循环磨损到轨道 0（归零后再掷高，避免 0≤0 无限磨）
@@ -6620,6 +6668,8 @@ def verify_haunt57_repaint_and_immunity() -> None:
     # p68 例外：持远古护身符的英雄在肉搏中打赢他，伤害照常扣属性
     # （轨道上有重复数值格，所以要看滑格位置，不能只看数值）
     hero.items.append("item_amulet_of_the_ages")
+    # 清除开局抬属性产生的溢出，隔离「能否受伤」与「先扣溢出」两条规则。
+    traitor.overflow["might"] = traitor.overflow["speed"] = 0
     engine._deal_damage(traitor, "physical", 1, source="攻击")
     assert traitor.stat_positions != positions_before, "远古护身符应能伤到叛徒"
     hero.items.remove("item_amulet_of_the_ages")
@@ -6974,6 +7024,9 @@ def verify_haunt59_medallion_flow() -> None:
     statue_key = flags.get("statue_key")
     assert statue_key
     assert engine.tokens_in_room(statue_key, handler.STATUE), "开局必须把国王雕像令牌放进雕像房"
+    # 单独构造没有徽章的英雄，避免探索期抽到同一预兆。
+    hero.items = [card for card in hero.items if card != handler.MEDALLION]
+    flags["medallion_holder"] = f"traitor:{traitor.id}"
     # 没拿徽章时挂徽章不能当寻路目标，否则全员扎进雕像房从不去抢叛徒
     assert handler.bot_action_blocked(engine, hero, "place_medallion") is True
     witch = next(m for m in engine.state.monsters if m.template_id == handler.WITCH)
@@ -7123,6 +7176,8 @@ def verify_haunt60_riddle_race() -> None:
     hero.room_key = room_of["junk_room"]
     saved_might = hero.stats.get("might", 0)
     hero.stats["might"] = 1
+    saved_items = list(hero.items)
+    hero.items = []  # 无加骰道具：一骰不可能达到 4+。
     assert handler.bot_action_blocked(engine, hero, "clue_junk") is True
     assert "junk_room" not in handler.bot_goal_rooms(engine, hero)
     saved_speed = hero.stats.get("speed", 0)
@@ -7145,6 +7200,7 @@ def verify_haunt60_riddle_race() -> None:
     hero.stats["speed"] = saved_speed
     hero.stats["sanity"] = saved_sanity
     hero.stats["might"] = saved_might
+    hero.items = saved_items
     assert handler.bot_goal_suppressed(engine, hero) is False
     events_before = len(engine.state.card_discards.get("event", []))
     with patch.object(engine, "_resolve_check", return_value=True), patch.object(
@@ -7795,6 +7851,7 @@ def verify_haunt4_timer_and_growth() -> None:
     traitor = next((p for p in engine.state.players if p.role == "traitor" and not p.dead), None)
     alive = [p for p in engine.state.players if not p.dead]
     ticker = traitor if traitor is not None else alive[0]
+    engine._set_haunt_track_value("spider_timer", 0)  # 作祟后的自动 start_turn 可能已推进一次。
 
     deadline = engine._haunt_track_target("spider_timer")
     for i in range(deadline - 1):
@@ -10059,7 +10116,10 @@ def verify_item_use_matrix() -> None:
         player.items = [c for c in player.items if c != card_id]
         player.item_used = False
         engine.state.room_items.setdefault(room_key, []).append(card_id)
+        engine._reset_player_turn_state(player)
         assert engine.pickup_item(player, card_id), f"{card_id} 无法拾取"
+        assert engine.use_item(player, card_id) is False, f"{card_id} 拾取当回合不可再主动使用"
+        engine._reset_player_turn_state(player)
         result = engine.use_item(player, card_id)
         assert isinstance(result, bool), f"{card_id} use_item 未返回 bool"
         if "weapon" in card.tags:
@@ -10077,11 +10137,14 @@ def verify_item_use_matrix() -> None:
                 f"{card_id} 不是道具，不应可交易"
             )
             continue
+        engine._reset_player_turn_state(player)
         assert engine.drop_item(player, card_id), f"{card_id} 应可丢弃"
         assert card_id in engine.state.room_items.get(room_key, []), (
             f"{card_id} 丢弃后应落在房间里"
         )
-        assert engine.pickup_item(player, card_id), f"{card_id} 丢弃后应能再拾取"
+        assert not engine.pickup_item(player, card_id), f"{card_id} 丢弃当回合不可再拾取"
+        engine._reset_player_turn_state(player)
+        assert engine.pickup_item(player, card_id), f"{card_id} 下回合应能再拾取"
         if not card.tradeable:
             untradeable.append(card_id)
             assert engine.trade_item(player, other, card_id) is False, (
@@ -10089,9 +10152,13 @@ def verify_item_use_matrix() -> None:
             )
             continue
         tradable.append(card_id)
+        assert not engine.trade_item(player, other, card_id), f"{card_id} 拾取当回合不可再交易"
+        engine._reset_player_turn_state(player)
         assert engine.trade_item(player, other, card_id), f"{card_id} 应可交给同房间队友"
         assert card_id in other.items, f"{card_id} 交易后应在队友手里"
-        assert engine.trade_item(other, player, card_id), f"{card_id} 应可换回来"
+        assert not engine.trade_item(other, player, card_id), f"{card_id} 交易当回合不可转交"
+        engine._reset_player_turn_state(other)
+        assert engine.trade_item(other, player, card_id), f"{card_id} 下回合应可换回来"
     assert len(companions) >= 3, f"应至少识别出疯子 / 女孩 / 狗三张同伴卡：{companions}"
     assert len(untradeable) >= 2, f"盔甲 / 咬痕应不可交易：{untradeable}"
     assert len(tradable) >= 20, f"可交易卡过少：{len(tradable)}"
@@ -10436,6 +10503,7 @@ def verify_haunt39_spear_flow() -> None:
         other.items = ["omen_spear"]
         other.room_key = spear_room
         _set_current(engine, other)
+        engine._reset_player_turn_state(other)
         bot = BotController()
         assert bot._try_share_quest_items(engine, other) is True, (
             "持矛队友应与继承人交接（quest_carrier）"
@@ -10533,6 +10601,13 @@ def verify_all_haunts_win_branches_and_action_reachability() -> None:
     catalog = build_catalog(113)
     mode_module = sys.modules[type(get_mode_handler("generic")).__module__]
     engine_module = sys.modules[GameEngine.__module__]
+    import ast
+    import textwrap
+
+    def string_literals(source):
+        return {node.value for node in ast.walk(ast.parse(textwrap.dedent(source)))
+                if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+
     mode_source = inspect.getsource(mode_module)
     engine_source = inspect.getsource(engine_module)
     # 豁免：5 号 shoot_werewolf——注释明说它只用于 required_cards 与寻路提示，
@@ -10543,9 +10618,12 @@ def verify_all_haunts_win_branches_and_action_reachability() -> None:
         handler = get_mode_handler(rule.get("mode"))
         handler_cls = type(handler)
         text = json.dumps(rule, ensure_ascii=False)
+        implementation_ids = set()
         for cls in handler_cls.__mro__:
             try:
-                text += inspect.getsource(cls)
+                source = inspect.getsource(cls)
+                text += source
+                implementation_ids.update(string_literals(source))
             except (OSError, TypeError):  # object 等内建类拿不到源码
                 pass
         for pattern in (
@@ -10559,7 +10637,9 @@ def verify_all_haunts_win_branches_and_action_reachability() -> None:
                 if idx < 0:
                     break
                 nxt = engine_source.find("\n    def ", idx)
-                text += engine_source[idx: nxt if nxt > 0 else idx + 4000]
+                source = engine_source[idx: nxt if nxt > 0 else idx + 4000]
+                text += source
+                implementation_ids.update(string_literals(source))
                 start = idx + 1
         assert (
             '_set_winner("heroes"' in text
@@ -10576,7 +10656,7 @@ def verify_all_haunts_win_branches_and_action_reachability() -> None:
             action_id = str(action.get("id") or "")
             if not action_id or action_id in whitelist.get(haunt_id, set()):
                 continue
-            if action_id in mode_source or action_id in engine_source:
+            if action_id in implementation_ids:
                 continue
             # 未覆盖 perform_action（或回落到 super()）的 handler 走 rule_data
             # 通用执行（stat 检定 / attack 对决 / progress / set_flags），
@@ -10685,6 +10765,7 @@ def verify_haunt4_failed_checks_do_not_advance() -> None:
     with patch.object(engine, "_resolve_check", return_value=False):
         handler.perform_action(engine, hero, "destroy_eggs_medical_kit", {})
     assert flags.get("eggs_destroyed") is False, "检定失败不能销毁蛛卵"
+    engine._reset_player_turn_state(hero)
     with patch.object(engine, "_resolve_check", return_value=True):
         handler.perform_action(engine, hero, "destroy_eggs_medical_kit", {})
     assert flags.get("eggs_destroyed") is True, "检定成功必须销毁蛛卵"
@@ -10699,6 +10780,7 @@ def verify_haunt4_failed_checks_do_not_advance() -> None:
     with patch.object(engine, "_resolve_check", return_value=False):
         handler.perform_action(engine, hero, "open_front_door", {})
     assert flags.get("front_door_open") is False, "检定失败不能开门"
+    engine._reset_player_turn_state(hero)
     with patch.object(engine, "_resolve_check", return_value=True):
         handler.perform_action(engine, hero, "open_front_door", {})
     assert flags.get("front_door_open") is True, "检定成功必须开门"
@@ -11222,6 +11304,10 @@ def verify_haunt15_equipment_goal() -> None:
     flags = engine._haunt_flags()
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
 
+    # 开局地图不保证已经翻出盾房；显式发现一个候选房，验证延迟放置路径。
+    if not any(t.room_key for t in engine.tokens_of_kind("shield")):
+        room = engine._place_room(engine.catalog.room_templates["crypt"], 90, 90, -1)
+        handler.on_room_discovered(engine, hero, room)
     goals = set(handler.bot_goal_rooms(engine, hero))
     armor_room = flags.get("armor_room")
     assert armor_room and f"__room__{armor_room}" in goals, "护甲房应当进目标"
@@ -11257,9 +11343,24 @@ def verify_mode_rewards_gated_on_check_success() -> None:
             if "stat" in action or "attack" in action:
                 risky_ids.add(str(action.get("id")))
 
-    source = (Path(__file__).resolve().parent / "haunt_modes.py").read_text(encoding="utf-8")
+    root = Path(__file__).resolve().parent
+    sources = sorted((root / "haunts").glob("*.py"))
+    assert len(sources) >= 72, "奖励检查必须覆盖拆分后的全部剧本模块"
+    offenders = []
+    for source_path in sources:
+        source = source_path.read_text(encoding="utf-8")
+        offenders.extend((source_path.name, line, action)
+                         for line, action in _unguarded_mode_rewards(source, risky_ids))
+    assert not offenders, (
+        "这些奖励块仍在拿「行动已执行」当成功：" f"{offenders}"
+    )
+
+
+def _unguarded_mode_rewards(source, risky_ids):
+    import re
+
     lines = source.splitlines()
-    offenders: list[tuple[int, str]] = []
+    offenders = []
     for index, line in enumerate(lines):
         if "= super().perform_action" not in line:
             continue
@@ -11273,10 +11374,27 @@ def verify_mode_rewards_gated_on_check_success() -> None:
                 break
         if action_id in risky_ids:
             offenders.append((index + 1, action_id))
-    assert not offenders, (
-        "这些奖励块仍在拿「行动已执行」当成功（应为 ok and engine.last_haunt_action_succeeded()）："
-        f"{offenders}"
-    )
+    return offenders
+
+
+def verify_static_guards_detect_regressions():
+    """主动注入错误，确认奖励与行动 ID 门禁不会假通过。"""
+    broken = 'if action_id == "make_spray":\n    ok = super().perform_action(engine, player, action_id, data)\n    if ok:\n        grant_reward()\n'
+    assert _unguarded_mode_rewards(broken, {"make_spray"})
+    assert not _unguarded_mode_rewards(broken.replace("if ok:", "if ok and engine.last_haunt_action_succeeded():"), {"make_spray"})
+    rule = build_catalog(113).haunt_defs[1].rule_data
+    original = rule["actions"][0]["id"]
+    rule["actions"][0]["id"] = "learn_true_name"
+    try:
+        with patch.object(sys.modules[__name__], "build_catalog", return_value=type("Catalog", (), {"haunt_defs": {**build_catalog(113).haunt_defs, 1: type("Haunt", (), {"rule_data": rule})()}})()):
+            try:
+                verify_all_haunts_win_branches_and_action_reachability()
+            except AssertionError as error:
+                assert "learn_true_name" in str(error)
+            else:
+                raise AssertionError("行动 ID 子串错误未被门禁识别")
+    finally:
+        rule["actions"][0]["id"] = original
 
 
 def verify_haunt16_escape_and_fallback() -> None:
@@ -11416,193 +11534,345 @@ def verify_haunt20_corpse_drop_and_timer() -> None:
     assert engine._haunt_track_value("wedding_timer") == 1, "叛徒死后由存活者代跑婚礼计时"
 
 
-def main():
-    verify_mode_dispatch()
-    verify_mode_handler_reaches_engine()
-    verify_token_api()
-    verify_token_serialization()
-    verify_save_roundtrip_keeps_tokens()
-    verify_haunt1_tokens()
-    verify_haunt1_girl_set_aside()
-    verify_haunt1_girl_pickup()
-    verify_haunt1_mummy_damage()
-    verify_haunt1_steal_instead()
-    verify_haunt1_secret_passage()
-    verify_haunt2_seance_race()
-    verify_haunt2_bones_require_summon()
-    verify_haunt2_ghost_rules()
-    verify_haunt2_timer()
-    verify_haunt2_traitor_death_no_win()
-    verify_haunt2_ghost_destroyed_on_defeat()
-    verify_haunt3_witch_invulnerable()
-    verify_haunt3_frog_lifecycle()
-    verify_haunt3_root_tokens()
-    verify_haunt3_traitor_death_no_win()
-    verify_haunt3_witch_killed_after_spell()
-    verify_haunt2_no_attack_before_seance()
-    verify_haunt3_witch_breath_and_frog_carry()
-    verify_haunt4_spider_blank_reroll()
-    verify_haunt5_werewolf_hunt()
-    verify_haunt4_setup_and_trapped()
-    verify_haunt4_web_and_eggs_flow()
-    verify_haunt4_timer_and_growth()
-    verify_attack_defense_action_type()
-    verify_haunt4_traitor_death_no_win()
-    verify_haunt6_setup_and_traitor_away()
-    verify_haunt6_mind_control_lifecycle()
-    verify_haunt6_free_and_immune()
-    verify_haunt6_alien_turn_attack()
-    verify_haunt6_traitor_away_no_win()
-    verify_haunt7_setup_and_vines()
-    verify_haunt7_spray_creation_and_kill()
-    verify_haunt7_grab_release_mulch()
-    verify_haunt7_elevator_and_destroy()
-    verify_haunt8_banshee_exorcism()
-    verify_haunt9_dance_of_death()
-    verify_haunt10_family_gathering()
-    verify_haunt11_specter_invasion()
-    verify_haunt12_fleshwalkers()
-    verify_haunt13_perchance_to_dream()
-    verify_haunt14_stars_right()
-    verify_haunt15_here_there_be_dragons()
-    verify_haunt16_phantoms_embrace()
-    verify_haunt17_bugs()
-    verify_haunt18_offspring()
-    verify_haunt19_beastmaster()
-    verify_haunt20_ghost_bride()
-    verify_haunt21_zombie_lord()
-    verify_haunt22_abyss_exorcism()
-    verify_haunt22_abyss_rises_to_next_floor()
-    verify_haunt23_tentacled_horror()
-    verify_haunt24_bat_swarm()
-    verify_haunt38_hellbeast_exorcism()
-    verify_haunt25_voodoo()
-    verify_haunt25_deferred_draw()
-    verify_haunt26_rat_ritual()
-    verify_haunt26_pentagram_block()
-    verify_haunt27_amok_flesh()
+def _checks():
+    yield verify_mode_dispatch
+    yield verify_mode_handler_reaches_engine
+    yield verify_token_api
+    yield verify_token_serialization
+    yield verify_save_roundtrip_keeps_tokens
+    yield verify_haunt1_tokens
+    yield verify_haunt1_girl_set_aside
+    yield verify_haunt1_girl_pickup
+    yield verify_haunt1_mummy_damage
+    yield verify_haunt1_steal_instead
+    yield verify_haunt1_secret_passage
+    yield verify_haunt2_seance_race
+    yield verify_haunt2_bones_require_summon
+    yield verify_haunt2_ghost_rules
+    yield verify_haunt2_timer
+    yield verify_haunt2_traitor_death_no_win
+    yield verify_haunt2_ghost_destroyed_on_defeat
+    yield verify_haunt3_witch_invulnerable
+    yield verify_haunt3_frog_lifecycle
+    yield verify_haunt3_root_tokens
+    yield verify_haunt3_traitor_death_no_win
+    yield verify_haunt3_witch_killed_after_spell
+    yield verify_haunt2_no_attack_before_seance
+    yield verify_haunt3_witch_breath_and_frog_carry
+    yield verify_haunt4_spider_blank_reroll
+    yield verify_haunt5_werewolf_hunt
+    yield verify_haunt4_setup_and_trapped
+    yield verify_haunt4_web_and_eggs_flow
+    yield verify_haunt4_timer_and_growth
+    yield verify_attack_defense_action_type
+    yield verify_haunt4_traitor_death_no_win
+    yield verify_haunt6_setup_and_traitor_away
+    yield verify_haunt6_mind_control_lifecycle
+    yield verify_haunt6_free_and_immune
+    yield verify_haunt6_alien_turn_attack
+    yield verify_haunt6_traitor_away_no_win
+    yield verify_haunt7_setup_and_vines
+    yield verify_haunt7_spray_creation_and_kill
+    yield verify_haunt7_grab_release_mulch
+    yield verify_haunt7_elevator_and_destroy
+    yield verify_haunt8_banshee_exorcism
+    yield verify_haunt9_dance_of_death
+    yield verify_haunt10_family_gathering
+    yield verify_haunt11_specter_invasion
+    yield verify_haunt12_fleshwalkers
+    yield verify_haunt13_perchance_to_dream
+    yield verify_haunt14_stars_right
+    yield verify_haunt15_here_there_be_dragons
+    yield verify_haunt16_phantoms_embrace
+    yield verify_haunt17_bugs
+    yield verify_haunt18_offspring
+    yield verify_haunt19_beastmaster
+    yield verify_haunt20_ghost_bride
+    yield verify_haunt21_zombie_lord
+    yield verify_haunt22_abyss_exorcism
+    yield verify_haunt22_abyss_rises_to_next_floor
+    yield verify_haunt23_tentacled_horror
+    yield verify_haunt24_bat_swarm
+    yield verify_haunt38_hellbeast_exorcism
+    yield verify_haunt25_voodoo
+    yield verify_haunt25_deferred_draw
+    yield verify_haunt26_rat_ritual
+    yield verify_haunt26_pentagram_block
+    yield verify_haunt27_amok_flesh
     # M10-45/批次6：#27 Blob 自保钩子（禁区/险区/做完挪窝/停步风险）
-    verify_haunt27_blob_ai()
-    verify_haunt28_demon_ring()
-    verify_haunt29_frankenstein()
-    verify_haunt30_dracula()
-    verify_haunt31_organ_rooms()
-    verify_haunt31_heart_brain_spear()
-    verify_haunt31_antibody_wall_move()
-    verify_haunt32_lost_dimension()
-    verify_haunt32_house_reshuffle()
-    verify_haunt33_lake_rescue()
-    verify_haunt34_mad_world()
-    verify_haunt35_small_change()
-    verify_haunt36_swamp_escape()
-    verify_haunt37_checkmate()
-    verify_haunt44_supernatural_aging()
-    verify_haunt45_time_bomb()
-    verify_haunt51_darker_than_night()
-    verify_haunt52_crackling_aura()
-    verify_haunt53_toxic_object_escape()
-    verify_haunt54_arkanok_skull()
-    verify_haunt55_kings_roads()
-    verify_haunt61_eternal_glory()
-    verify_haunt62_bag_of_tricks()
-    verify_haunt63_twisting_nether()
-    verify_haunt64_blood_offering()
-    verify_haunt65_breath_of_wind()
-    verify_haunt66_hell_on_earth()
-    verify_haunt67_once_upon_a_time()
-    verify_haunt68_setup_and_seal()
-    verify_haunt68_tile_rearrange()
-    verify_haunt68_key_route_and_confusion()
-    verify_haunt68_bot_hall_guard()
-    verify_haunt56_sands_of_time_setup()
-    verify_haunt56_mask_sanity_floor()
-    verify_haunt56_time_powers()
-    verify_haunt58_nightfall_setup()
-    verify_haunt58_torch_banish_haunting()
-    verify_haunt59_badge_setup()
-    verify_haunt59_medallion_flow()
-    verify_haunt60_burning_sands_setup()
-    verify_haunt60_riddle_race()
-    verify_haunt69_wisp_setup()
-    verify_haunt69_wisp_flees_heroes()
-    verify_haunt69_catch_and_escape()
-    verify_haunt69_wisp_explores_and_owns_turn()
-    verify_haunt70_transformation_setup()
-    verify_haunt70_weapons_and_immunity()
-    verify_haunt70_bot_no_noop_actions()
-    verify_haunt57_paint_setup()
-    verify_haunt57_repaint_and_immunity()
-    verify_haunt46_the_feast_setup()
-    verify_haunt46_front_door_and_victory()
-    verify_haunt47_worm_ouroboros_setup()
-    verify_haunt47_spell_and_bodies()
-    verify_haunt48_crimson_jack_setup()
-    verify_haunt48_cursed_weapon_flow()
-    verify_haunt49_astral_spirit_setup()
-    verify_haunt49_banish_and_possession()
-    verify_haunt50_night_murder_setup()
-    verify_haunt50_dawn_and_absorption()
-    verify_haunt39_heir()
-    verify_haunt40_buried_alive()
-    verify_haunt41_invisible_traitor()
-    verify_haunt42_hell_gate()
-    verify_haunt43_shadow_exorcism()
-    verify_dead_player_turn_skipped()
-    verify_monster_defeated_hook_defaults()
-    verify_ensure_room_in_play()
-    verify_collapse_subsystem()
-    verify_bot_quest_goal_rooms()
-    verify_bot_holds_position_for_next_step()
-    verify_haunt_script_visible_to_both_roles()
-    verify_no_instant_verdict_on_trigger()
-    verify_haunt_track_targets_nonzero()
-    verify_fixed_haunt_semantics()
+    yield verify_haunt27_blob_ai
+    yield verify_haunt28_demon_ring
+    yield verify_haunt29_frankenstein
+    yield verify_haunt30_dracula
+    yield verify_haunt31_organ_rooms
+    yield verify_haunt31_heart_brain_spear
+    yield verify_haunt31_antibody_wall_move
+    yield verify_haunt32_lost_dimension
+    yield verify_haunt32_house_reshuffle
+    yield verify_haunt33_lake_rescue
+    yield verify_haunt34_mad_world
+    yield verify_haunt35_small_change
+    yield verify_haunt36_swamp_escape
+    yield verify_haunt37_checkmate
+    yield verify_haunt44_supernatural_aging
+    yield verify_haunt45_time_bomb
+    yield verify_haunt51_darker_than_night
+    yield verify_haunt52_crackling_aura
+    yield verify_haunt53_toxic_object_escape
+    yield verify_haunt54_arkanok_skull
+    yield verify_haunt55_kings_roads
+    yield verify_haunt61_eternal_glory
+    yield verify_haunt62_bag_of_tricks
+    yield verify_haunt63_twisting_nether
+    yield verify_haunt64_blood_offering
+    yield verify_haunt65_breath_of_wind
+    yield verify_haunt66_hell_on_earth
+    yield verify_haunt67_once_upon_a_time
+    yield verify_haunt68_setup_and_seal
+    yield verify_haunt68_tile_rearrange
+    yield verify_haunt68_key_route_and_confusion
+    yield verify_haunt68_bot_hall_guard
+    yield verify_haunt56_sands_of_time_setup
+    yield verify_haunt56_mask_sanity_floor
+    yield verify_haunt56_time_powers
+    yield verify_haunt58_nightfall_setup
+    yield verify_haunt58_torch_banish_haunting
+    yield verify_haunt59_badge_setup
+    yield verify_haunt59_medallion_flow
+    yield verify_haunt60_burning_sands_setup
+    yield verify_haunt60_riddle_race
+    yield verify_haunt69_wisp_setup
+    yield verify_haunt69_wisp_flees_heroes
+    yield verify_haunt69_catch_and_escape
+    yield verify_haunt69_wisp_explores_and_owns_turn
+    yield verify_haunt70_transformation_setup
+    yield verify_haunt70_weapons_and_immunity
+    yield verify_haunt70_bot_no_noop_actions
+    yield verify_haunt57_paint_setup
+    yield verify_haunt57_repaint_and_immunity
+    yield verify_haunt46_the_feast_setup
+    yield verify_haunt46_front_door_and_victory
+    yield verify_haunt47_worm_ouroboros_setup
+    yield verify_haunt47_spell_and_bodies
+    yield verify_haunt48_crimson_jack_setup
+    yield verify_haunt48_cursed_weapon_flow
+    yield verify_haunt49_astral_spirit_setup
+    yield verify_haunt49_banish_and_possession
+    yield verify_haunt50_night_murder_setup
+    yield verify_haunt50_dawn_and_absorption
+    yield verify_haunt39_heir
+    yield verify_haunt40_buried_alive
+    yield verify_haunt41_invisible_traitor
+    yield verify_haunt42_hell_gate
+    yield verify_haunt43_shadow_exorcism
+    yield verify_dead_player_turn_skipped
+    yield verify_monster_defeated_hook_defaults
+    yield verify_ensure_room_in_play
+    yield verify_collapse_subsystem
+    yield verify_bot_quest_goal_rooms
+    yield verify_bot_holds_position_for_next_step
+    yield verify_haunt_script_visible_to_both_roles
+    yield verify_no_instant_verdict_on_trigger
+    yield verify_haunt_track_targets_nonzero
+    yield verify_fixed_haunt_semantics
     # M10-35：70 本横切扩容（剧本机制 / 道具使用 / 角色交互）
-    verify_all_haunts_data_integrity()
-    verify_all_haunts_handler_smoke()
-    verify_traitor_death_semantics_sweep()
-    verify_item_use_matrix()
-    verify_weapon_cards_attack_paths()
-    verify_character_interaction_matrix()
-    verify_haunt33_fresh_tile_and_explore_gate()
-    verify_haunt39_spear_flow()
-    verify_haunt39_deck_fallback()
-    verify_all_haunts_win_branches_and_action_reachability()
+    yield verify_all_haunts_data_integrity
+    yield verify_all_haunts_handler_smoke
+    yield verify_traitor_death_semantics_sweep
+    yield verify_item_use_matrix
+    yield verify_weapon_cards_attack_paths
+    yield verify_character_interaction_matrix
+    yield verify_haunt33_fresh_tile_and_explore_gate
+    yield verify_haunt39_spear_flow
+    yield verify_haunt39_deck_fallback
+    yield verify_all_haunts_win_branches_and_action_reachability
     # M10-38：批次 1（剧本 1-5）审计新增的引擎能力与修复
-    verify_haunt_action_success_flag()
-    verify_haunt3_dig_root_needs_success()
-    verify_haunt3_restore_frog_gating()
-    verify_haunt4_failed_checks_do_not_advance()
-    verify_searchable_required_cards()
-    verify_seance_traitor_anywhere()
-    verify_haunt2_setup_places_pentagram()
-    verify_haunt2_burial_timer_not_frozen()
-    verify_ensure_room_in_play_farthest()
+    yield verify_haunt_action_success_flag
+    yield verify_haunt3_dig_root_needs_success
+    yield verify_haunt3_restore_frog_gating
+    yield verify_haunt4_failed_checks_do_not_advance
+    yield verify_searchable_required_cards
+    yield verify_seance_traitor_anywhere
+    yield verify_haunt2_setup_places_pentagram
+    yield verify_haunt2_burial_timer_not_frozen
+    yield verify_ensure_room_in_play_farthest
     # M10-39：批次 2（剧本 6-10）审计新增的引擎能力与修复
-    verify_explore_all_dead_ends_game()
-    verify_mystic_elevator_not_transit()
-    verify_omen_exhaustion_triggers_haunt()
-    verify_dead_player_command_guard()
-    verify_haunt7_goal_hooks()
-    verify_bot_attacks_captor_first()
-    verify_haunt9_traitor_goal_gating()
+    yield verify_explore_all_dead_ends_game
+    yield verify_mystic_elevator_not_transit
+    yield verify_omen_exhaustion_triggers_haunt
+    yield verify_dead_player_command_guard
+    yield verify_haunt7_goal_hooks
+    yield verify_bot_attacks_captor_first
+    yield verify_haunt9_traitor_goal_gating
     # M10-40：批次 3（剧本 11-15）审计新增的引擎能力与修复
-    verify_stairs_reverse_link_exit()
-    verify_haunt13_wake_success_gating()
-    verify_haunt13_goal_hooks()
-    verify_haunt14_goal_hooks()
-    verify_haunt15_equipment_goal()
-    verify_mode_rewards_gated_on_check_success()
+    yield verify_stairs_reverse_link_exit
+    yield verify_haunt13_wake_success_gating
+    yield verify_haunt13_goal_hooks
+    yield verify_haunt14_goal_hooks
+    yield verify_haunt15_equipment_goal
+    yield verify_mode_rewards_gated_on_check_success
     # M10-41：批次 4（剧本 16-20）审计新增的引擎能力与修复
-    verify_haunt16_escape_and_fallback()
-    verify_haunt16_timer_and_defuse_gate()
-    verify_haunt18_breath_gating()
-    verify_haunt20_corpse_drop_and_timer()
+    yield verify_haunt16_escape_and_fallback
+    yield verify_haunt16_timer_and_defuse_gate
+    yield verify_haunt18_breath_gating
+    yield verify_haunt20_corpse_drop_and_timer
     # M10-42/批次 5：抓人藤蔓/触手的必拖拽 + #23 英雄斩首引导
-    verify_haunt7_23_drag_and_goal_hooks()
+    yield verify_haunt7_23_drag_and_goal_hooks
     # M10-44/批次 6：#26 鼠群合力攻击每回合只能一次
-    verify_haunt26_rat_pack_once_per_turn()
-    print("verify_haunt_systems: ok")
+    yield verify_haunt26_rat_pack_once_per_turn
+    yield verify_static_guards_detect_regressions
+    yield verify_bot_objective_chains
+    yield verify_bot_retreat_and_focus
+
+
+def verify_bot_objective_chains():
+    """真实行动验证：留药毁卵、集中配料、拾取护符、只搜未搜房、偷任务物品。"""
+    bot = BotController()
+    engine = _run_until_haunt(109, 4, 4)
+    handler = engine._mode_handler()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    trapped = next(p for p in engine.state.players if p.id == engine._haunt_flags()["trapped_id"])
+    hero.room_key = trapped.room_key
+    hero.items.append("item_healing_salve")
+    _set_current(engine, hero)
+    engine._reset_player_turn_state(hero)
+    assert handler.bot_preserve_item(engine, hero, "item_healing_salve")
+    assert bot._try_haunt_action(engine, hero)
+    assert engine._haunt_flags()["eggs_destroyed"]
+
+    engine = _run_until_haunt(109, 4, 17)
+    handler = engine._mode_handler()
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    for token in list(engine.tokens_of_kind("ingredient")):
+        engine.remove_token(token.uid)
+    for index in range(3):
+        token = engine.spawn_token("ingredient", label="测试配料", role="marker", room_key=heroes[index % len(heroes)].room_key)
+        engine.give_token(token.uid, heroes[index % len(heroes)].id)
+    goals = [bot._haunt_goal_targets(engine, p) for p in heroes]
+    assert len(goals[0]) == 1 and all(goal == goals[0] for goal in goals), "配料携带者必须约定同一合成房"
+    mix = next(iter(goals[0]))
+    for hero in heroes:
+        hero.room_key = mix
+    hero = heroes[0]
+    _set_current(engine, hero)
+    engine._reset_player_turn_state(hero)
+    with patch.object(engine, "_resolve_check", return_value=True):
+        assert bot._try_haunt_action(engine, hero)
+    assert engine.tokens_held_by(hero.id, "bug_spray")
+
+    engine = _run_until_haunt(109, 4, 21)
+    handler = engine._mode_handler()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    for person in engine.state.players:
+        person.items = [card for card in person.items if card != handler.MEDALLION]
+    for cards in engine.state.room_items.values():
+        cards[:] = [card for card in cards if card != handler.MEDALLION]
+    engine.state.room_items.setdefault(hero.room_key, []).append(handler.MEDALLION)
+    _set_current(engine, hero)
+    assert hero.room_key in bot._haunt_goal_targets(engine, hero)
+    bot._pickup_room_items(engine, hero)
+    assert handler.MEDALLION in hero.items
+    carrier = next(p for p in engine.state.players if p.id == handler.quest_carrier(engine))
+    if carrier is not hero:
+        carrier.room_key = hero.room_key
+        engine._reset_player_turn_state(hero)
+        assert bot._try_share_quest_items(engine, hero)
+        assert handler.MEDALLION in carrier.items
+
+    engine = _run_until_haunt(109, 4, 27)
+    handler = engine._mode_handler()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    flags = engine._haunt_flags()
+    flags["weakness_found"] = True
+    room = next(k for k, r in engine.state.board.items() if r.template_id in handler.INGREDIENT_ROOMS and not handler._is_blob_room(engine, k))
+    flags["searched_rooms"] = [room]
+    assert room not in bot._haunt_goal_targets(engine, hero), "通用规则不可重新加回已搜过的配料房"
+
+    engine = _run_until_haunt(109, 4, 67)
+    handler = engine._mode_handler()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    traitor = next(p for p in engine.state.players if p.role == "traitor")
+    hero.items = []
+    qid, choices = next(iter(handler.QUEST_ITEM_CHOICES.items()))
+    wanted = choices[0]
+    irrelevant = next(card for card, spec in engine.catalog.cards.items() if spec.tradeable and card not in choices)
+    traitor.items = [irrelevant, wanted]
+    engine._haunt_flags()["obtained_quests"] = [qid]
+    engine._haunt_flags()["completed_quests"] = []
+    hero.room_key = traitor.room_key
+    hero.control = "bot"
+    hero.attack_used = False
+    _set_current(engine, hero)
+    assert handler.perform_action(engine, hero, "steal_from_traitor", {})
+    assert wanted in hero.items and irrelevant in traitor.items
+
+
+def verify_bot_retreat_and_focus():
+    engine = _run_until_haunt(109, 4, 5)
+    bot = BotController()
+    hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    hero.items = []
+    hero.stats["might"] = 1
+    hero.attack_used = False
+    _set_current(engine, hero)
+    monster = engine.state.monsters[0]
+    monster.might = 8
+    monster.stunned_turns = 0
+    monster.room_key = hero.room_key
+    unsafe = engine._place_room(engine.catalog.room_templates["foyer"], 90, 90, 0)
+    safe = engine._place_room(engine.catalog.room_templates["foyer"], 91, 90, 0)
+    hero.room_key = unsafe.key
+    monster.room_key = unsafe.key
+    hero.steps_remaining = 5
+    hero.movement_stopped = False
+    with patch.object(engine, "roll_dice", side_effect=AssertionError("有退路时不应发动明显不利的自愿攻击")):
+        assert bot._try_attack(engine, hero) is False
+    options = engine.available_move_options(hero)
+    ranked = bot._rank_move_options(engine, hero, options)
+    assert ranked and ranked[0].target_key == safe.key, "撤退优先于追怪或空房目标"
+    # 回到同批敌人前且未获得装备/属性：不能无限拒绝战斗。
+    engine.state.meta["bot_retreats"] = {str(hero.id): [bot._retreat_signature(engine, hero)]}
+    with patch.object(engine, "execute_command", return_value=True) as execute:
+        assert bot._try_attack(engine, hero) is True
+        assert execute.call_args[0][0].action == "attack"
+    second = next((m for m in engine.state.monsters if m is not monster), None)
+    if second is not None:
+        second.template_id = monster.template_id
+        second.might, second.sanity, second.knowledge = monster.might, monster.sanity, monster.knowledge
+        engine._haunt_rule_state()["bot_focus"] = {"hero": "monster:" + str(monster.id)}
+        profile = bot._side_profile(engine, hero)
+        assert bot._target_score(engine, hero, monster, profile) == bot._target_score(engine, hero, second, profile) + 25
+
+
+def main():
+    import argparse
+    import json
+    import time
+    import traceback
+
+    parser = argparse.ArgumentParser(description="逐项执行全部剧本检查，不因首个失败中断")
+    parser.add_argument("--json", type=Path, help="保存完整结果与失败堆栈")
+    args = parser.parse_args()
+    checks = list(_checks())
+    results = []
+    for index, check in enumerate(checks, 1):
+        started = time.monotonic()
+        result = {"index": index, "name": check.__name__, "passed": True}
+        try:
+            check()
+        except Exception as error:
+            result.update(passed=False, error=str(error), traceback=traceback.format_exc())
+            print(f"FAIL {index}/{len(checks)} {check.__name__}: {error}", flush=True)
+        result["seconds"] = round(time.monotonic() - started, 3)
+        results.append(result)
+        if index % 25 == 0:
+            print(f"progress: {index}/{len(checks)}", flush=True)
+    if args.json:
+        args.json.parent.mkdir(parents=True, exist_ok=True)
+        args.json.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+    failed = sum(not result["passed"] for result in results)
+    print(f"verify_haunt_systems: {len(checks)-failed}/{len(checks)} passed, {failed} failed")
+    return int(bool(failed))
 
 
 def verify_haunt7_23_drag_and_goal_hooks() -> None:
@@ -11650,6 +11920,7 @@ def verify_haunt7_23_drag_and_goal_hooks() -> None:
     other = next((p for p in engine.state.players if p.role == "hero" and p.id != hero.id and not p.dead), None)
     head_key = next(key for key in engine.state.board if key != hero.room_key)
     engine._haunt_flags()["head_room"] = head_key
+    hero.items = [card for card in hero.items if card not in ("item_dynamite", "omen_spear")]
     assert handler.bot_goal_rooms(engine, hero) == [], "没带武器时不该直奔头颅房"
     hero.items.append("item_dynamite")
     assert handler.bot_goal_rooms(engine, hero) == [f"__room__{head_key}"], (
@@ -11697,4 +11968,4 @@ def verify_haunt26_rat_pack_once_per_turn() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

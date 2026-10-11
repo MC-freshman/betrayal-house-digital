@@ -687,7 +687,7 @@ class StorybookTwistsMode(GenericModeHandler):
             card = engine.catalog.cards.get(card_id)
             if card is None:
                 continue
-            if card.tradeable or card_id in self.COMPANIONS:
+            if (card.tradeable or card_id in self.COMPANIONS) and engine.item_action_available(card_id):
                 out.append(card_id)
         return out
 
@@ -697,7 +697,12 @@ class StorybookTwistsMode(GenericModeHandler):
         traitor = self._traitor(engine)
         candidates = self._stealable(engine, traitor)
         if getattr(player, "control", "") == "bot" or len(candidates) == 1:
-            steal_id = candidates[0]
+            flags = engine._haunt_flags()
+            completed = {int(qid) for qid in flags.get("completed_quests", [])}
+            needed = {card for qid in flags.get("obtained_quests", [])
+                      if int(qid) not in completed
+                      for card in self._missing_quest_cards(player, int(qid))}
+            steal_id = next((card for card in candidates if card in needed), candidates[0])
         else:
             names = [engine.catalog.cards[c].name for c in candidates]
             idx = engine.prompter.choose_from_list("偷窃", "要偷哪一件？", names)
@@ -706,6 +711,7 @@ class StorybookTwistsMode(GenericModeHandler):
             steal_id = candidates[idx]
         traitor.items.remove(steal_id)
         player.items.append(steal_id)
+        engine._mark_item_action(steal_id, "steal")
         if steal_id in getattr(traitor, "companions", []):
             traitor.companions.remove(steal_id)
         if "companion" in engine.catalog.cards[steal_id].tags and steal_id not in player.companions:

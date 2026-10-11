@@ -105,6 +105,7 @@ class MonsterTemplate:
     tags: tuple[str, ...] = ()
     can_carry_items: bool = False
     text: str = ""
+    present_traits: tuple[str, ...] | None = None
 
 
 @dataclass
@@ -122,6 +123,7 @@ class Monster:
     can_carry_items: bool = False
     items: list[str] = field(default_factory=list)
     tags: tuple[str, ...] = ()
+    present_traits: tuple[str, ...] | None = None
 
 
 @dataclass

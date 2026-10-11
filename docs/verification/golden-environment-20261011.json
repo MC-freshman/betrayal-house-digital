@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-11",
+  "source_parent_commit": "1fbfe8c",
+  "runtime_source_sha256": "c3219dccc41973cc2852f2a1205c4649c7e5ca4a3e5bbfa9361102ee258dcf9c",
+  "python": "3.9.13 (tags/v3.9.13:6de2ca5, May 17 2022, 16:36:42) [MSC v.1929 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "PYTHONHASHSEED": "未指定",
+  "case_count": 186,
+  "baseline": "golden-local-py39-20261011.json",
+  "repeat_matches": 186,
+  "historical_baseline_unchanged": true,
+  "commands": [
+    "GOLDEN_BASELINE_FILE=docs/verification/golden-local-py39-20261011.json python replay_golden.py --update",
+    "GOLDEN_BASELINE_FILE=docs/verification/golden-local-py39-20261011.json python replay_golden.py"
+  ]
+}

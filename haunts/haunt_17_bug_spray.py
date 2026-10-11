@@ -122,6 +122,53 @@ class BugSprayMode(GenericModeHandler):
                 engine._log(f"一只{name}从{room.name}的阴影里爬了出来！")
             return
 
+    # ------------------------------------------------------------- 机器人合成链
+    bot_goal_exclusive = True
+
+    def _mix_room(self, engine):
+        flags = engine._haunt_flags()
+        saved = flags.get("bot_mix_room")
+        if saved in engine.state.board and not engine._is_collapsed(saved):
+            return saved
+        rooms = [key for key, room in engine.state.board.items()
+                 if room.template_id in ("research_laboratory", "kitchen")
+                 and not engine._is_collapsed(key)]
+        heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+        if not rooms or not heroes:
+            return None
+        room = min(rooms, key=lambda key: (sum(engine._path_length(p.room_key, key) for p in heroes), key))
+        flags["bot_mix_room"] = room
+        return room
+
+    def bot_goal_rooms(self, engine, player):
+        if player.dead or player.role != "hero":
+            return []
+        if self._holding_spray(engine, player):
+            return ["__room__" + bug.room_key for bug in self._bugs(engine)]
+        ingredients = list(engine.tokens_of_kind(self.INGREDIENT))
+        hero_ids = {p.id for p in engine.state.players if p.role == "hero" and not p.dead}
+        held = [token for token in ingredients if token.holder in hero_ids]
+        if len(held) >= 3 or any(t.kind == self.SPRAY for t in engine.state.tokens):
+            room = self._mix_room(engine)
+            return ["__room__" + room] if room else []
+        loose = [token for token in ingredients if token.holder is None and token.room_key]
+        return ["__room__" + token.room_key for token in loose]
+
+    def bot_wants_explore(self, engine, player):
+        if player.role != "hero" or self._holding_spray(engine, player):
+            return False
+        hero_ids = {p.id for p in engine.state.players if p.role == "hero" and not p.dead}
+        usable = [t for t in engine.tokens_of_kind(self.INGREDIENT)
+                  if t.holder is None or t.holder in hero_ids]
+        return len(usable) < 3 and not any(t.kind == self.SPRAY for t in engine.state.tokens)
+
+    def bot_attack_blocked(self, engine, player, target):
+        # 毒杀才推进胜利轨；没有杀虫剂时先完成配料后勤。
+        return player.role == "hero" and self._is_bug(engine, target) and not self._holding_spray(engine, player)
+
+    def bot_action_priority(self, engine, player, action_id):
+        return {"make_spray": 100, "take_ingredient": 80, "break_webs": 60}.get(action_id, 0)
+
     # ------------------------------------------------------------- 内部
     def _kind_of(self, engine: Any, monster: Any) -> str:
         return str(engine._haunt_flags().get("bug_kind", {}).get(str(getattr(monster, "id", "")), ""))

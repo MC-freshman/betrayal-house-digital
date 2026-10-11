@@ -1,0 +1,566 @@
+{
+  "basis": "现有源码声明；不是全套实体怪物卡校正证明",
+  "monsters": [
+    {
+      "id": "alien",
+      "name": "外星人",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 6,
+      "knowledge": 0
+    },
+    {
+      "id": "antibody",
+      "name": "抗体",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 3,
+      "knowledge": 0
+    },
+    {
+      "id": "astral_spirit",
+      "name": "星界灵",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity",
+        "knowledge"
+      ],
+      "sanity": 1,
+      "knowledge": 6
+    },
+    {
+      "id": "banshee",
+      "name": "女妖",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "bat",
+      "name": "蝙蝠",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 1,
+      "knowledge": 0
+    },
+    {
+      "id": "beast",
+      "name": "野兽",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "brain",
+      "name": "大脑",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "bride",
+      "name": "新娘",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 4,
+      "knowledge": 0
+    },
+    {
+      "id": "cannibal_freak",
+      "name": "食人狂徒",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 4,
+      "knowledge": 0
+    },
+    {
+      "id": "cat",
+      "name": "猫",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 2,
+      "knowledge": 0
+    },
+    {
+      "id": "creeper_tip",
+      "name": "爬行物尖端",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 3,
+      "knowledge": 0
+    },
+    {
+      "id": "crimson_jack",
+      "name": "血腥杰克",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 3,
+      "knowledge": 0
+    },
+    {
+      "id": "cultist",
+      "name": "邪教徒",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "curse_bear",
+      "name": "女巫之熊",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "curse_cat",
+      "name": "女巫之猫",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 1,
+      "knowledge": 0
+    },
+    {
+      "id": "curse_cultist",
+      "name": "女巫信徒",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 3,
+      "knowledge": 0
+    },
+    {
+      "id": "curse_witch",
+      "name": "诅咒女巫",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity",
+        "knowledge"
+      ],
+      "sanity": 3,
+      "knowledge": 5
+    },
+    {
+      "id": "demon_1",
+      "name": "恶魔一",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 5,
+      "knowledge": 0
+    },
+    {
+      "id": "demon_2",
+      "name": "恶魔二",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 4,
+      "knowledge": 0
+    },
+    {
+      "id": "demon_3",
+      "name": "恶魔三",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 3,
+      "knowledge": 0
+    },
+    {
+      "id": "demon_4",
+      "name": "恶魔四",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 2,
+      "knowledge": 0
+    },
+    {
+      "id": "demon_5",
+      "name": "恶魔五",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 1,
+      "knowledge": 0
+    },
+    {
+      "id": "demon_lord",
+      "name": "恶魔领主",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 7,
+      "knowledge": 0
+    },
+    {
+      "id": "dog",
+      "name": "狗",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 3,
+      "knowledge": 0
+    },
+    {
+      "id": "dracula",
+      "name": "德古拉伯爵",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 6,
+      "knowledge": 0
+    },
+    {
+      "id": "frankenstein",
+      "name": "弗兰肯斯坦的怪物",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "ghost",
+      "name": "幽灵",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "giant",
+      "name": "巨人",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "giant_spider",
+      "name": "巨型蜘蛛",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 5,
+      "knowledge": 0
+    },
+    {
+      "id": "heart",
+      "name": "心脏",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "hell_demon_lord",
+      "name": "恶魔领主",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 4,
+      "knowledge": 0
+    },
+    {
+      "id": "labyrinth_servant",
+      "name": "迷宫仆人",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 5,
+      "knowledge": 0
+    },
+    {
+      "id": "madman",
+      "name": "疯子",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 5,
+      "knowledge": 0
+    },
+    {
+      "id": "mummy",
+      "name": "木乃伊",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "nightmare",
+      "name": "噩梦",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity",
+        "knowledge"
+      ],
+      "sanity": 4,
+      "knowledge": 5
+    },
+    {
+      "id": "ouroboros_head",
+      "name": "衔尾蛇头",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "plant",
+      "name": "邪恶植物",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "rat",
+      "name": "老鼠",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 1,
+      "knowledge": 0
+    },
+    {
+      "id": "servant",
+      "name": "贪婪仆人",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 3,
+      "knowledge": 0
+    },
+    {
+      "id": "shadow",
+      "name": "阴影",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "spectre",
+      "name": "记忆幽影",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 4,
+      "knowledge": 0
+    },
+    {
+      "id": "sphinx",
+      "name": "斯芬克斯",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity",
+        "knowledge"
+      ],
+      "sanity": 3,
+      "knowledge": 4
+    },
+    {
+      "id": "spider",
+      "name": "蜘蛛",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "story_dragon",
+      "name": "恶龙",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 4,
+      "knowledge": 0
+    },
+    {
+      "id": "story_spider",
+      "name": "猎蛛",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 3,
+      "knowledge": 0
+    },
+    {
+      "id": "story_witch",
+      "name": "女巫",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 5,
+      "knowledge": 0
+    },
+    {
+      "id": "victim",
+      "name": "受害者",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 3,
+      "knowledge": 0
+    },
+    {
+      "id": "wisp",
+      "name": "小精灵",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 6,
+      "knowledge": 0
+    },
+    {
+      "id": "witch",
+      "name": "女巫",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 6,
+      "knowledge": 0
+    },
+    {
+      "id": "wolf",
+      "name": "狼",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "zombie",
+      "name": "僵尸",
+      "present_traits": [
+        "speed",
+        "might"
+      ],
+      "sanity": 0,
+      "knowledge": 0
+    },
+    {
+      "id": "zombie_lord",
+      "name": "僵尸领主",
+      "present_traits": [
+        "speed",
+        "might",
+        "sanity"
+      ],
+      "sanity": 2,
+      "knowledge": 0
+    }
+  ]
+}

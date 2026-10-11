@@ -54,6 +54,7 @@ class AmokFleshMode(GenericModeHandler):
     """
 
     mode = "blob_weakness"
+    bot_goal_exclusive = True
 
     def progress_summary(self, engine: Any, viewer: Any) -> list[str]:
         flags = engine._haunt_flags()

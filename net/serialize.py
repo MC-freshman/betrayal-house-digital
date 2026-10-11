@@ -150,6 +150,7 @@ def monster_to_dict(m: Monster) -> dict:
         "might": m.might,
         "sanity": m.sanity,
         "knowledge": m.knowledge,
+        "present_traits": list(m.present_traits) if m.present_traits is not None else None,
         "room_key": m.room_key,
         "controller": m.controller,
         "stunned_turns": m.stunned_turns,
@@ -174,6 +175,7 @@ def monster_from_dict(d: dict) -> Monster:
         can_carry_items=d.get("can_carry_items", False),
         items=list(d.get("items", [])),
         tags=tuple(d.get("tags", [])),
+        present_traits=tuple(d["present_traits"]) if d.get("present_traits") is not None else None,
     )
 
 

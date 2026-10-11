@@ -1,0 +1,1082 @@
+[
+  {
+    "index": 1,
+    "name": "verify_mode_dispatch",
+    "passed": true,
+    "seconds": 0.0
+  },
+  {
+    "index": 2,
+    "name": "verify_mode_handler_reaches_engine",
+    "passed": true,
+    "seconds": 0.0
+  },
+  {
+    "index": 3,
+    "name": "verify_token_api",
+    "passed": true,
+    "seconds": 0.016
+  },
+  {
+    "index": 4,
+    "name": "verify_token_serialization",
+    "passed": true,
+    "seconds": 0.015
+  },
+  {
+    "index": 5,
+    "name": "verify_save_roundtrip_keeps_tokens",
+    "passed": true,
+    "seconds": 0.032
+  },
+  {
+    "index": 6,
+    "name": "verify_haunt1_tokens",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 7,
+    "name": "verify_haunt1_girl_set_aside",
+    "passed": true,
+    "seconds": 0.0
+  },
+  {
+    "index": 8,
+    "name": "verify_haunt1_girl_pickup",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 9,
+    "name": "verify_haunt1_mummy_damage",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 10,
+    "name": "verify_haunt1_steal_instead",
+    "passed": true,
+    "seconds": 0.016
+  },
+  {
+    "index": 11,
+    "name": "verify_haunt1_secret_passage",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 12,
+    "name": "verify_haunt2_seance_race",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 13,
+    "name": "verify_haunt2_bones_require_summon",
+    "passed": true,
+    "seconds": 0.015
+  },
+  {
+    "index": 14,
+    "name": "verify_haunt2_ghost_rules",
+    "passed": true,
+    "seconds": 0.032
+  },
+  {
+    "index": 15,
+    "name": "verify_haunt2_timer",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 16,
+    "name": "verify_haunt2_traitor_death_no_win",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 17,
+    "name": "verify_haunt2_ghost_destroyed_on_defeat",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 18,
+    "name": "verify_haunt3_witch_invulnerable",
+    "passed": true,
+    "seconds": 0.032
+  },
+  {
+    "index": 19,
+    "name": "verify_haunt3_frog_lifecycle",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 20,
+    "name": "verify_haunt3_root_tokens",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 21,
+    "name": "verify_haunt3_traitor_death_no_win",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 22,
+    "name": "verify_haunt3_witch_killed_after_spell",
+    "passed": true,
+    "seconds": 0.032
+  },
+  {
+    "index": 23,
+    "name": "verify_haunt2_no_attack_before_seance",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 24,
+    "name": "verify_haunt3_witch_breath_and_frog_carry",
+    "passed": true,
+    "seconds": 0.062
+  },
+  {
+    "index": 25,
+    "name": "verify_haunt4_spider_blank_reroll",
+    "passed": true,
+    "seconds": 0.032
+  },
+  {
+    "index": 26,
+    "name": "verify_haunt5_werewolf_hunt",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 27,
+    "name": "verify_haunt4_setup_and_trapped",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 28,
+    "name": "verify_haunt4_web_and_eggs_flow",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 29,
+    "name": "verify_haunt4_timer_and_growth",
+    "passed": true,
+    "seconds": 0.032
+  },
+  {
+    "index": 30,
+    "name": "verify_attack_defense_action_type",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 31,
+    "name": "verify_haunt4_traitor_death_no_win",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 32,
+    "name": "verify_haunt6_setup_and_traitor_away",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 33,
+    "name": "verify_haunt6_mind_control_lifecycle",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 34,
+    "name": "verify_haunt6_free_and_immune",
+    "passed": true,
+    "seconds": 0.032
+  },
+  {
+    "index": 35,
+    "name": "verify_haunt6_alien_turn_attack",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 36,
+    "name": "verify_haunt6_traitor_away_no_win",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 37,
+    "name": "verify_haunt7_setup_and_vines",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 38,
+    "name": "verify_haunt7_spray_creation_and_kill",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 39,
+    "name": "verify_haunt7_grab_release_mulch",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 40,
+    "name": "verify_haunt7_elevator_and_destroy",
+    "passed": true,
+    "seconds": 0.032
+  },
+  {
+    "index": 41,
+    "name": "verify_haunt8_banshee_exorcism",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 42,
+    "name": "verify_haunt9_dance_of_death",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 43,
+    "name": "verify_haunt10_family_gathering",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 44,
+    "name": "verify_haunt11_specter_invasion",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 45,
+    "name": "verify_haunt12_fleshwalkers",
+    "passed": true,
+    "seconds": 0.032
+  },
+  {
+    "index": 46,
+    "name": "verify_haunt13_perchance_to_dream",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 47,
+    "name": "verify_haunt14_stars_right",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 48,
+    "name": "verify_haunt15_here_there_be_dragons",
+    "passed": true,
+    "seconds": 0.062
+  },
+  {
+    "index": 49,
+    "name": "verify_haunt16_phantoms_embrace",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 50,
+    "name": "verify_haunt17_bugs",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 51,
+    "name": "verify_haunt18_offspring",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 52,
+    "name": "verify_haunt19_beastmaster",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 53,
+    "name": "verify_haunt20_ghost_bride",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 54,
+    "name": "verify_haunt21_zombie_lord",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 55,
+    "name": "verify_haunt22_abyss_exorcism",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 56,
+    "name": "verify_haunt22_abyss_rises_to_next_floor",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 57,
+    "name": "verify_haunt23_tentacled_horror",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 58,
+    "name": "verify_haunt24_bat_swarm",
+    "passed": true,
+    "seconds": 0.062
+  },
+  {
+    "index": 59,
+    "name": "verify_haunt38_hellbeast_exorcism",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 60,
+    "name": "verify_haunt25_voodoo",
+    "passed": true,
+    "seconds": 0.11
+  },
+  {
+    "index": 61,
+    "name": "verify_haunt25_deferred_draw",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 62,
+    "name": "verify_haunt26_rat_ritual",
+    "passed": true,
+    "seconds": 0.328
+  },
+  {
+    "index": 63,
+    "name": "verify_haunt26_pentagram_block",
+    "passed": true,
+    "seconds": 0.062
+  },
+  {
+    "index": 64,
+    "name": "verify_haunt27_amok_flesh",
+    "passed": true,
+    "seconds": 0.235
+  },
+  {
+    "index": 65,
+    "name": "verify_haunt27_blob_ai",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 66,
+    "name": "verify_haunt28_demon_ring",
+    "passed": true,
+    "seconds": 0.39
+  },
+  {
+    "index": 67,
+    "name": "verify_haunt29_frankenstein",
+    "passed": true,
+    "seconds": 0.266
+  },
+  {
+    "index": 68,
+    "name": "verify_haunt30_dracula",
+    "passed": true,
+    "seconds": 0.437
+  },
+  {
+    "index": 69,
+    "name": "verify_haunt31_organ_rooms",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 70,
+    "name": "verify_haunt31_heart_brain_spear",
+    "passed": true,
+    "seconds": 0.109
+  },
+  {
+    "index": 71,
+    "name": "verify_haunt31_antibody_wall_move",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 72,
+    "name": "verify_haunt32_lost_dimension",
+    "passed": true,
+    "seconds": 0.234
+  },
+  {
+    "index": 73,
+    "name": "verify_haunt32_house_reshuffle",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 74,
+    "name": "verify_haunt33_lake_rescue",
+    "passed": true,
+    "seconds": 0.094
+  },
+  {
+    "index": 75,
+    "name": "verify_haunt34_mad_world",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 76,
+    "name": "verify_haunt35_small_change",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 77,
+    "name": "verify_haunt36_swamp_escape",
+    "passed": true,
+    "seconds": 0.062
+  },
+  {
+    "index": 78,
+    "name": "verify_haunt37_checkmate",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 79,
+    "name": "verify_haunt44_supernatural_aging",
+    "passed": true,
+    "seconds": 0.078
+  },
+  {
+    "index": 80,
+    "name": "verify_haunt45_time_bomb",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 81,
+    "name": "verify_haunt51_darker_than_night",
+    "passed": true,
+    "seconds": 0.062
+  },
+  {
+    "index": 82,
+    "name": "verify_haunt52_crackling_aura",
+    "passed": true,
+    "seconds": 0.281
+  },
+  {
+    "index": 83,
+    "name": "verify_haunt53_toxic_object_escape",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 84,
+    "name": "verify_haunt54_arkanok_skull",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 85,
+    "name": "verify_haunt55_kings_roads",
+    "passed": true,
+    "seconds": 0.093
+  },
+  {
+    "index": 86,
+    "name": "verify_haunt61_eternal_glory",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 87,
+    "name": "verify_haunt62_bag_of_tricks",
+    "passed": true,
+    "seconds": 0.219
+  },
+  {
+    "index": 88,
+    "name": "verify_haunt63_twisting_nether",
+    "passed": true,
+    "seconds": 1.234
+  },
+  {
+    "index": 89,
+    "name": "verify_haunt64_blood_offering",
+    "passed": true,
+    "seconds": 0.078
+  },
+  {
+    "index": 90,
+    "name": "verify_haunt65_breath_of_wind",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 91,
+    "name": "verify_haunt66_hell_on_earth",
+    "passed": true,
+    "seconds": 0.172
+  },
+  {
+    "index": 92,
+    "name": "verify_haunt67_once_upon_a_time",
+    "passed": true,
+    "seconds": 0.234
+  },
+  {
+    "index": 93,
+    "name": "verify_haunt68_setup_and_seal",
+    "passed": true,
+    "seconds": 0.094
+  },
+  {
+    "index": 94,
+    "name": "verify_haunt68_tile_rearrange",
+    "passed": true,
+    "seconds": 0.062
+  },
+  {
+    "index": 95,
+    "name": "verify_haunt68_key_route_and_confusion",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 96,
+    "name": "verify_haunt68_bot_hall_guard",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 97,
+    "name": "verify_haunt56_sands_of_time_setup",
+    "passed": true,
+    "seconds": 0.125
+  },
+  {
+    "index": 98,
+    "name": "verify_haunt56_mask_sanity_floor",
+    "passed": true,
+    "seconds": 0.046
+  },
+  {
+    "index": 99,
+    "name": "verify_haunt56_time_powers",
+    "passed": true,
+    "seconds": 0.032
+  },
+  {
+    "index": 100,
+    "name": "verify_haunt58_nightfall_setup",
+    "passed": true,
+    "seconds": 0.093
+  },
+  {
+    "index": 101,
+    "name": "verify_haunt58_torch_banish_haunting",
+    "passed": true,
+    "seconds": 0.157
+  },
+  {
+    "index": 102,
+    "name": "verify_haunt59_badge_setup",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 103,
+    "name": "verify_haunt59_medallion_flow",
+    "passed": true,
+    "seconds": 0.156
+  },
+  {
+    "index": 104,
+    "name": "verify_haunt60_burning_sands_setup",
+    "passed": true,
+    "seconds": 0.062
+  },
+  {
+    "index": 105,
+    "name": "verify_haunt60_riddle_race",
+    "passed": true,
+    "seconds": 0.125
+  },
+  {
+    "index": 106,
+    "name": "verify_haunt69_wisp_setup",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 107,
+    "name": "verify_haunt69_wisp_flees_heroes",
+    "passed": true,
+    "seconds": 0.125
+  },
+  {
+    "index": 108,
+    "name": "verify_haunt69_catch_and_escape",
+    "passed": true,
+    "seconds": 0.172
+  },
+  {
+    "index": 109,
+    "name": "verify_haunt69_wisp_explores_and_owns_turn",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 110,
+    "name": "verify_haunt70_transformation_setup",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 111,
+    "name": "verify_haunt70_weapons_and_immunity",
+    "passed": true,
+    "seconds": 0.219
+  },
+  {
+    "index": 112,
+    "name": "verify_haunt70_bot_no_noop_actions",
+    "passed": true,
+    "seconds": 0.062
+  },
+  {
+    "index": 113,
+    "name": "verify_haunt57_paint_setup",
+    "passed": true,
+    "seconds": 0.078
+  },
+  {
+    "index": 114,
+    "name": "verify_haunt57_repaint_and_immunity",
+    "passed": true,
+    "seconds": 0.11
+  },
+  {
+    "index": 115,
+    "name": "verify_haunt46_the_feast_setup",
+    "passed": true,
+    "seconds": 0.046
+  },
+  {
+    "index": 116,
+    "name": "verify_haunt46_front_door_and_victory",
+    "passed": true,
+    "seconds": 0.125
+  },
+  {
+    "index": 117,
+    "name": "verify_haunt47_worm_ouroboros_setup",
+    "passed": true,
+    "seconds": 0.079
+  },
+  {
+    "index": 118,
+    "name": "verify_haunt47_spell_and_bodies",
+    "passed": true,
+    "seconds": 0.125
+  },
+  {
+    "index": 119,
+    "name": "verify_haunt48_crimson_jack_setup",
+    "passed": true,
+    "seconds": 0.046
+  },
+  {
+    "index": 120,
+    "name": "verify_haunt48_cursed_weapon_flow",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 121,
+    "name": "verify_haunt49_astral_spirit_setup",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 122,
+    "name": "verify_haunt49_banish_and_possession",
+    "passed": true,
+    "seconds": 0.094
+  },
+  {
+    "index": 123,
+    "name": "verify_haunt50_night_murder_setup",
+    "passed": true,
+    "seconds": 0.046
+  },
+  {
+    "index": 124,
+    "name": "verify_haunt50_dawn_and_absorption",
+    "passed": true,
+    "seconds": 0.094
+  },
+  {
+    "index": 125,
+    "name": "verify_haunt39_heir",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 126,
+    "name": "verify_haunt40_buried_alive",
+    "passed": true,
+    "seconds": 0.015
+  },
+  {
+    "index": 127,
+    "name": "verify_haunt41_invisible_traitor",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 128,
+    "name": "verify_haunt42_hell_gate",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 129,
+    "name": "verify_haunt43_shadow_exorcism",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 130,
+    "name": "verify_dead_player_turn_skipped",
+    "passed": true,
+    "seconds": 0.062
+  },
+  {
+    "index": 131,
+    "name": "verify_monster_defeated_hook_defaults",
+    "passed": true,
+    "seconds": 0.016
+  },
+  {
+    "index": 132,
+    "name": "verify_ensure_room_in_play",
+    "passed": true,
+    "seconds": 0.015
+  },
+  {
+    "index": 133,
+    "name": "verify_collapse_subsystem",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 134,
+    "name": "verify_bot_quest_goal_rooms",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 135,
+    "name": "verify_bot_holds_position_for_next_step",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 136,
+    "name": "verify_haunt_script_visible_to_both_roles",
+    "passed": true,
+    "seconds": 0.015
+  },
+  {
+    "index": 137,
+    "name": "verify_no_instant_verdict_on_trigger",
+    "passed": true,
+    "seconds": 1.11
+  },
+  {
+    "index": 138,
+    "name": "verify_haunt_track_targets_nonzero",
+    "passed": true,
+    "seconds": 2.5
+  },
+  {
+    "index": 139,
+    "name": "verify_fixed_haunt_semantics",
+    "passed": true,
+    "seconds": 0.187
+  },
+  {
+    "index": 140,
+    "name": "verify_all_haunts_data_integrity",
+    "passed": true,
+    "seconds": 0.016
+  },
+  {
+    "index": 141,
+    "name": "verify_all_haunts_handler_smoke",
+    "passed": true,
+    "seconds": 1.234
+  },
+  {
+    "index": 142,
+    "name": "verify_traitor_death_semantics_sweep",
+    "passed": true,
+    "seconds": 1.641
+  },
+  {
+    "index": 143,
+    "name": "verify_item_use_matrix",
+    "passed": true,
+    "seconds": 0.015
+  },
+  {
+    "index": 144,
+    "name": "verify_weapon_cards_attack_paths",
+    "passed": true,
+    "seconds": 0.016
+  },
+  {
+    "index": 145,
+    "name": "verify_character_interaction_matrix",
+    "passed": true,
+    "seconds": 0.016
+  },
+  {
+    "index": 146,
+    "name": "verify_haunt33_fresh_tile_and_explore_gate",
+    "passed": true,
+    "seconds": 0.14
+  },
+  {
+    "index": 147,
+    "name": "verify_haunt39_spear_flow",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 148,
+    "name": "verify_haunt39_deck_fallback",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 149,
+    "name": "verify_all_haunts_win_branches_and_action_reachability",
+    "passed": true,
+    "seconds": 4.75
+  },
+  {
+    "index": 150,
+    "name": "verify_haunt_action_success_flag",
+    "passed": true,
+    "seconds": 0.11
+  },
+  {
+    "index": 151,
+    "name": "verify_haunt3_dig_root_needs_success",
+    "passed": true,
+    "seconds": 0.093
+  },
+  {
+    "index": 152,
+    "name": "verify_haunt3_restore_frog_gating",
+    "passed": true,
+    "seconds": 0.11
+  },
+  {
+    "index": 153,
+    "name": "verify_haunt4_failed_checks_do_not_advance",
+    "passed": true,
+    "seconds": 0.094
+  },
+  {
+    "index": 154,
+    "name": "verify_searchable_required_cards",
+    "passed": true,
+    "seconds": 0.109
+  },
+  {
+    "index": 155,
+    "name": "verify_seance_traitor_anywhere",
+    "passed": true,
+    "seconds": 0.078
+  },
+  {
+    "index": 156,
+    "name": "verify_haunt2_setup_places_pentagram",
+    "passed": true,
+    "seconds": 0.109
+  },
+  {
+    "index": 157,
+    "name": "verify_haunt2_burial_timer_not_frozen",
+    "passed": true,
+    "seconds": 0.094
+  },
+  {
+    "index": 158,
+    "name": "verify_ensure_room_in_play_farthest",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 159,
+    "name": "verify_explore_all_dead_ends_game",
+    "passed": true,
+    "seconds": 0.016
+  },
+  {
+    "index": 160,
+    "name": "verify_mystic_elevator_not_transit",
+    "passed": true,
+    "seconds": 0.016
+  },
+  {
+    "index": 161,
+    "name": "verify_omen_exhaustion_triggers_haunt",
+    "passed": true,
+    "seconds": 0.031
+  },
+  {
+    "index": 162,
+    "name": "verify_dead_player_command_guard",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 163,
+    "name": "verify_haunt7_goal_hooks",
+    "passed": true,
+    "seconds": 0.094
+  },
+  {
+    "index": 164,
+    "name": "verify_bot_attacks_captor_first",
+    "passed": true,
+    "seconds": 0.062
+  },
+  {
+    "index": 165,
+    "name": "verify_haunt9_traitor_goal_gating",
+    "passed": true,
+    "seconds": 0.047
+  },
+  {
+    "index": 166,
+    "name": "verify_stairs_reverse_link_exit",
+    "passed": true,
+    "seconds": 0.016
+  },
+  {
+    "index": 167,
+    "name": "verify_haunt13_wake_success_gating",
+    "passed": true,
+    "seconds": 0.093
+  },
+  {
+    "index": 168,
+    "name": "verify_haunt13_goal_hooks",
+    "passed": true,
+    "seconds": 0.094
+  },
+  {
+    "index": 169,
+    "name": "verify_haunt14_goal_hooks",
+    "passed": true,
+    "seconds": 0.078
+  },
+  {
+    "index": 170,
+    "name": "verify_haunt15_equipment_goal",
+    "passed": true,
+    "seconds": 0.11
+  },
+  {
+    "index": 171,
+    "name": "verify_mode_rewards_gated_on_check_success",
+    "passed": true,
+    "seconds": 0.046
+  },
+  {
+    "index": 172,
+    "name": "verify_haunt16_escape_and_fallback",
+    "passed": true,
+    "seconds": 0.204
+  },
+  {
+    "index": 173,
+    "name": "verify_haunt16_timer_and_defuse_gate",
+    "passed": true,
+    "seconds": 0.093
+  },
+  {
+    "index": 174,
+    "name": "verify_haunt18_breath_gating",
+    "passed": true,
+    "seconds": 0.11
+  },
+  {
+    "index": 175,
+    "name": "verify_haunt20_corpse_drop_and_timer",
+    "passed": true,
+    "seconds": 0.093
+  },
+  {
+    "index": 176,
+    "name": "verify_haunt7_23_drag_and_goal_hooks",
+    "passed": true,
+    "seconds": 0.141
+  },
+  {
+    "index": 177,
+    "name": "verify_haunt26_rat_pack_once_per_turn",
+    "passed": true,
+    "seconds": 0.063
+  },
+  {
+    "index": 178,
+    "name": "verify_static_guards_detect_regressions",
+    "passed": true,
+    "seconds": 0.046
+  },
+  {
+    "index": 179,
+    "name": "verify_bot_objective_chains",
+    "passed": true,
+    "seconds": 0.469
+  },
+  {
+    "index": 180,
+    "name": "verify_bot_retreat_and_focus",
+    "passed": true,
+    "seconds": 0.094
+  }
+]

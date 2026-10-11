@@ -64,9 +64,9 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
             }
         ],
         "actions": [
-            {"id": "learn_true_name", "side": "heroes", "stat": "knowledge", "target": 6, "rooms": ["catacombs", "research_laboratory", "library"]},
-            {"id": "learn_spell", "side": "heroes", "stat": "knowledge", "target": 6, "requires": ["omen_book", "banishment_steps>=1"]},
-            {"id": "banish_mummy", "side": "heroes", "attack": "sanity", "requires": ["omen_book", "banishment_steps>=2", "same_room:mummy"]},
+            {"id": "h1_learn_true_name", "side": "heroes", "stat": "knowledge", "target": 6, "rooms": ["catacombs", "research_laboratory", "library"]},
+            {"id": "h1_learn_spell", "side": "heroes", "stat": "knowledge", "target": 6, "requires": ["omen_book", "banishment_steps>=1"]},
+            {"id": "h1_banish_mummy", "side": "heroes", "attack": "sanity", "requires": ["omen_book", "banishment_steps>=2", "same_room:mummy"]},
         ],
         "source_pages": [12, 83],
     },

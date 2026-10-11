@@ -28,6 +28,8 @@ class BotDecisionProvider(AutoDecisionProvider):
         self.human_prompter = human_prompter
 
     def confirm(self, title: str, message: str) -> bool:
+        if title == "塌方房间":
+            return False  # 默认放弃会受伤的主动坠落；首次发现的强制检定仍执行。
         if title == "盔甲" and self._message_mentions_human(message):
             return self.human_prompter.confirm(title, message) if self.human_prompter else True
         if title in {"偷窃", "重掷"}:
@@ -197,6 +199,8 @@ class BotController:
             candidates = [option] + [item for item in ranked if item is not option]
             moved = False
             previous_room_key = player.room_key
+            previous_threat = self._room_threat(engine, player, previous_room_key)
+            retreat_signature = self._retreat_signature(engine, player)
             for candidate in candidates:
                 if candidate is not None and engine.execute_command(
                     ActionCommand("move", player.id, {"option": candidate})
@@ -214,7 +218,13 @@ class BotController:
             self._pickup_room_items(engine, player)
             if engine.state.phase == "HAUNT_PHASE":
                 self._try_haunt_action(engine, player)
+                self._try_share_quest_items(engine, player)
                 self._try_attack(engine, player)
+                if previous_threat >= 3 and self._room_threat(engine, player, player.room_key) < previous_threat:
+                    spent = engine.state.meta.setdefault("bot_retreats", {}).setdefault(str(player.id), [])
+                    if retreat_signature not in spent:
+                        spent.append(retreat_signature)
+                    break
 
         if engine.state.phase == "HAUNT_PHASE":
             self._try_haunt_action(engine, player)
@@ -228,13 +238,16 @@ class BotController:
             engine.execute_command(ActionCommand("pickup", player.id, {"card_id": card_id}))
 
     def _try_use_helpful_item(self, engine: GameEngine, player: Player) -> bool:
-        if player.item_used:
-            return False
         if player.bot_difficulty == "easy" and engine.rng.random() < 0.45:
             return False
         for card_id in list(player.items):
             card = engine.catalog.cards.get(card_id)
             if not card:
+                continue
+            if not engine.item_action_available(card_id):
+                continue
+            preserve = getattr(engine._mode_handler(), "bot_preserve_item", None)
+            if callable(preserve) and preserve(engine, player, card_id):
                 continue
             if card.effect_id in {"item_heal_small", "item_heal_large"} and self._needs_heal(player, ("speed", "might")):
                 return engine.execute_command(ActionCommand("use_item", player.id, {"card_id": card_id}))
@@ -316,6 +329,9 @@ class BotController:
                 value += 20
             if player.bot_difficulty == "hard":
                 value += 15
+            priority = getattr(engine._mode_handler(), "bot_action_priority", None)
+            if callable(priority):
+                value += int(priority(engine, player, action.id) or 0)
             return value
 
         action = max(actions, key=score)
@@ -405,7 +421,17 @@ class BotController:
                 # （如怪物免疫此属性、剧本 handler 闸门），避免白送攻击/白跑。
                 if not engine.attack_would_be_allowed(player, target, weapon_id):
                     continue
+                margin, safe_loss = self._combat_margin(engine, player, target, weapon_id)
+                can_retreat = self._retreat_available(engine, player) and any(
+                    option.target_key in engine.state.board
+                    and self._room_threat(engine, player, option.target_key)
+                    < self._room_threat(engine, player, player.room_key)
+                    for option in engine.available_move_options(player)
+                ) if player.role == "hero" and margin < -2 else False
+                if player.role == "hero" and margin < -2 and not safe_loss and target is not captor and can_retreat:
+                    continue
                 score = self._target_score(engine, player, target, profile) + bonus
+                score += 5 * margin
                 # 剧本可给"该用哪件武器打这个目标"加权（duck-typed
                 # `bot_weapon_bonus`，默认不实现 → 行为不变）。48 号 p59：
                 # 只有那把诅咒武器能永久杀死血腥杰克，别的打法只会让他更强地回来。
@@ -435,10 +461,62 @@ class BotController:
             # 因为 bot_focus 会进 haunt_rule 存档。
             focus = engine._haunt_rule_state().setdefault("bot_focus", {})
             if isinstance(target, Monster):
-                focus[player.role] = target.template_id
+                focus[player.role] = "monster:" + str(target.id)
             elif isinstance(target, Player):
                 focus[player.role] = target.id
         return ok
+
+    def _combat_margin(self, engine, player, target, weapon_id=None):
+        """与引擎共用攻击属性和加骰规则；只读预测，不提前掷骰。"""
+        params = engine._derive_attack_params(player, target, weapon_id, False)
+        if params is None:
+            return -8, False
+        ranged, attr, _weapon, bonus = params
+        attack = max(1, min(8, engine._effective_stat(player, attr) + bonus + engine._check_bonus(player, attr)))
+        handler = engine._mode_handler()
+        if isinstance(target, Player):
+            fixed = handler.defense_roll_override(engine, player, target, weapon_id)
+            defense = (max(1, min(8, engine._effective_stat(target, attr) + engine._check_bonus(target, attr)))
+                       if fixed is None else int(fixed))
+            if handler.defense_roll_disabled(engine, player, target, weapon_id):
+                defense = 0
+        else:
+            defense = max(1, min(8, getattr(target, attr, 0)))
+        return attack - defense, bool(ranged or handler.attack_loss_damage_disabled(engine, player, target))
+
+    def _room_threat(self, engine, player, room_key):
+        if player.role != "hero" or engine.state.phase != "HAUNT_PHASE":
+            return 0
+        enemies = [m for m in engine.state.monsters if m.room_key == room_key
+                   and m.stunned_turns <= 0 and getattr(m, "controller", "traitor") != player.role]
+        enemies += [p for p in engine.state.players if p.room_key == room_key
+                    and p.role == "traitor" and not p.dead]
+        threat = 0
+        for enemy in enemies:
+            if isinstance(enemy, Monster):
+                attr = "sanity" if enemy.might <= 0 and enemy.sanity > 0 else "might"
+                attack = max(1, min(8, getattr(enemy, attr, 0)))
+                attack += engine._mode_handler().monster_attack_roll_bonus(engine, enemy, player)
+            else:
+                attr = "might"
+                attack = max(1, min(8, enemy.stats.get(attr, 0) + engine._attack_bonus_from_inventory(enemy, None)))
+            defense = max(1, min(8, player.stats.get(attr, 0) + engine._check_bonus(player, attr)))
+            threat = max(threat, max(0, attack - defense))
+        return threat
+
+    def _retreat_signature(self, engine, player):
+        enemies = sorted("monster:" + str(m.id) for m in engine.state.monsters
+                         if m.room_key == player.room_key and m.stunned_turns <= 0
+                         and m.controller != player.role)
+        enemies += sorted("player:" + str(p.id) for p in engine.state.players
+                          if p.room_key == player.room_key and not p.dead and p.role != player.role)
+        return repr((enemies, sorted(player.stats.items()), sorted(player.items)))
+
+    def _retreat_available(self, engine, player):
+        # 战力未变时对同批敌人只撤一次，防止双方不推进胜利的反复绕圈。
+        return (self._room_threat(engine, player, player.room_key) >= 3
+                and self._retreat_signature(engine, player)
+                not in engine.state.meta.get("bot_retreats", {}).get(str(player.id), []))
 
     def _filter_attack_targets(self, engine: GameEngine, player: Player, targets: list[object], profile: dict) -> list[object]:
         filtered: list[object] = []
@@ -484,8 +562,9 @@ class BotController:
         # 集火：英雄对与 bot_focus 一致的目标集中火力（+25）。
         if player.role == "hero":
             focus = engine._haunt_rule_state().get("bot_focus", {})
-            marker = target.template_id if isinstance(target, Monster) else (target.id if isinstance(target, Player) else None)
-            if marker is not None and focus.get(player.role) == marker:
+            marker = "monster:" + str(target.id) if isinstance(target, Monster) else (target.id if isinstance(target, Player) else None)
+            legacy = target.template_id if isinstance(target, Monster) else marker
+            if marker is not None and focus.get(player.role) in (marker, legacy):
                 score += 25
         return score
 
@@ -556,6 +635,11 @@ class BotController:
             else set()
         )
         haunt_goals = self._next_steps_toward(engine, player, haunt_targets)
+        if haunt_targets and getattr(engine._mode_handler(), "bot_goal_exclusive", False):
+            # 定制后勤目标优先于追杀；同房仍可按规则反击。
+            next_targets = set()
+        current_threat = self._room_threat(engine, player, player.room_key)
+        retreat_allowed = self._retreat_available(engine, player)
         # 认准的那一间：它压过通用目标房间表（+130）——那张表里混着阁楼、
         # 卧室之类的"通用宝地"，会把真正的剧本目标挤掉（2 号实测：英雄被
         # 楼上房间牵着走，五芒星室就在三层外也不去，降灵会开不起来）。
@@ -612,6 +696,10 @@ class BotController:
 
         def score(option: ExitOption) -> int:
             value = 0
+            if retreat_allowed and option.target_key in engine.state.board:
+                threat = self._room_threat(engine, player, option.target_key)
+                if threat < current_threat and option.target_key not in hazard_rooms:
+                    value += 500  # 先退出明显不利的战斗，再恢复胜利目标。
             if option.target_key in committed_steps:
                 # 认准的剧本目标：高于一切常驻目标，机器人才会"一条路走到底"。
                 value += {"easy": 100, "normal": 130, "hard": 165}.get(
@@ -631,6 +719,9 @@ class BotController:
                     # （+130），否则整局都在前沿之间打转，见上方 explore_floor 注释。
                     value += 45
             if option.is_new_room:
+                if engine.current_room(player).template_id == "mystic_elevator":
+                    # 电梯移走会拆掉唯一连接；先走到固定房间，再从固定房间探索。
+                    value -= 400
                 value += 15
                 if wants_explore:
                     # 剧情目标牌还没露面 → 翻新房间比"去王座干等"更接近胜利。
@@ -694,7 +785,7 @@ class BotController:
                         for p in engine.state.players
                         if p.role == "hero" and not p.dead and p.id != player.id and p.room_key == option.target_key
                     )
-                    if same_heroes >= 2:
+                    if same_heroes >= 2 and not any(m.room_key == room.key and m.stunned_turns <= 0 for m in engine.state.monsters):
                         value -= 40
                     room_monsters = [
                         m
@@ -702,6 +793,11 @@ class BotController:
                         if m.room_key == option.target_key and m.stunned_turns <= 0
                     ]
                     if room_monsters:
+                        threat = self._room_threat(engine, player, room.key)
+                        # 有风险仍须完成目标；封顶避免把唯一取胜房间永久排除。
+                        value -= 35 * min(3, threat)
+                        if same_heroes:
+                            value += 25  # 有同伴时允许会合清场，独自冲强敌则继续扣分。
                         weapon_ids = [None] + engine.available_attack_weapons(player)
                         # 打不动怪所在房：本英雄空手/任一武器都打不动的非眩晕怪 → −60
                         unbeatable = any(
@@ -768,6 +864,12 @@ class BotController:
             provided = custom_goals(engine, player) or []
             if provided:
                 goals.update(provided)
+                if getattr(handler, "bot_goal_exclusive", False):
+                    return {
+                        key for goal in provided for key, room in engine.state.board.items()
+                        if goal in (key, "__room__" + key, room.template_id, room.name)
+                        and not engine._is_collapsed(key)
+                    }
 
         # 0b) 剧本可声明"这个玩家此刻没有任何剧本目标房间"（区别于上面
         #     bot_goal_rooms 返回空 = 退回通用换算）。9 号实测：叛徒唯一的

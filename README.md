@@ -4,9 +4,9 @@
 **全部 70 本剧本**（含原版 1–50 与扩充 51–70）均有专属机制实现——令牌、怪物特殊规则、
 逐步剧本行动、独立胜负判定与进度摘要，无通用兜底脚本。
 
-当前桌面版本 **v3.7（2026-10-09）**。从 [GitHub Releases](https://github.com/MC-freshman/betrayal-house-digital/releases/latest)
+当前桌面版本 **v3.8（2026-10-11）**。从 [GitHub Releases](https://github.com/MC-freshman/betrayal-house-digital/releases/latest)
 下载 Windows 便携包，解压后双击 `山中小屋.exe` 或 `启动游戏.bat`，无需安装 Python。
-使用方法、相对 v3.6 的改动与验证限制见 [发布说明](docs/发布说明-v3.7.md)。本次仓库更新仅包含桌面版。
+使用方法、相对 v3.7 的改动与验证限制见 [发布说明](docs/发布说明-v3.8.md)。本次仓库更新仅包含桌面版。
 
 ## 功能
 
@@ -33,7 +33,8 @@ python launcher.py
 
 ```bash
 python replay_golden.py            # 186 条端到端种子回放（黄金基准）
-python verify_haunt_systems.py     # 177 项剧本系统专项验证（2665 条断言）
+python verify_haunt_systems.py     # 180 项，失败收集完整且非零退出
+python verify_base_rules.py        # 9 项基础规则与电梯探索边界
 python check_core_drift.py         # 需本地完整项目的兄弟目录小程序后端；独立克隆不适用
 python verify_v1.py                # 桌面 UI 层回归（需 tkinter）
 ```
@@ -43,8 +44,8 @@ python verify_v1.py                # 桌面 UI 层回归（需 tkinter）
 基线"再做前后对照，不会覆盖已提交基准（基准哈希与生成它的解释器/环境绑定，
 历史基准在当前环境无法复现）。2026-10-09 复核：历史基准 186 条均有差异；
 改动前的本地参考基线仅 5 条差异，均来自剧本 2 / 68 的术语调整，其余 181 条一致。
-`verify_haunt_systems.py` 仍在剧本 17 的杀虫剂断言失败；这些是公开记录的验证限制，
-不能把本版称为全量回归通过。详见发布说明。本次未重新生成黄金基准以消除差异。
+v3.8 专项 180/180、基础边界 9/9；独立当前环境参考 186 条重复一致。历史黄金文件原样保留。
+全库 2310 局仍有 3 局超时，AI 平衡与部分规则简化未关闭，详见 [执行收口](docs/执行收口-20261011.md)。
 
 ## 结构
 
