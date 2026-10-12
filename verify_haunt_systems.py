@@ -2667,6 +2667,59 @@ def verify_haunt21_zombie_lord() -> None:
     assert engine.state.winner == "heroes", "摧毁领主即英雄胜（p32）"
 
 
+def verify_haunt21_medallion_carrier() -> None:
+    """剧本 21：主攻手必须是持徽者本人；徽章掉落后全员去找、捡起者接管主攻。
+
+    2026-10-12 修：旧 quest_carrier 按"力量+武器加成"选主攻手，持徽者不是
+    力量最高时会被派去护送主攻手，而主攻手打领主全部无效（attack_allowed
+    直接拒）——33 局 lord_damage 全 0 即此bug 的实证（探针 _b21_p01/p03）。
+    """
+    from engine import ActionCommand  # 局部导入（本文件顶层只导了 GameEngine）
+
+    engine = _run_until_haunt(seed=109, players=4, haunt_id=21)
+    handler = engine._mode_handler()
+    assert isinstance(handler, ZombieLordMode)
+    lord = engine._monster_by_template("zombie_lord")
+    assert lord is not None, "僵尸领主应在场"
+
+    # 固定夹具：收掉地上/原有的徽章，发给指定存活英雄（与 #66 持徽夹具同口径）
+    heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
+    assert heroes, "应有存活英雄"
+    for key in list(engine.state.room_items):
+        cards = engine.state.room_items[key]
+        if handler.MEDALLION in cards:
+            cards.remove(handler.MEDALLION)
+    for person in engine.state.players:
+        if handler.MEDALLION in person.items:
+            engine._discard_card_from_player(person, handler.MEDALLION, return_to_room=False)
+    holder = heroes[0]
+    engine._grant_card_to_player(holder, handler.MEDALLION)
+    assert handler.MEDALLION in holder.items, "夹具：徽章应在指定英雄手上"
+
+    assert handler.quest_carrier(engine) == holder.id, "主攻手必须是持徽者本人（p32）"
+    assert handler.bot_goal_rooms(engine, holder) == ["__room__" + lord.room_key], \
+        "持徽主攻手的目标房应是领主所在房"
+    other = next(p for p in heroes if p is not holder)
+    assert handler.bot_goal_rooms(engine, other) == ["__room__" + holder.room_key], \
+        "其余英雄应护送持徽者，而不是自己去打领主"
+
+    # 徽章掉地上（持徽者死亡掉落）：全员路由到徽章房，进房捡起者接管主攻
+    engine._discard_card_from_player(holder, handler.MEDALLION, return_to_room=True)
+    assert not any(handler.MEDALLION in p.items for p in engine.state.players), "徽章应已掉落"
+    loose = [key for key, cards in engine.state.room_items.items() if handler.MEDALLION in cards]
+    assert loose, "掉落的徽章应躺在持有人所在房间"
+    for hero in heroes:
+        assert handler.bot_goal_rooms(engine, hero) == ["__room__" + loose[0]], \
+            "徽章掉落后全员应去找徽章"
+    retriever = heroes[0]
+    retriever.room_key = loose[0]
+    _set_current(engine, retriever)
+    assert engine.execute_command(
+        ActionCommand("pickup", retriever.id, {"card_id": handler.MEDALLION})
+    ), "进房应能捡起徽章"
+    assert handler.quest_carrier(engine) == retriever.id, "捡起徽章者应接管主攻"
+
+
 def verify_haunt22_abyss_exorcism() -> None:
     """剧本 22：深渊起点/首回合只开洞/邻格扩散/一次性驱魔来源/圣徽拖延（p33/p104）。"""
     engine = _run_until_haunt(seed=113, players=3, haunt_id=22)
@@ -11647,6 +11700,7 @@ def _checks():
     yield verify_haunt19_beastmaster
     yield verify_haunt20_ghost_bride
     yield verify_haunt21_zombie_lord
+    yield verify_haunt21_medallion_carrier
     yield verify_haunt22_abyss_exorcism
     yield verify_haunt22_abyss_rises_to_next_floor
     yield verify_haunt23_tentacled_horror

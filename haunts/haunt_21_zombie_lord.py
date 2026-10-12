@@ -34,6 +34,14 @@ class ZombieLordMode(GenericModeHandler):
         · 胜负：摧毁领主 或 消灭所有僵尸 → 英雄胜；英雄全灭 → 叛徒胜。
           叛徒开局就死，必须吸收引擎"叛徒死亡即英雄胜"的兜底（老坑第 6 次）。
 
+    AI 目标（2026-10-12 修）：主攻手（quest_carrier）必须是持徽者本人——
+    旧实现按"力量+武器加成"选主攻手，持徽者不是力量最高时会被派去护送，
+    而主攻手打领主全部无效（attack_allowed 直接拒），33 局 lord_damage
+    全 0 即此 bug 的实证。修复后徽章掉落后全员路由到徽章房、捡起者接管
+    主攻（verify_haunt21_medallion_carrier 回归）。剩余 0 胜为战斗消耗
+    层问题（每次命中差多少扣多少、领主反击约 3 点/回合，单主攻手打不满
+    7 点），属 §11.33 已登记的 C 类 bot 战术专项，不是路由 bug。
+
     已知简化：
         · 转化的僵尸由引擎/bot 代跑，不由原玩家操控（p103 原版是"该玩家在自己
           的回合继续操控他的僵尸"）；因此"僵尸杀了英雄则该玩家也赢"的多胜方
@@ -124,6 +132,13 @@ class ZombieLordMode(GenericModeHandler):
         heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
         if not heroes:
             return None
+        # p32：只有持徽章者能伤到僵尸领主——主攻手必须是持徽者本人。
+        # 旧实现按"力量+武器加成"选主攻手：持徽者若不是力量最高，会被派去
+        # 护送主攻手，而主攻手打领主全部无效（attack_allowed 直接拒），
+        # 33 局 lord_damage 全 0 正是这么来的（2026-10-12 探针实证）。
+        holder = next((p for p in heroes if self.MEDALLION in p.items), None)
+        if holder is not None:
+            return holder.id
         def strength(hero):
             bonus = max([0] + [engine._attack_bonus_from_inventory(hero, card)
                               for card in hero.items if "weapon" in engine.catalog.cards[card].tags])
