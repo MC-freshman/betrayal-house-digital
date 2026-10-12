@@ -201,7 +201,7 @@ class KingsRoadsMode(GenericModeHandler):
             return
         if getattr(attacker, "role", "") != "hero":
             return
-        damage = engine.roll_dice(1, "影子反噬")
+        damage = engine.roll_damage_dice(1, "影子反噬")
         engine._log(f"{attacker.name} 触碰影子，心神被侵蚀（{damage}）。")
         engine._deal_damage(attacker, "mental", damage, source="影子")
         engine.check_victory()
@@ -360,9 +360,9 @@ class KingsRoadsMode(GenericModeHandler):
                     engine._log(f"他在国王之路上完成了驱魔（{value}）！")
         elif roll == 3:
             self._arrive(engine, player, target)
-            engine._deal_damage(player, "mental", engine.roll_dice(1, "精神伤害"), source="国王之路")
+            engine._deal_damage(player, "mental", engine.roll_damage_dice(1, "精神伤害"), source="国王之路")
         elif roll == 2:
-            engine._deal_damage(player, "mental", engine.roll_dice(1, "精神伤害"), source="国王之路")
+            engine._deal_damage(player, "mental", engine.roll_damage_dice(1, "精神伤害"), source="国王之路")
             engine._log(f"{player.name} 被扔回了出发的房间。")
         else:
             shadow = self._shadow_of(engine, player)

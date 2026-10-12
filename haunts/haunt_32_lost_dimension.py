@@ -120,7 +120,18 @@ class LostDimensionMode(GenericModeHandler):
         # p114：The occupied room tiles are still in the house. Move them next to
         # the starting tiles of the appropriate floors.（原文是复数的 starting
         # tiles——逐张起始牌试，直到门对门接上，保证人还能走出来。）
-        for key in sorted(engine.state.board):
+        staged = []
+        occupied = [key for key in sorted(engine.state.board)
+                    if engine.state.board[key].template_id not in engine.START_ROOM_IDS
+                    and engine._is_room_occupied(key)]
+        # 先腾出原有占位，避免后搬的房间堵住先搬房间的合法门位。
+        for index, key in enumerate(occupied):
+            x, y = 1000 + index, 1000
+            floor = engine.state.board[key].floor
+            while (floor, x, y) in engine.state.pos_index:
+                x += len(occupied) + 1
+            staged.append(engine._relocate_room(key, x, y))
+        for key in staged:
             room = engine.state.board.get(key)
             if room is None or room.template_id in engine.START_ROOM_IDS:
                 continue
@@ -137,7 +148,16 @@ class LostDimensionMode(GenericModeHandler):
                     engine._log(f"「{room.name}」连同里面的一切被挪到了起始牌旁边。")
                     break
             else:
-                engine._log(f"「{room.name}」四周没有能门对门接上的起始牌空位，留在原处。")
+                connected = [k for k, r in sorted(engine.state.board.items())
+                             if r.floor == room.floor and r.template_id not in engine.NON_TRANSIT_TEMPLATES
+                             and any(engine._path_length(a, k, avoid_transit=True) < 9999 for a in anchors)]
+                for anchor in connected:
+                    if engine._place_room_adjacent(key, anchor, require_connection=True):
+                        flags.setdefault("overflow_room_placements", []).append(room.template_id)
+                        engine._log(f"起始牌门位已满；「{room.name}」接到同层已连通房间旁。")
+                        break
+                else:
+                    raise RuntimeError(f"剧本32无法为占用房间 {room.name} 找到连通落点")
 
     # ------------------------------------------------------- 回合开始（毒大气）
     def on_turn_start(self, engine: Any, player: Any) -> None:
@@ -147,7 +167,7 @@ class LostDimensionMode(GenericModeHandler):
             return
         if engine._haunt_flags().get("returned_home"):
             return
-        total = engine.roll_dice(2, "毒大气")
+        total = engine.roll_damage_dice(2, "毒大气")
         if total <= 0:
             engine._log(f"{player.name} 屏住了呼吸——这回合没有被大气灼伤。")
             return

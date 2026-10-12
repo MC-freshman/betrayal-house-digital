@@ -257,7 +257,7 @@ class WitchAndFrogsMode(GenericModeHandler):
         )
         if visible and engine._path_length(witch.room_key, visible[0].room_key) > 3:
             victim = visible[0]
-            amount = engine.roll_dice(2, "龙息")
+            amount = engine.roll_damage_dice(2, "龙息")
             engine._log(f"女巫向{victim.name}喷出龙息（2 骰不可防御物理伤害）！")
             engine._deal_damage(victim, "physical", amount, source="女巫的龙息")
             engine.check_victory()

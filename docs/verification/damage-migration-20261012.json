@@ -1,0 +1,100 @@
+{
+  "scope": "伤害骰；对决、检定与结果表仍用 roll_dice，保留共享掷骰及顺序",
+  "changes": [
+    {
+      "file": "haunt_03_witch_and_frogs.py",
+      "line": 260,
+      "label": "\"龙息\""
+    },
+    {
+      "file": "haunt_18_poisonous_plant.py",
+      "line": 114,
+      "label": "\"孢子\""
+    },
+    {
+      "file": "haunt_32_lost_dimension.py",
+      "line": 150,
+      "label": "\"毒大气\""
+    },
+    {
+      "file": "haunt_36_swamp_escape.py",
+      "line": 120,
+      "label": "\"洪水\""
+    },
+    {
+      "file": "haunt_38_hellbeast_exorcism.py",
+      "line": 155,
+      "label": "\"火蝠灼烧\""
+    },
+    {
+      "file": "haunt_39_secret_heir.py",
+      "line": 308,
+      "label": "\"刺客偷袭\""
+    },
+    {
+      "file": "haunt_40_buried_alive.py",
+      "line": 132,
+      "label": "f\"活埋伤害（轨位 {timer}）\""
+    },
+    {
+      "file": "haunt_52_ring_exorcism.py",
+      "line": 683,
+      "label": "\"沸血伤害\""
+    },
+    {
+      "file": "haunt_52_ring_exorcism.py",
+      "line": 661,
+      "label": "\"火球伤害\""
+    },
+    {
+      "file": "haunt_55_kings_roads.py",
+      "line": 204,
+      "label": "\"影子反噬\""
+    },
+    {
+      "file": "haunt_55_kings_roads.py",
+      "line": 363,
+      "label": "\"精神伤害\""
+    },
+    {
+      "file": "haunt_55_kings_roads.py",
+      "line": 365,
+      "label": "\"精神伤害\""
+    },
+    {
+      "file": "haunt_57_portrait_curse.py",
+      "line": 227,
+      "label": "\"肖像的反噬\""
+    },
+    {
+      "file": "haunt_58_nightfall_twilight.py",
+      "line": 256,
+      "label": "\"梦魇伤害\""
+    },
+    {
+      "file": "haunt_61_ghost_warrior.py",
+      "line": 128,
+      "label": "\"长矛乱舞\""
+    },
+    {
+      "file": "haunt_62_bag_of_tricks.py",
+      "line": 350,
+      "label": "\"小玩意反噬\""
+    },
+    {
+      "file": "haunt_67_storybook_twists.py",
+      "line": 563,
+      "label": "\"高贵受苦·肉体\""
+    },
+    {
+      "file": "haunt_67_storybook_twists.py",
+      "line": 564,
+      "label": "\"高贵受苦·精神\""
+    },
+    {
+      "file": "haunt_69_wisp_capture.py",
+      "line": 124,
+      "label": "\"孢子迷雾\""
+    }
+  ]
+}

@@ -61,6 +61,10 @@ class InhumanTransformationMode(GenericModeHandler):
           修前完成 26/33、警 14（token_infect×85、create_holy_water×120、
           300 回合僵局 ×7）；修后完成 33/33、警 1（仅 seed31/4p 的一处
           "同房 15 次"震荡，恰在阈值上）。
+        · 试玩诊断口径（2026-10-12）：`available_actions` 同时服务真人界面，
+          不会应用 bot 专属的 `bot_action_blocked` 过滤；因此“出现过但未执行”
+          会把狼人形态下被 bot 明确屏蔽的 `search_ingredient` 记成空转。该告警
+          不代表 bot 实际尝试了该行动；focused 6-seed audit 中复核的 7 次均被屏蔽。
     """
 
     mode = "inhuman_transformation"
@@ -418,7 +422,8 @@ class InhumanTransformationMode(GenericModeHandler):
     def _dip_weapon(self, engine: Any, player: Any) -> bool:
         """p81：在有圣水的房间蘸武器（代替攻击）。"""
         flags = engine._haunt_flags()
-        weapon = next((c for c in self.TRAITOR_WEAPONS if c in player.items), None)
+        weapon = next((c for c in self.TRAITOR_WEAPONS if c in player.items
+                       and c not in flags.get("holy_weapons", [])), None)
         if weapon is None or player.room_key not in set(flags.get("holy_rooms", [])):
             return False
         holy = sorted(set(flags.get("holy_weapons", [])) | {weapon})
@@ -560,6 +565,27 @@ class InhumanTransformationMode(GenericModeHandler):
         return False
 
     # ------------------------------------------------------------- bot/UI
+    bot_goal_exclusive = True
+
+    def action_item_cards(self, engine, player, action_id):
+        if action_id == "dip_weapon":
+            return [c for c in self.TRAITOR_WEAPONS if c in player.items
+                    and c not in engine._haunt_flags().get("holy_weapons", [])][:1]
+        if action_id == "create_holy_water":
+            return [c for c in self.HOLY_TOOLS if c in player.items][:1]
+        return []
+
+    def bot_action_blocked(self, engine, player, action_id):
+        if player.role != "hero":
+            return False
+        allowed = {
+            "vampire": {"create_holy_water", "dip_weapon"},
+            "werewolf": {"create_silver_bullets", "search_revolver"},
+            "bane_spider": ({"spray_traitor"} if engine._haunt_flags().get("bug_spray") else
+                            {"search_ingredient", "assemble_bug_spray"}),
+        }
+        return action_id not in allowed[self._form(engine)]
+
     def bot_stay_in_room(self, engine: Any, player: Any) -> bool:
         """吸血鬼的转变只差"贴住一个活人"：人都到跟前了就别再走开（p152）。
 
@@ -633,6 +659,9 @@ class InhumanTransformationMode(GenericModeHandler):
             if not any(self.REVOLVER in p.items for p in engine.state.players):
                 return [self.VAULT] if self.VAULT in reachable else []
         else:
+            if flags.get("bug_spray"):
+                traitor = self._traitor(engine)
+                return [f"__room__{traitor.room_key}"] if traitor is not None else []
             have = set(flags.get("ingredients", []))
             for material in self.INGREDIENTS:
                 if material not in have:

@@ -121,7 +121,7 @@ class WispCaptureMode(GenericModeHandler):
         if mine == "ended":
             return 0
         # 本回合第一次：做理智掷骰（p80：骰数 = 当前理智）
-        result = engine.roll_dice(max(1, player.stats.get("sanity", 1)), "孢子迷雾")
+        result = engine.roll_damage_dice(max(1, player.stats.get("sanity", 1)), "孢子迷雾")
         if result >= 6:
             state[str(player.id)] = "immune"
             flags["spore_state"] = state

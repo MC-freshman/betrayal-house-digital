@@ -305,7 +305,7 @@ class HeirAssassinMode(GenericModeHandler):
                 hidden_list.remove(hid)
             engine._log(f"一名刺客从暗处跳出来攻击 {player.name}！")
             # sneak attack：Might 2，无防御
-            assassin_roll = engine.roll_dice(2, "刺客偷袭")
+            assassin_roll = engine.roll_damage_dice(2, "刺客偷袭")
             engine._log(f"刺客偷袭 {player.name}：{assassin_roll}（无防御）。")
             if assassin_roll > 0:
                 engine._deal_damage(player, "physical", assassin_roll, source="刺客")

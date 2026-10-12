@@ -7692,10 +7692,17 @@ def verify_haunt32_house_reshuffle() -> None:
     for key, room in engine.state.board.items():
         if room.template_id in engine.START_ROOM_IDS or room.template_id == handler.ORGAN_ROOM:
             continue
-        assert any(
+        direct = any(
             engine.state.board[nb].template_id in engine.START_ROOM_IDS
             for nb in engine._door_neighbors(key)
-        ), f"「{room.name}」应被挪到起始牌旁边并连通"
+        )
+        if room.template_id in flags.get("overflow_room_placements", []):
+            assert any(engine._path_length(key, anchor, avoid_transit=True) < 9999
+                       for anchor, start in engine.state.board.items()
+                       if start.floor == room.floor and start.template_id in engine.START_ROOM_IDS), \
+                f"门位不足时「{room.name}」仍须接入同层起始牌"
+        else:
+            assert direct, f"「{room.name}」应被挪到起始牌旁边并连通"
     assert engine.state.room_discard == [], "弃牌堆应并入洗匀"
     assert all(
         engine.state.pos_index.get((r.floor, r.x, r.y)) == k
@@ -7802,18 +7809,17 @@ def verify_haunt4_web_and_eggs_flow() -> None:
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
     trapped = next(p for p in engine.state.players if p.id == flags.get("trapped_id"))
 
-    # 打网：站在蛛网房间。对决是掷骰（Might vs 4），把力量拉满保证命中率，
-    # 循环多次直到轨道打满——这里验证的是"打满→解困"链路而非掷骰运气。
+    # 打网：站在蛛网房间。每回合只能攻击一次；用确定性掷骰模拟多个回合，
+    # 验证完整的"打满→解困"链路而不依赖随机结果。
     hero.room_key = haunt_room
     might_track = engine._stat_track(hero, "might")
     hero.stat_positions["might"] = len(might_track) - 1
     hero.stats["might"] = might_track[-1]
     target = engine._haunt_track_target("web_damage")
-    for _ in range(target * 10):
-        if engine._haunt_track_value("web_damage") >= target:
-            break
-        engine._set_haunt_track_value("web_damage", min(target - 1, engine._haunt_track_value("web_damage") + 1))
-        handler.perform_action(engine, hero, "attack_web", {})
+    with patch.object(engine, "_roll_attack", return_value=99), patch.object(engine, "roll_dice", return_value=0):
+        for _ in range(target):
+            engine._reset_player_turn_state(hero)
+            handler.perform_action(engine, hero, "attack_web", {})
     assert engine._haunt_track_value("web_damage") >= target, "满力量下应能打满蛛网轨道"
     assert flags.get("web_destroyed"), "轨道满后蛛网应被摧毁"
     assert not trapped.movement_stopped, "网破后被困者应解困"
@@ -9376,6 +9382,9 @@ def verify_haunt66_hell_on_earth() -> None:
     assert sum(1 for m in engine.state.monsters if m.template_id in ("giant", "cultist")) == 0
 
     traitor = next(p for p in engine.state.players if p.role == "traitor")
+    # 本项验证英雄持徽后的规则，不依赖探索 AI 恰好把圣徽发给哪个座位。
+    hero_fixture = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+    engine._grant_card_to_player(hero_fixture, "omen_holy_symbol")
     holder = next((p for p in engine.state.players if "omen_holy_symbol" in p.items), None)
     assert holder is not None and holder.role == "hero", "圣徽应在英雄手上"
     assert handler.item_pickup_blocked(engine, traitor, "omen_holy_symbol") is True
@@ -9413,7 +9422,8 @@ def verify_haunt66_hell_on_earth() -> None:
     # 未封闭房间打胜：轨道不够击晕则击退
     engine2 = _run_until_haunt(seed=113, players=3, haunt_id=66)
     handler2 = engine2._mode_handler()
-    hero2 = next(p for p in engine2.state.players if "omen_holy_symbol" in p.items)
+    hero2 = next(p for p in engine2.state.players if p.role == "hero" and not p.dead)
+    engine2._grant_card_to_player(hero2, "omen_holy_symbol")
     lord2 = engine2._monster_by_template("hell_demon_lord")
     _set_current(engine2, hero2)
     engine2._reset_player_turn_state(hero2)

@@ -49,6 +49,7 @@ class SmallChangeMode(GenericModeHandler):
             (s for s in haunt.rule_data.get("monsters", []) if s.get("template_id") == self.CAT),
             {},
         )
+        spec = dict(spec, knowledge=5)  # p117：猫的知识为5，可用于逃脱对决。
         entrance = next(
             (k for k, r in engine.state.board.items() if r.template_id == "entrance_hall"),
             room_key,
@@ -99,7 +100,8 @@ class SmallChangeMode(GenericModeHandler):
             victim.dead = True
             captured.pop(str(victim.id), None)
         engine.check_victory()
-        return True  # 猫的回合由 handler 接管
+        # 这里只处理回合开始的吞食；返回 True 会让引擎跳过猫的移动和攻击。
+        return engine.state.phase == "GAME_OVER"
 
     def on_turn_start(self, engine: Any, player: Any) -> None:
         """p46：被俘者回合开始选属性对决逃生。"""
@@ -142,6 +144,19 @@ class SmallChangeMode(GenericModeHandler):
         return False  # 默认击晕
 
     # ------------------------------------------------------------- 行动
+    bot_goal_exclusive = True
+
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        if player.role != "hero" or player.dead:
+            return []
+        flags = engine._haunt_flags()
+        if flags.get("plane_started"):
+            return list(self.OUTER_ROOMS)
+        if flags.get("plane_found"):
+            # 发动在任意房间都可进行，不让通用目标把搜索者拉走。
+            return ["__room__" + player.room_key]
+        return ["bedroom", "master_bedroom", "larder", "attic", "game_room"]
+
     def available_actions(self, engine: Any, player: Any) -> list[Any]:
         actions = super().available_actions(engine, player)
         result = []

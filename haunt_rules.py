@@ -206,7 +206,7 @@ HAUNT_RULE_OVERRIDES: dict[int, dict[str, Any]] = {
         "fidelity": "refined",
         "status": "playable",
         "mode": "web_escape",
-        "traitor_rule": "highest_might",
+        "traitor_rule": "highest_might_except_revealer",
         "hero_goal": "打碎蛛网、摧毁卵，然后打开入口大厅前门并逃出房子。",
         "traitor_goal": "保护蛛卵直到第 9 回合孵化，或杀光英雄。",
         "suggested_monsters": ["giant_spider"],

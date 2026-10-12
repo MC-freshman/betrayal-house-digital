@@ -125,7 +125,7 @@ class EternalGloryMode(GenericModeHandler):
         if roll >= 3:
             engine._log(f"{player.name} 避开了乱舞的长矛（速度 {roll}）。")
             return
-        amount = engine.roll_dice(1, "长矛乱舞")
+        amount = engine.roll_damage_dice(1, "长矛乱舞")
         engine._log(f"长矛在{player.name}面前疯狂乱舞（速度 {roll}）——{amount} 点物理伤害。")
         engine._deal_damage(player, "physical", amount, source="疯狂的长矛")
 

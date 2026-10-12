@@ -224,7 +224,7 @@ class PortraitCurseMode(GenericModeHandler):
         if engine._resolve_check(player, "sanity", 4, "抗拒肖像的凝视"):
             engine._log(f"{player.name} 强迫自己别去看那幅画。")
             return
-        roll = engine.roll_dice(1, "肖像的反噬")
+        roll = engine.roll_damage_dice(1, "肖像的反噬")
         engine._log(f"画中人替他挡下了三百年的伤，此刻却向他讨债（精神伤害 {roll}）。")
         # 直接结算：绕开 _deal_damage，否则会被他自己的免疫吃干净
         engine._apply_damage_amounts(player, mental=roll, source="肖像")

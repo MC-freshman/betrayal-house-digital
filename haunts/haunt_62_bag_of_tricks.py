@@ -347,7 +347,7 @@ class BagOfTricksMode(GenericModeHandler):
     def _trinket_trait_shock(self, engine: Any, heroes: list[Any]) -> None:
         """p144 · 4：每个英雄掷 1 骰，从最高属性上扣掉这么多点。"""
         for hero in heroes:
-            amount = engine.roll_dice(1, "小玩意反噬")
+            amount = engine.roll_damage_dice(1, "小玩意反噬")
             if amount <= 0:
                 continue
             stat = max(

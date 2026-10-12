@@ -253,7 +253,7 @@ class NightfallMode(GenericModeHandler):
             flags["haunting"] = haunting
             engine._log(f"{engine._player_label(player)} 挣脱了梦魇——噩梦现身在房间里。")
             return
-        engine._deal_damage(player, "mental", engine.roll_dice(1, "梦魇伤害"), source="梦魇")
+        engine._deal_damage(player, "mental", engine.roll_damage_dice(1, "梦魇伤害"), source="梦魇")
         engine._log(f"{engine._player_label(player)} 没能甩开梦魇，精神被啃噬了一口。")
 
     # ------------------------------------------------------------- 行动

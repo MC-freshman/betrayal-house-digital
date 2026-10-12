@@ -66,6 +66,13 @@ class ZombieLordMode(GenericModeHandler):
             engine._drop_inventory_on_death(traitor)
             traitor.dead = True
             engine._log(f"{traitor.name}被墙里伸出的灰白色手拖了进去——再站起来的东西不再是祂。")
+        # 原表 #21 只由徽章触发（规则基准 p4），摘要抽本或强制试玩必须补此前置。
+        if not engine._card_is_controlled(self.MEDALLION):
+            revealer = next((p for p in engine.state.players
+                             if p.id == engine.state.haunt_revealer_id and p.role == "hero" and not p.dead), None)
+            holder = revealer or next(p for p in engine.state.players if p.role == "hero" and not p.dead)
+            engine._grant_card_to_player(holder, self.MEDALLION)
+            engine._log("活死人之屋的开局前置已补齐：英雄持有徽章。")
         placed = self._place_zombies(engine, room_key)
         engine._haunt_flags()["zombies_placed"] = placed
         engine._log(f"僵尸从墓穴与花园的方向围了过来（{placed} 只）。")
@@ -94,6 +101,24 @@ class ZombieLordMode(GenericModeHandler):
 
     # ---------------------------------------------------------- 战斗规则
     bot_goal_exclusive = True
+    REVOLVER = "item_revolver"
+
+    def item_draw_choices(self, engine, player):
+        return 3 if player.role == "hero" else 1
+
+    def bot_item_draw_score(self, engine, player, card_id):
+        card = engine.catalog.cards[card_id]
+        if "weapon" in card.tags and card_id != self.REVOLVER:
+            return 100 + 10 * engine._attack_bonus_from_inventory(player, card_id)
+        return 40 if card.effect_id in {"item_heal_small", "item_heal_large"} else 0
+
+    def bot_weapon_bonus(self, engine, player, target, weapon_id):
+        if _monster_id(target) == self.LORD and self.MEDALLION in player.items:
+            return 160
+        if (_monster_id(target) == self.ZOMBIE and weapon_id
+                and "weapon" in engine.catalog.cards[weapon_id].tags and weapon_id != self.REVOLVER):
+            return 60
+        return 0
 
     def quest_carrier(self, engine):
         heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]

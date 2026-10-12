@@ -1,0 +1,1081 @@
+{
+  "date": "2026-10-12",
+  "scope": {
+    "haunts": 70,
+    "seeds": [
+      3,
+      7,
+      11,
+      23,
+      31,
+      101,
+      109,
+      113,
+      137,
+      151,
+      251
+    ],
+    "players": [
+      3,
+      4,
+      5
+    ],
+    "max_turns": 400
+  },
+  "total_games": 2310,
+  "winners": {
+    "traitor": 1661,
+    "heroes": 649
+  },
+  "unfinished_cases": [],
+  "warning_counts": {
+    "unused_available_action": 103,
+    "room_oscillation": 21,
+    "long_turns": 5
+  },
+  "priority_haunts": [
+    {
+      "haunt": 4,
+      "games": 33,
+      "winners": {
+        "traitor": 30,
+        "heroes": 3
+      },
+      "actions_used": {
+        "attack_web": 143,
+        "destroy_eggs_medical_kit": 4,
+        "destroy_eggs_salve": 6,
+        "open_front_door": 4
+      },
+      "warning_games": 2
+    },
+    {
+      "haunt": 17,
+      "games": 33,
+      "winners": {
+        "traitor": 32,
+        "heroes": 1
+      },
+      "actions_used": {
+        "break_webs": 22,
+        "destroy_ingredient": 6,
+        "make_spray": 6,
+        "take_ingredient": 105
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 21,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {},
+      "warning_games": 0
+    },
+    {
+      "haunt": 27,
+      "games": 33,
+      "winners": {
+        "traitor": 31,
+        "heroes": 2
+      },
+      "actions_used": {
+        "examine_blob": 104,
+        "search_ingredient": 25,
+        "throw_ingredient": 19
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 35,
+      "games": 33,
+      "winners": {
+        "heroes": 25,
+        "traitor": 8
+      },
+      "actions_used": {
+        "escape_plane": 50,
+        "search_plane": 40,
+        "start_plane": 42
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 67,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {
+        "complete_quest": 8,
+        "obtain_quest": 69,
+        "plot_twist": 44,
+        "steal_from_traitor": 3
+      },
+      "warning_games": 19
+    },
+    {
+      "haunt": 70,
+      "games": 33,
+      "winners": {
+        "traitor": 28,
+        "heroes": 5
+      },
+      "actions_used": {
+        "assemble_bug_spray": 8,
+        "create_holy_water": 11,
+        "create_silver_bullets": 18,
+        "dip_weapon": 2,
+        "search_ingredient": 22,
+        "search_revolver": 3,
+        "token_hypnotize": 22,
+        "token_infect": 41,
+        "token_trap": 20
+      },
+      "warning_games": 31
+    }
+  ],
+  "by_haunt": [
+    {
+      "haunt": 1,
+      "games": 33,
+      "winners": {
+        "traitor": 31,
+        "heroes": 2
+      },
+      "actions_used": {
+        "h1_banish_mummy": 2,
+        "h1_give_mummy_card": 7,
+        "h1_learn_spell": 8,
+        "h1_learn_true_name": 72
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 2,
+      "games": 33,
+      "winners": {
+        "heroes": 31,
+        "traitor": 2
+      },
+      "actions_used": {
+        "find_bones": 2,
+        "seance_check": 141
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 3,
+      "games": 33,
+      "winners": {
+        "heroes": 24,
+        "traitor": 9
+      },
+      "actions_used": {
+        "carry_frog": 18,
+        "cast_mortal_form": 41,
+        "dig_root": 73,
+        "drop_frog": 10,
+        "restore_frog": 9
+      },
+      "warning_games": 10
+    },
+    {
+      "haunt": 4,
+      "games": 33,
+      "winners": {
+        "traitor": 30,
+        "heroes": 3
+      },
+      "actions_used": {
+        "attack_web": 143,
+        "destroy_eggs_medical_kit": 4,
+        "destroy_eggs_salve": 6,
+        "open_front_door": 4
+      },
+      "warning_games": 2
+    },
+    {
+      "haunt": 5,
+      "games": 33,
+      "winners": {
+        "traitor": 32,
+        "heroes": 1
+      },
+      "actions_used": {
+        "h5_find_revolver": 15,
+        "h5_give_silver_bullets": 10,
+        "h5_make_silver_bullets": 50
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 6,
+      "games": 33,
+      "winners": {
+        "heroes": 3,
+        "traitor": 30
+      },
+      "actions_used": {
+        "damage_spaceship": 592
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 7,
+      "games": 33,
+      "winners": {
+        "traitor": 30,
+        "heroes": 3
+      },
+      "actions_used": {
+        "make_plant_spray": 5,
+        "spray_creeper": 15
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 8,
+      "games": 33,
+      "winners": {
+        "heroes": 29,
+        "traitor": 4
+      },
+      "actions_used": {
+        "chapel": 25,
+        "crypt": 39,
+        "library": 33,
+        "omen_book": 9,
+        "omen_crystal_ball": 11,
+        "omen_holy_symbol": 11,
+        "omen_spirit_board": 17,
+        "pentagram_chamber": 40,
+        "research_laboratory": 37
+      },
+      "warning_games": 5
+    },
+    {
+      "haunt": 9,
+      "games": 33,
+      "winners": {
+        "heroes": 23,
+        "traitor": 10
+      },
+      "actions_used": {
+        "banish_fiddler": 136,
+        "destroy_holy_symbol": 1
+      },
+      "warning_games": 1
+    },
+    {
+      "haunt": 10,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {},
+      "warning_games": 0
+    },
+    {
+      "haunt": 11,
+      "games": 33,
+      "winners": {
+        "heroes": 15,
+        "traitor": 18
+      },
+      "actions_used": {
+        "chapel": 24,
+        "crypt": 29,
+        "library": 21,
+        "omen_book": 10,
+        "omen_crystal_ball": 12,
+        "omen_holy_symbol": 11,
+        "omen_ring": 10,
+        "open_window": 26,
+        "pentagram_chamber": 30,
+        "research_laboratory": 26
+      },
+      "warning_games": 3
+    },
+    {
+      "haunt": 12,
+      "games": 33,
+      "winners": {
+        "heroes": 3,
+        "traitor": 30
+      },
+      "actions_used": {},
+      "warning_games": 0
+    },
+    {
+      "haunt": 13,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {
+        "wake_attempt": 9
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 14,
+      "games": 33,
+      "winners": {
+        "heroes": 13,
+        "traitor": 20
+      },
+      "actions_used": {
+        "sacrifice": 46,
+        "take_corpse": 20,
+        "take_paint": 115,
+        "throw_paint": 73
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 15,
+      "games": 33,
+      "winners": {
+        "traitor": 29,
+        "heroes": 4
+      },
+      "actions_used": {
+        "don_armor": 12,
+        "take_shield": 26
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 16,
+      "games": 33,
+      "winners": {
+        "heroes": 6,
+        "traitor": 27
+      },
+      "actions_used": {
+        "defuse_bomb": 20,
+        "open_front_door": 66
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 17,
+      "games": 33,
+      "winners": {
+        "traitor": 32,
+        "heroes": 1
+      },
+      "actions_used": {
+        "break_webs": 22,
+        "destroy_ingredient": 6,
+        "make_spray": 6,
+        "take_ingredient": 105
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 18,
+      "games": 33,
+      "winners": {
+        "traitor": 26,
+        "heroes": 7
+      },
+      "actions_used": {
+        "find_flower": 65,
+        "hold_breath": 296,
+        "weaken_plant": 29
+      },
+      "warning_games": 5
+    },
+    {
+      "haunt": 19,
+      "games": 33,
+      "winners": {
+        "traitor": 32,
+        "heroes": 1
+      },
+      "actions_used": {},
+      "warning_games": 0
+    },
+    {
+      "haunt": 20,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {
+        "disinter_body": 106,
+        "learn_name": 51,
+        "learn_name_book": 5,
+        "locate_body": 36
+      },
+      "warning_games": 2
+    },
+    {
+      "haunt": 21,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {},
+      "warning_games": 0
+    },
+    {
+      "haunt": 22,
+      "games": 33,
+      "winners": {
+        "heroes": 16,
+        "traitor": 17
+      },
+      "actions_used": {
+        "chapel": 25,
+        "crypt": 11,
+        "library": 41,
+        "omen_book": 7,
+        "omen_crystal_ball": 13,
+        "omen_holy_symbol": 10,
+        "omen_ring": 10,
+        "pentagram_chamber": 32,
+        "research_laboratory": 37
+      },
+      "warning_games": 5
+    },
+    {
+      "haunt": 23,
+      "games": 33,
+      "winners": {
+        "traitor": 29,
+        "heroes": 4
+      },
+      "actions_used": {
+        "destroy_head": 4,
+        "gaze_crystal_ball": 13
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 24,
+      "games": 33,
+      "winners": {
+        "traitor": 26,
+        "heroes": 7
+      },
+      "actions_used": {
+        "drive_away_bats": 9,
+        "start_organ": 181
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 25,
+      "games": 33,
+      "winners": {
+        "heroes": 15,
+        "traitor": 18
+      },
+      "actions_used": {
+        "search_doll": 66
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 26,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {
+        "perform_ritual": 65
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 27,
+      "games": 33,
+      "winners": {
+        "traitor": 31,
+        "heroes": 2
+      },
+      "actions_used": {
+        "examine_blob": 104,
+        "search_ingredient": 25,
+        "throw_ingredient": 19
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 28,
+      "games": 33,
+      "winners": {
+        "traitor": 32,
+        "heroes": 1
+      },
+      "actions_used": {},
+      "warning_games": 0
+    },
+    {
+      "haunt": 29,
+      "games": 33,
+      "winners": {
+        "traitor": 32,
+        "heroes": 1
+      },
+      "actions_used": {
+        "light_torch": 186,
+        "throw_torch": 48
+      },
+      "warning_games": 1
+    },
+    {
+      "haunt": 30,
+      "games": 33,
+      "winners": {
+        "heroes": 3,
+        "traitor": 30
+      },
+      "actions_used": {
+        "stake_unconscious": 3
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 31,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {},
+      "warning_games": 0
+    },
+    {
+      "haunt": 32,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {
+        "play_organ": 4,
+        "sabotage_transporter": 50,
+        "search_books": 3,
+        "search_stars": 5,
+        "search_trophy": 9
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 33,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {},
+      "warning_games": 0
+    },
+    {
+      "haunt": 34,
+      "games": 33,
+      "winners": {
+        "heroes": 8,
+        "traitor": 25
+      },
+      "actions_used": {
+        "lock_up": 15,
+        "pass_captive": 16
+      },
+      "warning_games": 1
+    },
+    {
+      "haunt": 35,
+      "games": 33,
+      "winners": {
+        "heroes": 25,
+        "traitor": 8
+      },
+      "actions_used": {
+        "escape_plane": 50,
+        "search_plane": 40,
+        "start_plane": 42
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 36,
+      "games": 33,
+      "winners": {
+        "heroes": 20,
+        "traitor": 13
+      },
+      "actions_used": {
+        "drop_medallion": 3,
+        "escape_boat": 33,
+        "take_rowboat": 31
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 37,
+      "games": 33,
+      "winners": {
+        "traitor": 27,
+        "heroes": 6
+      },
+      "actions_used": {
+        "break_seal": 59
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 38,
+      "games": 33,
+      "winners": {
+        "heroes": 12,
+        "traitor": 21
+      },
+      "actions_used": {
+        "chapel": 22,
+        "crypt": 24,
+        "library": 24,
+        "omen_book": 8,
+        "omen_crystal_ball": 11,
+        "omen_holy_symbol": 10,
+        "omen_ring": 8,
+        "pentagram_chamber": 23,
+        "research_laboratory": 29
+      },
+      "warning_games": 4
+    },
+    {
+      "haunt": 39,
+      "games": 33,
+      "winners": {
+        "heroes": 10,
+        "traitor": 23
+      },
+      "actions_used": {},
+      "warning_games": 1
+    },
+    {
+      "haunt": 40,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {
+        "h40_dig": 84,
+        "h40_search": 133,
+        "h40_spirit_board": 25
+      },
+      "warning_games": 1
+    },
+    {
+      "haunt": 41,
+      "games": 33,
+      "winners": {
+        "heroes": 23,
+        "traitor": 10
+      },
+      "actions_used": {
+        "detect_traitor": 334
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 42,
+      "games": 33,
+      "winners": {
+        "heroes": 21,
+        "traitor": 12
+      },
+      "actions_used": {
+        "animate_statue": 16,
+        "move_statue": 26
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 43,
+      "games": 33,
+      "winners": {
+        "heroes": 3,
+        "traitor": 30
+      },
+      "actions_used": {
+        "find_ritual": 37,
+        "ritual_roll": 102
+      },
+      "warning_games": 4
+    },
+    {
+      "haunt": 44,
+      "games": 33,
+      "winners": {
+        "heroes": 8,
+        "traitor": 25
+      },
+      "actions_used": {
+        "ritual_roll": 121
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 45,
+      "games": 33,
+      "winners": {
+        "heroes": 8,
+        "traitor": 25
+      },
+      "actions_used": {
+        "defuse_bomb": 253
+      },
+      "warning_games": 2
+    },
+    {
+      "haunt": 46,
+      "games": 33,
+      "winners": {
+        "heroes": 6,
+        "traitor": 27
+      },
+      "actions_used": {
+        "escape_house": 71,
+        "escort_victim": 42,
+        "feast_corpse": 15,
+        "reenter_house": 53,
+        "unlock_front_door": 71
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 47,
+      "games": 33,
+      "winners": {
+        "traitor": 27,
+        "heroes": 6
+      },
+      "actions_used": {
+        "cast_weakening_spell": 69
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 48,
+      "games": 33,
+      "winners": {
+        "heroes": 14,
+        "traitor": 19
+      },
+      "actions_used": {
+        "search_cursed_weapon": 33,
+        "study_cursed_weapon": 699
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 49,
+      "games": 33,
+      "winners": {
+        "heroes": 23,
+        "traitor": 10
+      },
+      "actions_used": {},
+      "warning_games": 0
+    },
+    {
+      "haunt": 50,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {},
+      "warning_games": 0
+    },
+    {
+      "haunt": 51,
+      "games": 33,
+      "winners": {
+        "heroes": 32,
+        "traitor": 1
+      },
+      "actions_used": {
+        "create_seal": 169
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 52,
+      "games": 33,
+      "winners": {
+        "traitor": 21,
+        "heroes": 12
+      },
+      "actions_used": {
+        "disenchant_ring": 73,
+        "drop_dust": 2,
+        "enchant": 24,
+        "restoration": 47,
+        "search_dust": 294,
+        "summon_demon": 42
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 53,
+      "games": 33,
+      "winners": {
+        "traitor": 28,
+        "heroes": 5
+      },
+      "actions_used": {
+        "clear_barricade": 290,
+        "flee_house": 9,
+        "unlock_door": 12
+      },
+      "warning_games": 1
+    },
+    {
+      "haunt": 54,
+      "games": 33,
+      "winners": {
+        "traitor": 25,
+        "heroes": 8
+      },
+      "actions_used": {
+        "detect_remains": 29,
+        "exorcise": 11
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 55,
+      "games": 33,
+      "winners": {
+        "heroes": 7,
+        "traitor": 26
+      },
+      "actions_used": {
+        "disenchant_room": 116,
+        "roads_travel": 179
+      },
+      "warning_games": 1
+    },
+    {
+      "haunt": 56,
+      "games": 33,
+      "winners": {
+        "heroes": 27,
+        "traitor": 6
+      },
+      "actions_used": {
+        "cheat_fate": 21,
+        "time_stop_strike": 8,
+        "winds_of_fate": 49
+      },
+      "warning_games": 7
+    },
+    {
+      "haunt": 57,
+      "games": 33,
+      "winners": {
+        "heroes": 19,
+        "traitor": 14
+      },
+      "actions_used": {
+        "destroy_paint": 66,
+        "pass_paint": 9,
+        "repaint_portrait": 120,
+        "take_paint": 169
+      },
+      "warning_games": 8
+    },
+    {
+      "haunt": 58,
+      "games": 33,
+      "winners": {
+        "heroes": 24,
+        "traitor": 9
+      },
+      "actions_used": {
+        "banish_twilight": 89,
+        "create_torch": 45
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 59,
+      "games": 33,
+      "winners": {
+        "heroes": 12,
+        "traitor": 21
+      },
+      "actions_used": {
+        "place_medallion": 13
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 60,
+      "games": 33,
+      "winners": {
+        "traitor": 22,
+        "heroes": 11
+      },
+      "actions_used": {
+        "clue_gameroom": 169,
+        "clue_junk": 135,
+        "clue_organ": 87,
+        "solve_riddle": 27,
+        "traitor_solve_riddle": 2
+      },
+      "warning_games": 4
+    },
+    {
+      "haunt": 61,
+      "games": 33,
+      "winners": {
+        "heroes": 5,
+        "traitor": 28
+      },
+      "actions_used": {
+        "inspire_ghost": 57,
+        "persuade_ghost": 82,
+        "pick_up_spear": 48
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 62,
+      "games": 33,
+      "winners": {
+        "traitor": 24,
+        "heroes": 9
+      },
+      "actions_used": {
+        "tap_trinkets": 329,
+        "use_trinket": 267
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 63,
+      "games": 33,
+      "winners": {
+        "traitor": 30,
+        "heroes": 3
+      },
+      "actions_used": {
+        "anchor_room": 61,
+        "nether_seek": 110
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 64,
+      "games": 33,
+      "winners": {
+        "heroes": 8,
+        "traitor": 25
+      },
+      "actions_used": {
+        "attack_girl": 136,
+        "close_portal": 26
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 65,
+      "games": 33,
+      "winners": {
+        "heroes": 15,
+        "traitor": 18
+      },
+      "actions_used": {
+        "burn_candle": 93,
+        "find_candle": 219
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 66,
+      "games": 33,
+      "winners": {
+        "heroes": 20,
+        "traitor": 13
+      },
+      "actions_used": {
+        "charge_holy_symbol": 231,
+        "holy_symbol_attack": 32
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 67,
+      "games": 33,
+      "winners": {
+        "traitor": 33
+      },
+      "actions_used": {
+        "complete_quest": 8,
+        "obtain_quest": 69,
+        "plot_twist": 44,
+        "steal_from_traitor": 3
+      },
+      "warning_games": 19
+    },
+    {
+      "haunt": 68,
+      "games": 33,
+      "winners": {
+        "traitor": 32,
+        "heroes": 1
+      },
+      "actions_used": {
+        "flee_labyrinth": 2,
+        "grab_key": 49,
+        "pass_key": 7,
+        "unlock_door": 2
+      },
+      "warning_games": 5
+    },
+    {
+      "haunt": 69,
+      "games": 33,
+      "winners": {
+        "traitor": 18,
+        "heroes": 15
+      },
+      "actions_used": {
+        "catch_wisp": 79
+      },
+      "warning_games": 0
+    },
+    {
+      "haunt": 70,
+      "games": 33,
+      "winners": {
+        "traitor": 28,
+        "heroes": 5
+      },
+      "actions_used": {
+        "assemble_bug_spray": 8,
+        "create_holy_water": 11,
+        "create_silver_bullets": 18,
+        "dip_weapon": 2,
+        "search_ingredient": 22,
+        "search_revolver": 3,
+        "token_hypnotize": 22,
+        "token_infect": 41,
+        "token_trap": 20
+      },
+      "warning_games": 31
+    }
+  ],
+  "raw_snapshot": "all-delivery-20261012.json.gz",
+  "notes": [
+    "Fixed P1 timeout cases from #35/#70 and newly found #9/#57 stalls; all 2310 cases completed.",
+    "Weak hero win rates remain a bot-strength issue; this run is not a balance claim.",
+    "Warning counts are diagnostic: offered-but-unused haunt actions, repeated-room visits, and cases at/over the 120-turn long-game threshold.",
+    "The playtest proxy counts handler actions offered to humans before bot_action_blocked filtering; some unused-action warnings are false positives (confirmed for 7 blocked search_ingredient probes in the focused #70 audit)."
+  ]
+}

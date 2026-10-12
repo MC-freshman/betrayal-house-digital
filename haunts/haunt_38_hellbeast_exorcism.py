@@ -152,7 +152,7 @@ class HellbeastMode(ExorcismMode):
             ]
             if not victims:
                 continue
-            amount = engine.roll_dice(bat_count, "火蝠灼烧")
+            amount = engine.roll_damage_dice(bat_count, "火蝠灼烧")
             if amount <= 0:
                 continue
             room = engine.state.board.get(room_key)

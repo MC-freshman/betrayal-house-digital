@@ -129,7 +129,7 @@ class BuriedAliveMode(GenericModeHandler):
         flags = engine._haunt_flags()
         timer = int(flags.get("bury_timer", 0)) + 1
         flags["bury_timer"] = timer
-        rolled = engine.roll_dice(timer, f"活埋伤害（轨位 {timer}）")
+        rolled = engine.roll_damage_dice(timer, f"活埋伤害（轨位 {timer}）")
         engine._advance_haunt_track("burial_damage", rolled)
         engine._log(f"泥土下面传来沉闷的声响——被埋的人挨过了 {rolled} 点伤害。")
         engine.check_victory()

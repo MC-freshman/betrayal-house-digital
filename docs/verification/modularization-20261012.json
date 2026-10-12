@@ -1,0 +1,48 @@
+{
+  "method_ast_comparison": "Before-modularization functional snapshot vs current extracted modules; source locations ignored.",
+  "BotController": {
+    "methods": 34,
+    "structurally_unchanged": 32,
+    "intentional_changes": {
+      "_choose_move_option": "Accepts optional ranked options; direct callers can still rank internally.",
+      "_run_turn": "Passes already-ranked options to avoid recalculating path ranks during the same move."
+    }
+  },
+  "GameEngine": {
+    "methods": 223,
+    "structurally_unchanged": 221,
+    "intentional_changes": {
+      "_select_traitor": "Haunt #4 excludes the revealer where the scenario requires another traitor.",
+      "spawn_token": "Uses a persistent monotonic serial so deleted/reloaded token IDs cannot be reused."
+    }
+  },
+  "modules": {
+    "ai\\__init__.py": 1,
+    "ai\\_imports.py": 11,
+    "ai\\combat.py": 179,
+    "ai\\controller.py": 137,
+    "ai\\decisions.py": 107,
+    "ai\\haunt_actions.py": 91,
+    "ai\\items.py": 98,
+    "ai\\navigation.py": 600,
+    "engine_parts\\__init__.py": 1,
+    "engine_parts\\_imports.py": 11,
+    "engine_parts\\board.py": 535,
+    "engine_parts\\combat.py": 411,
+    "engine_parts\\damage.py": 277,
+    "engine_parts\\geometry.py": 29,
+    "engine_parts\\haunt_actions.py": 261,
+    "engine_parts\\inventory.py": 374,
+    "engine_parts\\monsters.py": 234,
+    "engine_parts\\paths.py": 143,
+    "engine_parts\\room_effects.py": 545,
+    "engine_parts\\types.py": 32,
+    "rules\\__init__.py": 1,
+    "rules\\barriers.py": 62,
+    "rules\\omens.py": 20
+  },
+  "entry_lines": {
+    "bot_ai.py": 9,
+    "engine.py": 1951
+  }
+}

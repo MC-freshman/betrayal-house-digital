@@ -274,7 +274,7 @@ class StorybookTwistsMode(GenericModeHandler):
         seed101/3p、seed251/3p）。人已经站到他面前却还在抽牌，任务就永远卡在
         "缺少物件"上——这是英雄 0/33 胜的一处成因。
         """
-        if action_id != "obtain_quest":
+        if action_id not in {"obtain_quest", "steal_from_traitor"}:
             return False
         flags = engine._haunt_flags()
         obtained = [int(x) for x in (flags.get("obtained_quests") or [])]
@@ -286,8 +286,8 @@ class StorybookTwistsMode(GenericModeHandler):
             if qid in completed:
                 continue
             if any(card in traitor.items for card in self._missing_quest_cards(player, qid)):
-                return True
-        return False
+                return action_id == "obtain_quest"
+        return action_id == "steal_from_traitor"
 
     def _missing_quest_cards(self, player, qid):
         """该任务还缺、而玩家手上没有的关键牌（物件候选 + 伙伴）。
@@ -319,15 +319,36 @@ class StorybookTwistsMode(GenericModeHandler):
         obtained = [int(x) for x in (flags.get("obtained_quests") or [])]
         completed = {int(x) for x in (flags.get("completed_quests") or [])}
         goals = []
+        tasks = []
         for qid in obtained:
             if qid in completed:
                 continue
-            goals.extend(self._quest_prep_goals(engine, player, qid))
+            missing = self._missing_quest_cards(player, qid)
+            # 有同伴已经备齐关键牌时让持牌者做这项任务，别让全队追着同伴跑。
+            if missing and any(p.role == "hero" and not p.dead and p.id != player.id
+                               and not self._missing_quest_cards(p, qid)
+                               for p in engine.state.players):
+                continue
+            prep = self._quest_prep_goals(engine, player, qid)
+            keys = [key for goal in prep for key, room in engine.state.board.items()
+                    if goal in (key, "__room__" + key, room.template_id, room.name)]
+            distance = min([engine._path_length(player.room_key, key, avoid_transit=True)
+                            for key in keys] or [9999])
+            # 先挑已备齐物件、且能到达的一件任务，避免把几件互斥任务混成目标池。
+            needed = self._missing_quest_cards(player, qid)
+            tasks.append((bool(needed), distance, qid, prep))
+        if tasks:
+            goals = min(tasks, key=lambda t: t[:3])[3]
         if not goals:
             traitor = self._traitor(engine)
             if traitor is not None:
                 goals.append(f"__room__{traitor.room_key}")
         return goals
+
+    bot_goal_exclusive = True
+
+    def bot_action_priority(self, engine, player, action_id):
+        return {"complete_quest": 150, "steal_from_traitor": 100}.get(action_id, 0)
 
     def _quest_prep_goals(self, engine, player, qid):
         goals = []
@@ -539,8 +560,8 @@ class StorybookTwistsMode(GenericModeHandler):
             if extra is not None:
                 engine._log(f"灵应板又翻出了任务：{self.QUEST_NAMES[extra]}。")
         elif qid == 9:
-            physical = engine.roll_dice(2, "高贵受苦·肉体")
-            mental = engine.roll_dice(1, "高贵受苦·精神")
+            physical = engine.roll_damage_dice(2, "高贵受苦·肉体")
+            mental = engine.roll_damage_dice(1, "高贵受苦·精神")
             engine._deal_damage(player, "physical", physical, source="高贵受苦")
             if not player.dead:
                 engine._deal_damage(player, "mental", mental, source="高贵受苦")

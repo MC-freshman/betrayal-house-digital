@@ -162,9 +162,29 @@ class BugSprayMode(GenericModeHandler):
                   if t.holder is None or t.holder in hero_ids]
         return len(usable) < 3 and not any(t.kind == self.SPRAY for t in engine.state.tokens)
 
+    def bot_stay_in_room(self, engine, player):
+        if player.role != "hero" or player.dead or self._holding_spray(engine, player):
+            return False
+        held = self._held_ingredients(engine, player)
+        hero_ids = {p.id for p in engine.state.players if p.role == "hero" and not p.dead}
+        gathered = [t for t in engine.tokens_of_kind(self.INGREDIENT) if t.holder in hero_ids]
+        # 原地接收同伴的配料；到达集合点后离开会让材料永远凑不齐。
+        return bool(held and len(gathered) >= 3 and player.room_key == self._mix_room(engine))
+
     def bot_attack_blocked(self, engine, player, target):
         # 毒杀才推进胜利轨；没有杀虫剂时先完成配料后勤。
-        return player.role == "hero" and self._is_bug(engine, target) and not self._holding_spray(engine, player)
+        if player.role != "hero" or not self._is_bug(engine, target) or self._holding_spray(engine, player):
+            return False
+        if target.stunned_turns > 0:
+            return True
+        for weapon in [None] + engine.available_attack_weapons(player):
+            params = engine._derive_attack_params(player, target, weapon, False)
+            if params is not None:
+                ranged, stat, _, bonus = params
+                dice = min(8, engine._effective_stat(player, stat) + bonus + engine._check_bonus(player, stat))
+                if ranged or dice >= getattr(target, stat, 0) + 2:
+                    return False  # 有把握的击晕为材料会合争取一轮。
+        return True
 
     def bot_action_priority(self, engine, player, action_id):
         return {"make_spray": 100, "take_ingredient": 80, "break_webs": 60}.get(action_id, 0)

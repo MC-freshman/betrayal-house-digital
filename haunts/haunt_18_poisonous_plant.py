@@ -111,7 +111,7 @@ class OffspringMode(GenericModeHandler):
         return player.room_key in self._spore_rooms(engine)
 
     def _spore_damage(self, engine: Any, player: Any) -> None:
-        amount = engine.roll_dice(1, "孢子")
+        amount = engine.roll_damage_dice(1, "孢子")
         engine._log(f"{player.name} 吸入了孢子（1 骰物理伤害）。")
         engine._deal_damage(player, "physical", amount, source="孢子")
         engine.check_victory()

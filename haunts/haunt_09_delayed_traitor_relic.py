@@ -63,6 +63,12 @@ class DeathDanceMode(GenericModeHandler):
             latent.role = "hero"
             engine.state.traitor_id = None
             engine._log("提琴手的旋律在每个心头埋下种子——目前还没有人堕落。")
+        # 原表 #9 只由圣徽触发（规则基准 p4）；当前摘要抽本/强制试玩可绕过前置。
+        # 与其它剧本的开局补关键牌一致，保证本局存在原表本来保证的圣徽。
+        if not engine._card_is_controlled("omen_holy_symbol"):
+            revealer = next(p for p in engine.state.players if p.id == engine.state.haunt_revealer_id)
+            engine._grant_card_to_player(revealer, "omen_holy_symbol")
+            engine._log("死亡之舞的开局前置已补齐：揭示者持有圣徽。")
 
     def item_trade_blocked(self, engine: Any, giver: Any, target: Any, card_id: str) -> bool:
         return card_id == "omen_holy_symbol" and giver.role == "hero"
@@ -89,6 +95,7 @@ class DeathDanceMode(GenericModeHandler):
             if roll <= 2:
                 player.movement_stopped = True
                 engine._apply_stat_loss(player, "might", 1)
+                engine._check_player_death(player)
                 engine._log(f"{player.name} 跳得双脚发麻（力量检定 {roll}）：本回合不能移动，力量 -1。")
             else:
                 engine._log(f"{player.name} 在死亡之舞中旋舞（力量检定 {roll}）。")

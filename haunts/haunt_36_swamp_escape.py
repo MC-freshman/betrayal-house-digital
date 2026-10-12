@@ -117,7 +117,7 @@ class SwampEscapeMode(GenericModeHandler):
         if player.dead:
             return
         if self._flood_desc(engine, self._floor_for_room(engine, player.room_key)) == "full":
-            amount = engine.roll_dice(2, "洪水")
+            amount = engine.roll_damage_dice(2, "洪水")
             engine._log(f"{player.name} 在齐胸的洪水中挣扎（2 骰不可防物理伤害）。")
             engine._deal_damage(player, "physical", amount, source="洪水")
             engine.check_victory()

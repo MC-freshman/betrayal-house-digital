@@ -658,7 +658,7 @@ class CracklingAuraMode(GenericModeHandler):
             if roll >= 5:
                 engine._log(f"{hero.name} 躲开了火球（{roll}）。")
                 continue
-            damage = engine.roll_dice(2, "火球伤害")
+            damage = engine.roll_damage_dice(2, "火球伤害")
             engine._log(f"{hero.name} 被火球击中（{roll}）。")
             engine._deal_damage(hero, "physical", damage, source="火球术")
         engine.check_victory()
@@ -680,7 +680,7 @@ class CracklingAuraMode(GenericModeHandler):
         if roll >= 4:
             engine._log(f"{target.name} 顶住了沸血术（{roll}）。")
             return True
-        damage = engine.roll_dice(3, "沸血伤害")
+        damage = engine.roll_damage_dice(3, "沸血伤害")
         engine._log(f"{target.name} 的血液沸腾起来（{roll}）。")
         engine._deal_damage(target, "physical", damage, source="沸血术")
         engine.check_victory()

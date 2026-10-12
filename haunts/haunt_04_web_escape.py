@@ -41,6 +41,8 @@ class WebEscapeMode(GenericModeHandler):
         return _monster_id(monster) == "giant_spider"
 
     # ------------------------------------------------------------- bot 目标
+    bot_goal_exclusive = True
+
     # B 类小修（2026-10-06，handoff §11.33 ① 的第一本样板）：attack_web /
     # destroy_eggs_* 的 requires 是 same_room:web / same_room:revealer，没有
     # rooms 字段，通用目标换算只能看见 open_front_door 的前门——而前门在
@@ -51,7 +53,16 @@ class WebEscapeMode(GenericModeHandler):
         if player.role == "traitor":
             return []
         flags = engine._haunt_flags()
-        if flags.get("eggs_destroyed") is not True:
+        if flags.get("web_destroyed") and flags.get("eggs_destroyed"):
+            return ["entrance_hall"]
+        if flags.get("web_destroyed") and not flags.get("eggs_destroyed"):
+            medicine = {"item_medical_kit", "item_healing_salve"}
+            if not medicine.intersection(player.items):
+                loose = ["__room__" + key for key, cards in engine.state.room_items.items()
+                         if medicine.intersection(cards)]
+                if loose:
+                    return loose
+        if not flags.get("web_destroyed") or not flags.get("eggs_destroyed"):
             trapped_id = flags.get("trapped_id")
             trapped = next(
                 (p for p in engine.state.players if p.id == trapped_id and not p.dead),
@@ -71,6 +82,19 @@ class WebEscapeMode(GenericModeHandler):
     def bot_action_priority(self, engine, player, action_id):
         return {"destroy_eggs_salve": 100, "destroy_eggs_medical_kit": 90}.get(action_id, 0)
 
+    def bot_attack_blocked(self, engine, player, target):
+        # 撕网/毁卵/出门才推进胜利，普通攻击蜘蛛既不减倒计时也不解救被困者。
+        return player.role == "hero" and _monster_id(target) == "giant_spider"
+
+    def _web_weapon(self, engine, player):
+        weapons = [c for c in engine.available_attack_weapons(player)
+                   if c not in ("item_revolver", "omen_ring", "item_dynamite")]
+        return max(weapons, key=lambda c: engine._attack_bonus_from_inventory(player, c), default=None)
+
+    def action_item_cards(self, engine, player, action_id):
+        weapon = self._web_weapon(engine, player) if action_id == "attack_web" else None
+        return [weapon] if weapon else []
+
     def bot_wants_explore(self, engine: Any, player: Any) -> bool:
         """网已破、卵还没毁、全队没人带医疗物品时：去翻新房间找医疗箱/药膏。
 
@@ -80,13 +104,22 @@ class WebEscapeMode(GenericModeHandler):
         if player.role == "traitor":
             return False
         flags = engine._haunt_flags()
-        if flags.get("web_destroyed") is not True or flags.get("eggs_destroyed") is True:
+        if flags.get("eggs_destroyed") is True:
             return False
         for p in engine.state.players:
             if p.role != "traitor" and not p.dead:
                 if "item_medical_kit" in p.items or "item_healing_salve" in p.items:
                     return False
-        return True
+        mobile = [p for p in engine.state.players if p.role == "hero" and not p.dead
+                  and p.id != flags.get("trapped_id")]
+        runner = min(mobile, key=lambda p: (p.stats.get("might", 0), p.id), default=None)
+        return runner is not None and runner.id == player.id
+
+    def bot_action_blocked(self, engine, player, action_id):
+        return action_id == "attack_web" and self.bot_wants_explore(engine, player)
+
+    def bot_leave_after_action(self, engine, player):
+        return self.bot_wants_explore(engine, player)
 
     # p86 Turn Traits 表：回合 → (speed, might)
     SPIDER_GROWTH: tuple[tuple[int, int], ...] = (
@@ -160,6 +193,8 @@ class WebEscapeMode(GenericModeHandler):
         flags = engine._haunt_flags()
         result = []
         for action in actions:
+            if action.id == "attack_web" and player.attack_used:
+                continue
             # 蛛网已破就别再显示"攻击蛛网"
             if action.id == "attack_web" and flags.get("web_destroyed"):
                 continue
@@ -182,9 +217,22 @@ class WebEscapeMode(GenericModeHandler):
     def perform_action(self, engine: Any, player: Any, action_id: str, data: dict) -> bool:
         if action_id == "attack_web":
             flags = engine._haunt_flags()
-            if flags.get("web_destroyed"):
+            if flags.get("web_destroyed") or player.attack_used:
                 return False
-            ok = super().perform_action(engine, player, action_id, data)
+            if not any(a.id == action_id for a in super().available_actions(engine, player)):
+                return False
+            weapon = self._web_weapon(engine, player)
+            bonus = engine._attack_bonus_from_inventory(player, weapon)
+            attack = engine._roll_attack(player, "might", bonus)
+            defense = engine.roll_dice(4, "蛛网防御")
+            engine._last_haunt_action_success = attack > defense
+            player.attack_used = True
+            if weapon:
+                engine._mark_item_action(weapon, "use")
+            if attack > defense:
+                engine._advance_haunt_track("web_damage", 1)
+            engine._log(f"{player.name} 攻击蛛网：{attack} 对 {defense}。")
+            ok = True
             if engine.last_haunt_action_succeeded() and engine._haunt_track_value("web_damage") >= engine._haunt_track_target("web_damage"):
                 flags["web_destroyed"] = True
                 # 解困
