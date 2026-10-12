@@ -139,10 +139,14 @@ class NavigationDecisions:
                 value += 15
                 if wants_explore:
                     # 剧情目标牌还没露面 → 翻新房间比"去王座干等"更接近胜利。
-                    # +140（合计 155）要压过"走向剧本目标房"的 +125 和常驻
-                    # 追杀/护送目标的 +130——钩子的语义就是"探索优先"，
-                    # 之前 +120（合计 135）从来没压住过，9 号就卡在这儿。
+                    # 明确探索意图优先于剧本目标与常驻追击，但仍保留危险房和
+                    # 受威胁时的撤退权重，避免探索加分压过生存决策。
                     value += 140
+                    exploration_bonus = getattr(
+                        engine._mode_handler(), "bot_exploration_bonus", None
+                    )
+                    if callable(exploration_bonus):
+                        value += int(exploration_bonus(engine, player) or 0)
             room = engine.state.board.get(option.target_key)
             if room:
                 if option.target_key == previous_room_key:

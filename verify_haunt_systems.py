@@ -9507,6 +9507,54 @@ def verify_haunt67_once_upon_a_time() -> None:
     assert 9 in engine._haunt_flags().get("completed_quests", [])
     assert engine._haunt_track_value("quests") == 1
 
+    # 驱魔放逐需要钟、古书、蜡烛三件齐备；先拿到其中一件仍须继续找剩下两件。
+    engine5 = _run_until_haunt(seed=137, players=3, haunt_id=67)
+    handler5 = engine5._mode_handler()
+    hero5 = next(p for p in engine5.state.players if p.role == "hero" and not p.dead)
+    required = set(handler5.QUEST_ITEM_REQUIREMENTS[0])
+    for player in engine5.state.players:
+        player.items = [card for card in player.items if card not in required]
+    for cards in engine5.state.room_items.values():
+        cards[:] = [card for card in cards if card not in required]
+    hero5.items.append("item_bell")
+    book_room, candle_room = sorted(engine5.state.board)[:2]
+    engine5.state.room_items.setdefault(book_room, []).append("omen_book")
+    engine5.state.room_items.setdefault(candle_room, []).append("item_candle")
+    engine5._haunt_flags()["obtained_quests"] = [0]
+    engine5._haunt_flags()["completed_quests"] = []
+    assert handler5._missing_quest_cards(hero5, 0) == ["omen_book", "item_candle"]
+    assert handler5._quest_prep_goals(engine5, hero5, 0) == ["__room__" + book_room]
+    hero5.items.append("omen_book")
+    assert handler5._missing_quest_cards(hero5, 0) == ["item_candle"]
+    assert handler5._quest_prep_goals(engine5, hero5, 0) == ["__room__" + candle_room]
+
+    # 力量试炼通过击败猎蛛完成，AI 必须把猎蛛所在房间列为目标。
+    engine5._haunt_flags()["obtained_quests"] = [3]
+    spider5 = engine5._monster_by_template("story_spider")
+    assert spider5 is not None
+    assert handler5.bot_goal_rooms(engine5, hero5) == ["__room__" + spider5.room_key]
+
+    # 独占目标尚未翻出时，英雄必须继续探索，而不能因模板目标解析为空而闲逛。
+    assert not any(room.template_id == "bloody_room" for room in engine5.state.board.values())
+    engine5._haunt_flags()["obtained_quests"] = [9]
+    assert handler5.bot_wants_explore(engine5, hero5) is True
+    frontier_floor = next(
+        floor for floor in (-1, 0, 1) if engine5.exploration_frontier_keys(floor)
+    )
+    frontier_room = next(
+        key for key in engine5.exploration_frontier_keys(frontier_floor)
+        if engine5.state.board[key].template_id != "mystic_elevator"
+    )
+    hero5.room_key = frontier_room
+    for monster in engine5.state.monsters:
+        monster.stunned_turns = 1
+    _set_current(engine5, hero5)
+    engine5._reset_player_turn_state(hero5)
+    bot5 = BotController()
+    options = engine5.available_move_options(hero5)
+    ranked = bot5._rank_move_options(engine5, hero5, options)
+    assert ranked and ranked[0].is_new_room, "未翻出的任务房应驱动机器人直接探索"
+
     # 故事走到 7、任务未满 → 悲伤结局
     engine2 = _run_until_haunt(seed=113, players=3, haunt_id=67)
     handler2 = engine2._mode_handler()

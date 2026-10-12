@@ -39,12 +39,13 @@ class StorybookTwistsMode(GenericModeHandler):
       不会挡它。**这正是正确打法**（原版也不会为了偷一件与任务无关的钟而放弃抽
       任务）。真需要偷的时候（缺牌正攥在叛徒手上）`bot_action_blocked` 会挡掉
       obtain，steal 自然落到 `max()` 手里。
-    · 平衡观察（2026-09-16，11 种子 × 3/4/5 人 = 33 局 bot 对局）：叛徒胜 33。
-      英雄胜线是结构性吃力，不是 bot 漏做——叛徒每回合推故事轨 1 格（约 7 回合
-      翻完），英雄要在此之前完成"开局人数"个任务（3/4/5 人局即 2/3/4 个），每个
-      任务都得先同房知识检定抽到、再凑齐限定物件/房间。33 局里 `obtain_quest` 与
-      `complete_quest` 都在真实使用、任务链走得通，只是赶不上故事的进度。按项目
-      惯例（只修 bug、不修平衡）接受为"难而非坏"。
+    · 历史平衡观察（2026-09-16，11 种子 × 3/4/5 人 = 33 局）：英雄 0 胜。当时
+      将结果归因于任务时限与胜线难度；后续复核发现目标规划还漏了任务 0 的三件
+      必需物品、任务 3 的猎蛛目标，以及未翻出任务房时的探索需求（见下条）。
+    · AI 目标修正（2026-10-12）：任务 0 要求钟、古书、蜡烛齐备；任务 3 完成条件
+      是力量攻击击败猎蛛；若任务房模板尚未出现，机器人提高探索优先级。新增回归
+      覆盖三项。按 handoff 的 canonical 11 种子 × 3/4/5 人复测仍为英雄 0/33，
+      已完成任务共 7 项（3/4/5 人组分别 1/1/5）；目标链缺陷已修，但整体胜率仍未达标。
     """
 
     mode = "storybook_twists"
@@ -92,15 +93,18 @@ class StorybookTwistsMode(GenericModeHandler):
         11: "拥抱命运",
         12: "打破蛊惑",
     }
-    # 任务 → "让它可以完成"所需先备的物件 / 同伴（`bot_goal_rooms` 用）。
+    # 有些任务只需候选物件中任意一件（`bot_goal_rooms` 用）。
     QUEST_ITEM_CHOICES = {
-        0: ("item_bell", "omen_book", "item_candle"),
         1: ("item_lucky_stone", "item_rabbit_foot"),
         7: ("omen_skull",),
         8: ("omen_spirit_board",),
         10: ("item_amulet_of_the_ages", "item_healing_salve"),
         11: ("item_bottle",),
         12: ("omen_mask",),
+    }
+    # 驱魔放逐要求三件物品同时在女巫房间（英雄手册 p78），不能按候选物件处理。
+    QUEST_ITEM_REQUIREMENTS = {
+        0: ("item_bell", "omen_book", "item_candle"),
     }
     QUEST_COMPANION = {2: "omen_bite", 5: "omen_madman", 6: "omen_girl"}
 
@@ -292,10 +296,13 @@ class StorybookTwistsMode(GenericModeHandler):
     def _missing_quest_cards(self, player, qid):
         """该任务还缺、而玩家手上没有的关键牌（物件候选 + 伙伴）。
 
-        物件类任务是"多选一"（如任务 0 只要钟/书/蜡烛任一），所以只有玩家
-        一个候选都没拿到时才算缺；伙伴类任务要求伙伴在**自己**身上。
+        候选物件任务是"多选一"；明确列为必需的物件则逐件检查。伙伴类任务
+        要求伙伴在**自己**身上。
         """
-        cards = []
+        cards = [
+            card for card in self.QUEST_ITEM_REQUIREMENTS.get(qid, ())
+            if card not in player.items
+        ]
         choices = self.QUEST_ITEM_CHOICES.get(qid)
         if choices and not any(c in player.items for c in choices):
             cards.extend(choices)
@@ -345,6 +352,31 @@ class StorybookTwistsMode(GenericModeHandler):
                 goals.append(f"__room__{traitor.room_key}")
         return goals
 
+    def bot_wants_explore(self, engine, player):
+        """任务目标房尚未翻出时，继续探索房屋寻找它。"""
+        if player.dead or player.role != "hero":
+            return False
+        goals = self.bot_goal_rooms(engine, player)
+        if not goals:
+            return False
+        for goal in goals:
+            if goal.startswith("__room__"):
+                key = goal[len("__room__"):]
+                if key in engine.state.board and not engine._is_collapsed(key):
+                    return False
+                continue
+            if any(
+                not engine._is_collapsed(key)
+                and goal in (key, room.template_id, room.name)
+                for key, room in engine.state.board.items()
+            ):
+                return False
+        return any(engine.exploration_frontier_keys(floor) for floor in (-1, 0, 1))
+
+    def bot_exploration_bonus(self, engine, player):
+        """让 #67 尚未出现的任务房胜过通往旧目标的中间房。"""
+        return 100 if self.bot_wants_explore(engine, player) else 0
+
     bot_goal_exclusive = True
 
     def bot_action_priority(self, engine, player, action_id):
@@ -352,8 +384,14 @@ class StorybookTwistsMode(GenericModeHandler):
 
     def _quest_prep_goals(self, engine, player, qid):
         goals = []
-        needed = self.QUEST_ITEM_CHOICES.get(qid)
-        if needed and not any(card in player.items for card in needed):
+        needed = [
+            card for card in self.QUEST_ITEM_REQUIREMENTS.get(qid, ())
+            if card not in player.items
+        ]
+        choices = self.QUEST_ITEM_CHOICES.get(qid)
+        if choices and not any(card in player.items for card in choices):
+            needed.extend(choices)
+        if needed:
             where = self._find_card(engine, needed)
             # 缺少关键物件：先去把物件拿到手（在房间地上就过去捡，在别人手里
             # 就过去会合）。物件还在牌堆里则本任务暂时无解，退回目标房碰运气。
@@ -643,6 +681,7 @@ class StorybookTwistsMode(GenericModeHandler):
             0: [self.WITCH],
             1: [],
             2: ["research_laboratory", "operating_laboratory"],
+            3: [self.SPIDER],
             4: ["pentagram_chamber"],
             5: ["chapel"],
             6: ["entrance_hall"],
