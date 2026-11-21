@@ -1,0 +1,41 @@
+{
+ "dpi_percent": 125,
+ "system_dpi": 120,
+ "expected_system_dpi": 120,
+ "system_dpi_match": true,
+ "mode_decision": "system_dpi=120 处于 125% 档规范值 120±2 → real-screenshot",
+ "tk_scaling": 1.333,
+ "tk_scaling_reference": 1.667,
+ "dpi_awareness": 1,
+ "mode": "real-screenshot",
+ "approximated": false,
+ "scale_factor": 1.25,
+ "window_size": "1250x950",
+ "room_logical": "128x128",
+ "room_physical": "160x160",
+ "card_logical": "240x336",
+ "card_physical": "300x420",
+ "room_ratio": 1.0,
+ "card_ratio": 0.7143,
+ "contrast_graphic": 7.85,
+ "contrast_text": 12.65,
+ "contrast_method": "wcag-relative-luminance(ui.PALETTE design values)",
+ "screenshot_full": "source/desktop/game/qa/screenshots/ui_125.png",
+ "screenshot_crop": "source/desktop/game/qa/screenshots/ui_125_crop.png",
+ "sha256_full": "b18a7ea66750710fe85acf1b672e62137cb6dd3f80b6d98be35e053cde0ed960",
+ "sha256_crop": "026be3bc894d5e87b2789f72b1c2589543aaccb024850442271ce2de793af5e6",
+ "captured_at": "2026-11-20T16:21:26",
+ "reviewer": "qa/ui_capture.py 自动采集；人工复核待办",
+ "app_source_sha256": "59b61f883544f3158455c4563fc211d727b25699abd578fabc95b87dc68ea151",
+ "assets_sha256": "c233a1f040cc857dcc8a75ce1d33da7cfbc181b2a7589e25b62c99b19f67a66c",
+ "size_assertions": {
+  "room_ok": true,
+  "card_ok": true
+ },
+ "selected_refs": {
+  "room": "P-ROOM-001",
+  "card": "P-EVT-001"
+ },
+ "status": "pass",
+ "pass": true
+}

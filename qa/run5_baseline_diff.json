@@ -1,0 +1,118 @@
+{
+  "schema": "run5_baseline_diff/v1",
+  "generated_at": "2026-11-21T12:28:12",
+  "reviewer": "run5-promote/automated",
+  "note": "run5 §4.6 旧项重基线矩阵。允许改期望值，不允许删断言、不允许放宽语义。",
+  "ww_isolation": {
+    "content.py": "461f8aeb95e32fb31d185c1f65f46f13405d3233c5575a5c853a012e6964c147",
+    "content_ww.py": "5c1a461d2c3ff29c766c4b01addf065b320863d6e8e0d50486b414b830e40abc",
+    "moved_haunts": 50,
+    "moved_ww_placeholders": 50
+  },
+  "promotion": {
+    "rows": 47,
+    "by_asset_type": {
+      "character": 12,
+      "room": 1,
+      "card_event": 34
+    },
+    "transcoded": 35,
+    "already_png": 12,
+    "all_usable": true,
+    "all_matched": true,
+    "problems": []
+  },
+  "entries": [
+    {
+      "id": "A-05 availability",
+      "old": "usable=0 / partial=95 / missing=47",
+      "expected_v2": "usable=142 / partial=0 / missing=0",
+      "why": "47 位登记 + 130 张转码后无 partial/missing",
+      "evidence": "assets/p_table.json §stats"
+    },
+    {
+      "id": "A-07 mapping",
+      "old": "entries=95 / unresolved=47",
+      "expected_v2": "entries=142 / unresolved=0",
+      "why": "映射随 P 表可用性一起重算",
+      "evidence": "assets/asset_mapping.json"
+    },
+    {
+      "id": "A-08 runtime PNG",
+      "old": "rooms=49 / cards=46 / placeholders=3（98）",
+      "expected_v2": "rooms=50 / cards=80 / characters=12 / placeholders=3（145）",
+      "why": "角色 12 位接通 photos/role/ 真图；卡牌补满 80",
+      "evidence": "assets/**/*.png 计数"
+    },
+    {
+      "id": "A-09 missing 语义",
+      "old": "47 行 missing 规则",
+      "expected_v2": "N/A（退役）",
+      "why": "0 missing 后失去断言对象；保留条目与退役理由，不计入分母",
+      "evidence": "qa/verify_p_table_final.py A-09 说明"
+    },
+    {
+      "id": "A-27 内容台账",
+      "old": "12/1/34 缺口台账",
+      "expected_v2": "142/142 全覆盖、缺口 0",
+      "why": "台账改为逐行 source+provenance+release 7 列核对",
+      "evidence": "qa/run5_promotion_map.json + qa/run5_gap_closure.jsonl"
+    },
+    {
+      "id": "verify_assets.py V05",
+      "old": "7 集合含 192（WW 混入）",
+      "expected_v2": "7 集合合计 142，content.py 无 WW 残留",
+      "why": "content.py 收敛回 142 基线后自然满足，并追加 WW 残留扫描",
+      "evidence": "python verify_assets.py V05"
+    },
+    {
+      "id": "verify_assets.py V06/V07",
+      "old": "95 present / 47 missing",
+      "expected_v2": "142 present / 0 missing",
+      "why": "同上",
+      "evidence": "python verify_assets.py V06/V07"
+    },
+    {
+      "id": "verify_assets.py V11",
+      "old": "95 个文件、哈希一致",
+      "expected_v2": "142 个源文件 + 130 个原件备份，数量与哈希分开断言",
+      "why": "47 文件登记 + 130 转码；备份目录显式排除，避免 272 混淆",
+      "evidence": "python verify_assets.py V11"
+    },
+    {
+      "id": "契约 32 项",
+      "old": "含 95/47 断言",
+      "expected_v2": "同步 v2（条数仍 32）",
+      "why": "不减少条数，只改期望值",
+      "evidence": "python qa/verify_assets_contract.py --json"
+    },
+    {
+      "id": "新测试 48 项",
+      "old": "含 95/47 断言",
+      "expected_v2": "同步 v2（条数仍 48）",
+      "why": "不删用例，只改期望值",
+      "evidence": "python qa/test_p_table_execution.py"
+    },
+    {
+      "id": "content.py 集合计数",
+      "old": "12/70/49+20/60/32/18/120（含 WW）",
+      "expected_v2": "12/50/45/22/13/70（142 基线）",
+      "why": "WW 隔离到 content_ww.py，id 集合与 S0 归档完全相等",
+      "evidence": "qa/run5_ww_isolation.json"
+    },
+    {
+      "id": "haunts 注册表",
+      "old": "120 本（71-120 为 WW 骨架）",
+      "expected_v2": "70 本",
+      "why": "50 个 WW handler 移到 haunts/_ww_deferred/，不再注册",
+      "evidence": "haunts/__init__.py + haunts/_ww_deferred/"
+    },
+    {
+      "id": "photos 体积",
+      "old": "≈140 MiB（130 个 JPEG 内容）",
+      "expected_v2": "源文件 690.5 MiB + 备份 139.6 MiB（转码后合计）",
+      "why": "JPEG→PNG 无损重编码必然变大（转码清单 summary 有实测值）",
+      "evidence": "qa/run5_transcode_manifest.json §summary"
+    }
+  ]
+}

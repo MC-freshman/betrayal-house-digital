@@ -1,0 +1,152 @@
+{
+  "generated_at": "2026-11-21T19:50:30",
+  "tool": "verify_assets.py",
+  "ok": true,
+  "totals": {
+    "records": 142,
+    "checked": 17,
+    "failed": 0
+  },
+  "summary": {
+    "p_table": {
+      "records": 142,
+      "present": 142,
+      "missing": 0,
+      "by_asset_type": {
+        "character": 12,
+        "room": 50,
+        "card_omen": 13,
+        "card_item": 22,
+        "card_event": 45
+      },
+      "by_runtime_status": {
+        "ok": 142
+      },
+      "by_mapping_status": {
+        "matched": 142
+      }
+    },
+    "artifacts": {
+      "rooms": {
+        "count": 50,
+        "bytes": 22161011
+      },
+      "cards": {
+        "count": 80,
+        "bytes": 38566276
+      },
+      "placeholders": {
+        "count": 3,
+        "bytes": 31233
+      },
+      "normalized_total": {
+        "count": 130,
+        "bytes": 60727287
+      }
+    }
+  },
+  "checks": [
+    {
+      "id": "V01",
+      "name": "p_table.csv 为 UTF-8 BOM 且列序固定",
+      "status": "pass",
+      "detail": "BOM ok；33 列"
+    },
+    {
+      "id": "V02",
+      "name": "P 表 142 行",
+      "status": "pass",
+      "detail": "csv=142 / json=142"
+    },
+    {
+      "id": "V03",
+      "name": "分类计数 角色12/房间50/事件45/物品22/预兆13",
+      "status": "pass",
+      "detail": "character=12 / room=50 / card_event=45 / card_item=22 / card_omen=13"
+    },
+    {
+      "id": "V04",
+      "name": "record_id 唯一、前缀与类型一致、段号连续",
+      "status": "pass",
+      "detail": "142 个唯一 id"
+    },
+    {
+      "id": "V05",
+      "name": "target_ref/runtime_key 均唯一，且与 content.py 双向一一对应（WW 已隔离）",
+      "status": "pass",
+      "detail": "142 个 target_ref 与 142 个 runtime_key 全部可解析且指向同一行，content_refs 双向映射完整；7 个集合合计 142 个 id 无遗漏、无 WW 残留"
+    },
+    {
+      "id": "V06",
+      "name": "142 个源文件存在、真 PNG 魔数、扩展名一致、标 usable 且无 quality_flags",
+      "status": "pass",
+      "detail": "142/142 真 PNG（角色 12 张 RGBA 带 alpha），0 条 ext_mismatch"
+    },
+    {
+      "id": "V07",
+      "name": "0 个缺口：任何 availability=missing 即 FAIL（旧 47 缺口已全部落实）",
+      "status": "pass",
+      "detail": "missing=0 / fallback=0 / pending_missing=0；47 位按 qa/run5_promotion_map.json 逐行登记"
+    },
+    {
+      "id": "V08",
+      "name": "142 个 runtime_path 存在、真实 PNG、尺寸符合规格（145 张运行时 PNG：50/80/12/3）",
+      "status": "pass",
+      "detail": "ok=142 / fallback=0 / placeholder=0；rooms=50 cards=80 characters=12 placeholders=3"
+    },
+    {
+      "id": "V09",
+      "name": "回退语义：0 条 fallback / 0 条 placeholder（142 位均有自有运行时图）",
+      "status": "pass",
+      "detail": "回退分支保留为兜底断言，v2 期望 0/0"
+    },
+    {
+      "id": "V10",
+      "name": "三张占位图存在且尺寸为 320/512/480x672；WW 50 张占位图不在 assets/",
+      "status": "pass",
+      "detail": "placeholders/*.png = 3；assets_ww/placeholders/ww_*.png = 50（不被扫描）"
+    },
+    {
+      "id": "V11",
+      "name": "photos 未被修改（142 个源文件 + 130 个原件备份，数量与哈希分别断言）",
+      "status": "pass",
+      "detail": "142 个源文件哈希与 photos_inventory.json(142) 一致；130 个 .jpg 备份哈希与 qa/run5_transcode_manifest.json 一致"
+    },
+    {
+      "id": "V12",
+      "name": "CSV 与 JSON 逐字段一致，stats 口径正确",
+      "status": "pass",
+      "detail": "142 行 x 33 列无差异"
+    },
+    {
+      "id": "V13",
+      "name": "asset_mapping.json 与 P 表双向覆盖（142/0）",
+      "status": "pass",
+      "detail": "entries=142 / unresolved=0"
+    },
+    {
+      "id": "V14",
+      "name": "注册表解析全部 142 个 target_ref / runtime_key / record_id / content_ref，validate 无问题",
+      "status": "pass",
+      "detail": "issues=0"
+    },
+    {
+      "id": "V15",
+      "name": "缺图不伪造路径，映射不引用 missing 行",
+      "status": "pass",
+      "detail": "0 条伪造引用"
+    },
+    {
+      "id": "V16",
+      "name": "dimensions/aspect_ratio 与 width/height 同源，content_ref 一一对应 content.py",
+      "status": "pass",
+      "detail": "142 条 dimensions/aspect_ratio 自洽；content_ref 唯一且可回溯"
+    },
+    {
+      "id": "V17",
+      "name": "发布档 7 列齐全，bytes/sha256 取源文件、missing 留空、canonical 自指",
+      "status": "pass",
+      "detail": "33 列；142 行源文件哈希复核；verified_at=2026-11-19"
+    }
+  ]
+}

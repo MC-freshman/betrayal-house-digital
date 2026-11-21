@@ -337,6 +337,7 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
             meta={},
         )
         self.rng.shuffle(self.state.room_deck)
+        self._init_roof_room_deck()
         self._next_monster_id = 1
         self._place_start_rooms()
         self._place_players_on_start()
@@ -386,6 +387,8 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
         # 通过楼梯前往其他仍有牌的楼层，而不是重复生成已经探索过的房间。
         if not self.has_remaining_room_cards(floor):
             return None
+        if floor == "roof":
+            return self._draw_roof_room_template()
         attempts = len(self.state.room_deck) + len(self.state.room_discard)
         while attempts > 0:
             if not self.state.room_deck:
@@ -406,8 +409,42 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
             return template
         return None
 
+    def _init_roof_room_deck(self) -> None:
+        """初始化屋顶层房牌堆（Widow's Walk）。
+
+        官方规则：在屋顶发现新房间时，使用板块堆中第一块"背面为屋顶层或
+        上层"的板块。这里按 ww_architecture 的简化建模——屋顶探索从
+        ROOF_ROOMS 的 20 块扩充板块池抽取（Roof Landing 开局已在桌面，不进
+        牌堆）。屋顶堆独立于基础层 room_deck：基础层对局的房间序列保持
+        不变（黄金回放护栏），屋顶牌只在有人从 Roof Landing 探索时消耗。
+        牌堆存进 state.meta（屋顶堆随存档一起序列化，回放可复现）。
+        """
+        deck = [
+            room_id
+            for room_id, template in sorted(self.catalog.room_templates.items())
+            if template.floor == "roof" and room_id != "roof_landing"
+        ]
+        self.rng.shuffle(deck)
+        self.state.meta["roof_room_deck"] = deck
+        self.state.meta["roof_room_discard"] = []
+
+    def _draw_roof_room_template(self) -> RoomTemplate | None:
+        """从屋顶层房牌堆抽一块板块；空堆返回 None（WW-T04：屋顶层放满时
+        探索按"这一层已经没有可用的新房间"优雅收尾，不进入异常分支）。"""
+        deck = self.state.meta.get("roof_room_deck") or []
+        if not deck:
+            return None
+        template_id = deck.pop()
+        template = self.catalog.room_templates.get(template_id)
+        if template is None:
+            self._log(f"[规则缺口] 屋顶板块 {template_id} 不在房间模板表里，已跳过。")
+            return None
+        return template
+
     def has_remaining_room_cards(self, floor: int) -> bool:
         """返回指定楼层是否仍有尚未放置的房间牌。"""
+        if floor == "roof":
+            return bool(self.state.meta.get("roof_room_deck"))
         remaining = (*self.state.room_deck, *self.state.room_discard)
         return any(
             room_id in self.catalog.room_templates
@@ -438,6 +475,13 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
                     break
         return frontier
 
+    def _discard_room_template(self, template: RoomTemplate) -> None:
+        """房间牌放不下/进不去时弃回所属楼层对应的牌堆（屋顶房进屋顶弃牌堆）。"""
+        if template.floor == "roof":
+            self.state.meta.setdefault("roof_room_discard", []).append(template.id)
+        else:
+            self.state.room_discard.append(template.id)
+
     def _place_start_rooms(self) -> None:
         starts = {
             "basement_landing": (-1, 0, 0),
@@ -446,6 +490,12 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
             "grand_staircase": (0, 2, 0),
             "upper_landing": (1, 2, 0),
         }
+        # Widow's Walk：屋顶层是新楼层，激活时开局即把 Roof Landing 放入游戏
+        # （官方规则表："When you start play, put the Roof Landing in play."）。
+        # run5 起 WW 内容隔离到 content_ww.py，catalog 里可能没有 roof_landing；
+        # 此时不摆这块板（否则 KeyError），基础 142 位的开局完全不受影响。
+        if "roof_landing" in self.catalog.room_templates:
+            starts["roof_landing"] = ("roof", 2, 0)
         for room_id, (floor, x, y) in starts.items():
             template = self.catalog.room_templates[room_id]
             key = _room_key(floor, x, y)
@@ -542,6 +592,9 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
             # 剧本可在"玩家回合结束"时介入（剧本 22 p104：每回合结束都要让
             # 房屋塌掉一部分）。必须在怪物回合之前跑，否则深渊扩散会慢一轮。
             self._mode_handler().on_turn_end(self, player)
+            # Widow's Walk 屋顶房的"结束回合在此"效果（洗衣房/笼舍/育儿室/
+            # 缝纫室/日光室/书房）同样在怪物回合之前结算。
+            self._apply_room_end_of_turn(player)
             traitor_alive = any(
                 p.role == "traitor" and not p.dead for p in self.state.players
             )
@@ -870,7 +923,12 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
             # 尝试上限：牌不够放时弃牌堆会被循环补进牌堆，下面这个 while
             # 必须有界，否则"该位置放不进任何房间牌"会变成无限循环
             # （种子 109,4 的 28 号局实测触发）。
-            draw_budget = len(self.state.room_deck) + len(self.state.room_discard) + 1
+            draw_budget = (
+                len(self.state.room_deck)
+                + len(self.state.room_discard)
+                + len(self.state.meta.get("roof_room_deck") or [])
+                + 1
+            )
             while True:
                 if draw_budget <= 0:
                     self._log("这一层的房间牌都放不进这个方向，只好作罢。")
@@ -883,12 +941,12 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
                 if self._mode_handler().room_entry_blocked(self, player, template):
                     # 剧本可禁止探索特定房间（剧本 26 p37/p108：英雄进不了
                     # 五芒星室——抽到它就弃掉换一张，而不是把它放上桌再进去）。
-                    self.state.room_discard.append(template.id)
+                    self._discard_room_template(template)
                     self._log(f"{self._player_label(player)}抽到了{template.name}，但那里进不去，换一张再试。")
                     continue
                 placements = self._compute_explore_placements(template, option.direction, target_pos)
                 if not placements:
-                    self.state.room_discard.append(template.id)
+                    self._discard_room_template(template)
                     self._log(f"{template.name} 在这个方向放不下，换一张再试。")
                     continue
                 if len(placements) > 1:
@@ -1590,6 +1648,14 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
     def _select_haunt_id(self, room_id: str, omen_id: str) -> int:
         payload = f"{room_id}|{omen_id}".encode("utf-8")
         value = int(hashlib.sha1(payload).hexdigest(), 16)
+        # Widow's Walk 屋顶层条件剧本：揭示者站在屋顶层房间（Roof Landing 或
+        # 任意 ROOF_ROOMS 板块）触发作祟时，从 50 本 WW 剧本（槽位 71-120，
+        # 官方编号 51-100）中选择；屋顶房 × WW 预兆的组合是官方触发表里
+        # WW 剧本的主要入口。基础层房间的哈希分布保持 % 70 + 1 不变，旧对局
+        # （未走上屋顶）的剧本选择序列零漂移。
+        template = self.catalog.room_templates.get(room_id)
+        if template is not None and template.floor == "roof":
+            return 71 + (value % 50)
         # 新版合并了原版 1-50 与扩展 51-70；70 个剧本都必须有机会被抽到。
         return (value % 70) + 1
 
@@ -1609,6 +1675,32 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
             best = min(player.stats["sanity"] for player in players)
             candidates = [player for player in players if player.stats["sanity"] == best]
             return self._resolve_tie(candidates, revealer, reverse=False)
+        if haunt.traitor_rule == "lowest_sanity_except_revealer":
+            eligible = [p for p in players if p.id != revealer.id and not p.dead] or [revealer]
+            best = min(p.stats["sanity"] for p in eligible)
+            return self._resolve_tie([p for p in eligible if p.stats["sanity"] == best], revealer, reverse=False)
+        if haunt.traitor_rule == "highest_knowledge":
+            best = max(player.stats["knowledge"] for player in players)
+            candidates = [player for player in players if player.stats["knowledge"] == best]
+            return self._resolve_tie(candidates, revealer)
+        if haunt.traitor_rule == "lowest_knowledge":
+            best = min(player.stats["knowledge"] for player in players)
+            candidates = [player for player in players if player.stats["knowledge"] == best]
+            return self._resolve_tie(candidates, revealer, reverse=False)
+        if haunt.traitor_rule == "highest_speed":
+            best = max(player.stats["speed"] for player in players)
+            candidates = [player for player in players if player.stats["speed"] == best]
+            return self._resolve_tie(candidates, revealer)
+        if haunt.traitor_rule == "left_of_revealer":
+            # 官方多个 WW 剧本的"揭示者左侧玩家"；座位序按回合顺序取下一位。
+            order = self.state.turn_order
+            if order:
+                start = order.index(revealer.id)
+                for offset in range(1, len(order) + 1):
+                    candidate = self.state.players[order[(start + offset) % len(order)]]
+                    if not candidate.dead:
+                        return candidate
+            return revealer
         if haunt.traitor_rule == "specific_character":
             return revealer
         return revealer

@@ -20,6 +20,7 @@ from __future__ import annotations
 """
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -93,6 +94,11 @@ def build(dist: Path) -> int:
         str(REPO.parent),
         "--collect-submodules",
         "game.haunts",
+        # 运行时美术资源：按 source/desktop/game/assets 结构内嵌，
+        # asset_registry 据此确定项目根并解析 runtime_path；
+        # photos/（母版 830 MB）不进包，发布包只带规范化后的运行时 PNG。
+        "--add-data",
+        "%s%s%s" % (REPO / "assets", os.pathsep, "source/desktop/game/assets"),
         "--name",
         APP_NAME,
         "--distpath",

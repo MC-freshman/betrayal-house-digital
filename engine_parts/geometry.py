@@ -26,4 +26,4 @@ def _rotate_links(links: dict[str, str], rotation: int) -> dict[str, str]:
     return rotated
 
 def _distance_hint(floor: int) -> str:
-    return { -1: "地下室", 0: "一层", 1: "二层" }.get(floor, "未知楼层")
+    return { -1: "地下室", 0: "一层", 1: "二层", "roof": "屋顶层" }.get(floor, "未知楼层")

@@ -19,3 +19,10 @@ golden_replays.local.json
 dist/
 release/*.exe
 release/*.zip
+
+# run5 构建缓存与临时产物
+qa/.photo_probe_cache.json
+qa/__pycache__/
+
+# 剧本/资源中间生成物
+*_ww_deferred/__pycache__/

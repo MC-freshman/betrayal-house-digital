@@ -1,0 +1,1605 @@
+{
+  "tool": "qa/branch_probe.py",
+  "method": "condition-jump-arc",
+  "trace_precision": "opcode+line",
+  "same_run_as_tests": true,
+  "method_detail": "静态 dis 递归枚举条件跳转两条出边；动态 sys.settrace 同帧采集 line 弧（上一事件行 -> 当前指令偏移）与 opcode 弧（上一指令偏移 -> 当前指令偏移）。覆盖判定：opcode 精确弧优先；Python 3.9 跳转指令不发 opcode 事件，改用 line-landing 弧（跳转指令所在行 -> 落点行首）无歧义判定，同行汇合（shared_line_arc）保守记未覆盖，不虚报。分支覆盖与 qa/test_p_table_execution.py 的 48 项测试在同一次 trace 运行内采集。",
+  "generated_at": "2026-11-21T19:49:43",
+  "python": "3.9.13",
+  "threshold": 75.0,
+  "files": [
+    {
+      "file": "asset_pipeline.py",
+      "status": "measured",
+      "total": 376,
+      "covered": 313,
+      "percent": 83.24,
+      "threshold": 75.0,
+      "meets_threshold": true,
+      "uncovered_count": 63,
+      "uncovered_edges": [
+        {
+          "file": "asset_pipeline.py",
+          "line": 1637,
+          "direction": "jump",
+          "function": "<module>",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 1376,
+          "target_offset": 1390,
+          "target_line": 0,
+          "reason": "line_arc_no_line_start_after_target"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1637,
+          "direction": "fallthrough",
+          "function": "<module>",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 1376,
+          "target_offset": 1378,
+          "target_line": 1638,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 373,
+          "direction": "jump",
+          "function": "sniff_format",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 94,
+          "target_offset": 116,
+          "target_line": 375,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 373,
+          "direction": "jump",
+          "function": "sniff_format",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 110,
+          "target_offset": 116,
+          "target_line": 375,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 380,
+          "direction": "jump",
+          "function": "_has_aigc_marker",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 42,
+          "target_offset": 46,
+          "target_line": 0,
+          "reason": "line_arc_no_line_start_after_target"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 397,
+          "direction": "jump",
+          "function": "transcode_index",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 22,
+          "target_offset": 150,
+          "target_line": 409,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 404,
+          "direction": "jump",
+          "function": "transcode_index",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 108,
+          "target_offset": 88,
+          "target_line": 403,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 493,
+          "direction": "jump",
+          "function": "probe_photo",
+          "opname": "JUMP_IF_TRUE_OR_POP",
+          "offset": 180,
+          "target_offset": 190,
+          "target_line": 494,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 494,
+          "direction": "jump",
+          "function": "probe_photo",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 214,
+          "target_offset": 218,
+          "target_line": 495,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 495,
+          "direction": "jump",
+          "function": "probe_photo",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 234,
+          "target_offset": 246,
+          "target_line": 496,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 524,
+          "direction": "jump",
+          "function": "_load_probe_cache",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 54,
+          "target_offset": 70,
+          "target_line": 525,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 527,
+          "direction": "jump",
+          "function": "_load_probe_cache",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 92,
+          "target_offset": 98,
+          "target_line": 0,
+          "reason": "line_arc_no_line_start_after_target"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 537,
+          "direction": "jump",
+          "function": "_save_probe_cache",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 48,
+          "target_offset": 58,
+          "target_line": 539,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 580,
+          "direction": "jump",
+          "function": "probe_photo_cached",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 174,
+          "target_offset": 214,
+          "target_line": 584,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 580,
+          "direction": "jump",
+          "function": "probe_photo_cached",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 188,
+          "target_offset": 214,
+          "target_line": 584,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 606,
+          "direction": "jump",
+          "function": "scan_photos",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 80,
+          "target_offset": 110,
+          "target_line": 609,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 654,
+          "direction": "jump",
+          "function": "match_photo",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 18,
+          "target_offset": 28,
+          "target_line": 655,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 730,
+          "direction": "jump",
+          "function": "collect_slots",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 104,
+          "target_offset": 110,
+          "target_line": 729,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 773,
+          "direction": "jump",
+          "function": "collect_slots",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 388,
+          "target_offset": 398,
+          "target_line": 774,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 899,
+          "direction": "jump",
+          "function": "make_photo_record",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 34,
+          "target_offset": 62,
+          "target_line": 901,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 899,
+          "direction": "jump",
+          "function": "make_photo_record",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 50,
+          "target_offset": 62,
+          "target_line": 901,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 914,
+          "direction": "jump",
+          "function": "make_photo_record",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 176,
+          "target_offset": 226,
+          "target_line": 919,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 916,
+          "direction": "jump",
+          "function": "make_photo_record",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 184,
+          "target_offset": 198,
+          "target_line": 917,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 917,
+          "direction": "jump",
+          "function": "make_photo_record",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 208,
+          "target_offset": 226,
+          "target_line": 919,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 917,
+          "direction": "jump",
+          "function": "make_photo_record",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 216,
+          "target_offset": 226,
+          "target_line": 919,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 941,
+          "direction": "jump",
+          "function": "make_photo_record",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 382,
+          "target_offset": 396,
+          "target_line": 942,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 946,
+          "direction": "jump",
+          "function": "make_photo_record",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 422,
+          "target_offset": 434,
+          "target_line": 947,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 980,
+          "direction": "jump",
+          "function": "make_missing_record",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 50,
+          "target_offset": 130,
+          "target_line": 993,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 980,
+          "direction": "jump",
+          "function": "make_missing_record",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 70,
+          "target_offset": 130,
+          "target_line": 993,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1089,
+          "direction": "jump",
+          "function": "assign_fallback_refs",
+          "opname": "JUMP_IF_TRUE_OR_POP",
+          "offset": 30,
+          "target_offset": 34,
+          "target_line": 1090,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1090,
+          "direction": "jump",
+          "function": "assign_fallback_refs",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 38,
+          "target_offset": 50,
+          "target_line": 1093,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1094,
+          "direction": "jump",
+          "function": "assign_fallback_refs",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 66,
+          "target_offset": 88,
+          "target_line": 1098,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1149,
+          "direction": "jump",
+          "function": "stats_of",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 76,
+          "target_offset": 62,
+          "target_line": 1149,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1206,
+          "direction": "jump",
+          "function": "write_p_table",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 202,
+          "target_offset": 208,
+          "target_line": 1207,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1268,
+          "direction": "jump",
+          "function": "write_p_table",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 492,
+          "target_offset": 496,
+          "target_line": 1270,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1278,
+          "direction": "jump",
+          "function": "write_mapping",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 26,
+          "target_offset": 90,
+          "target_line": 1291,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1291,
+          "direction": "jump",
+          "function": "write_mapping",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 100,
+          "target_offset": 12,
+          "target_line": 1278,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1336,
+          "direction": "jump",
+          "function": "write_mapping",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 326,
+          "target_offset": 330,
+          "target_line": 1337,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1376,
+          "direction": "jump",
+          "function": "normalize_card",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 356,
+          "target_offset": 360,
+          "target_line": 1377,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1397,
+          "direction": "jump",
+          "function": "normalize_character",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 248,
+          "target_offset": 252,
+          "target_line": 1398,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1420,
+          "direction": "jump",
+          "function": "normalize_assets",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 122,
+          "target_offset": 136,
+          "target_line": 1423,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1423,
+          "direction": "jump",
+          "function": "normalize_assets",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 146,
+          "target_offset": 160,
+          "target_line": 1425,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1425,
+          "direction": "jump",
+          "function": "normalize_assets",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 170,
+          "target_offset": 184,
+          "target_line": 1428,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1433,
+          "direction": "jump",
+          "function": "normalize_assets",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 222,
+          "target_offset": 238,
+          "target_line": 1435,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1435,
+          "direction": "jump",
+          "function": "normalize_assets",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 252,
+          "target_offset": 270,
+          "target_line": 1438,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1436,
+          "direction": "jump",
+          "function": "normalize_assets",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 288,
+          "target_offset": 292,
+          "target_line": 1438,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1475,
+          "direction": "jump",
+          "function": "_pick_font",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 18,
+          "target_offset": 34,
+          "target_line": 1477,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1479,
+          "direction": "jump",
+          "function": "_pick_font",
+          "opname": "FOR_ITER",
+          "offset": 62,
+          "target_offset": 148,
+          "target_line": 1487,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1480,
+          "direction": "jump",
+          "function": "_pick_font",
+          "opname": "FOR_ITER",
+          "offset": 70,
+          "target_offset": 146,
+          "target_line": 1487,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1482,
+          "direction": "jump",
+          "function": "_pick_font",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 88,
+          "target_offset": 70,
+          "target_line": 1481,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1526,
+          "direction": "jump",
+          "function": "build_placeholder",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 264,
+          "target_offset": 270,
+          "target_line": 1527,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1527,
+          "direction": "jump",
+          "function": "build_placeholder",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 278,
+          "target_offset": 284,
+          "target_line": 1528,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1546,
+          "direction": "jump",
+          "function": "build_placeholder",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 518,
+          "target_offset": 532,
+          "target_line": 1547,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1546,
+          "direction": "jump",
+          "function": "build_placeholder",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 530,
+          "target_offset": 544,
+          "target_line": 1548,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1547,
+          "direction": "jump",
+          "function": "build_placeholder",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 562,
+          "target_offset": 566,
+          "target_line": 1548,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1553,
+          "direction": "jump",
+          "function": "build_placeholders",
+          "opname": "FOR_ITER",
+          "offset": 26,
+          "target_offset": 82,
+          "target_line": 1561,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1598,
+          "direction": "jump",
+          "function": "main",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 66,
+          "target_offset": 112,
+          "target_line": 1605,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1606,
+          "direction": "jump",
+          "function": "main",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 124,
+          "target_offset": 206,
+          "target_line": 1614,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1617,
+          "direction": "jump",
+          "function": "main",
+          "opname": "FOR_ITER",
+          "offset": 248,
+          "target_offset": 296,
+          "target_line": 1621,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1625,
+          "direction": "jump",
+          "function": "main",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 358,
+          "target_offset": 412,
+          "target_line": 1631,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1627,
+          "direction": "jump",
+          "function": "main",
+          "opname": "FOR_ITER",
+          "offset": 388,
+          "target_offset": 408,
+          "target_line": 1629,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1631,
+          "direction": "jump",
+          "function": "main",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 416,
+          "target_offset": 452,
+          "target_line": 1634,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_pipeline.py",
+          "line": 1631,
+          "direction": "jump",
+          "function": "main",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 430,
+          "target_offset": 452,
+          "target_line": 1634,
+          "reason": "line_arc_shared_line_arc"
+        }
+      ],
+      "line_arc": {
+        "total": 180,
+        "covered": 128,
+        "percent": 71.11,
+        "note": "只统计行弧能唯一证明方向的出边；共用行弧/无行起始的出边不算入分母，因此该数字只说明行弧方法的表达能力，不参与门槛判定"
+      }
+    },
+    {
+      "file": "asset_registry.py",
+      "status": "measured",
+      "total": 256,
+      "covered": 196,
+      "percent": 76.56,
+      "threshold": 75.0,
+      "meets_threshold": true,
+      "uncovered_count": 60,
+      "uncovered_edges": [
+        {
+          "file": "asset_registry.py",
+          "line": 507,
+          "direction": "jump",
+          "function": "<module>",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 186,
+          "target_offset": 380,
+          "target_line": 0,
+          "reason": "line_arc_no_line_start_after_target"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 510,
+          "direction": "jump",
+          "function": "<module>",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 208,
+          "target_offset": 220,
+          "target_line": 511,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 519,
+          "direction": "jump",
+          "function": "<module>",
+          "opname": "FOR_ITER",
+          "offset": 362,
+          "target_offset": 380,
+          "target_line": 0,
+          "reason": "line_arc_no_line_start_after_target"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 69,
+          "direction": "jump",
+          "function": "png_size",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 44,
+          "target_offset": 48,
+          "target_line": 70,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 124,
+          "direction": "jump",
+          "function": "exists",
+          "opname": "JUMP_IF_FALSE_OR_POP",
+          "offset": 8,
+          "target_offset": 22,
+          "target_line": 0,
+          "reason": "line_arc_no_line_start_after_target"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 162,
+          "direction": "jump",
+          "function": "resolve_manifest_path",
+          "opname": "FOR_ITER",
+          "offset": 10,
+          "target_offset": 32,
+          "target_line": 165,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 163,
+          "direction": "jump",
+          "function": "resolve_manifest_path",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 20,
+          "target_offset": 10,
+          "target_line": 163,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 176,
+          "direction": "jump",
+          "function": "__init__",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 24,
+          "target_offset": 34,
+          "target_line": 177,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 177,
+          "direction": "jump",
+          "function": "__init__",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 46,
+          "target_offset": 56,
+          "target_line": 178,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 199,
+          "direction": "jump",
+          "function": "_register_key",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 26,
+          "target_offset": 58,
+          "target_line": 204,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 199,
+          "direction": "jump",
+          "function": "_register_key",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 34,
+          "target_offset": 58,
+          "target_line": 204,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 217,
+          "direction": "jump",
+          "function": "_make_ref",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 32,
+          "target_offset": 48,
+          "target_line": 218,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 235,
+          "direction": "jump",
+          "function": "_make_ref",
+          "opname": "JUMP_IF_TRUE_OR_POP",
+          "offset": 230,
+          "target_offset": 234,
+          "target_line": 236,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 237,
+          "direction": "jump",
+          "function": "_make_ref",
+          "opname": "JUMP_IF_TRUE_OR_POP",
+          "offset": 256,
+          "target_offset": 260,
+          "target_line": 218,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 253,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 118,
+          "target_offset": 36,
+          "target_line": 247,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 262,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 202,
+          "target_offset": 142,
+          "target_line": 258,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 273,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "JUMP_IF_TRUE_OR_POP",
+          "offset": 292,
+          "target_offset": 296,
+          "target_line": 274,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 274,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "JUMP_IF_TRUE_OR_POP",
+          "offset": 312,
+          "target_offset": 328,
+          "target_line": 275,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 275,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 336,
+          "target_offset": 242,
+          "target_line": 268,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 275,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 342,
+          "target_offset": 242,
+          "target_line": 268,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 278,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 372,
+          "target_offset": 242,
+          "target_line": 268,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 278,
+          "direction": "fallthrough",
+          "function": "_build_indexes",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 372,
+          "target_offset": 374,
+          "target_line": 279,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 285,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "JUMP_IF_TRUE_OR_POP",
+          "offset": 434,
+          "target_offset": 438,
+          "target_line": 286,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 286,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "JUMP_IF_TRUE_OR_POP",
+          "offset": 454,
+          "target_offset": 458,
+          "target_line": 287,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 289,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 488,
+          "target_offset": 518,
+          "target_line": 292,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 289,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 500,
+          "target_offset": 518,
+          "target_line": 292,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 293,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 526,
+          "target_offset": 398,
+          "target_line": 283,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 294,
+          "direction": "jump",
+          "function": "_build_indexes",
+          "opname": "JUMP_IF_TRUE_OR_POP",
+          "offset": 540,
+          "target_offset": 544,
+          "target_line": 0,
+          "reason": "line_arc_no_line_start_after_target"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 294,
+          "direction": "fallthrough",
+          "function": "_build_indexes",
+          "opname": "JUMP_IF_TRUE_OR_POP",
+          "offset": 540,
+          "target_offset": 542,
+          "target_line": 0,
+          "reason": "line_arc_no_line_start_after_target"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 309,
+          "direction": "jump",
+          "function": "load",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 124,
+          "target_offset": 140,
+          "target_line": 311,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 339,
+          "direction": "jump",
+          "function": "_detect_project_root",
+          "opname": "FOR_ITER",
+          "offset": 96,
+          "target_offset": 134,
+          "target_line": 342,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 342,
+          "direction": "jump",
+          "function": "_detect_project_root",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 136,
+          "target_offset": 174,
+          "target_line": 346,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 343,
+          "direction": "jump",
+          "function": "_detect_project_root",
+          "opname": "FOR_ITER",
+          "offset": 150,
+          "target_offset": 174,
+          "target_line": 346,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 344,
+          "direction": "jump",
+          "function": "_detect_project_root",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 162,
+          "target_offset": 150,
+          "target_line": 344,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 346,
+          "direction": "jump",
+          "function": "_detect_project_root",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 184,
+          "target_offset": 194,
+          "target_line": 0,
+          "reason": "line_arc_no_line_start_after_target"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 360,
+          "direction": "jump",
+          "function": "_normalize",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 52,
+          "target_offset": 70,
+          "target_line": 361,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 360,
+          "direction": "jump",
+          "function": "_normalize",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 60,
+          "target_offset": 70,
+          "target_line": 361,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 370,
+          "direction": "jump",
+          "function": "_normalize",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 164,
+          "target_offset": 86,
+          "target_line": 364,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 376,
+          "direction": "jump",
+          "function": "_normalize",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 232,
+          "target_offset": 238,
+          "target_line": 379,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 412,
+          "direction": "jump",
+          "function": "<listcomp>",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 16,
+          "target_offset": 4,
+          "target_line": 0,
+          "reason": "line_arc_no_line_start_after_target"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 415,
+          "direction": "jump",
+          "function": "<listcomp>",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 16,
+          "target_offset": 4,
+          "target_line": 0,
+          "reason": "line_arc_no_line_start_after_target"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 432,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 6,
+          "target_offset": 20,
+          "target_line": 434,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 455,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 112,
+          "target_offset": 170,
+          "target_line": 462,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 473,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 268,
+          "target_offset": 42,
+          "target_line": 446,
+          "reason": "not_executed"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 478,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 316,
+          "target_offset": 354,
+          "target_line": 481,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 478,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 334,
+          "target_offset": 354,
+          "target_line": 481,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 478,
+          "direction": "fallthrough",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 334,
+          "target_offset": 336,
+          "target_line": 479,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 481,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 360,
+          "target_offset": 394,
+          "target_line": 484,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 481,
+          "direction": "fallthrough",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 360,
+          "target_offset": 362,
+          "target_line": 482,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 481,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 374,
+          "target_offset": 394,
+          "target_line": 484,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 481,
+          "direction": "fallthrough",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 374,
+          "target_offset": 376,
+          "target_line": 482,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 484,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 404,
+          "target_offset": 432,
+          "target_line": 487,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 484,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 412,
+          "target_offset": 432,
+          "target_line": 487,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 487,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 442,
+          "target_offset": 464,
+          "target_line": 490,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 487,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 450,
+          "target_offset": 464,
+          "target_line": 490,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 490,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 474,
+          "target_offset": 506,
+          "target_line": 493,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 490,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 486,
+          "target_offset": 506,
+          "target_line": 493,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 490,
+          "direction": "fallthrough",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 486,
+          "target_offset": 488,
+          "target_line": 491,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 493,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_FALSE",
+          "offset": 514,
+          "target_offset": 42,
+          "target_line": 446,
+          "reason": "line_arc_shared_line_arc"
+        },
+        {
+          "file": "asset_registry.py",
+          "line": 493,
+          "direction": "jump",
+          "function": "validate",
+          "opname": "POP_JUMP_IF_TRUE",
+          "offset": 520,
+          "target_offset": 42,
+          "target_line": 446,
+          "reason": "line_arc_shared_line_arc"
+        }
+      ],
+      "line_arc": {
+        "total": 110,
+        "covered": 85,
+        "percent": 77.27,
+        "note": "只统计行弧能唯一证明方向的出边；共用行弧/无行起始的出边不算入分母，因此该数字只说明行弧方法的表达能力，不参与门槛判定"
+      }
+    }
+  ],
+  "total": 632,
+  "covered": 509,
+  "percent": 80.54,
+  "total_note": "total/covered/percent 为两文件汇总，仅供人读；阈值按文件分别判定（C-03/C-04）",
+  "status": "pass",
+  "repeat": {
+    "status": "pass",
+    "repeat": 2,
+    "diffs": []
+  },
+  "runner": {
+    "tests": 63,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "failure_ids": []
+  },
+  "runner_error": "",
+  "duration_ms": 22609.1,
+  "exceptions_sample": [
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_registry.py",
+      75,
+      "error"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_registry.py",
+      68,
+      "FileNotFoundError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_registry.py",
+      305,
+      "JSONDecodeError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_registry.py",
+      445,
+      "StopIteration"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_registry.py",
+      457,
+      "ValueError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_registry.py",
+      75,
+      "error"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_registry.py",
+      445,
+      "StopIteration"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      308,
+      "ValueError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      487,
+      "OSError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      399,
+      "JSONDecodeError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      1421,
+      "RuntimeError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      1112,
+      "GeneratorExit"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      327,
+      "ValueError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      338,
+      "OverflowError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      348,
+      "OverflowError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      879,
+      "ValueError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      308,
+      "ValueError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      308,
+      "ValueError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      308,
+      "ValueError"
+    ],
+    [
+      "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_pipeline.py",
+      308,
+      "ValueError"
+    ]
+  ],
+  "exclusions": "未排除任何块（含 if __name__ == '__main__'），分母为完整保守口径",
+  "selftest": {
+    "status": "pass",
+    "cases": [
+      {
+        "case": "both_directions",
+        "total": 6,
+        "covered": 6,
+        "percent": 100.0,
+        "expected": "100%",
+        "pass": true
+      },
+      {
+        "case": "one_sided",
+        "total": 2,
+        "covered": 1,
+        "percent": 50.0,
+        "expected": "50%（只走一端）",
+        "pass": true
+      },
+      {
+        "case": "short_circuit_shared_line_arc",
+        "total": 4,
+        "covered": 4,
+        "percent": 100.0,
+        "expected": "opcode 精确弧证明全部，或 shared 边全部保守未覆盖；不允许虚增的中间态",
+        "shared_line_arc_edges": 4,
+        "python": "3.9",
+        "pass": true
+      },
+      {
+        "case": "two_runs_identical",
+        "expected": "两次运行 total/covered/未覆盖键一致",
+        "run_a": [
+          6,
+          6
+        ],
+        "run_b": [
+          6,
+          6
+        ],
+        "pass": true
+      }
+    ],
+    "static_denominator_ok": true,
+    "dynamic_trace_ok": true,
+    "fixture_full_percent": 100.0,
+    "fixture_one_side_percent": 50.0,
+    "two_runs_identical": true,
+    "locatable": true,
+    "ok": true
+  },
+  "runs": [
+    {
+      "index": 1,
+      "duration_ms": 11703.5,
+      "opcode_arcs": 1928,
+      "line_arcs": 1342,
+      "runner": {
+        "tests": 63,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "failure_ids": []
+      }
+    },
+    {
+      "index": 2,
+      "duration_ms": 10905.6,
+      "opcode_arcs": 1634,
+      "line_arcs": 1092,
+      "runner": {
+        "tests": 63,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "failure_ids": []
+      }
+    }
+  ],
+  "original_generated_at": "2026-11-21T19:49:43",
+  "reemitted_at": "2026-11-21T19:49:59",
+  "reemit_note": "收口序列时序重落盘：数据为 original_generated_at 时刻的真实 trace 采集；此后 coverage 探针重写过 assets/（内容逐字节一致），本次只刷新文件 mtime 以满足证据新鲜度，未重跑测试、未改任何数字。"
+}

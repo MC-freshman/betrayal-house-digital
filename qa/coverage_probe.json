@@ -1,0 +1,111 @@
+{
+  "tool": "qa/coverage_probe.py",
+  "method": "stdlib trace(count=1, trace=0) + dis.findlinestarts 可执行行集合",
+  "runner": {
+    "tests": 63,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "failure_ids": []
+  },
+  "runner_error": "",
+  "files": [
+    {
+      "file": "asset_pipeline.py",
+      "status": "measured",
+      "total_lines": 1119,
+      "covered_lines": 966,
+      "line_percent": 86.33,
+      "threshold": 85.0,
+      "meets_threshold": true,
+      "missing_lines_count": 153,
+      "missing_sample": [
+        539,
+        540,
+        678,
+        680,
+        900,
+        902,
+        905,
+        907,
+        1068,
+        1093,
+        1094,
+        1096,
+        1097,
+        1098,
+        1133,
+        1150,
+        1206,
+        1291,
+        1292,
+        1293,
+        1294,
+        1295,
+        1296,
+        1297,
+        1298
+      ],
+      "branch": {
+        "status": "not-run",
+        "threshold": 75.0,
+        "reason": "coverage.py 未安装（本轮不联网装依赖）；标准库 trace 只统计行执行次数，无法给出分支总数/覆盖数，故 branch 记为 not-run，不估算、不编造数字。"
+      }
+    },
+    {
+      "file": "asset_registry.py",
+      "status": "measured",
+      "total_lines": 342,
+      "covered_lines": 310,
+      "line_percent": 90.64,
+      "threshold": 85.0,
+      "meets_threshold": true,
+      "missing_lines_count": 32,
+      "missing_sample": [
+        165,
+        187,
+        260,
+        276,
+        277,
+        278,
+        279,
+        292,
+        342,
+        343,
+        344,
+        345,
+        346,
+        375,
+        376,
+        391,
+        415,
+        447,
+        448,
+        499,
+        504,
+        508,
+        510,
+        511,
+        513
+      ],
+      "branch": {
+        "status": "not-run",
+        "threshold": 75.0,
+        "reason": "coverage.py 未安装（本轮不联网装依赖）；标准库 trace 只统计行执行次数，无法给出分支总数/覆盖数，故 branch 记为 not-run，不估算、不编造数字。"
+      }
+    }
+  ],
+  "summary": {
+    "targets": 2,
+    "measured": 2,
+    "not_run": 0,
+    "line_percent": {
+      "asset_pipeline.py": 86.33,
+      "asset_registry.py": 90.64
+    },
+    "all_line_thresholds_met": true,
+    "branch_status": "not-run",
+    "branch_reason": "coverage.py 未安装（本轮不联网装依赖）；标准库 trace 只统计行执行次数，无法给出分支总数/覆盖数，故 branch 记为 not-run，不估算、不编造数字。",
+    "exclusions": "未排除任何块（含 if __name__ == '__main__'），因此行覆盖是保守下界"
+  }
+}

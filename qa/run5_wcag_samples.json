@@ -1,0 +1,411 @@
+{
+ "tool": "qa/_gen_semantic_review.py",
+ "generated_at": "2026-11-21T15:19:46",
+ "sampled": 20,
+ "min_ratio": 3.76,
+ "all_pass": true,
+ "threshold_text": 3.0,
+ "threshold_note": "卡面标题为大号文本（>18pt），按 WCAG AA 大文本 3:1 判定",
+ "samples": [
+  {
+   "record_id": "P-EVT-012",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_shrieking_wind.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    203,
+    176,
+    123
+   ],
+   "title_bg_rgb": [
+    35,
+    37,
+    46
+   ],
+   "contrast_ratio": 7.3,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-013",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_smoke.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    186,
+    158,
+    109
+   ],
+   "title_bg_rgb": [
+    41,
+    41,
+    53
+   ],
+   "contrast_ratio": 5.61,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-014",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_whoops.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    178,
+    149,
+    89
+   ],
+   "title_bg_rgb": [
+    41,
+    40,
+    47
+   ],
+   "contrast_ratio": 5.1,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-015",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_drip_drip_drip.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    204,
+    174,
+    113
+   ],
+   "title_bg_rgb": [
+    38,
+    38,
+    46
+   ],
+   "contrast_ratio": 7.05,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-016",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_possession.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    190,
+    156,
+    94
+   ],
+   "title_bg_rgb": [
+    32,
+    36,
+    46
+   ],
+   "contrast_ratio": 5.99,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-017",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_disquieting_sounds.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    187,
+    155,
+    92
+   ],
+   "title_bg_rgb": [
+    40,
+    39,
+    52
+   ],
+   "contrast_ratio": 5.56,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-018",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_spider.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    180,
+    160,
+    112
+   ],
+   "title_bg_rgb": [
+    40,
+    43,
+    52
+   ],
+   "contrast_ratio": 5.52,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-019",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_closet_door.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    178,
+    153,
+    101
+   ],
+   "title_bg_rgb": [
+    40,
+    40,
+    50
+   ],
+   "contrast_ratio": 5.3,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-020",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_locked_safe.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    205,
+    179,
+    123
+   ],
+   "title_bg_rgb": [
+    40,
+    40,
+    48
+   ],
+   "contrast_ratio": 7.19,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-021",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_rotten.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    168,
+    139,
+    84
+   ],
+   "title_bg_rgb": [
+    31,
+    30,
+    36
+   ],
+   "contrast_ratio": 5.11,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-022",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_revolving_wall.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    186,
+    156,
+    94
+   ],
+   "title_bg_rgb": [
+    42,
+    43,
+    48
+   ],
+   "contrast_ratio": 5.38,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-023",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_creepy_puppet.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    202,
+    171,
+    114
+   ],
+   "title_bg_rgb": [
+    45,
+    45,
+    56
+   ],
+   "contrast_ratio": 6.2,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-024",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_burning_man.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    190,
+    157,
+    101
+   ],
+   "title_bg_rgb": [
+    38,
+    37,
+    45
+   ],
+   "contrast_ratio": 5.92,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-025",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_image_in_the_mirror_backwards.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    185,
+    163,
+    109
+   ],
+   "title_bg_rgb": [
+    34,
+    37,
+    44
+   ],
+   "contrast_ratio": 6.23,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-026",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_angry_being.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    203,
+    176,
+    123
+   ],
+   "title_bg_rgb": [
+    34,
+    37,
+    44
+   ],
+   "contrast_ratio": 7.33,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-027",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_groundskeeper.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    160,
+    124,
+    71
+   ],
+   "title_bg_rgb": [
+    39,
+    41,
+    53
+   ],
+   "contrast_ratio": 3.76,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-028",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_something_slimy.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    208,
+    177,
+    115
+   ],
+   "title_bg_rgb": [
+    36,
+    40,
+    53
+   ],
+   "contrast_ratio": 7.15,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-029",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_a_moment_of_hope.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    188,
+    158,
+    109
+   ],
+   "title_bg_rgb": [
+    31,
+    35,
+    46
+   ],
+   "contrast_ratio": 6.17,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-030",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_hanged_men.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    180,
+    153,
+    99
+   ],
+   "title_bg_rgb": [
+    37,
+    38,
+    49
+   ],
+   "contrast_ratio": 5.48,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  },
+  {
+   "record_id": "P-EVT-031",
+   "asset_type": "card_event",
+   "source_path": "photos/event/event_jonahs_turn.png",
+   "size": "1773x2364",
+   "title_fg_rgb": [
+    191,
+    162,
+    102
+   ],
+   "title_bg_rgb": [
+    38,
+    38,
+    46
+   ],
+   "contrast_ratio": 6.13,
+   "threshold_text": 3.0,
+   "pass": true,
+   "method": "wcag-relative-luminance(标题带最亮1%像素 vs 40分位底色)，大文本 AA 阈值 3:1"
+  }
+ ]
+}

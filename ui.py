@@ -9,14 +9,18 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 
 try:
     from . import help_text as HT
+    from .asset_registry import AssetRegistry, resolve_manifest_path
     from .bot_ai import BotController
     from .engine import ActionCommand, DecisionProvider, GameEngine, ExitOption
     from .models import DIRECTION_DELTAS, GameState, OPPOSITE, Player, PlacedRoom
+    from .ui_asset_binding import load_asset_photo
 except ImportError:  # pragma: no cover - direct script execution
     import help_text as HT  # type: ignore
+    from asset_registry import AssetRegistry, resolve_manifest_path  # type: ignore
     from bot_ai import BotController  # type: ignore
     from engine import ActionCommand, DecisionProvider, GameEngine, ExitOption  # type: ignore
     from models import DIRECTION_DELTAS, GameState, OPPOSITE, Player, PlacedRoom  # type: ignore
+    from ui_asset_binding import load_asset_photo  # type: ignore
 
 
 PALETTE = {
@@ -837,8 +841,37 @@ class _PlayerDetailDialog:
         ).pack(pady=(0, 14))
 
 
+# 美术预览的清单路径（相对本文件所在目录），供 _get_asset_registry 懒加载。
+ASSET_MAPPING_REL = "assets/asset_mapping.json"
+
+# 懒加载状态：loaded=True 表示已尝试过，registry 为 None 表示清单/依赖不可用。
+_ASSET_REGISTRY_STATE: dict[str, object] = {"loaded": False, "registry": None}
+
+
+def _get_asset_registry():
+    """懒加载 assets/asset_mapping.json；清单缺失或注册表不可用时返回 None。
+
+    只在第一次打开美术预览页时读清单，避免拖慢启动；任何异常都退化为 None，
+    由调用方显示说明文字，不让帮助窗口打不开。
+    """
+    if _ASSET_REGISTRY_STATE["loaded"]:
+        return _ASSET_REGISTRY_STATE["registry"]
+    _ASSET_REGISTRY_STATE["loaded"] = True
+    # 冻结包内 assets 以 source/desktop/game/assets 结构内嵌，候选路径见
+    # asset_registry.default_manifest_candidates（源码与打包两种布局都覆盖）。
+    manifest = resolve_manifest_path()
+    if not manifest.is_file():
+        return None
+    try:
+        # asset_mapping.json 没有 records，AssetRegistry 会自动找同目录 p_table.json。
+        _ASSET_REGISTRY_STATE["registry"] = AssetRegistry.load(str(manifest))
+    except Exception:
+        _ASSET_REGISTRY_STATE["registry"] = None
+    return _ASSET_REGISTRY_STATE["registry"]
+
+
 class _HelpDialog:
-    """规则与图鉴帮助窗口：基本规则 / 道具图鉴 / 房间图鉴。"""
+    """规则与图鉴帮助窗口：基本规则 / 道具图鉴 / 房间图鉴 / 美术预览。"""
 
     def __init__(self, root: tk.Tk, catalog) -> None:
         self.top = tk.Toplevel(root)
@@ -865,6 +898,7 @@ class _HelpDialog:
         nb.add(self._rules_page(), text="  基本规则  ")
         nb.add(self._cards_page(catalog), text="  道具图鉴  ")
         nb.add(self._rooms_page(catalog), text="  房间图鉴  ")
+        nb.add(self._art_page(), text="  美术预览  ")
 
         tk.Button(
             self.top,
@@ -918,7 +952,7 @@ class _HelpDialog:
 
     def _rooms_page(self, catalog) -> tk.Frame:
         lines = ["房间效果一览：\n"]
-        floor_cn = {1: "二层", 0: "一层", -1: "地下室"}
+        floor_cn = {1: "二层", 0: "一层", -1: "地下室", "roof": "屋顶层"}
         for rid in sorted(catalog.room_templates):
             room = catalog.room_templates[rid]
             floor = floor_cn.get(room.floor, f"{room.floor}F")
@@ -927,6 +961,146 @@ class _HelpDialog:
                 effect = room.text or "无特殊效果。"
             lines.append(f"[{floor}] {room.name}：{effect}")
         return self._page_text("\n".join(lines))
+
+    # 美术预览口径：房间缩略图基准 128×128，卡牌基准 240×336（96 DPI 基准）；
+    # 实际显示尺寸按 system_dpi / 96 等比缩放，保证 125%/150% 档物理尺寸达标。
+    ART_ROOM_BASE = (128, 128)
+    ART_CARD_BASE = (240, 336)
+    # 近似档由 ui_capture.py 设置的目标 DPI（72×tk_scaling）；None 时读 ctypes 真实系统 DPI。
+    ART_DPI_OVERRIDE = None
+    ART_SECTIONS = (
+        ("room", "房间"),
+        ("card_event", "事件"),
+        ("card_item", "物品"),
+        ("card_omen", "预兆"),
+    )
+
+    @classmethod
+    def _read_effective_dpi(cls):
+        """读取有效 DPI：优先 override（近似档），否则 ctypes GetDeviceCaps 真实系统 DPI。
+
+        Tk 8.6 的 winfo_fpixels("1i") 在 SetProcessDpiAwareness 之后不一定更新，
+        因此用 ctypes 直读，保证 125%/150% 档拿到 120/144 而不是缓存值。
+        """
+        if cls.ART_DPI_OVERRIDE:
+            return int(cls.ART_DPI_OVERRIDE)
+        try:
+            import ctypes
+
+            dc = ctypes.windll.user32.GetDC(0)
+            try:
+                return int(ctypes.windll.gdi32.GetDeviceCaps(dc, 88))  # LOGPIXELSX
+            finally:
+                ctypes.windll.user32.ReleaseDC(0, dc)
+        except Exception:
+            return 96
+
+    def _art_scaled_size(self, asset_type):
+        """按有效 DPI 等比缩放美术预览尺寸；96 DPI 基准下保持原始尺寸。"""
+        dpi = self._read_effective_dpi()
+        factor = dpi / 96.0 if dpi > 0 else 1.0
+        base = self.ART_ROOM_BASE if asset_type == "room" else self.ART_CARD_BASE
+        return (
+            max(1, int(round(base[0] * factor))),
+            max(1, int(round(base[1] * factor))),
+        )
+
+    def _art_page(self) -> tk.Frame:
+        """美术预览页：左侧列资源位，右侧按类别尺寸显示图片。
+
+        * 取图全部走 ui_asset_binding.load_asset_photo，缺图时由绑定层回落到占位图；
+        * 返回的 PhotoImage 引用挂在本 dialog 上（``self._art_photo``），
+          仅存在局部变量里会被 GC 回收，标签随即变空白；
+        * registry 不可用（清单缺失/损坏）时显示说明文字，不抛异常。
+        """
+        frame = tk.Frame(self.top, bg=PALETTE["panel"])
+        registry = _get_asset_registry()
+        if registry is None:
+            tk.Label(
+                frame,
+                text=(
+                    "美术预览暂不可用：未加载 assets/asset_mapping.json。\n"
+                    "先运行 python asset_pipeline.py 重新生成资源清单；\n"
+                    "本页依赖 asset_registry.AssetRegistry 与 ui_asset_binding.load_asset_photo。"
+                ),
+                bg=PALETTE["panel"],
+                fg=PALETTE["muted"],
+                font=FONT_PANEL,
+                justify="left",
+                anchor="nw",
+                padx=16,
+                pady=16,
+            ).pack(fill="both", expand=True)
+            return frame
+
+        body = tk.Frame(frame, bg=PALETTE["panel"])
+        body.pack(fill="both", expand=True, padx=8, pady=8)
+
+        listbox = tk.Listbox(
+            body,
+            width=34,
+            bg="#0d1013",
+            fg=PALETTE["text"],
+            font=FONT_PANEL,
+            selectbackground=PALETTE["accent"],
+            selectforeground="#111",
+            relief="flat",
+            bd=0,
+            highlightthickness=0,
+            activestyle="none",
+        )
+        scroll = tk.Scrollbar(body, orient="vertical", command=listbox.yview)
+        listbox.configure(yscrollcommand=scroll.set)
+        scroll.pack(side="left", fill="y")
+        listbox.pack(side="left", fill="y")
+
+        preview = tk.Label(
+            body,
+            text="选择左侧条目查看美术预览",
+            bg=PALETTE["panel3"],
+            fg=PALETTE["muted"],
+            font=FONT_PANEL,
+            width=38,
+            height=18,
+        )
+        preview.pack(side="left", fill="both", expand=True, padx=(12, 0))
+
+        self._art_entries = []
+        for asset_type, label in self.ART_SECTIONS:
+            for ref in registry.by_type(asset_type):
+                self._art_entries.append((label, ref))
+                missing_hint = "（缺图→占位图）" if ref.is_missing else ""
+                listbox.insert(
+                    "end",
+                    "%s · %s%s" % (label, ref.runtime_key or ref.record_id, missing_hint),
+                )
+
+        # PhotoImage 引用保存在 dialog 上，防止 Tk 图片被 GC 回收后变空白。
+        self._art_photo = None
+
+        def _show_selected(_event=None) -> None:
+            selection = listbox.curselection()
+            if not selection:
+                return
+            _, ref = self._art_entries[selection[0]]
+            max_size = self._art_scaled_size(ref.asset_type)
+            photo = load_asset_photo(
+                registry, ref.runtime_key or ref.target_ref, self.top, max_size
+            )
+            if photo is None:
+                self._art_photo = None
+                preview.configure(image="", text="该资源位没有可用图片：%s" % ref.record_id)
+                return
+            self._art_photo = photo
+            preview.configure(image=photo, text="")
+
+        listbox.bind("<<ListboxSelect>>", _show_selected)
+        if self._art_entries:
+            listbox.selection_set(0)
+            _show_selected()
+        else:
+            preview.configure(text="资源清单里没有房间/事件/物品/预兆条目")
+        return frame
 
 
 class GameApp(tk.Tk):
@@ -1681,10 +1855,10 @@ class GameApp(tk.Tk):
         if not state.board:
             return
 
-        # 地图是三维的（地下室/一层/二层），这里按楼层分成三条竖向带分别排版，
-        # 避免不同楼层同坐标的房间互相覆盖。
-        floor_order = [1, 0, -1]  # 自上而下：二层、一层、地下室
-        floor_label = {1: "二层 (2F)", 0: "一层 (1F)", -1: "地下室 (-1F)"}
+        # 地图是四层的（屋顶/地下室/一层/二层），这里按楼层分成竖向带分别排版，
+        # 避免不同楼层同坐标的房间互相覆盖。屋顶层（Widow's Walk）排在最上方。
+        floor_order = ["roof", 1, 0, -1]  # 自上而下：屋顶层、二层、一层、地下室
+        floor_label = {"roof": "屋顶层 (RF)", 1: "二层 (2F)", 0: "一层 (1F)", -1: "地下室 (-1F)"}
         floor_rooms: dict[int, list] = {f: [] for f in floor_order}
         for room in state.board.values():
             floor_rooms.setdefault(room.floor, []).append(room)
@@ -1808,6 +1982,12 @@ class GameApp(tk.Tk):
             color = PALETTE["room_revealed"] if room.revealed else PALETTE["room"]
             if room.template_id in self.engine.catalog.start_room_ids:
                 color = PALETTE["start"]
+            if room.floor == "roof":
+                # 屋顶层（Widow's Walk）用冷色底与基础三层区分；起始的
+                # Roof Landing 保持起始房配色，符号房仍按符号高亮。
+                color = "#37465c" if room.revealed else "#26303e"
+                if room.template_id in self.engine.catalog.start_room_ids:
+                    color = PALETTE["start"]
             if room.symbol == "omen":
                 color = PALETTE["omen"] if room.revealed else color
             elif room.symbol == "item":
@@ -2058,7 +2238,7 @@ class GameApp(tk.Tk):
 
     def _show_room_info(self, room: PlacedRoom) -> None:
         lines = [f"房间：{room.name}", f"坐标：{room.x}, {room.y}"]
-        floor_label = {1: "二层", 0: "一层", -1: "地下室"}.get(room.floor, f"{room.floor}F")
+        floor_label = {1: "二层", 0: "一层", -1: "地下室", "roof": "屋顶层"}.get(room.floor, f"{room.floor}F")
         lines.append(f"楼层：{floor_label}")
         if room.symbol:
             lines.append(f"符号：{ {'omen': '预兆', 'item': '物品', 'event': '事件'}.get(room.symbol, room.symbol) }")
@@ -2144,7 +2324,7 @@ class GameApp(tk.Tk):
         self._hide_player_tooltip()
         self._hide_room_tooltip()
         lines = [f"房间：{room.name}"]
-        floor_label = {1: "二层", 0: "一层", -1: "地下室"}.get(room.floor, f"{room.floor}F")
+        floor_label = {1: "二层", 0: "一层", -1: "地下室", "roof": "屋顶层"}.get(room.floor, f"{room.floor}F")
         lines.append(f"楼层：{floor_label}")
         if room.symbol:
             sym = {"omen": "预兆", "item": "物品", "event": "事件"}.get(room.symbol, room.symbol)

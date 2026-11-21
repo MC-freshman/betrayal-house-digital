@@ -1,0 +1,3819 @@
+{
+  "schema": "run5_transcode_manifest/v1",
+  "generated_at": "2026-11-21T12:23:51",
+  "operator": "run5-transcode/automated",
+  "tool": {
+    "python": "3.9.13",
+    "pillow": "11.3.0",
+    "encoder": "PNG optimize=True（无量化、无调色板化、无缩放）"
+  },
+  "parameters": {
+    "decode": "Image.open -> load -> convert(\"RGB\")",
+    "resize": "none",
+    "crop": "none",
+    "rotate": "none",
+    "quantize": "none",
+    "backup_ext": ".jpg"
+  },
+  "summary": {
+    "transcoded": 130,
+    "failures": 0,
+    "elapsed_seconds": 254.128,
+    "source_bytes": 146398734,
+    "output_bytes": 724078160,
+    "pixel_equal_all": true,
+    "max_diff_all": 0,
+    "by_category": {
+      "role": 0,
+      "room": 50,
+      "event": 45,
+      "item": 22,
+      "omen": 13
+    }
+  },
+  "inventory": {
+    "path": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\.codebuddy\\wfat\\photos_inventory.json",
+    "entries": 142,
+    "by_category": {
+      "role": 12,
+      "room": 50,
+      "event": 45,
+      "item": 22,
+      "omen": 13
+    },
+    "duplicate_groups": 0
+  },
+  "records": [
+    {
+      "path": "photos/room/abandoned_room.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/abandoned_room.jpg",
+      "source_sha256": "77d7c8d2a43e206dcddf2314a77477570242508dbc0f6e8959eb9bbf853e33a0",
+      "source_bytes": 1930671,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "c9579210aae8b53192b3f69761a9bed25e860f58d6934eadbee585e01119aebe",
+      "bytes": 7094794,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.332
+    },
+    {
+      "path": "photos/room/attic.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/attic.jpg",
+      "source_sha256": "4b6db7b87134ec54071c78df3a4a4ed21e76656301d47783a78c6c2c7ca18957",
+      "source_bytes": 1869490,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "139ca3519b7dc7c3555ad5c97e4b9019e538b7b6e01667adde2dc415c112ae64",
+      "bytes": 6681045,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.377
+    },
+    {
+      "path": "photos/room/balcony.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/balcony.jpg",
+      "source_sha256": "e1e1dc7ad4e9458c1af17818c103ddea27df4f1bdddc88429b1fb4b0f965182d",
+      "source_bytes": 1782104,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "c2c9a36e2c6c90f20ef640f9e875d98cdf73688f07470c2e52b0a0dc6504d2ac",
+      "bytes": 6609515,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.404
+    },
+    {
+      "path": "photos/room/ballroom.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/ballroom.jpg",
+      "source_sha256": "12be49f7dcebd3b15616cdae648e71d1bdcdd2e135830c31d1ec7513a3ecbdbc",
+      "source_bytes": 1905510,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "b432d405fb371fd5e87e75877e7023bc80bded08dd78d1e55fe44f3a68b6a665",
+      "bytes": 7103056,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.327
+    },
+    {
+      "path": "photos/room/basement_landing.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/basement_landing.jpg",
+      "source_sha256": "8c2c19b54f48fb48c1b3d6bd80e1bd7d6b355186fdfc1d529577e8bca55448f9",
+      "source_bytes": 1817669,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "5f9c8b1db3f46983c18eb11a3b5849560520bf4cd2a8366a836b72bb860944cd",
+      "bytes": 6696205,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.406
+    },
+    {
+      "path": "photos/room/bathroom.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/bathroom.jpg",
+      "source_sha256": "07cf3834fc7b37bfe98af286e53d50f257bc82a7805de6ee55112983cf08781a",
+      "source_bytes": 1931368,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "827cf90cabef8fb7d454043914c3db78ea51980b7245d4dc05264ed13d4e2938",
+      "bytes": 7094039,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.338
+    },
+    {
+      "path": "photos/room/bedroom.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/bedroom.jpg",
+      "source_sha256": "bb505502f7c094b9e61d6df93b501614fa1d20b0dba5ddc55eb4b83cbd5cdb0b",
+      "source_bytes": 1813350,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "4f0c21fd0b9b07d9127806267630ed8a1b192ca75478dec101b875f95f5a8889",
+      "bytes": 6657189,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.352
+    },
+    {
+      "path": "photos/room/bloody_room.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/bloody_room.jpg",
+      "source_sha256": "abcef8684d09948d2b3511b2abe68f503b1cb9b627c09ea9ab953d879242abe8",
+      "source_bytes": 1819476,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "1fffd6de5f5a94d1dc159a76f7039d558b21e664db021d83e929b1aee5dbb610",
+      "bytes": 6847778,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.445
+    },
+    {
+      "path": "photos/room/catacombs.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/catacombs.jpg",
+      "source_sha256": "f372487694099fbe5365fad2c72512b81e1c9e856ea0d2d1961d98e7a4d76181",
+      "source_bytes": 1884128,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "01beeb72d0d937c58c8b7622e5649c932f5d62a43b62c742808c6f48e522f5ca",
+      "bytes": 6915110,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.336
+    },
+    {
+      "path": "photos/room/chapel.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/chapel.jpg",
+      "source_sha256": "19162151daa666d7f6efbf3140d16177a1a908996ab863ee1662efa780035eaa",
+      "source_bytes": 2093130,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "21ed1ace5c50f9ed43f1b33003c1f3f2137a318b68323a8711cb78db52ac65fa",
+      "bytes": 7512226,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.24
+    },
+    {
+      "path": "photos/room/charred_room.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/charred_room.jpg",
+      "source_sha256": "0dff0a05946a0ff97ce4c1973d7b133859640167372a235d83ba854cabcfaad5",
+      "source_bytes": 1996803,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "ef281535751531447a6307cec2646bc3a3e7a69f3048f3d022b5811d09fe0bd2",
+      "bytes": 7264653,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.352
+    },
+    {
+      "path": "photos/room/chasm.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/chasm.jpg",
+      "source_sha256": "6256de7839347ad87b57f5056ac3578e44b3d3f18b9902bd928998936c5e89a2",
+      "source_bytes": 1910753,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "11aa288de2db7aeb91551722fa007ead193ee719fe421b8b3b585485bd1bd0df",
+      "bytes": 6954256,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.303
+    },
+    {
+      "path": "photos/room/coal_chute.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/coal_chute.jpg",
+      "source_sha256": "97a811e4307a2722f1638cac6301e153860d7387a53e5c21641aaa87139bacf2",
+      "source_bytes": 1748651,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "c8a10a766dc3753e5b151995439f144abbe215cc31bcdfe5b418a1e29f66f609",
+      "bytes": 6543255,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.406
+    },
+    {
+      "path": "photos/room/collapsed_room.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/collapsed_room.jpg",
+      "source_sha256": "f93bf0a4d83ae2e350fea72b2c973d58830a39f17f9bba1c105b94868cd2cd59",
+      "source_bytes": 1744101,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "717c0369f138e5841cc2d219bdaeee4a5a60053a7f219f532929faf37e72510c",
+      "bytes": 6426911,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.448
+    },
+    {
+      "path": "photos/room/conservatory.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/conservatory.jpg",
+      "source_sha256": "7571bb488666cc10e230140e29263a806cc62133ed0d04c610b0f114f5148b3f",
+      "source_bytes": 2117384,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "d2cb182171ce31a9ee326b4735ee4c3c47a84cf4f87b55ec4d1cefc1268f35b9",
+      "bytes": 7620529,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.276
+    },
+    {
+      "path": "photos/room/crawlspace.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/crawlspace.jpg",
+      "source_sha256": "717728b1c5e5ae79ccec5537afb433819ddf174fc4b65436c12cd72bb3007979",
+      "source_bytes": 1759078,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "a99666851a8ee25c2e333c8b3a0dac16e573ada9ace0f78bcef43d34a5e82b68",
+      "bytes": 6616114,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.474
+    },
+    {
+      "path": "photos/room/creaky_hallway.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/creaky_hallway.jpg",
+      "source_sha256": "e89a168bb03abc92324ccebc684d57716c0a6cd165362accdba4744245290710",
+      "source_bytes": 1856179,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "175d9a02aff90dfadfcb102f1314114faba0607cf471b7395f737e2851d5c705",
+      "bytes": 6917560,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.398
+    },
+    {
+      "path": "photos/room/crypt.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/crypt.jpg",
+      "source_sha256": "2841f50919c5256dfdb5a46b1af63c94bd08d239ac7f06f7553b25e8353bd301",
+      "source_bytes": 1819405,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "fa6e59f47d7a92fe032651128f124f258462b6bebcadc2292363dddffbb5ec85",
+      "bytes": 6727162,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.383
+    },
+    {
+      "path": "photos/room/dining_room.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/dining_room.jpg",
+      "source_sha256": "5b86c6400c5a0b4e215104148c21d0955a175cb382f3fffb8d5717d82b473a41",
+      "source_bytes": 1907629,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "6d5592e02b8b05dca30f443fb6dbb847bb22ca6c64ee30567460bb88ed01c067",
+      "bytes": 7100070,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.22
+    },
+    {
+      "path": "photos/room/dusty_hallway.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/dusty_hallway.jpg",
+      "source_sha256": "94a029995a1f08cec83e8b51b832345e3d4f56b2d1c1111be4a73d828718e29d",
+      "source_bytes": 1785959,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "af96c2da2a942f3ed8cbc58b7f914ab9534cee460f0be0e8f661bb041f8794d4",
+      "bytes": 6564611,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.214
+    },
+    {
+      "path": "photos/room/entrance_hall.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/entrance_hall.jpg",
+      "source_sha256": "06f4909ff93b6b3d89d171e8e15959f9918863b66e47de9dfff133732df5985f",
+      "source_bytes": 2000839,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "34cb362ad46e495ff5b7f516e212834ef7362fa916f67119d80ab9298eeb474f",
+      "bytes": 7330746,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.181
+    },
+    {
+      "path": "photos/room/foyer.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/foyer.jpg",
+      "source_sha256": "8dcbe8e5a14653f85a7df65b6e3df5084e0e59da55f7710c06c63512f0bd7d74",
+      "source_bytes": 1859404,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "c74643094d56100ce67a0d70bafb1f829c5d8b12d69c0ec055f0454c4f8e4e3e",
+      "bytes": 6868902,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.2
+    },
+    {
+      "path": "photos/room/furnace_room.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/furnace_room.jpg",
+      "source_sha256": "ff0d192418ff0c60d8f6847f6d08e8cd1675c84a243525f152b89dc7dccce0c8",
+      "source_bytes": 1924329,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "2bd06f6bef7973b2939acb18b894b38724eb690e7838bcf349f487ab8ac5d619",
+      "bytes": 6984204,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.302
+    },
+    {
+      "path": "photos/room/gallery.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/gallery.jpg",
+      "source_sha256": "565ae41a36d1f8446ff47a0538023c2df93b26f86444549339f4665e02892089",
+      "source_bytes": 1844740,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "62dfea72fc46e2dc8e39bda6f6741634c94ef9fa57fc78845348610e708b907d",
+      "bytes": 6844567,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.43
+    },
+    {
+      "path": "photos/room/game_room.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/game_room.jpg",
+      "source_sha256": "4d23b3bd06196f05e44336c7ba9e7092a95eaff2b3977d8950393497e4e174c5",
+      "source_bytes": 1837847,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "d05d1c52ef7ea56815f6107236787ef20c8770473e1369cf1e23b672620638e1",
+      "bytes": 6745289,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.398
+    },
+    {
+      "path": "photos/room/garden.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/garden.jpg",
+      "source_sha256": "69a03f4d1c48d8b641ba2507f3b78d8a28d9f12d3eddf60bfb58542b73cf8445",
+      "source_bytes": 1956604,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "b98c5b90ba4e251f681397bf57790b3d23e4923a4eed5b81f4601ea276ffbe71",
+      "bytes": 7031778,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.299
+    },
+    {
+      "path": "photos/room/grand_staircase.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/grand_staircase.jpg",
+      "source_sha256": "20946354e444d9b2550051443176fbf2ec00ddfb485a933f6f727a7137dab71f",
+      "source_bytes": 1753914,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "e4ab94cd4a58c60c217f1966814c0d2c677942e529cdce7ccf55b001daddee1e",
+      "bytes": 6674099,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.358
+    },
+    {
+      "path": "photos/room/graveyard.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/graveyard.jpg",
+      "source_sha256": "4639adcedd7d370b3b4f64038197dd0efe474357d84e1a1dbafa8be886dbf639",
+      "source_bytes": 2021056,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "f37f5bec14a8e1cba6edd5eeb5b6323cdc5d651e003a3037ea92e31a53af3555",
+      "bytes": 7398794,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.258
+    },
+    {
+      "path": "photos/room/gymnasium.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/gymnasium.jpg",
+      "source_sha256": "ade2d33d74c6fdc7201a534aab3166b2e2cecc513d2af3596290c2c8bed028dc",
+      "source_bytes": 1948792,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "65f6f25ea04fec72c159c9c1cb230e18873afe07c7b6c63ba6844e2d0996f26a",
+      "bytes": 7195448,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.197
+    },
+    {
+      "path": "photos/room/inner_hall.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/inner_hall.jpg",
+      "source_sha256": "fddc4cfda2d2288d9cbce22decbb6d81082e503c1c621109eed3017c43e49922",
+      "source_bytes": 1809808,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "e634bb9cf733a2777ad4643bb6b5211c9921661ad3202567c16f1b169bbdbeda",
+      "bytes": 6689142,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.306
+    },
+    {
+      "path": "photos/room/junk_room.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/junk_room.jpg",
+      "source_sha256": "ee76e6d23a32c026215c3fb95630272e22e23674ecd36d013c7d581e9ef6b25b",
+      "source_bytes": 1990641,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "640358894dcbe9177a935c81c9dcdc0fbea62636ed963ffd9da9d84aa8af7d5a",
+      "bytes": 7340394,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.211
+    },
+    {
+      "path": "photos/room/kitchen.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/kitchen.jpg",
+      "source_sha256": "7b92d40031d06e2e4a7327db9096cdd58b981ba6f97cba4aa69ca15d307cc093",
+      "source_bytes": 1972918,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "84c9c0613e1f8988b0e501885089a0381495e7fdac307e88e194a4b702b674a7",
+      "bytes": 7307870,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.162
+    },
+    {
+      "path": "photos/room/larder.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/larder.jpg",
+      "source_sha256": "d48285a5a5c15d5a8ff3b32e78fba1cfd5cd971be18708e77e27418d17089390",
+      "source_bytes": 2017485,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "c1d127c4b3246189459a8de83da5ea455e9e3687a7911497d3375cf86a0de902",
+      "bytes": 7390992,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.184
+    },
+    {
+      "path": "photos/room/library.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/library.jpg",
+      "source_sha256": "c966a93a0b00ed357127ed52e723646e6a865867257b5b557fadb0d95abbf424",
+      "source_bytes": 1877048,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "c4492d70b0dfe7d537bf504f14fe2a3f5fc82bdc4687540c15eed8be54c7b2d2",
+      "bytes": 7050852,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.252
+    },
+    {
+      "path": "photos/room/master_bedroom.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/master_bedroom.jpg",
+      "source_sha256": "eaccd8a6d8d861e5439bbeaf9d9215c5f7d34a4111c1f6e51a26dbf88d9bcb85",
+      "source_bytes": 1868172,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "487230eea3078b452417b493319a9c1cc189bff5e5adb71dcc979a4fd336d9b0",
+      "bytes": 6924012,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.266
+    },
+    {
+      "path": "photos/room/mystic_elevator.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/mystic_elevator.jpg",
+      "source_sha256": "229317332d7bd1435831635dbde03e25dab0a6e272b1f207fb832855508b1a23",
+      "source_bytes": 1758486,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "2ed3645db0df4a1c821fa928d3cd4fad818c6265a8f4da40ceabd331fbcaaa75",
+      "bytes": 6443442,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.261
+    },
+    {
+      "path": "photos/room/operating_laboratory.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/operating_laboratory.jpg",
+      "source_sha256": "500b63a2e228460e01ae9f8652644e69069ac8ec7655a85b1a2ac65c4f7ca9b3",
+      "source_bytes": 1847291,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "4d23fe1a6b1a960bfcdcff86f48309608a20879883e5e143a4c186b26e080b4f",
+      "bytes": 6748587,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.386
+    },
+    {
+      "path": "photos/room/organ_room.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/organ_room.jpg",
+      "source_sha256": "230e366888457c0e172dadd1ec08fafbbed6314865bac7b5afec32ff9ed44079",
+      "source_bytes": 1854371,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "0d6afc2cf6bb49f98f39330bd9c3c2f150d7c20d9ed251d974a78728a5745d78",
+      "bytes": 6882582,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.323
+    },
+    {
+      "path": "photos/room/patio.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/patio.jpg",
+      "source_sha256": "99673616b4b03d64abc2cb1786145ddde6377c137a781d5d34ade3a37254c62e",
+      "source_bytes": 1840447,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "825465f36516fc7fb24ca7d929461ac84df768e6de4aedc746d7ad1a57d742f5",
+      "bytes": 6731100,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.429
+    },
+    {
+      "path": "photos/room/pentagram_chamber.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/pentagram_chamber.jpg",
+      "source_sha256": "133572de6f2082aea847d0619f4e2c29e16c8d3cd090fddda1826221acefdd20",
+      "source_bytes": 1913748,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "51c55819b8e5ff5b53d93b704aeddc39b9a5e827e0c01dea0e857c9f25c3865c",
+      "bytes": 7108250,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.348
+    },
+    {
+      "path": "photos/room/research_laboratory.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/research_laboratory.jpg",
+      "source_sha256": "945611dca811b54dabafa084b3c42f95924181f5f91501a5c8f6d46dd374ac9d",
+      "source_bytes": 2006215,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "8c0898d5c2b668acb2fe4dad41b1787122b58851090f39eb37ec39630e707723",
+      "bytes": 7409639,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.299
+    },
+    {
+      "path": "photos/room/servants_quarters.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/servants_quarters.jpg",
+      "source_sha256": "deab08d66dccde792b609ee12308acb99a366de45316b023096234726c5add36",
+      "source_bytes": 1734279,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "c242bcd3a908609bc6f2a78d2a524886fe6272203a71e664b5f4dca4a52f3e1d",
+      "bytes": 6452845,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.966
+    },
+    {
+      "path": "photos/room/stairs_from_basement.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/stairs_from_basement.jpg",
+      "source_sha256": "b4df5f214b32329572a20e4cd59eaf17c9f6016da70aedda57ae6bda15f6776f",
+      "source_bytes": 1828656,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "8aa95f09e78a54cce210dd4d18db1d5d57f84cd27861afe2f7e97a3095269ba4",
+      "bytes": 6793551,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.4
+    },
+    {
+      "path": "photos/room/statuary_corridor.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/statuary_corridor.jpg",
+      "source_sha256": "4641b547fb4344a88a868dd88685eb2d47a8b5f088b6693d02ffc3409d55d1ff",
+      "source_bytes": 1760232,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "56a8790552f173950d8ddeedae64e6f3a0a9d1e9b3140ea82c9fef6a595fc0b0",
+      "bytes": 6614972,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.412
+    },
+    {
+      "path": "photos/room/storeroom.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/storeroom.jpg",
+      "source_sha256": "4c2e32fa0ed04be6b6e30161e1a18e42d40700c097ad1b5f0d2bed5b2b59051d",
+      "source_bytes": 1432709,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "f6ed3ddf703cd52ae72910473e7d803d79980b60284c850523baa0140c988d76",
+      "bytes": 5622721,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 2.044
+    },
+    {
+      "path": "photos/room/tower.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/tower.jpg",
+      "source_sha256": "b2e45da151f15fce0e55864018bfc2ad87fc6348453581b3550443ac8644c5f0",
+      "source_bytes": 1805807,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "a3b6867f11678807780a37ebe71674dfa2e6f6f4b7b362e84bf492bdcd242ea2",
+      "bytes": 6631575,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.35
+    },
+    {
+      "path": "photos/room/underground_lake.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/underground_lake.jpg",
+      "source_sha256": "50724b1d72d59d77c9b57de7eeda2b4cd0e4c21f57b84ef9c291e5a09245bbb3",
+      "source_bytes": 1605390,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "5b9d0cf221983d2d39f7477f172f44d55b1b28849105a03c9af193a74895e672",
+      "bytes": 6151483,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.525
+    },
+    {
+      "path": "photos/room/upper_landing.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/upper_landing.jpg",
+      "source_sha256": "f8e84be58884d34c88a464f4979fbfbc099756f3b2fe86e5e6f045c2d6d0574f",
+      "source_bytes": 1741287,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "20618a6018cac0efcb484a1091077d1c013f02bde701f999d8596822ab0548a0",
+      "bytes": 6353049,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.341
+    },
+    {
+      "path": "photos/room/vault.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/vault.jpg",
+      "source_sha256": "5ce31364aa5f1e88ff5dbd2c86c670f2179c050b5f8b37529fac9a60f60b1fef",
+      "source_bytes": 1824869,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "3c3ca51d20355f9971e2706bf9fe2441823d6145980078eac47a1bc7fb354352",
+      "bytes": 6656707,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.359
+    },
+    {
+      "path": "photos/room/wine_cellar.png",
+      "category": "room",
+      "backup": "photos/_source_jpeg/room/wine_cellar.jpg",
+      "source_sha256": "39faff63b84ea809a3d5a34a0d9521b4d77023e38aecf8950ceb0a531cd7cd64",
+      "source_bytes": 1836405,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "3078bf5c85d21c22de577b5cd3c620ba6b8d78dd6a039e84ff52038916d78aaa",
+      "bytes": 6848360,
+      "width": 2048,
+      "height": 2048,
+      "dimensions": "2048x2048",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12582912,
+        "equal": true,
+        "size_left": [
+          2048,
+          2048
+        ],
+        "size_right": [
+          2048,
+          2048
+        ]
+      },
+      "encode_seconds": 1.378
+    },
+    {
+      "path": "photos/event/event_a_moment_of_hope.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_a_moment_of_hope.jpg",
+      "source_sha256": "61e0b03735760de0734109602a5165b35a5e7741eb2e7d1f6fd3fa54aa4ff839",
+      "source_bytes": 561044,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "5f4c1367eda7d4a83e75a98dd726cef57412f0cae277d135ad261a4588d91d8a",
+      "bytes": 4062002,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.158
+    },
+    {
+      "path": "photos/event/event_angry_being.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_angry_being.jpg",
+      "source_sha256": "41542760125d717e5ec8e5ef0316577828632b2f8f2ea72717459b81f120ee16",
+      "source_bytes": 701202,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "d6ab20a808a7eb28e47d0c77ed0cc36151834c829451a935178d5d5284d78cc2",
+      "bytes": 4921289,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.772
+    },
+    {
+      "path": "photos/event/event_awful_waffles.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_awful_waffles.jpg",
+      "source_sha256": "5cd7921b27500ee4b6ee53b67f14a23e3cb6d22696b8cda2889cef749bcd03d2",
+      "source_bytes": 740237,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "1af1113704d55b61e637acff48e6b66e9db327d650521e294d8bd102bfa72a58",
+      "bytes": 5269295,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.694
+    },
+    {
+      "path": "photos/event/event_bloody_vision.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_bloody_vision.jpg",
+      "source_sha256": "ef92b5e8911c8a4471d26bc6cd9b0f86e43d72128a5b7b821bece01d7e6cde38",
+      "source_bytes": 669532,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "aa3d321847c9e5b9f85938bf92bca2cede7e00d0f7dbbd92fe409f3afbf040fd",
+      "bytes": 5045526,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.872
+    },
+    {
+      "path": "photos/event/event_burning_man.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_burning_man.jpg",
+      "source_sha256": "2a5d76a17c8ebd40028c2c6693386b1e263d10ea34c7117d79b44725b5799724",
+      "source_bytes": 650892,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "0c13001065f26819cc1d12cf8f7cf2973f6f9571cd17060b3be6b18649864536",
+      "bytes": 4805008,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.989
+    },
+    {
+      "path": "photos/event/event_closet_door.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_closet_door.jpg",
+      "source_sha256": "bc9fd7d4115257981b0a6d32a188f5312b05860303674200e4374e64095f3b84",
+      "source_bytes": 623625,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "78c8456db57423327b60f385032fbc85fee4a9d267aa9d9eded96c2d29823630",
+      "bytes": 4387138,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.933
+    },
+    {
+      "path": "photos/event/event_creepy_crawlies.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_creepy_crawlies.jpg",
+      "source_sha256": "bd9352419edc82216e1e6ab2d62827a881c445c064ee742ac77b3002e1ddbdeb",
+      "source_bytes": 621386,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "5ed9218a093f0b175862beb149b3fb97f2adff57e36129daba48012a4bf6544e",
+      "bytes": 4460314,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.002
+    },
+    {
+      "path": "photos/event/event_creepy_puppet.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_creepy_puppet.jpg",
+      "source_sha256": "204db655af4432d612dbd840546a1f2e47704e8c395cc6da34ea0e1328d0abb9",
+      "source_bytes": 697054,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "99c8f9427f4d1435f733a7cc6781526644763e6946cc7fc5e743bdfac69d7945",
+      "bytes": 5077533,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.871
+    },
+    {
+      "path": "photos/event/event_debris.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_debris.jpg",
+      "source_sha256": "7bd4d7851d33cc02c88c202e6c7887963fd31470db80c4682109cf541f92bfda",
+      "source_bytes": 626482,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "3804ed48bdbfc9d75f5250952cad6b99d864bd19876041f30f2060a63c8808fb",
+      "bytes": 4388335,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.043
+    },
+    {
+      "path": "photos/event/event_disquieting_sounds.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_disquieting_sounds.jpg",
+      "source_sha256": "ae491db498b24c7e0e9cf78f0772b50e8d2d731ace7413d2a852e2c53500ade3",
+      "source_bytes": 617524,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "3d3e0c62b01e788584706a729a80134267238754f27644dfd1be1a6685101bfd",
+      "bytes": 4454468,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.992
+    },
+    {
+      "path": "photos/event/event_drip_drip_drip.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_drip_drip_drip.jpg",
+      "source_sha256": "4e1bac6fa4533126d09fa5f22d7dff59d9466a4ac6cac6c7bb04863d9328848e",
+      "source_bytes": 709072,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "4d696c774e23c8c2e23672e6f16c3cb612282dcd1eba7ad737937ef56cf8dbc2",
+      "bytes": 4897640,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.698
+    },
+    {
+      "path": "photos/event/event_footsteps.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_footsteps.jpg",
+      "source_sha256": "080059d5618c9d0298b5080b92c5c9818c14d330ee446539b415d47e3a220988",
+      "source_bytes": 648760,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "8278bd85948da8ee57a71eb9b18775bea8244cd0958c9f013ce5f2adad08d81d",
+      "bytes": 4563435,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.969
+    },
+    {
+      "path": "photos/event/event_funeral.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_funeral.jpg",
+      "source_sha256": "d9f8c5a592f428a106f33458edf9d4d3598ebc02caa55fd67fe0818ece9a80fa",
+      "source_bytes": 622483,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "7855f2ce1216b17167af789a99793308ebda683e6c93fe36234c59f311817854",
+      "bytes": 4273190,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.939
+    },
+    {
+      "path": "photos/event/event_grave_dirt.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_grave_dirt.jpg",
+      "source_sha256": "6e96f3cf9837b4ce130e0cb0d88cf52a88dec18532fb5167dd4fc94abed1af1b",
+      "source_bytes": 702922,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "3a110ef9bb08bc9c6e9134c1c0d6d45271e70bf0e087c047d8cfd8e78a57885f",
+      "bytes": 5047402,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.815
+    },
+    {
+      "path": "photos/event/event_groundskeeper.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_groundskeeper.jpg",
+      "source_sha256": "36a0f23c8c3c2904685a5d4925a44880db3522a9cdbd27815cc01d273c4c0e66",
+      "source_bytes": 654633,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "403a525a2bbd0c1c215fc2c94a25f0cf442166ee5fad8999c2c19c687cf6a728",
+      "bytes": 4730871,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.229
+    },
+    {
+      "path": "photos/event/event_hanged_men.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_hanged_men.jpg",
+      "source_sha256": "328f4ad61e360edd1f6c621c01def819f179fb472a52d1ffc88699f92fc965e0",
+      "source_bytes": 641657,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "f3f1b00277214eb694d7ca6e003abaae09127625d7b375d064f2ccd6bae49457",
+      "bytes": 4553476,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.097
+    },
+    {
+      "path": "photos/event/event_hideous_shriek.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_hideous_shriek.jpg",
+      "source_sha256": "a94e9f6d97ce1621977bcbfdeb89527ec1230dbf0d102f22cc1b9a78293f71fd",
+      "source_bytes": 763460,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "da602443ff5af050a73d51d6aebac357ab75a93c823c29f5bf09f3bb5b7f1a02",
+      "bytes": 5535775,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.783
+    },
+    {
+      "path": "photos/event/event_image_in_the_mirror.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_image_in_the_mirror.jpg",
+      "source_sha256": "891c7edcd49f4e22cd7025a001ce94496d0c478a6ed74702db4f0e34d7aec977",
+      "source_bytes": 659728,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "c87c883fd6008757a5dba7975e519708a6ff9da9cc0ed4b14c062447f2cf0acf",
+      "bytes": 4791125,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.095
+    },
+    {
+      "path": "photos/event/event_image_in_the_mirror_backwards.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_image_in_the_mirror_backwards.jpg",
+      "source_sha256": "28a8c353048fbea25378a26feb8f83cfa68b57672a292116b90ecb1452f47322",
+      "source_bytes": 649895,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "9684016f2a3345adecd8b68a810b3548d40a1e6cf29d995bd03190f5e47db9e8",
+      "bytes": 4824483,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.09
+    },
+    {
+      "path": "photos/event/event_it_is_meant_to_be.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_it_is_meant_to_be.jpg",
+      "source_sha256": "06a25759f7bece234ecac864f8359d0edd86149e17c6850766b710142225062a",
+      "source_bytes": 710353,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "0161b5356999c2c58aa064138226a69776ccbf023d3eb78b1061ef70c3f74909",
+      "bytes": 5117061,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.965
+    },
+    {
+      "path": "photos/event/event_jonahs_turn.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_jonahs_turn.jpg",
+      "source_sha256": "e2eae9561ec87b5e8db010f8bf5dbd381aea24d0e3ed6bf7da5e88075d4109d4",
+      "source_bytes": 674138,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "4bd81f5074a14c9057f8e8499767a0f298029df404e81b38b6b426eea1e55336",
+      "bytes": 4898428,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.133
+    },
+    {
+      "path": "photos/event/event_lights_out.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_lights_out.jpg",
+      "source_sha256": "fc0c58bf57be17962e6fa54506ebc9b9a4587b987af19f7df034e422ff2ebab8",
+      "source_bytes": 615637,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "127f2542f7ce5ab6d367108adc940b2d195a56b26ed77555d72d74340e126aed",
+      "bytes": 4391645,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.89
+    },
+    {
+      "path": "photos/event/event_locked_safe.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_locked_safe.jpg",
+      "source_sha256": "e521d8e382b41f893b790b8a9268e7d219f20d84dbe6d829f2ebf87d2321f550",
+      "source_bytes": 677902,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "aa3e9dcbf61e61e05ea9dcf39a3b04d6f28e869fbaf101cadcdefe263bef875a",
+      "bytes": 4820288,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.999
+    },
+    {
+      "path": "photos/event/event_lost_one.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_lost_one.jpg",
+      "source_sha256": "357d5564a175129e97c908e6f06db9eb0bc2a2417713fbdc9c7b8eb685dadb70",
+      "source_bytes": 650418,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "b47e667013619dca281af48a8bab73afec9f72d157ac90320f2d74457ef140a8",
+      "bytes": 4560681,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.99
+    },
+    {
+      "path": "photos/event/event_mists_from_the_walls.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_mists_from_the_walls.jpg",
+      "source_sha256": "dd2881c3f177158655e047ddeed79042e77559f57028f1091f511f32f4c2e77d",
+      "source_bytes": 652087,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "692ae3cbe4953fdec768df737b41864f59136730bf41d5e79b092f031a48afd4",
+      "bytes": 4585899,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.995
+    },
+    {
+      "path": "photos/event/event_mystic_slide.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_mystic_slide.jpg",
+      "source_sha256": "02f94622e94f5f3d3eafe11c07416790c850434fedfee9d780a23adc066be92d",
+      "source_bytes": 680289,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "5cd311fccfc7138ed9256f6a4cb5d80be8f3d5fc72d3046667540ee7dfb74ba4",
+      "bytes": 4876630,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.895
+    },
+    {
+      "path": "photos/event/event_night_view.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_night_view.jpg",
+      "source_sha256": "f5f4bb6e4a0ba32a000a395d5c7c7736fae4c64884e3ef04779d4f17efdb18ff",
+      "source_bytes": 658981,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "0f3a99769af96d9e994989f5a58c7e3b5a1fad067c6a96dd4844a075b68f6e40",
+      "bytes": 4700749,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.099
+    },
+    {
+      "path": "photos/event/event_phone_call.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_phone_call.jpg",
+      "source_sha256": "e1b4a5d160f57ecbcbe0e3be2bd0caf316e16871088b793fb89445db21180676",
+      "source_bytes": 609184,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "f8c565c1bc29b4d2258054a08aea78bac6e656b7f265f5fb7f44cea07bb2e3d9",
+      "bytes": 4317108,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.268
+    },
+    {
+      "path": "photos/event/event_possession.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_possession.jpg",
+      "source_sha256": "37626a5eb58cd700c37d7408d2e4bc94a05a16588c47fd3bb1b3ebf1502f396b",
+      "source_bytes": 691300,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "55ef184482ac1d0b73ab7ef86466196c56a7f97d11fdbb275ca0e8c769990275",
+      "bytes": 5134969,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.048
+    },
+    {
+      "path": "photos/event/event_revolving_wall.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_revolving_wall.jpg",
+      "source_sha256": "e224fba85924e9fd44f502ca60f09b4ac65a0016967fcff574aa1e9769874f0d",
+      "source_bytes": 694930,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "e0700b0f6d5210bc0587797211d721edfa5257721045fb0111bf67d929b815f0",
+      "bytes": 5030739,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.967
+    },
+    {
+      "path": "photos/event/event_rotten.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_rotten.jpg",
+      "source_sha256": "56d1965e6fc99444003b4a308d4606fc90de41639fb6c4f81658858f06507682",
+      "source_bytes": 596433,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "49317371cc4a4b25b327e9883f0f2749a36a5e337327df77249b580cecb36a37",
+      "bytes": 4346544,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.141
+    },
+    {
+      "path": "photos/event/event_secret_passage.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_secret_passage.jpg",
+      "source_sha256": "e406c90ba8c256bf0c593e61a4b2d4034c968f0b04e49836ac19d8f223971bbe",
+      "source_bytes": 699970,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "53b5972564cc2586377e3defb89e105175a0d3e49d0fb835d8b0dd039d060124",
+      "bytes": 5005939,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.779
+    },
+    {
+      "path": "photos/event/event_secret_stairs.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_secret_stairs.jpg",
+      "source_sha256": "d3f1c4a6fc5d7b969078c18b56fedc0d39a8257f1b79bddab9414137906ff084",
+      "source_bytes": 675136,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "555056ecd72d0598ddf08aa31c6b1d77acc49d53e606198cd77dd2444a195667",
+      "bytes": 4766753,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.827
+    },
+    {
+      "path": "photos/event/event_shrieking_wind.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_shrieking_wind.jpg",
+      "source_sha256": "fa74fa7eddf6f2a09123c4f4ca22b9d2bb4b05542ffb986a17e610ee1d3935a9",
+      "source_bytes": 663072,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "042df41125cd82a19e58260f34602458e454efcebe90747ab65cc1ea5ba5b241",
+      "bytes": 4817591,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.013
+    },
+    {
+      "path": "photos/event/event_silence.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_silence.jpg",
+      "source_sha256": "3da346a6287325eda4c707ec82dd5d43b86f485b04d4bbf5f6db6c35d198e893",
+      "source_bytes": 653483,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "e6df24efe86b009588f7884139cf84b237d519ed655608f33224026fe84ecd0e",
+      "bytes": 4585510,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.887
+    },
+    {
+      "path": "photos/event/event_skeletons.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_skeletons.jpg",
+      "source_sha256": "35a381788dbf2b8e244121fd82df49ba1dfd0406fcfc5b6728b386b4964640e6",
+      "source_bytes": 678585,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "095fa31ddb342a1650c5d10d16d49d0014588b53023c9952c3fd419f550fafc3",
+      "bytes": 4772253,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.014
+    },
+    {
+      "path": "photos/event/event_smoke.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_smoke.jpg",
+      "source_sha256": "f2fcd654949e89c9ca44a41f0514fa6de18da41f9b3f30a40736b191705be7d9",
+      "source_bytes": 626009,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "2ac9364452eb40b8ff70ef5b8f12d33c156333e0fb8849bbd821532494cddcfe",
+      "bytes": 4475493,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.983
+    },
+    {
+      "path": "photos/event/event_something_hidden.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_something_hidden.jpg",
+      "source_sha256": "cbe5891a9df165de3aae7ecfff6e745bbda4a1a5afb737983b569a15bd56147a",
+      "source_bytes": 651382,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "48b24be846e8c738ef495e028397e9f7cced47e2de8a8e95535aa2527d80c04b",
+      "bytes": 4753754,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.038
+    },
+    {
+      "path": "photos/event/event_something_slimy.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_something_slimy.jpg",
+      "source_sha256": "e8696850bc34fb6fa52aa64da5e9988fd8ced94305268f29b4005fa338c2d5b9",
+      "source_bytes": 626744,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "ac83a84e4eb86980c6e8a8d1ffc0ce770dc43d2562e1a42861bfa2bd0d3bebe3",
+      "bytes": 4439348,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.055
+    },
+    {
+      "path": "photos/event/event_spider.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_spider.jpg",
+      "source_sha256": "c60ba38451287bf6d5763827c175b716842f2da9e67b257946f9033e367ea821",
+      "source_bytes": 646054,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "2cda37f6d7822b3d491f857969a7487cb50a27f96ad4754b9face2253f38c540",
+      "bytes": 4608240,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.033
+    },
+    {
+      "path": "photos/event/event_the_beckoning.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_the_beckoning.jpg",
+      "source_sha256": "0ea35ba4faf77b297e33dc76162519a57a92a585ab1a721f947da07661b9d74f",
+      "source_bytes": 552817,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "6065032c4d77db5556f01f3dc69a84087fdffe12fbacdd83ba3f0556a800aa87",
+      "bytes": 3893985,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.22
+    },
+    {
+      "path": "photos/event/event_the_voice.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_the_voice.jpg",
+      "source_sha256": "32c59837fcf61b425a061bb26a96a274de3560a2bccc068a38282ec52bfba291",
+      "source_bytes": 623740,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "3dd36808564135e35b77ccaade0d1bbf73f8080d7e9f0ecd991018e5af29e04f",
+      "bytes": 4499593,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.02
+    },
+    {
+      "path": "photos/event/event_the_walls.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_the_walls.jpg",
+      "source_sha256": "0e2dab4095a63d3b7ae66ec55575022aa6718b0200fb44c005f317093d97a0d4",
+      "source_bytes": 752888,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "77cc58ce2e744ad8b4c3af1afd21b02f609a2db159faf0c3a69e6b06b5d7622d",
+      "bytes": 5353653,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.699
+    },
+    {
+      "path": "photos/event/event_webs.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_webs.jpg",
+      "source_sha256": "4a95416916fc4e2253cf5aa3bcb1db2ce8c9c3e840ec28603a2c52b292011ae6",
+      "source_bytes": 669917,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "315610695b8e0bc282424ca395262833d3f012dd2a13015a2ac1fa1676b4b719",
+      "bytes": 4817997,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.985
+    },
+    {
+      "path": "photos/event/event_whoops.png",
+      "category": "event",
+      "backup": "photos/_source_jpeg/event/event_whoops.jpg",
+      "source_sha256": "f2fd667605e03fe39365eaad9ff2775a5ab6c26f906bfa313e1ea99a41ba846e",
+      "source_bytes": 648855,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "0e60bafed3639231c870b0858cdba1b687dedd11d252447ff9799b0cab818c05",
+      "bytes": 4748102,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 2.017
+    },
+    {
+      "path": "photos/item/item_adrenaline_shot.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_adrenaline_shot.jpg",
+      "source_sha256": "195f66c316c3494cf40afa28893de934d316a8821e895de3f5265e1e58a2ed14",
+      "source_bytes": 690863,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "65bcefa2f93c23c4cf72c0d9b9d60b007941e5b768a7f845d8cb5b594f860f9f",
+      "bytes": 4913158,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.867
+    },
+    {
+      "path": "photos/item/item_amulet_of_the_ages.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_amulet_of_the_ages.jpg",
+      "source_sha256": "eee18828b6958ff83da09c760c4316a9a3aa2e10f372f319362f07664d527a05",
+      "source_bytes": 706631,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "bb88479aa019a6901d028f75e1aada62a55b30cc65541f6e08c2f92b96dd49db",
+      "bytes": 4958976,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.765
+    },
+    {
+      "path": "photos/item/item_angel_feather.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_angel_feather.jpg",
+      "source_sha256": "250a575f9439e7e0ba0fe000c64b7701c9fa7e7262422f0bdf5a731971aa232b",
+      "source_bytes": 594394,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "ca29e2d5321884441649a43af1b1b970c614f378c3544f4ab15bdc6a2bc6d8af",
+      "bytes": 4181600,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.995
+    },
+    {
+      "path": "photos/item/item_armor.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_armor.jpg",
+      "source_sha256": "b94cdf39a77df7a52fbc9150fcd83d6b3d1d02b398a37bc0544b72c5d9cd9bc2",
+      "source_bytes": 619699,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "85811e09390fe6f78a80053c8ff580ba7646453cee6fcda72cdbc4c101f82c52",
+      "bytes": 4378092,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.757
+    },
+    {
+      "path": "photos/item/item_axe.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_axe.jpg",
+      "source_sha256": "7a830d80822adcb813c8ad3f899bf5d2e1ef8f2aaa09fb1d731554046746545c",
+      "source_bytes": 698300,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "e4d27d4f92a781539ce17abd1d94d3325abb760cc7b163756c3ad77de3a1b30b",
+      "bytes": 4973048,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.803
+    },
+    {
+      "path": "photos/item/item_bell.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_bell.jpg",
+      "source_sha256": "43cc66beed30445a7e9a32156d52d6a6c08ec96710e2f4d9777a318859b09169",
+      "source_bytes": 709869,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "ff1fade186329fc44ec9d1ac289407001f5135fb74a9b575a9c9917f7f24a471",
+      "bytes": 5072194,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.852
+    },
+    {
+      "path": "photos/item/item_blood_dagger.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_blood_dagger.jpg",
+      "source_sha256": "d0556b728e56e9b2f92644e61550810d938600befb81d708a2ebaefa4df9769b",
+      "source_bytes": 672914,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "6a7271d432f451988d8335abd90993199b1c99d8e1bcf6d5cdb9a527f2b94961",
+      "bytes": 4763034,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.87
+    },
+    {
+      "path": "photos/item/item_bottle.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_bottle.jpg",
+      "source_sha256": "a941e0309cb730678f28726fa0a7f0fb9f4697f7cae2b29fb877113ab6aa86ea",
+      "source_bytes": 638730,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "71568bebf3856cfe27cfef6702c4ccfa3f2a553eeb8d32013e347727b2aea1a0",
+      "bytes": 4469193,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.902
+    },
+    {
+      "path": "photos/item/item_candle.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_candle.jpg",
+      "source_sha256": "ec3156b17f7cc6397bc87e6a32db2e73e9ede5bb2c651e5eee297fc160e2b525",
+      "source_bytes": 697835,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "4ad58b3942bca5f1e5e87124e57922352298be424e7aa76f4fcaeb0436744bb8",
+      "bytes": 5025129,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.729
+    },
+    {
+      "path": "photos/item/item_dark_dice.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_dark_dice.jpg",
+      "source_sha256": "b243b95d7f83c5d9d64161e85f48ba1ef30b8bfb8606c5da1aeb992a00be37a6",
+      "source_bytes": 689032,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "720e53098fdabe756a83a192a538a840b97caf389ddf569c9b17de79e802e1e8",
+      "bytes": 4878878,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.782
+    },
+    {
+      "path": "photos/item/item_dynamite.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_dynamite.jpg",
+      "source_sha256": "3f86970592dd930e3445f37c79a1bd41b9015d1569dff19c265bc9a642966b6d",
+      "source_bytes": 732356,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "b00321209f8aa5edc393ac9bf1657e7855d4d758dd879cf3fc0ab3ed2cc02254",
+      "bytes": 5251371,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.726
+    },
+    {
+      "path": "photos/item/item_healing_salve.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_healing_salve.jpg",
+      "source_sha256": "984765bdf167585054e1405de106475398f894e8c060cd7dbac46ca4cdaec3c5",
+      "source_bytes": 694511,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "9cfff4f054335bd644cd23cc010ce2a6f8ef22914856b02947c2da051bc35e10",
+      "bytes": 4979738,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.896
+    },
+    {
+      "path": "photos/item/item_idol.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_idol.jpg",
+      "source_sha256": "73d6fbd9eb8aa55faad075d5bab1c3e8683a8a8fc017e2beb0acfd7d8734c2ab",
+      "source_bytes": 656250,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "3c8379c42a2b8c932568f6c37b54d1fed67c3316841568a06f565590c9820662",
+      "bytes": 4581164,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.659
+    },
+    {
+      "path": "photos/item/item_lucky_stone.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_lucky_stone.jpg",
+      "source_sha256": "7ff0a459e8a887a503ce30cb82d82c668b5ff0b59f11b6183987ecaa22ad86bb",
+      "source_bytes": 598367,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "23fd502735fc9eff05a62ea4bce890bed0d2e516be302028f52ffe3b2d55d604",
+      "bytes": 4235961,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.728
+    },
+    {
+      "path": "photos/item/item_medical_kit.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_medical_kit.jpg",
+      "source_sha256": "6c3f9a847d70ef6ac0a27bcc88474fe73a02b4b3daea2f0dc0563db44a99ddc3",
+      "source_bytes": 642313,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "ae424e0e52e443d6e93bb301f3c1656dfcb3030b8a38248c18a03c444efc430f",
+      "bytes": 4509431,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.782
+    },
+    {
+      "path": "photos/item/item_music_box.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_music_box.jpg",
+      "source_sha256": "6c43977daf4cc3c5d9b8bb199d4fb62dae2b0febf03f5b62c0d646ca1d46ccec",
+      "source_bytes": 724194,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "86c6d261418e53514038777ee7bb87502b5cadd319f73cf2cd4d6500698f6335",
+      "bytes": 5176832,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.79
+    },
+    {
+      "path": "photos/item/item_pickpockets_gloves.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_pickpockets_gloves.jpg",
+      "source_sha256": "54b86020d2f036009a8ca80afbc83393eab1a45e421b360f77821db5307ccfeb",
+      "source_bytes": 618287,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "c0832f9c0cefbbdc6b4d001ee4afd03303c7317d79e59df7eaf79115df0488f8",
+      "bytes": 4307486,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.956
+    },
+    {
+      "path": "photos/item/item_puzzle_box.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_puzzle_box.jpg",
+      "source_sha256": "60217a7b3581aa7854e37a2788751ef1fa3c8f5e44eb4cc5e5da91404e8d7b4e",
+      "source_bytes": 743186,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "2f130827b4dc3a849e15c5a1b81183647721ec893496e567a12e85103ed4f630",
+      "bytes": 5320684,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.789
+    },
+    {
+      "path": "photos/item/item_rabbit_foot.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_rabbit_foot.jpg",
+      "source_sha256": "be53296d55626222aa91a7336eee2409fc55cd57f73bbd0e697bc670a65cc6cd",
+      "source_bytes": 674092,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "87fe759e79b6adefb2ae4e8a61ae7d8fa1792fbbc0462066afd3232146a67308",
+      "bytes": 4874965,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.864
+    },
+    {
+      "path": "photos/item/item_revolver.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_revolver.jpg",
+      "source_sha256": "61df3b78f92a4aadf64006ae3a560464e8b2bbe2392889eb737695151c953885",
+      "source_bytes": 700596,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "5faade3c496ba358cc178bae5e9a419a46709a4940b056140ac2d02989e9664e",
+      "bytes": 4951690,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.781
+    },
+    {
+      "path": "photos/item/item_sacrificial_dagger.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_sacrificial_dagger.jpg",
+      "source_sha256": "f52701cefc9ddf90d383944d6578cb1752b341f07174d5a0c813d42485837143",
+      "source_bytes": 694956,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "759c9413a96fa12913afc701a45252412295590c12ee218cb0d51db37f2be4c5",
+      "bytes": 4950851,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.842
+    },
+    {
+      "path": "photos/item/item_smelling_salts.png",
+      "category": "item",
+      "backup": "photos/_source_jpeg/item/item_smelling_salts.jpg",
+      "source_sha256": "3ff551cadb1e154549c75c33bb74e557c28d5be3a1565be5ff7ef532553f6a44",
+      "source_bytes": 663510,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "6a71b304cf25e7f49d3d5001be245898f98d874284a014f8978b39f605ae2001",
+      "bytes": 4649515,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.908
+    },
+    {
+      "path": "photos/omen/omen_bite.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_bite.jpg",
+      "source_sha256": "840992f0bc6d37ee0141130e7e98f9e47d1406bb44573e0948c8b1bc12904619",
+      "source_bytes": 689092,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "361daa8be6b272fecee172ba8beb6301a19805f9ebb5560ee74432d7caa8b616",
+      "bytes": 4855968,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.773
+    },
+    {
+      "path": "photos/omen/omen_book.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_book.jpg",
+      "source_sha256": "22ab18fd87265de113fe2722ed694a1a407bf223bea052f6fe8fd079e11b42d6",
+      "source_bytes": 748899,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "51cf5965f0ea696592fc5d0bc4ff43e7f05c333042f355a886649e4f76176cc2",
+      "bytes": 5279010,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.676
+    },
+    {
+      "path": "photos/omen/omen_crystal_ball.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_crystal_ball.jpg",
+      "source_sha256": "b14894dba047c4583f23ffc72cad834a156a69090a9632f5e66ccce43b33412e",
+      "source_bytes": 632837,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "1c71e920309fa1222ea4d217e67ccff147465bf8a56f1a0f802c485cc393f698",
+      "bytes": 4568211,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.934
+    },
+    {
+      "path": "photos/omen/omen_dog.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_dog.jpg",
+      "source_sha256": "8d117575deb61f5ea0f6912a5e2a95e050a821655d3da82f0aba70d2800ad279",
+      "source_bytes": 660179,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "b2cca6aac88701c8bd32db4ae5185db28750d44dff1b8baca27d88e8270d52f0",
+      "bytes": 4595991,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.899
+    },
+    {
+      "path": "photos/omen/omen_girl.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_girl.jpg",
+      "source_sha256": "95339e4578f3d8b49a94a902c98fe1f0c6306b282df792eadc1dadede1a32cce",
+      "source_bytes": 644178,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "4df5b560c1da06e8c69febe40e238f0238fd99b88f68358cf638f0e300dadd39",
+      "bytes": 4474085,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.896
+    },
+    {
+      "path": "photos/omen/omen_holy_symbol.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_holy_symbol.jpg",
+      "source_sha256": "e2ee722bee081ba62ad660e9fda2ecc35b5b82ae28c5bd02b56b7b627e86605b",
+      "source_bytes": 711148,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "69c62151d303b8f496ee97080ed7d0bd5a319bab39c5e5b1692ade2de3690814",
+      "bytes": 4910850,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.784
+    },
+    {
+      "path": "photos/omen/omen_madman.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_madman.jpg",
+      "source_sha256": "02494cc15e956f808bbcfaed43b990a00908cae03f4ddeec1e0dc4670c6599bd",
+      "source_bytes": 702777,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "ffcc7025c302c556a52dae5e701f588906fb0cb8899c57d5a94405878757ea73",
+      "bytes": 4938594,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.799
+    },
+    {
+      "path": "photos/omen/omen_mask.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_mask.jpg",
+      "source_sha256": "d715323ea83c1e8c87e51928c0431565da9d66ccf99b46a57708f8eeb9ce38eb",
+      "source_bytes": 567565,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "120ec1cee666d1818a570b73b9c6342e5abf358fe230a3419069fef080491194",
+      "bytes": 3931107,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.674
+    },
+    {
+      "path": "photos/omen/omen_medallion.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_medallion.jpg",
+      "source_sha256": "b2e030b34073426f2ae0e988abafd40b982418b20eb7f1f94c0265dd6bff016f",
+      "source_bytes": 667171,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "160428c3a9cb48083595e6c43c23b717fc45eb26fdc4b80870c7ce90c83713fd",
+      "bytes": 4732960,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.869
+    },
+    {
+      "path": "photos/omen/omen_ring.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_ring.jpg",
+      "source_sha256": "fd012070442858a08fc77acf433ac25557104f526b0efe15eeea801437ad7548",
+      "source_bytes": 699219,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "8349d009aff4581bee34c9b6c3935a4dd11caa798bee13a21be4bc7127b96c49",
+      "bytes": 4815906,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.803
+    },
+    {
+      "path": "photos/omen/omen_skull.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_skull.jpg",
+      "source_sha256": "85a7d4d0f3095374137786fc11df953ca84d698736c5fa8b500fc10857d9ff32",
+      "source_bytes": 708410,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "12e7ca0cfed6c56da129fa2f99898233cf5b62da1f1ea117542cd6bac4aad94c",
+      "bytes": 5153633,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.762
+    },
+    {
+      "path": "photos/omen/omen_spear.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_spear.jpg",
+      "source_sha256": "b1d728a66f5748c2bb4f14dcb78184fe94b1ff35e6bedc9129253b926ee41283",
+      "source_bytes": 687188,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "ffe753093a71e4fb626af4c7f5bd9983560b8bc04d83a50e0d606ffd4d76b6b1",
+      "bytes": 4930465,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.807
+    },
+    {
+      "path": "photos/omen/omen_spirit_board.png",
+      "category": "omen",
+      "backup": "photos/_source_jpeg/omen/omen_spirit_board.jpg",
+      "source_sha256": "a3e532d6b81d5d91c5fb8048ed8ee6ccc5b67029055d3d12366daf884a6f7e65",
+      "source_bytes": 810667,
+      "source_format": "JPEG",
+      "source_mode": "RGB",
+      "sha256": "fd64637aface64190c5993fcea610d26843ecd024f406f53ef6cb45db9a3c8b4",
+      "bytes": 5909103,
+      "width": 1773,
+      "height": 2364,
+      "dimensions": "1773x2364",
+      "pixel_equality": {
+        "max_diff": 0,
+        "mad": 0.0,
+        "pixels": 12574116,
+        "equal": true,
+        "size_left": [
+          1773,
+          2364
+        ],
+        "size_right": [
+          1773,
+          2364
+        ]
+      },
+      "encode_seconds": 1.594
+    }
+  ],
+  "failures": []
+}

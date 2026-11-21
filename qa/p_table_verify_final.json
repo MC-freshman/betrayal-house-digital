@@ -1,0 +1,1505 @@
+﻿{
+  "tool": "verify_p_table_execution.py",
+  "readonly": true,
+  "root": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill",
+  "snapshot_time": "2026-11-21T19:51:01",
+  "environment": {
+    "python": "3.9.13",
+    "platform": "Windows-10-10.0.26300-SP0",
+    "pillow": "11.3.0",
+    "tkinter": "available",
+    "coverage": "absent"
+  },
+  "inputs": {
+    "p_table": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\assets\\p_table.json",
+    "p_table_sha256": "5d459a8b82737c001f0101c3027b0fdcf5886b259dbce25c0b85177a54bcbc2f",
+    "p_table_columns": 33,
+    "p_table_records": 142,
+    "contract_json": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\qa\\contract_result.json",
+    "verify_report": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\assets\\validation_report.json"
+  },
+  "summary": {
+    "counts": {
+      "PASS": 64,
+      "CONFLICT": 1,
+      "NOT_RUN": 17
+    },
+    "case_counts": {
+      "PASS": 54,
+      "CONFLICT": 1,
+      "NOT_RUN": 9
+    },
+    "cases": [
+      {
+        "tc": "TC-PT-00a",
+        "priority": "P2",
+        "status": "PASS",
+        "checks": [
+          "ENV-01"
+        ]
+      },
+      {
+        "tc": "TC-PT-00b",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "ENV-02"
+        ]
+      },
+      {
+        "tc": "TC-PT-01",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "DATA-01",
+          "DATA-02",
+          "SCHEMA-01"
+        ]
+      },
+      {
+        "tc": "TC-PT-02",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "DATA-03"
+        ]
+      },
+      {
+        "tc": "TC-PT-03",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "DATA-04"
+        ]
+      },
+      {
+        "tc": "TC-PT-26",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "DATA-05"
+        ]
+      },
+      {
+        "tc": "TC-PT-04",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "DATA-06",
+          "REG-03"
+        ]
+      },
+      {
+        "tc": "TC-PT-05",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "DATA-07"
+        ]
+      },
+      {
+        "tc": "TC-PT-07",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "DATA-08"
+        ]
+      },
+      {
+        "tc": "TC-PT-08",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "DATA-09",
+          "DATA-12",
+          "RUNTIME-04"
+        ]
+      },
+      {
+        "tc": "TC-PT-09",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "DATA-10",
+          "REG-08"
+        ]
+      },
+      {
+        "tc": "TC-PT-10",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "DATA-11"
+        ]
+      },
+      {
+        "tc": "TC-PT-58",
+        "priority": "P2",
+        "status": "PASS",
+        "checks": [
+          "DATA-13"
+        ]
+      },
+      {
+        "tc": "TC-PT-22",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "DATA-14"
+        ]
+      },
+      {
+        "tc": "TC-PT-20",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "DATA-15"
+        ]
+      },
+      {
+        "tc": "TC-PT-23",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "SCHEMA-02",
+          "SCHEMA-03"
+        ]
+      },
+      {
+        "tc": "TC-PT-52",
+        "priority": "P2",
+        "status": "CONFLICT",
+        "checks": [
+          "SCHEMA-04"
+        ]
+      },
+      {
+        "tc": "TC-PT-53",
+        "priority": "P2",
+        "status": "PASS",
+        "checks": [
+          "SCHEMA-05"
+        ]
+      },
+      {
+        "tc": "TC-PT-39",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "SCHEMA-06"
+        ]
+      },
+      {
+        "tc": "TC-PT-06",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "RUNTIME-01",
+          "RUNTIME-02",
+          "RUNTIME-03"
+        ]
+      },
+      {
+        "tc": "TC-PT-60",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "REG-01"
+        ]
+      },
+      {
+        "tc": "TC-PT-21",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "REG-02"
+        ]
+      },
+      {
+        "tc": "TC-PT-14",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "REG-04"
+        ]
+      },
+      {
+        "tc": "TC-PT-12",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "REG-05"
+        ]
+      },
+      {
+        "tc": "TC-PT-11",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "REG-06"
+        ]
+      },
+      {
+        "tc": "TC-PT-13",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "REG-07"
+        ]
+      },
+      {
+        "tc": "TC-PT-27",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "REG-09"
+        ]
+      },
+      {
+        "tc": "TC-PT-42",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "REG-10",
+          "REG-11"
+        ]
+      },
+      {
+        "tc": "TC-PT-15",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "NEG-01"
+        ]
+      },
+      {
+        "tc": "TC-PT-16",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "NEG-02"
+        ]
+      },
+      {
+        "tc": "TC-PT-38",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "NEG-03"
+        ]
+      },
+      {
+        "tc": "TC-PT-17",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "NEG-04"
+        ]
+      },
+      {
+        "tc": "TC-PT-35",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "NEG-05"
+        ]
+      },
+      {
+        "tc": "TC-PT-36",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "NEG-06"
+        ]
+      },
+      {
+        "tc": "TC-PT-37",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "NEG-07"
+        ]
+      },
+      {
+        "tc": "TC-PT-56",
+        "priority": "P2",
+        "status": "PASS",
+        "checks": [
+          "NEG-08"
+        ]
+      },
+      {
+        "tc": "TC-PT-34",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "NEG-09"
+        ]
+      },
+      {
+        "tc": "TC-PT-40",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "REPEAT-01"
+        ]
+      },
+      {
+        "tc": "TC-PT-24",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "REPEAT-02"
+        ]
+      },
+      {
+        "tc": "TC-PT-41",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "REPEAT-03"
+        ]
+      },
+      {
+        "tc": "TC-PT-57",
+        "priority": "P2",
+        "status": "PASS",
+        "checks": [
+          "REPEAT-04"
+        ]
+      },
+      {
+        "tc": "TC-PT-28",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "UI-01"
+        ]
+      },
+      {
+        "tc": "TC-PT-29",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "UI-02"
+        ]
+      },
+      {
+        "tc": "TC-PT-30",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "UI-03"
+        ]
+      },
+      {
+        "tc": "TC-PT-31",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "UI-04"
+        ]
+      },
+      {
+        "tc": "TC-PT-32",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "UI-05"
+        ]
+      },
+      {
+        "tc": "TC-PT-33",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "UI-06"
+        ]
+      },
+      {
+        "tc": "TC-PT-55",
+        "priority": "P2",
+        "status": "NOT_RUN",
+        "checks": [
+          "UI-07"
+        ]
+      },
+      {
+        "tc": "TC-PT-46",
+        "priority": "P1",
+        "status": "NOT_RUN",
+        "checks": [
+          "PERF-01",
+          "PERF-02"
+        ]
+      },
+      {
+        "tc": "TC-PT-62",
+        "priority": "P2",
+        "status": "NOT_RUN",
+        "checks": [
+          "PERF-03"
+        ]
+      },
+      {
+        "tc": "TC-PT-43",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "PERF-04"
+        ]
+      },
+      {
+        "tc": "TC-PT-44",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "PERF-05"
+        ]
+      },
+      {
+        "tc": "TC-PT-47",
+        "priority": "P1",
+        "status": "NOT_RUN",
+        "checks": [
+          "PERF-06",
+          "PERF-07",
+          "PERF-08"
+        ]
+      },
+      {
+        "tc": "TC-PT-54",
+        "priority": "P2",
+        "status": "NOT_RUN",
+        "checks": [
+          "PERF-09"
+        ]
+      },
+      {
+        "tc": "TC-PT-45",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "PERF-10"
+        ]
+      },
+      {
+        "tc": "TC-PT-48",
+        "priority": "P1",
+        "status": "NOT_RUN",
+        "checks": [
+          "PERF-11",
+          "PERF-12",
+          "PERF-13",
+          "PERF-14",
+          "PERF-15"
+        ]
+      },
+      {
+        "tc": "TC-PT-18",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "LEGACY-01"
+        ]
+      },
+      {
+        "tc": "TC-PT-19",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "LEGACY-02"
+        ]
+      },
+      {
+        "tc": "TC-PT-51",
+        "priority": "P1",
+        "status": "NOT_RUN",
+        "checks": [
+          "LEGACY-03",
+          "LEGACY-05"
+        ]
+      },
+      {
+        "tc": "TC-PT-61",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "LEGACY-04"
+        ]
+      },
+      {
+        "tc": "TC-PT-59",
+        "priority": "P1",
+        "status": "PASS",
+        "checks": [
+          "LEGACY-06"
+        ]
+      },
+      {
+        "tc": "TC-PT-49",
+        "priority": "P1",
+        "status": "NOT_RUN",
+        "checks": [
+          "COV-01"
+        ]
+      },
+      {
+        "tc": "TC-PT-50",
+        "priority": "P1",
+        "status": "NOT_RUN",
+        "checks": [
+          "COV-02"
+        ]
+      },
+      {
+        "tc": "TC-PT-25",
+        "priority": "P0",
+        "status": "PASS",
+        "checks": [
+          "SAFE-01"
+        ]
+      }
+    ],
+    "rates": {
+      "P0": {
+        "total": 27,
+        "executed": 27,
+        "pass": 27,
+        "fail": 0,
+        "not_run": 0,
+        "conflict": 0,
+        "rate": 1.0
+      },
+      "P1": {
+        "total": 28,
+        "executed": 22,
+        "pass": 22,
+        "fail": 0,
+        "not_run": 6,
+        "conflict": 0,
+        "rate": 1.0
+      },
+      "P2": {
+        "total": 9,
+        "executed": 5,
+        "pass": 5,
+        "fail": 0,
+        "not_run": 3,
+        "conflict": 1,
+        "rate": 1.0
+      }
+    },
+    "gates": {
+      "P0": true,
+      "P1": true,
+      "P2": true
+    },
+    "thresholds": {
+      "P0": 1.0,
+      "P1": 0.95,
+      "P2": 0.9
+    },
+    "failed": [],
+    "not_run": [
+      "TC-PT-55",
+      "TC-PT-46",
+      "TC-PT-62",
+      "TC-PT-47",
+      "TC-PT-54",
+      "TC-PT-48",
+      "TC-PT-51",
+      "TC-PT-49",
+      "TC-PT-50"
+    ],
+    "conflicts": [
+      "TC-PT-52"
+    ],
+    "hard_gaps": [],
+    "soft_gaps": [
+      "性能 15 项中 12 项未测：PERF-01, PERF-02, PERF-03, PERF-06, PERF-07, PERF-08, PERF-09, PERF-11, PERF-12, PERF-13, PERF-14, PERF-15",
+      "行/分支覆盖率未测（coverage 不可用 + 测试套件会写项目文件）",
+      "实现方 unittest 未在只读阶段执行（会写 assets/fixtures）"
+    ],
+    "required_gaps": [
+      "性能 15 项中 12 项未测：PERF-01, PERF-02, PERF-03, PERF-06, PERF-07, PERF-08, PERF-09, PERF-11, PERF-12, PERF-13, PERF-14, PERF-15",
+      "行/分支覆盖率未测（coverage 不可用 + 测试套件会写项目文件）",
+      "实现方 unittest 未在只读阶段执行（会写 assets/fixtures）"
+    ],
+    "completion": {
+      "achieved": false,
+      "reasons": [
+        "性能 15 项中 12 项未测：PERF-01, PERF-02, PERF-03, PERF-06, PERF-07, PERF-08, PERF-09, PERF-11, PERF-12, PERF-13, PERF-14, PERF-15",
+        "行/分支覆盖率未测（coverage 不可用 + 测试套件会写项目文件）",
+        "实现方 unittest 未在只读阶段执行（会写 assets/fixtures）"
+      ]
+    },
+    "verdict": "INCOMPLETE"
+  },
+  "checks": [
+    {
+      "id": "ENV-01",
+      "tc": "TC-PT-00a",
+      "title": "环境与工具链",
+      "priority": "P2",
+      "status": "PASS",
+      "detail": "python=3.9.13 pillow=11.3.0 tk=available coverage=absent os=Windows-10-10.0.26300-SP0",
+      "evidence": []
+    },
+    {
+      "id": "ENV-02",
+      "tc": "TC-PT-00b",
+      "title": "关键产物齐全",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "关键产物齐全（10 项）",
+      "evidence": []
+    },
+    {
+      "id": "DATA-01",
+      "tc": "TC-PT-01",
+      "title": "P 表可解析且 142 行",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "records=142，schema=1.2.0，generated_at=2026-11-21",
+      "evidence": []
+    },
+    {
+      "id": "DATA-02",
+      "tc": "TC-PT-01",
+      "title": "stats 与逐行复算自洽",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "stats 与逐行复算逐项一致（records=142，0/95/47/0/0）",
+      "evidence": []
+    },
+    {
+      "id": "DATA-03",
+      "tc": "TC-PT-02",
+      "title": "五类计数 12/50/45/22/13",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "12/50/13/22/45，无未知枚举",
+      "evidence": []
+    },
+    {
+      "id": "DATA-04",
+      "tc": "TC-PT-03",
+      "title": "availability 0/95/47/0/0 且 partial 不冒充 usable",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "usable=0 / partial=95 / missing=47 / corrupted=0 / duplicate=0；partial 未越权为 usable",
+      "evidence": []
+    },
+    {
+      "id": "DATA-05",
+      "tc": "TC-PT-26",
+      "title": "record_id 唯一/前缀/段号连续",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "142 个 record_id 唯一、前缀正确、段号连续；target_ref 唯一",
+      "evidence": []
+    },
+    {
+      "id": "DATA-06",
+      "tc": "TC-PT-04",
+      "title": "content_refs 284 条双向一致",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "content_refs 284 条双向一致（runtime_key ↔ content_ref）；142 个 content_ref 唯一",
+      "evidence": []
+    },
+    {
+      "id": "DATA-07",
+      "tc": "TC-PT-05",
+      "title": "映射 entries 95 / unresolved 47 双向覆盖",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "entries=95 ↔ partial=95；unresolved=47 ↔ missing=47；path=source_path",
+      "evidence": []
+    },
+    {
+      "id": "DATA-08",
+      "tc": "TC-PT-07",
+      "title": "95 partial 源文件事实",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "95/95 源文件存在、逐段大小写一致、JPEG 魔数 + .png 扩展名、partial 未冒充 usable",
+      "evidence": []
+    },
+    {
+      "id": "DATA-09",
+      "tc": "TC-PT-08",
+      "title": "47 missing 登记完整",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "47 missing（角色 12 / 房间 1 / 事件 34）路径留空、note 齐全、不伪造源事实",
+      "evidence": []
+    },
+    {
+      "id": "DATA-10",
+      "tc": "TC-PT-09",
+      "title": "16 fallback 语义",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "16/16 fallback_ref=P-EVT-###，目标为可用事件卡且 runtime_path 一致",
+      "evidence": []
+    },
+    {
+      "id": "DATA-11",
+      "tc": "TC-PT-10",
+      "title": "31 pending_missing 语义",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "31/31 pending_missing：fallback_ref 为空、runtime_status=placeholder、指向 3 张占位图",
+      "evidence": []
+    },
+    {
+      "id": "DATA-12",
+      "tc": "TC-PT-08",
+      "title": "47 missing 运行时路由",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "31 条走 3 张占位图 + 16 条走已有事件图；47 条运行时均为真实 PNG",
+      "evidence": []
+    },
+    {
+      "id": "DATA-13",
+      "tc": "TC-PT-58",
+      "title": "F-08 字面判据与 V09 语义冲突",
+      "priority": "P2",
+      "status": "PASS",
+      "detail": "F-08 字面判据满足：47 条 missing 全部指向 3 张占位图",
+      "evidence": []
+    },
+    {
+      "id": "DATA-14",
+      "tc": "TC-PT-22",
+      "title": "content.py sha256 与集合同步",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "content.py sha256 一致；7 集合 12/39/11/13/22/11/34=142；无损坏/孤立源文件",
+      "evidence": []
+    },
+    {
+      "id": "DATA-15",
+      "tc": "TC-PT-20",
+      "title": "95 源文件 sha256/bytes 三方一致",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "142 源文件与 photos_inventory/P 表 sha256/bytes 三方一致；AIGC 事实按原件（备份）核对；130 个备份在独立目录且不计入源文件；无孤立",
+      "evidence": []
+    },
+    {
+      "id": "SCHEMA-01",
+      "tc": "TC-PT-01",
+      "title": "CSV BOM/行数/表头 = JSON 列",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "CSV BOM + 142 行；CSV 表头 = JSON schema.columns = 实现 33 列",
+      "evidence": []
+    },
+    {
+      "id": "SCHEMA-02",
+      "tc": "TC-PT-23",
+      "title": "16 个必填字段齐全",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "16 个必填字段在 142 行全部存在",
+      "evidence": []
+    },
+    {
+      "id": "SCHEMA-03",
+      "tc": "TC-PT-23",
+      "title": "33 列 = 26 业务（含 runtime_key）+ 7 发布；规范 28 列全含",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "33 列 = 26 业务列（target_ref + runtime_key 并存）+ 7 发布列；发布档齐全，规范 §6.1 的 28 列全部包含",
+      "evidence": []
+    },
+    {
+      "id": "SCHEMA-04",
+      "tc": "TC-PT-52",
+      "title": "列序与规范 §6.1 的差异",
+      "priority": "P2",
+      "status": "CONFLICT",
+      "detail": "规范 §6.1 仍是 28 列旧序（第 5 位 dimensions），实现为 33 列（第 5 位 width）；列集完整但列序未回写规范，属文档/规范待裁决，不计入代码缺陷",
+      "evidence": []
+    },
+    {
+      "id": "SCHEMA-05",
+      "tc": "TC-PT-53",
+      "title": "契约脚本定义 32 项 C01-C32",
+      "priority": "P2",
+      "status": "PASS",
+      "detail": "契约脚本定义 32 项检查 C01-C32",
+      "evidence": []
+    },
+    {
+      "id": "SCHEMA-06",
+      "tc": "TC-PT-39",
+      "title": "CSV/JSON 142×33 逐字段等价",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "142 行 × 33 列逐字段等价",
+      "evidence": []
+    },
+    {
+      "id": "RUNTIME-01",
+      "tc": "TC-PT-06",
+      "title": "98 个运行时 PNG 清单",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "142 个去重运行时 PNG：rooms=50 / cards=80 / characters=12；另有 placeholders=3 张兜底图（无行指向）",
+      "evidence": []
+    },
+    {
+      "id": "RUNTIME-02",
+      "tc": "TC-PT-06",
+      "title": "运行时 PNG 真实性与尺寸",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "98/98 真实 PNG；房间 512×512、卡牌 480×672、角色占位 320×320",
+      "evidence": []
+    },
+    {
+      "id": "RUNTIME-03",
+      "tc": "TC-PT-06",
+      "title": "3 张占位图规格",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "3 张占位图存在且尺寸为 320×320 / 512×512 / 480×672",
+      "evidence": []
+    },
+    {
+      "id": "RUNTIME-04",
+      "tc": "TC-PT-08",
+      "title": "runtime_path 不越界/大小写一致",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "142 条 runtime_path 均在 assets 内、无 ..、逐段大小写一致",
+      "evidence": []
+    },
+    {
+      "id": "REG-01",
+      "tc": "TC-PT-60",
+      "title": "load 不读图片/不 import PIL",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "load 仅读 JSON/建索引，未调用 png_size；顶层无 PIL/tkinter",
+      "evidence": []
+    },
+    {
+      "id": "REG-02",
+      "tc": "TC-PT-21",
+      "title": "registry 计数与 summary",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "len=142、missing=0、五类 by_type=12/50/13/22/45、summary 142/0/0",
+      "evidence": []
+    },
+    {
+      "id": "REG-03",
+      "tc": "TC-PT-04",
+      "title": "全键空间解析",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "target_ref=142 / runtime_key=142 / record_id=142 / content_ref=142 / 裸 id=130 全部可解析",
+      "evidence": []
+    },
+    {
+      "id": "REG-04",
+      "tc": "TC-PT-14",
+      "title": "脏键/路径穿越返回 None",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "None/空串/空白/非字符串/未知键/../ 与路径分隔符均返回 None，不抛异常",
+      "evidence": []
+    },
+    {
+      "id": "REG-05",
+      "tc": "TC-PT-12",
+      "title": "大小写不敏感",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "10 行样本的 target_ref/record_id/content_ref/裸 id 大小写变体均命中同一 record_id",
+      "evidence": []
+    },
+    {
+      "id": "REG-06",
+      "tc": "TC-PT-11",
+      "title": "角色双面键空间",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "6 角色 × 2 面：f0/f1 record_id 不同，character:card_N:fN、card#fN、face content_ref、target_ref @fN 四类键均可解析；无面别返回 None",
+      "evidence": []
+    },
+    {
+      "id": "REG-07",
+      "tc": "TC-PT-13",
+      "title": "裸 id 不跨类别",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "真实数据无跨类别裸 id 冲突；合成 omen/event 同名 id 解析稳定（首命中，不串号）",
+      "evidence": []
+    },
+    {
+      "id": "REG-08",
+      "tc": "TC-PT-09",
+      "title": "fallback_ref registry 语义",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "16 条 fallback_ref 均解析到非 missing 事件卡，runtime_path 与目标一致",
+      "evidence": []
+    },
+    {
+      "id": "REG-09",
+      "tc": "TC-PT-27",
+      "title": "validate 返回空列表不抛异常",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "validate(assets) 与 validate() 均返回空列表、不抛异常",
+      "evidence": []
+    },
+    {
+      "id": "REG-10",
+      "tc": "TC-PT-42",
+      "title": "映射回退/缺清单/缺 records",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "映射回退加载 142；缺清单 FileNotFoundError 含路径；缺 records 且无同目录表 ValueError",
+      "evidence": []
+    },
+    {
+      "id": "REG-11",
+      "tc": "TC-PT-42",
+      "title": "重复键显式 ValueError",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "重复 record_id / target_ref 均显式 ValueError，不再 last-wins",
+      "evidence": []
+    },
+    {
+      "id": "NEG-01",
+      "tc": "TC-PT-15",
+      "title": "清单不存在 FileNotFoundError",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "不存在清单抛 FileNotFoundError，消息含路径",
+      "evidence": []
+    },
+    {
+      "id": "NEG-02",
+      "tc": "TC-PT-16",
+      "title": "缺 records 且无同目录表 ValueError",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "run2_architecture.json 缺 records 且无同目录 P 表，抛 ValueError",
+      "evidence": []
+    },
+    {
+      "id": "NEG-03",
+      "tc": "TC-PT-38",
+      "title": "坏 JSON 抛 ValueError",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "非 JSON 清单抛 ValueError/JSONDecodeError",
+      "evidence": []
+    },
+    {
+      "id": "NEG-04",
+      "tc": "TC-PT-17",
+      "title": "运行时文件缺失 runtime_file_absent",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "运行时文件缺失产出 runtime_file_absent，进程不崩",
+      "evidence": [
+        "runtime_file_absent"
+      ]
+    },
+    {
+      "id": "NEG-05",
+      "tc": "TC-PT-35",
+      "title": "坏 PNG/尺寸不符",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "JPEG 魔数/截断 PNG 触发 runtime_not_png；规格 511×512 触发 runtime_size_mismatch",
+      "evidence": []
+    },
+    {
+      "id": "NEG-06",
+      "tc": "TC-PT-36",
+      "title": "missing_has_source / pending fallback / fallback 异常",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "missing_has_source / pending_missing_with_fallback / fallback_unresolved / fallback_not_record_id / 空引用均被检出",
+      "evidence": []
+    },
+    {
+      "id": "NEG-07",
+      "tc": "TC-PT-37",
+      "title": "assets 外路径 runtime_outside_assets_root",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "assets 外真实 PNG 触发 runtime_outside_assets_root",
+      "evidence": [
+        "runtime_outside_assets_root",
+        "runtime_size_mismatch"
+      ]
+    },
+    {
+      "id": "NEG-08",
+      "tc": "TC-PT-56",
+      "title": "runtime/note/placeholder 缺失",
+      "priority": "P2",
+      "status": "PASS",
+      "detail": "runtime_path_missing / missing_note_absent / placeholder_path_suspect 均被检出",
+      "evidence": []
+    },
+    {
+      "id": "NEG-09",
+      "tc": "TC-PT-34",
+      "title": "删除 1 条计数边界",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "删除 1 条合成 pending / 1 条 room 后 len、missing()、by_type() 同步减 1，无缓存残留",
+      "evidence": []
+    },
+    {
+      "id": "REPEAT-01",
+      "tc": "TC-PT-40",
+      "title": "两次读取字节/归一化哈希一致",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "p_table.json / p_table.csv 两次读取字节与归一化哈希一致",
+      "evidence": []
+    },
+    {
+      "id": "REPEAT-02",
+      "tc": "TC-PT-24",
+      "title": "内存重建 = 磁盘 P 表",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "内存重建 142 行 × 33 列与磁盘逐字段一致；stats 一致（耗时 0.29s）",
+      "evidence": []
+    },
+    {
+      "id": "REPEAT-03",
+      "tc": "TC-PT-41",
+      "title": "二次 scan/build 指纹一致",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "95 文件二次扫描与 142 行二次构建指纹一致（首次 0.27s）",
+      "evidence": []
+    },
+    {
+      "id": "REPEAT-04",
+      "tc": "TC-PT-57",
+      "title": "排除 generated_at 的归一化哈希",
+      "priority": "P2",
+      "status": "PASS",
+      "detail": "排除 generated_at 后归一化 payload 哈希稳定：754a55f48b2f672b",
+      "evidence": [
+        "754a55f48b2f672b36db53a6c2e4b8da6e3218fe5ee7cca348719af63bec9f0c"
+      ]
+    },
+    {
+      "id": "UI-01",
+      "tc": "TC-PT-28",
+      "title": "绑定模块接口",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "ui_asset_binding.py 可无显示导入；load_asset_photo/load_photo_for_ref/AssetImageCache/缓存统计齐全",
+      "evidence": []
+    },
+    {
+      "id": "UI-02",
+      "tc": "TC-PT-29",
+      "title": "ui.py 接入绑定层",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "ui.py 已出现资源绑定引用：{'ui_asset_binding': 4, 'load_asset_photo': 5, 'AssetRegistry': 5, 'PhotoImage': 2, 'assets/': 3}",
+      "evidence": [
+        "{'ui_asset_binding': 4, 'load_asset_photo': 5, 'AssetRegistry': 5, 'PhotoImage': 2, 'ImageTk': 0, 'assets/': 3}"
+      ]
+    },
+    {
+      "id": "UI-03",
+      "tc": "TC-PT-30",
+      "title": "128/240×336 尺寸",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "_fit_size 支持 512→128 与 480×672→240×336；ui.py 使用 128/240×336",
+      "evidence": []
+    },
+    {
+      "id": "UI-04",
+      "tc": "TC-PT-31",
+      "title": "LRU 缓存与计数",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "AssetImageCache LRU：容量 2 淘汰最旧；hits/misses/evictions/size 可观测",
+      "evidence": []
+    },
+    {
+      "id": "UI-05",
+      "tc": "TC-PT-32",
+      "title": "未知键/占位候选",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "未知/None 键返回 None 且计入 miss；角色占位候选命中 character_missing.png",
+      "evidence": []
+    },
+    {
+      "id": "UI-06",
+      "tc": "TC-PT-33",
+      "title": "Tk 冒烟/解码回落",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "Tk 冒烟：房间 128×128、卡牌 240×336、重复绑定命中缓存",
+      "evidence": []
+    },
+    {
+      "id": "UI-07",
+      "tc": "TC-PT-55",
+      "title": "缺图可辨识/对比度/DPI（人工）",
+      "priority": "P2",
+      "status": "NOT_RUN",
+      "detail": "人工项：缺图占位观感、对比度 ≥3:1/≥4.5:1、100%/125%/150% DPI 需截图实测",
+      "evidence": []
+    },
+    {
+      "id": "PERF-01",
+      "tc": "TC-PT-46",
+      "title": "pipeline --stage ptable 耗时",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "禁止写文件：--stage ptable 会写 assets/；只读验收不执行。写使能阶段命令见计划 §4.1",
+      "evidence": []
+    },
+    {
+      "id": "PERF-02",
+      "tc": "TC-PT-46",
+      "title": "pipeline --stage placeholders 耗时",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "禁止写文件：--stage placeholders 会写 assets/；只读验收不执行。写使能阶段命令见计划 §4.1",
+      "evidence": []
+    },
+    {
+      "id": "PERF-03",
+      "tc": "TC-PT-62",
+      "title": "pipeline all 耗时",
+      "priority": "P2",
+      "status": "NOT_RUN",
+      "detail": "禁止写文件：--stage all 会写 assets/；只读验收不执行。写使能阶段命令见计划 §4.1",
+      "evidence": []
+    },
+    {
+      "id": "PERF-04",
+      "tc": "TC-PT-43",
+      "title": "AssetRegistry.load 耗时",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "load ×10：median=10.49ms p95=11.75ms（预算 150ms）",
+      "evidence": [
+        "load ×10：median=10.49ms p95=11.75ms（预算 150ms）"
+      ]
+    },
+    {
+      "id": "PERF-05",
+      "tc": "TC-PT-44",
+      "title": "10k resolve 耗时",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "10k resolve ×10：round p95=13.7ms（预算 500ms）；单次 p95=3.50us（预算 50us）",
+      "evidence": [
+        "10k resolve ×10：round p95=13.7ms（预算 500ms）；单次 p95=3.50us（预算 50us）"
+      ]
+    },
+    {
+      "id": "PERF-06",
+      "tc": "TC-PT-47",
+      "title": "verify_assets 全量耗时",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "禁止写文件：verify_assets.py 会写 assets/validation_report.json；只读验收不执行",
+      "evidence": []
+    },
+    {
+      "id": "PERF-07",
+      "tc": "TC-PT-47",
+      "title": "契约全量（含解码）耗时",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "未执行契约子进程（--run-contract 可只读运行）；含解码全量不代跑",
+      "evidence": []
+    },
+    {
+      "id": "PERF-08",
+      "tc": "TC-PT-47",
+      "title": "契约 --no-decode 耗时",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "未执行契约子进程（--run-contract 可只读运行）；保存的契约 JSON 不能代表当前耗时",
+      "evidence": []
+    },
+    {
+      "id": "PERF-09",
+      "tc": "TC-PT-54",
+      "title": "构建峰值 RSS",
+      "priority": "P2",
+      "status": "NOT_RUN",
+      "detail": "禁止写文件：all 构建会写 assets/；峰值 RSS 需写使能阶段采样",
+      "evidence": []
+    },
+    {
+      "id": "PERF-10",
+      "tc": "TC-PT-45",
+      "title": "load 峰值增量 RSS",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "load ×10 RSS 增量 7.40MB（预算 80MB；before=46.9MB after=54.3MB）",
+      "evidence": [
+        "load ×10 RSS 增量 7.40MB（预算 80MB；before=46.9MB after=54.3MB）"
+      ]
+    },
+    {
+      "id": "PERF-11",
+      "tc": "TC-PT-48",
+      "title": "UI 房间图首帧 512→128",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "需要 Tk 显示环境与 ui.py 实际接入；预算 0.120s，只读/无显示阶段不测",
+      "evidence": []
+    },
+    {
+      "id": "PERF-12",
+      "tc": "TC-PT-48",
+      "title": "UI 卡牌首帧 480×672→240×336",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "需要 Tk 显示环境与 ui.py 实际接入；预算 0.150s，只读/无显示阶段不测",
+      "evidence": []
+    },
+    {
+      "id": "PERF-13",
+      "tc": "TC-PT-48",
+      "title": "UI 缓存命中",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "需要 Tk 显示环境与 ui.py 实际接入；预算 0.016s，只读/无显示阶段不测",
+      "evidence": []
+    },
+    {
+      "id": "PERF-14",
+      "tc": "TC-PT-48",
+      "title": "一屏 12 图块批量绑定",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "需要 Tk 显示环境与 ui.py 实际接入；预算 0.400s，只读/无显示阶段不测",
+      "evidence": []
+    },
+    {
+      "id": "PERF-15",
+      "tc": "TC-PT-48",
+      "title": "冷启动到主界面",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "需要 Tk 显示环境与 ui.py 实际接入；预算 2.5s，只读/无显示阶段不测",
+      "evidence": []
+    },
+    {
+      "id": "LEGACY-01",
+      "tc": "TC-PT-18",
+      "title": "verify_assets 旧报告解析",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "verify_assets 17 项全部 pass；报告晚于全部输入",
+      "evidence": [
+        "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\assets\\validation_report.json"
+      ]
+    },
+    {
+      "id": "LEGACY-02",
+      "tc": "TC-PT-19",
+      "title": "契约结果解析/基线",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "32 项：PASS=32 FAIL=[] WARN=[] SKIP=[]；fresh=True；来源=D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\qa\\contract_result.json",
+      "evidence": [
+        "32 项：PASS=32 FAIL=[] WARN=[] SKIP=[]；fresh=True；来源=D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\qa\\contract_result.json"
+      ]
+    },
+    {
+      "id": "LEGACY-03",
+      "tc": "TC-PT-51",
+      "title": "其他 verify 脚本回归",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "未执行 5 个规则/UI 回归脚本（只读验收不运行长耗时/写文件测试）；合并前需在写使能阶段逐脚本记录退出码与用例数",
+      "evidence": [
+        "source/desktop/game/verify_base_rules.py",
+        "source/desktop/game/verify_ai_rules.py",
+        "source/desktop/game/verify_haunt_systems.py",
+        "source/desktop/game/verify_v1.py",
+        "source/desktop/game/verify_network.py"
+      ]
+    },
+    {
+      "id": "LEGACY-04",
+      "tc": "TC-PT-61",
+      "title": "双端内核同一性",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "双端内核同一性通过：9 个内核模块 + net.serialize 同一对象，别名壳无拷贝",
+      "evidence": [
+        "[通过] 双端规则内核单源成立：9 个内核模块 + net.serialize 均为同一对象；别名壳无拷贝。"
+      ]
+    },
+    {
+      "id": "LEGACY-05",
+      "tc": "TC-PT-51",
+      "title": "实现方 unittest 结果",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "qa/test_p_table_execution.py 会写 assets/ 与 qa/fixtures/，只读验收禁止执行；需在写使能阶段运行并提交结果",
+      "evidence": [
+        "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\qa\\test_p_table_execution.py"
+      ]
+    },
+    {
+      "id": "LEGACY-06",
+      "tc": "TC-PT-59",
+      "title": "旧结果新鲜度",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "旧结果均晚于当前输入：validation_report.json, contract_result.json",
+      "evidence": [
+        "{'artifact': 'validation_report.json', 'mtime': 1795261830.3304317, 'newest_input': 1795261793.6183112, 'fresh': True}",
+        "{'artifact': 'contract_result.json', 'mtime': 1795261851.5453324, 'newest_input': 1795261793.4291408, 'fresh': True}"
+      ]
+    },
+    {
+      "id": "COV-01",
+      "tc": "TC-PT-49",
+      "title": "行覆盖 ≥85%",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "行覆盖未测：coverage=absent；qa/test_*.py=2 个（会写 assets/fixtures，只读验收禁止执行）。达标线 85%；写使能阶段命令：python -m coverage run --branch --source=asset_pipeline,asset_registry -m unittest discover -s qa -p \"test_*.py\" && python -m coverage report -m --fail-under=85",
+      "evidence": []
+    },
+    {
+      "id": "COV-02",
+      "tc": "TC-PT-50",
+      "title": "分支覆盖 ≥75%",
+      "priority": "P1",
+      "status": "NOT_RUN",
+      "detail": "分支覆盖未测：coverage=absent；测试套件会写 assets/fixtures，只读验收禁止执行。达标线 75%；写使能阶段读取 qa/coverage.json 的 totals.branches 计算",
+      "evidence": []
+    },
+    {
+      "id": "SAFE-01",
+      "tc": "TC-PT-25",
+      "title": "只读自证与漂移检测",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "项目快照与关键文件哈希未变；脚本无写文件调用；dont_write_bytecode 已设置",
+      "evidence": []
+    }
+  ],
+  "unavailable": [
+    {
+      "id": "UI-07",
+      "priority": "P2",
+      "detail": "人工项：缺图占位观感、对比度 ≥3:1/≥4.5:1、100%/125%/150% DPI 需截图实测"
+    },
+    {
+      "id": "PERF-01",
+      "priority": "P1",
+      "detail": "禁止写文件：--stage ptable 会写 assets/；只读验收不执行。写使能阶段命令见计划 §4.1"
+    },
+    {
+      "id": "PERF-02",
+      "priority": "P1",
+      "detail": "禁止写文件：--stage placeholders 会写 assets/；只读验收不执行。写使能阶段命令见计划 §4.1"
+    },
+    {
+      "id": "PERF-03",
+      "priority": "P2",
+      "detail": "禁止写文件：--stage all 会写 assets/；只读验收不执行。写使能阶段命令见计划 §4.1"
+    },
+    {
+      "id": "PERF-06",
+      "priority": "P1",
+      "detail": "禁止写文件：verify_assets.py 会写 assets/validation_report.json；只读验收不执行"
+    },
+    {
+      "id": "PERF-07",
+      "priority": "P1",
+      "detail": "未执行契约子进程（--run-contract 可只读运行）；含解码全量不代跑"
+    },
+    {
+      "id": "PERF-08",
+      "priority": "P1",
+      "detail": "未执行契约子进程（--run-contract 可只读运行）；保存的契约 JSON 不能代表当前耗时"
+    },
+    {
+      "id": "PERF-09",
+      "priority": "P2",
+      "detail": "禁止写文件：all 构建会写 assets/；峰值 RSS 需写使能阶段采样"
+    },
+    {
+      "id": "PERF-11",
+      "priority": "P1",
+      "detail": "需要 Tk 显示环境与 ui.py 实际接入；预算 0.120s，只读/无显示阶段不测"
+    },
+    {
+      "id": "PERF-12",
+      "priority": "P1",
+      "detail": "需要 Tk 显示环境与 ui.py 实际接入；预算 0.150s，只读/无显示阶段不测"
+    },
+    {
+      "id": "PERF-13",
+      "priority": "P1",
+      "detail": "需要 Tk 显示环境与 ui.py 实际接入；预算 0.016s，只读/无显示阶段不测"
+    },
+    {
+      "id": "PERF-14",
+      "priority": "P1",
+      "detail": "需要 Tk 显示环境与 ui.py 实际接入；预算 0.400s，只读/无显示阶段不测"
+    },
+    {
+      "id": "PERF-15",
+      "priority": "P1",
+      "detail": "需要 Tk 显示环境与 ui.py 实际接入；预算 2.5s，只读/无显示阶段不测"
+    },
+    {
+      "id": "LEGACY-03",
+      "priority": "P1",
+      "detail": "未执行 5 个规则/UI 回归脚本（只读验收不运行长耗时/写文件测试）；合并前需在写使能阶段逐脚本记录退出码与用例数"
+    },
+    {
+      "id": "LEGACY-05",
+      "priority": "P1",
+      "detail": "qa/test_p_table_execution.py 会写 assets/ 与 qa/fixtures/，只读验收禁止执行；需在写使能阶段运行并提交结果"
+    },
+    {
+      "id": "COV-01",
+      "priority": "P1",
+      "detail": "行覆盖未测：coverage=absent；qa/test_*.py=2 个（会写 assets/fixtures，只读验收禁止执行）。达标线 85%；写使能阶段命令：python -m coverage run --branch --source=asset_pipeline,asset_registry -m unittest discover -s qa -p \"test_*.py\" && python -m coverage report -m --fail-under=85"
+    },
+    {
+      "id": "COV-02",
+      "priority": "P1",
+      "detail": "分支覆盖未测：coverage=absent；测试套件会写 assets/fixtures，只读验收禁止执行。达标线 75%；写使能阶段读取 qa/coverage.json 的 totals.branches 计算"
+    }
+  ],
+  "conflicts": [
+    {
+      "id": "SCHEMA-04",
+      "priority": "P2",
+      "detail": "规范 §6.1 仍是 28 列旧序（第 5 位 dimensions），实现为 33 列（第 5 位 width）；列集完整但列序未回写规范，属文档/规范待裁决，不计入代码缺陷"
+    }
+  ]
+}

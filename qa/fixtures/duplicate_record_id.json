@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.2.0",
+  "generated_at": "2026-11-19",
+  "base_dir": "Betrayal at House on the Hill",
+  "runtime_specs": {
+    "room": {
+      "width": 512,
+      "height": 512,
+      "format": "png"
+    },
+    "card": {
+      "width": 480,
+      "height": 672,
+      "format": "png"
+    },
+    "character": {
+      "width": 320,
+      "height": 320,
+      "format": "png"
+    }
+  },
+  "stats": {
+    "records": 2
+  },
+  "content_refs": {},
+  "records": [
+    {
+      "record_id": "P-ROOM-001",
+      "source_file": "",
+      "source_path": "",
+      "asset_type": "room",
+      "width": null,
+      "height": null,
+      "dimensions": "",
+      "aspect_ratio": "",
+      "format": "unknown",
+      "has_alpha": false,
+      "decodable": "not_checked",
+      "semantic_hint": "",
+      "match_candidate": "",
+      "usable_fields": [],
+      "availability": "partial",
+      "mapping_status": "matched",
+      "target_ref": "room:dup_a",
+      "missing_note": "",
+      "provenance": "",
+      "runtime_path": "source/desktop/game/assets/placeholders/room_missing.png",
+      "runtime_format": "png",
+      "runtime_status": "ok",
+      "fallback_ref": "",
+      "quality_flags": [],
+      "content_ref": "content.py:FIXTURES#P-ROOM-001",
+      "bytes": null,
+      "sha256": "",
+      "category_dir": "room",
+      "alpha_required": false,
+      "canonical_record_id": "P-ROOM-001",
+      "reviewer": "automated",
+      "verified_at": "2026-11-19"
+    },
+    {
+      "record_id": "P-ROOM-001",
+      "source_file": "",
+      "source_path": "",
+      "asset_type": "room",
+      "width": null,
+      "height": null,
+      "dimensions": "",
+      "aspect_ratio": "",
+      "format": "unknown",
+      "has_alpha": false,
+      "decodable": "not_checked",
+      "semantic_hint": "",
+      "match_candidate": "",
+      "usable_fields": [],
+      "availability": "partial",
+      "mapping_status": "matched",
+      "target_ref": "room:dup_b",
+      "missing_note": "",
+      "provenance": "",
+      "runtime_path": "source/desktop/game/assets/placeholders/room_missing.png",
+      "runtime_format": "png",
+      "runtime_status": "ok",
+      "fallback_ref": "",
+      "quality_flags": [],
+      "content_ref": "content.py:FIXTURES#P-ROOM-001",
+      "bytes": null,
+      "sha256": "",
+      "category_dir": "room",
+      "alpha_required": false,
+      "canonical_record_id": "P-ROOM-001",
+      "reviewer": "automated",
+      "verified_at": "2026-11-19"
+    }
+  ]
+}

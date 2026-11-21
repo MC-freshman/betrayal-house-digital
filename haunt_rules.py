@@ -3841,8 +3841,13 @@ SUPPLEMENTAL_HAUNT_RULES: dict[int, dict[str, Any]] = {
 }
 
 
+
 def get_haunt_rule_override(haunt_id: int) -> dict[str, Any]:
-    """返回隐藏规则表；1-10 使用专属实现，11-70 使用逐号结构化规则。"""
+    """返回隐藏规则表；1-10 使用专属实现，11-70 使用逐号结构化规则。
+
+    run5：槽位 71-120（Widow's Walk）的剧本骨架已隔离到
+    ``content_ww.WW_HAUNT_RULES``，本函数不再加载它们。
+    """
     rule = HAUNT_RULE_OVERRIDES.get(haunt_id) or SUPPLEMENTAL_HAUNT_RULES.get(haunt_id, {})
     normalized = deepcopy(rule)
     if normalized:

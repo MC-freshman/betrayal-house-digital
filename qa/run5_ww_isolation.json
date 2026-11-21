@@ -1,0 +1,637 @@
+{
+  "schema": "run5_ww_isolation/v1",
+  "generated_at": "2026-11-21T12:18:06",
+  "python": "3.9.13",
+  "s0_archive": {
+    "content_pre_run5.py": "7138f310dd14ac86a41210c1f2be42c791fb7ff619530eb51fd53b5419d160f6",
+    "haunt_rules_pre_run5.py": "82910730b4ae388e83a9b21d98395e66b092a87cd091f7733e01aaa17c837749",
+    "haunts_init_pre_run5.py": "01d82925cd25c00e6d95677b7495d3cf49a86b23df9cc1bc201702ff7bc04edf"
+  },
+  "after_sha256": {
+    "content.py": "461f8aeb95e32fb31d185c1f65f46f13405d3233c5575a5c853a012e6964c147",
+    "content_ww.py": "5c1a461d2c3ff29c766c4b01addf065b320863d6e8e0d50486b414b830e40abc",
+    "haunt_rules.py": "193e69f845210b2abf25fbb0bc588067c6fa967428328f0dc19e0090d5b7e256",
+    "haunts/__init__.py": "a5909487d3eb8095c733d75704ba83c7e4a99a5fc3cb1688471a52682d3a7429"
+  },
+  "lines": {
+    "content.py": {
+      "before": 2738,
+      "after": 2205
+    },
+    "haunt_rules.py": {
+      "before": 4510,
+      "after": 3872
+    }
+  },
+  "moved_haunts": [
+    {
+      "file": "haunt_haunt71.py",
+      "sha256": "40670ec7e095027a8281773247cd00bfd18f18cf2309a5798220e2b8ea4ca18b"
+    },
+    {
+      "file": "haunt_haunt72.py",
+      "sha256": "5b76e04a56cea4303d179d86b7bdb5996058825460ad77574ddcfe1c3347da54"
+    },
+    {
+      "file": "haunt_haunt73.py",
+      "sha256": "1dc3503b7c5df197ed446f0b3787d79284ff94c066022e41450c23409769a8d7"
+    },
+    {
+      "file": "haunt_haunt74.py",
+      "sha256": "efc6c28435f1298fb4406e3e0fd504c4e667fc3620c0a51e03d1a4bc8d84e7fa"
+    },
+    {
+      "file": "haunt_haunt75.py",
+      "sha256": "4b44582e417e9741f82e685052046d24411d88955939e8e122629e9e44652fd4"
+    },
+    {
+      "file": "haunt_haunt76.py",
+      "sha256": "831dc4e09b8aea50331a1bb2809af329ec0f31f8019e5a7fd0136c0ca867457c"
+    },
+    {
+      "file": "haunt_haunt77.py",
+      "sha256": "e9cf1616241f40febae486e43a4038686559b104b7c13d198d7c485e402536b3"
+    },
+    {
+      "file": "haunt_haunt78.py",
+      "sha256": "d3f9873442fd03977d33a8f0bf56c96687c1f4fbc02e9aa062f177448b4a0924"
+    },
+    {
+      "file": "haunt_haunt79.py",
+      "sha256": "def71edae2fe8622139f7bc91a597d2d30df4cc56ecdd6b0a778449a0afae922"
+    },
+    {
+      "file": "haunt_haunt80.py",
+      "sha256": "534e7e2d5aa6bd4a4e42dc363c354c7723b72e3115451217d483415678885eb2"
+    },
+    {
+      "file": "haunt_haunt81.py",
+      "sha256": "11d7d3fe06f4278737d33acf8531b2ae9928d40c8efc7c2adc67fe23a9362a20"
+    },
+    {
+      "file": "haunt_haunt82.py",
+      "sha256": "a4450f6a10d57bf08ae41d17eb325ae0aeabd668e6581eea21a79df1844c6a1a"
+    },
+    {
+      "file": "haunt_haunt83.py",
+      "sha256": "2cfeadfb2276f15636901c3bd02ac83607ef69b7060e87e30376ec93b7fa92c3"
+    },
+    {
+      "file": "haunt_haunt84.py",
+      "sha256": "dd1903211bced96e02e4bf8b7b50efe87bae9ceefb2c2b4b32012545840b3599"
+    },
+    {
+      "file": "haunt_haunt85.py",
+      "sha256": "672d6c96101f8f4806e864b2e2e86976c8f63dedb3ad0d80bace1068c1c3c78b"
+    },
+    {
+      "file": "haunt_haunt86.py",
+      "sha256": "9a82d50b6823318a13c2152857cf46377a8f50d59ec8c1a3574c52b67d900278"
+    },
+    {
+      "file": "haunt_haunt87.py",
+      "sha256": "e9b45674b0bb226f19f34969ce822dc5bfc877490b89f94f4567e0ccecaa2fd4"
+    },
+    {
+      "file": "haunt_haunt88.py",
+      "sha256": "f9e48cf40a092e5c850ac6c04847941c225478b1830a429d6e288d3d2ae8182f"
+    },
+    {
+      "file": "haunt_haunt89.py",
+      "sha256": "7ca812cdf18e66f03a401fba04b1634b9e4d2c25a06e86e27d28da17befb63c8"
+    },
+    {
+      "file": "haunt_haunt90.py",
+      "sha256": "8b34ed17844c56600c4dbc1ef17f1ff920fe5f35555832249afc56bf70090b91"
+    },
+    {
+      "file": "haunt_haunt91.py",
+      "sha256": "a1bfb6e95f053cee8748e7905dfcd451708a433c3212b401d47a7e10311dffc4"
+    },
+    {
+      "file": "haunt_haunt92.py",
+      "sha256": "63acb0921c55af8149d963389925afb35516cae1b28862c2d8f254b26ddd5e9a"
+    },
+    {
+      "file": "haunt_haunt93.py",
+      "sha256": "d7d9ac2ab272840ce4265d0b6d9eddca5716f22894f5ebe91b7102a84573bc86"
+    },
+    {
+      "file": "haunt_haunt94.py",
+      "sha256": "aaf2fae2b359310c3985a8584c1418bb056c02381658552621acd9862ee3c724"
+    },
+    {
+      "file": "haunt_haunt95.py",
+      "sha256": "5fb36ab3f83961920c6f7aec26beaa9f4d3edebcfc9ea4ca6bfe46ff5965daed"
+    },
+    {
+      "file": "haunt_haunt96.py",
+      "sha256": "0cabadace01382bbf3fc45e484a178c7c6a1be085e3867ff2c903a26b6ec24e9"
+    },
+    {
+      "file": "haunt_haunt97.py",
+      "sha256": "6664c3e8f47b5c14b8d77cd72995fc5d60cae01ccf3ada09542012ffd09a8871"
+    },
+    {
+      "file": "haunt_haunt98.py",
+      "sha256": "0abbcb78cb7998bd94a270326e65f90b81894ba8190b9e854bebdaaf9e16d499"
+    },
+    {
+      "file": "haunt_haunt99.py",
+      "sha256": "4e9e822e9819485c331f8c6394dd117aa8a317ed11934acd868818bf9e73f921"
+    },
+    {
+      "file": "haunt_haunt100.py",
+      "sha256": "826c7621b6c2c5892d7aaf066d35891135bdd52feac747ef1a5392567ade4b29"
+    },
+    {
+      "file": "haunt_haunt101.py",
+      "sha256": "3391c2097c7f4892eb43834463def6c00ea1dabce21fb9d236982c3e5bb270dc"
+    },
+    {
+      "file": "haunt_haunt102.py",
+      "sha256": "9d52997b917fa8492c449712557422b96b4104ab2a2f0177fa57c153bd81e687"
+    },
+    {
+      "file": "haunt_haunt103.py",
+      "sha256": "12b7b5d6e2d390911e754eda1d2e2009cc7a62a3ef46e03870526b3f28e45fb4"
+    },
+    {
+      "file": "haunt_haunt104.py",
+      "sha256": "f917e3cceda191071ba678750faaab32b6440fb4d37a3fd98c4c3d53d6f8b42b"
+    },
+    {
+      "file": "haunt_haunt105.py",
+      "sha256": "072d8979d3ce5e0d24135560d01405c3d6a87a853c37d13f0fa308e4e65c3c55"
+    },
+    {
+      "file": "haunt_haunt106.py",
+      "sha256": "63460dc05c0363b751b14004e055b33d383845886597cd14212b73de8f2d2ed0"
+    },
+    {
+      "file": "haunt_haunt107.py",
+      "sha256": "5fc213b14266283cd857ba00f2849c47234a4cb58da0f13dae093639836b9d4c"
+    },
+    {
+      "file": "haunt_haunt108.py",
+      "sha256": "dc6494c9b785e7762c3b513ac2ffffe0013ef8e3ed014eeb09cd28968dd1634e"
+    },
+    {
+      "file": "haunt_haunt109.py",
+      "sha256": "04d9ba8d6de8ee8ed7cf0586dd1e4bc76bf56ff6725de8694e466da114833722"
+    },
+    {
+      "file": "haunt_haunt110.py",
+      "sha256": "9992c348011fc5b039ee02e70c4fa85b6910db60c4e511b7f8f3483df1b84ce1"
+    },
+    {
+      "file": "haunt_haunt111.py",
+      "sha256": "a5bf3a8e5812d9fa26415fdd3f20ba70dfffef44fdd760986dcf868e8335ec20"
+    },
+    {
+      "file": "haunt_haunt112.py",
+      "sha256": "fda63d272e916d5855ee8232168c6e8d9a9f160847a489eb1786bd0327d6a75b"
+    },
+    {
+      "file": "haunt_haunt113.py",
+      "sha256": "0a1d6e605e145d7035f75a2a695e177f7633f4875a791bcc848f43ddd3968ff0"
+    },
+    {
+      "file": "haunt_haunt114.py",
+      "sha256": "3ae93ea6e8d85dc1f9fa8de948173f9f072b2174bfed8d68b8a4e42d2303de63"
+    },
+    {
+      "file": "haunt_haunt115.py",
+      "sha256": "4bf89ce762be68c9d7890d667dfd4b56b49db421200d59ea252e54b0a2a24dcb"
+    },
+    {
+      "file": "haunt_haunt116.py",
+      "sha256": "e36ef7a291cac23f0ec9dffc2c57b3461ca041d24366cdce3fa68d7a5d88dae3"
+    },
+    {
+      "file": "haunt_haunt117.py",
+      "sha256": "d7e2252e6fbda506f0ffa1f6d78bbe20eabffeed3ef67cd08b1843ecdc402fa9"
+    },
+    {
+      "file": "haunt_haunt118.py",
+      "sha256": "85fe29a681f2d57a706d985bb66b614aba5f32f2a791652523b73b77483dacb1"
+    },
+    {
+      "file": "haunt_haunt119.py",
+      "sha256": "7438093c60688030d04243db353d3457f3b89393a8066e802cfb3cca286fd6c1"
+    },
+    {
+      "file": "haunt_haunt120.py",
+      "sha256": "f9eb833e8ad05e7ca7cde0a950aa413112d2e8be89b1374683f0b4c5eca82fd8"
+    }
+  ],
+  "moved_haunts_zh": [
+    {
+      "file": "haunt_71.md",
+      "sha256": "9f3eb5ebbd6b1a57b2c332137f176b9f613fec65a6c4b89d799694deb86d82e7"
+    },
+    {
+      "file": "haunt_72.md",
+      "sha256": "339da0ee494b4d191fb12066b90f6f7ed03eaa19a1109e3fecb0209b4c2821ec"
+    },
+    {
+      "file": "haunt_73.md",
+      "sha256": "2e269efd792fc872641dc0a183085176f3bed964c45b18c0661b58d3749e8f0e"
+    },
+    {
+      "file": "haunt_74.md",
+      "sha256": "5bf9790ba4237685df613c7dfb4068eecbd5d2a5153a702316e1fd7b9538a579"
+    },
+    {
+      "file": "haunt_75.md",
+      "sha256": "58535c8a9ec96afa46c870d99ee289f915584d3ee135eef988f70f47a7f49a30"
+    },
+    {
+      "file": "haunt_76.md",
+      "sha256": "fa4a26d92b1e128e30790d167b0069e35f109c2312a72147a3f686ae9f3c6b7c"
+    },
+    {
+      "file": "haunt_77.md",
+      "sha256": "a3326b5c7af32d4e0be1d62ddd26f926518fad081fe935f7f49ec5dbe7f85485"
+    },
+    {
+      "file": "haunt_78.md",
+      "sha256": "6d8e3599797433d366bf6fe986e058fa02fc6daa77b85fb95e128d2462f34834"
+    },
+    {
+      "file": "haunt_79.md",
+      "sha256": "a025c712b5317b8420aa6ed79fc8c7425144a343e21b7760071044ea4f188ae9"
+    },
+    {
+      "file": "haunt_80.md",
+      "sha256": "b05bccc2c34868be28eb06cb65c852f354c896f12dd697ea546f51eaf4fc26b3"
+    },
+    {
+      "file": "haunt_81.md",
+      "sha256": "fc03cfc5e43a5ec4631b024f1b3a69f0b1010adb1dabeff0d0aed5bc392ad083"
+    },
+    {
+      "file": "haunt_82.md",
+      "sha256": "5bad7329d03b306d0dd10bdb98106b09df955ee936e9c100ad7c1ac3c5d6f241"
+    },
+    {
+      "file": "haunt_83.md",
+      "sha256": "c68722753187758039c99893a599f0412b4232b6e6891cb272a68cbe9867564c"
+    },
+    {
+      "file": "haunt_84.md",
+      "sha256": "2ccfade46a52f8f2b3745ff01abc88d656ef5009a415c440c36594e0364310cf"
+    },
+    {
+      "file": "haunt_85.md",
+      "sha256": "080741a8ac95ba52ba469b2831be4b1beb7081a4c6ddc1d50d0cf92a609ff928"
+    },
+    {
+      "file": "haunt_86.md",
+      "sha256": "99ef677dcb421f4ed9487392623b90a068eea8744a2888f04c68e2edbb0961fb"
+    },
+    {
+      "file": "haunt_87.md",
+      "sha256": "df547b4a5c87fdd0a5ee02ffe95076171fc613a39db48f4be2e47f9918117a96"
+    },
+    {
+      "file": "haunt_88.md",
+      "sha256": "17711da7fbfbf62efb8887b2e68f05288fc322efd30d4cefc26111e72b3ef15a"
+    },
+    {
+      "file": "haunt_89.md",
+      "sha256": "28ba0f6264477e1af6d09faa633d3fc33f8aafb7243d6a50a833d680a5a4e286"
+    },
+    {
+      "file": "haunt_90.md",
+      "sha256": "2d7ba4e3ee564cb6c349598c7ac935b270772d1d014980950341ecc98108df00"
+    },
+    {
+      "file": "haunt_91.md",
+      "sha256": "75228231fd49ff225412d206f5599f9c174772107ff4be3a456226c26da5a30d"
+    },
+    {
+      "file": "haunt_92.md",
+      "sha256": "4573b5229a1821f0af3e610e0c5560e16e72359ea050cfbc0f29809967ed8874"
+    },
+    {
+      "file": "haunt_93.md",
+      "sha256": "5bf594105b6ecb44ac8ced83ac2ddc0e8aac247d0a87af4be927feae39433909"
+    },
+    {
+      "file": "haunt_94.md",
+      "sha256": "d4108301f4717d5c99df79ab1f959b6d8ea8e33d2fa620e684cfbb1c4bfe3a17"
+    },
+    {
+      "file": "haunt_95.md",
+      "sha256": "aa13ca077122d3343925522bebafc3de12f18647c10ee56bd33db83af9056344"
+    },
+    {
+      "file": "haunt_96.md",
+      "sha256": "247dad21ca2d2ca2464299454475b2805a66857036ef0bb9583932fa3421dc88"
+    },
+    {
+      "file": "haunt_97.md",
+      "sha256": "8a7c410223b5c282027267592ad503578e80ac505fcb355d4f6c2e8a0d981dd9"
+    },
+    {
+      "file": "haunt_98.md",
+      "sha256": "2dc68d95ee213361f46660778bcc2d2c039a3cd5fa86bfe2e501c1fb0185ffab"
+    },
+    {
+      "file": "haunt_99.md",
+      "sha256": "a872876d1373869a24214a5f4c9aed7c3e392294d8dcca9e0906dc794408d59c"
+    },
+    {
+      "file": "haunt_100.md",
+      "sha256": "c37d90f1b3aa491ed2a527d964d90c0f35eaa22f05176e53d4c17e9f191cd20e"
+    },
+    {
+      "file": "haunt_101.md",
+      "sha256": "2d38588be5c945811261e846c79fd17de7c1e12ad2f6d8bcb0d11f06c1be300d"
+    },
+    {
+      "file": "haunt_102.md",
+      "sha256": "772e420723b0697dd180ed220ea93ce2664bf57ffd08c7e361847b0240a39902"
+    },
+    {
+      "file": "haunt_103.md",
+      "sha256": "1ef47734a75387db02b974c8df7997464b42b44e8e542235b87ffca727b288a2"
+    },
+    {
+      "file": "haunt_104.md",
+      "sha256": "d2d21b4760abec2b71d7284552f9341788e05715e7cc14d09b36c860706d600e"
+    },
+    {
+      "file": "haunt_105.md",
+      "sha256": "3e7269984ab4489944400c5989eac97605dc93d7ea95502ee341bb62e448d463"
+    },
+    {
+      "file": "haunt_106.md",
+      "sha256": "2efa2ec5da129693130cc07de2476082d7d57c9c420d04eab6a3afa257fec6c5"
+    },
+    {
+      "file": "haunt_107.md",
+      "sha256": "781e9b79ede480b80edd06f962075dec415be8cac0ba86285b9050a17e169360"
+    },
+    {
+      "file": "haunt_108.md",
+      "sha256": "237229ab1c34893e776dfed52693cc49091e131d3626bbd48c5b7744d30aae18"
+    },
+    {
+      "file": "haunt_109.md",
+      "sha256": "c04a4b65310b739cf2e56e998c521ff6328e94b6672ed9e7d1edd134f4750cc8"
+    },
+    {
+      "file": "haunt_110.md",
+      "sha256": "b611d64a0166d259396be7d86fb425aa1c161711b1c6c0f29270a462a9f7309c"
+    },
+    {
+      "file": "haunt_111.md",
+      "sha256": "70eb2df6477c0665793e514ca2a43432ee7c17a1129f2e903e5918729b808ca2"
+    },
+    {
+      "file": "haunt_112.md",
+      "sha256": "fe19ca8129a863cbf73940b35e8d5cf4aca8ebc366fa87980b94c359520e8a22"
+    },
+    {
+      "file": "haunt_113.md",
+      "sha256": "01a856163a3d6e84020f050355bf3c34a255553664870c835ed8216797294bca"
+    },
+    {
+      "file": "haunt_114.md",
+      "sha256": "6f2e82a5ca2ad0ccfe99c5eae8f17fc93f8f568d83b821aad3c783c7c677cd17"
+    },
+    {
+      "file": "haunt_115.md",
+      "sha256": "141e194dc5604c30c97f8846a099c42728c968fe39942847d673e2fe709edf97"
+    },
+    {
+      "file": "haunt_116.md",
+      "sha256": "ed0ea3d8260076d56eaa1d3e05061dce2d912bf9a1eb70a152e530adc1cdd1ab"
+    },
+    {
+      "file": "haunt_117.md",
+      "sha256": "b7c3e2b856319080c693b4375961f55f362cc411f5f3955efb4ff32d768c3f4f"
+    },
+    {
+      "file": "haunt_118.md",
+      "sha256": "d006b204ada352a0d51086f7d9226e85247b265d9d99d0759bb5f0a02cc9c53d"
+    },
+    {
+      "file": "haunt_119.md",
+      "sha256": "4a986e357cfeed65ac47544fd26b98727a091bfe19cbc8a8d08a0d0cc414d834"
+    },
+    {
+      "file": "haunt_120.md",
+      "sha256": "7aae37480c69d9e7adf99fcf4d3169a39ed9086fc0dfef70286eb69acb7efc92"
+    }
+  ],
+  "moved_placeholders": [
+    {
+      "file": "ww_event_event_attic_bats.png",
+      "sha256": "1c0407610640d051351192b5ba28cdf26507c3e300cd6005c725e5180c868878"
+    },
+    {
+      "file": "ww_event_event_bird_attack.png",
+      "sha256": "6e8ca0a40bdda02f34a839ca1c0cdebc9eeaef4b9452b8c7ec1b0766b3135f7b"
+    },
+    {
+      "file": "ww_event_event_cellar_draft.png",
+      "sha256": "29860f8e075d6c59f33bde500a2d50c0eae3422243cf04b263b0c0b07804d2f0"
+    },
+    {
+      "file": "ww_event_event_contract.png",
+      "sha256": "90246af591afab5c360e8a28a011603056ea1f03595ba53a70ad83708657a8a8"
+    },
+    {
+      "file": "ww_event_event_creaking_rafter.png",
+      "sha256": "8728b30fab378b5de7865615cc4657d9df18e0667932cb72b0662c0d66d7d200"
+    },
+    {
+      "file": "ww_event_event_dumbwaiter_stall.png",
+      "sha256": "96de65b5f88fbf66bec1c633f7ebf6a5b2f4ccf8159a25ab6011f62faeba59f7"
+    },
+    {
+      "file": "ww_event_event_dust_and_ash.png",
+      "sha256": "5e5c36c85e5d9544e1c021227cd50c910ed19f4c44fd009bc960efdfed08155b"
+    },
+    {
+      "file": "ww_event_event_frozen_clock.png",
+      "sha256": "7dffcf6242223f44a3a5a0fdb0dac09e9c03859255759a86296f4021d291110e"
+    },
+    {
+      "file": "ww_event_event_glass_shatter.png",
+      "sha256": "2cac7b3feef993f92147812de78d5e8fa16136f85f7b7658696bd805b0d12322"
+    },
+    {
+      "file": "ww_event_event_hidden_ledger.png",
+      "sha256": "134249d283b159a7aa31d88d305a0ae67e87f14f627be964f8ba9708c55e34a6"
+    },
+    {
+      "file": "ww_event_event_mirror_glint.png",
+      "sha256": "98ece3154eabc4345f54e8b719b49570087b90cf0f4c96e35812cc521d8ebe35"
+    },
+    {
+      "file": "ww_event_event_music_from_nowhere.png",
+      "sha256": "e49ef603776cc408928646d302eaf34ad95b49a0a71a45dfb1ae8fa8f5e7cea3"
+    },
+    {
+      "file": "ww_event_event_old_portrait.png",
+      "sha256": "731d2ae5084b9445a0676d77d86538c60f050fcf33cd547b693f876ab58dba9f"
+    },
+    {
+      "file": "ww_event_event_roof_wind.png",
+      "sha256": "38c84cdfb94f9790f23db62a78eda9eb83160048483d5ddb3cf9996dfb4b9ad1"
+    },
+    {
+      "file": "ww_event_event_the_left_hand_writes.png",
+      "sha256": "8081bbf79d702b3cf9cf2d3b67daf18bab69e63b87d01fd3914c6af1e87418d5"
+    },
+    {
+      "file": "ww_item_item_bird_cage.png",
+      "sha256": "883bfe697b0bf357a192fb8e45740c9957a06bd19a8aeaabdad6959d338c5c30"
+    },
+    {
+      "file": "ww_item_item_blueprint.png",
+      "sha256": "5c875625184e67b1b932ff2ea55da3f2e2b34b69bae51626bc473e2c1cef87a6"
+    },
+    {
+      "file": "ww_item_item_ghost_camera.png",
+      "sha256": "6549e80797fd853ba554266cde6988b9009cc6f6db1f6711360f72d9740ddbad"
+    },
+    {
+      "file": "ww_item_item_left_hand.png",
+      "sha256": "e67b3d5a3ff0bf7c72546bd4aebe41183cc0572210bf89a37cface66852e3fda"
+    },
+    {
+      "file": "ww_item_item_lockpicks.png",
+      "sha256": "7967030a6639fb52c8151d40e7eb28e915d10ab97433b411313a769f50a65724"
+    },
+    {
+      "file": "ww_item_item_preserved_specimen.png",
+      "sha256": "10a7ca1c308c8a03bc427b9c6b19517db5921f8b95e9501070f25a8cc88bb790"
+    },
+    {
+      "file": "ww_item_item_sewing_kit.png",
+      "sha256": "201e5e5eb31b1f3ce3fa91ba0a8a81a84208d031c018019be921da0eb7489afb"
+    },
+    {
+      "file": "ww_item_item_signal_whistle.png",
+      "sha256": "b040f0682ae945506c140357b2399127632d953c76280c83aef58f2bea2f4bdc"
+    },
+    {
+      "file": "ww_item_item_storm_lantern.png",
+      "sha256": "8e6a6217f22e03064d0fffc82b0fe01758d108a9a4cb688cd7d4be19cdcd8b98"
+    },
+    {
+      "file": "ww_item_item_weather_vane.png",
+      "sha256": "5bf15520c264c0e5f21f85dcfc43f98adb13f5305d9c320bec3d546aaa6e41d9"
+    },
+    {
+      "file": "ww_omen_omen_bloodstone.png",
+      "sha256": "f085520da1d87371f96045db338b715cd237ace9f6726750ef96fbc264caa03a"
+    },
+    {
+      "file": "ww_omen_omen_box.png",
+      "sha256": "78ffe138e886e5341d43c17ba3979573513c132ccb12db8ccee5ad92d4b0a63f"
+    },
+    {
+      "file": "ww_omen_omen_key.png",
+      "sha256": "0074700bd160a0e7ef95c1607af58543cdfba47b858c2090976501ee99f54e3c"
+    },
+    {
+      "file": "ww_omen_omen_photograph.png",
+      "sha256": "8cb001ded0000f4eef9eb03d7c4c5063fba8d734b1e4352882e715a3ebf9dde0"
+    },
+    {
+      "file": "ww_omen_omen_vial.png",
+      "sha256": "f3cbe6b9913e013a440f3ab9f70c5c6cb9819c87ab6bf5ed19f988014ef22f04"
+    },
+    {
+      "file": "ww_room_arsenal.png",
+      "sha256": "06f31b27129c71d6eb256a4973f340ba39c17b0d29c5ed82fccf5ece4708fe95"
+    },
+    {
+      "file": "ww_room_cave.png",
+      "sha256": "a310c2638a7c46a0bc92cdde311fe6f5c791ce382e42a89078592c34f0baedd1"
+    },
+    {
+      "file": "ww_room_drawing_room.png",
+      "sha256": "3b1d253842fba5881d0c212e941981847933213f27c9b91168965f48e413b575"
+    },
+    {
+      "file": "ww_room_dungeon.png",
+      "sha256": "7490839fe9be78816afac0b1be2824f69f708de45a07cedf571ab115c33ad839"
+    },
+    {
+      "file": "ww_room_laundry.png",
+      "sha256": "5abc34cad380fcba92d3497af40d9f42c2d434f8f5895dbd7a013daf95a97063"
+    },
+    {
+      "file": "ww_room_locked_room.png",
+      "sha256": "61c9efa4bd5fba11619618c66e6a31aa81ac3ec2fa021e1c2e4fb995923adc6e"
+    },
+    {
+      "file": "ww_room_menagerie.png",
+      "sha256": "4711139d066661529b7b9ddaa79b07b7702d572bfe3fde4724452719a9d0160c"
+    },
+    {
+      "file": "ww_room_nursery.png",
+      "sha256": "30ce6daab8797f9933c46560efc66af73134c71d6bf31d34e896452c027ec917"
+    },
+    {
+      "file": "ww_room_panic_room.png",
+      "sha256": "55d7fdb2b29bf78559afde75303cc2d02e56e480e9e2f68958deb3c41dbd0369"
+    },
+    {
+      "file": "ww_room_roof_landing.png",
+      "sha256": "4242ff208036438d7cf2cdf9010709bdfdab5867f47d9c7c0f90838ed23135cf"
+    },
+    {
+      "file": "ww_room_rookery.png",
+      "sha256": "96e2752e6390dbc3ed2cc867791600a22bd9f71b075889586840d7a79c06c42d"
+    },
+    {
+      "file": "ww_room_sewing_room.png",
+      "sha256": "b07be8b219c3622f264c9fd5694c53d73214cb29c125427a62c19400d960d854"
+    },
+    {
+      "file": "ww_room_solarium.png",
+      "sha256": "099dd48d5fa400078b73eacddaa580c6873b3714f63d7156ab72019ffc0f39d8"
+    },
+    {
+      "file": "ww_room_spiral_staircase.png",
+      "sha256": "991db43992b61646ff5c064af9078b00a22e74aa88dd0e2665a8529262689abb"
+    },
+    {
+      "file": "ww_room_storm_cellar.png",
+      "sha256": "450cb065d50db319affe0279b464eae2080ffd693359891cea00ec2e80007f22"
+    },
+    {
+      "file": "ww_room_study.png",
+      "sha256": "4fba475b3a510ff9b0a576a6f8908481c702b29182962a6c24f3583ed2da1e00"
+    },
+    {
+      "file": "ww_room_theater.png",
+      "sha256": "45fb723f34983a9afcb33d5bce26b4f3df9818fc5ac78ed8ed52f335ea51cd02"
+    },
+    {
+      "file": "ww_room_tree_house.png",
+      "sha256": "d37dec079c5eae5ee1c0f1b1411c66a8930747ba58ac448afc0eed268b2f031c"
+    },
+    {
+      "file": "ww_room_widows_walk.png",
+      "sha256": "542c6b4186a90353386f865168849ca2e1443a99a934eaebd6840531abb96bf6"
+    },
+    {
+      "file": "ww_room_ww_bathroom.png",
+      "sha256": "eac81aa7e4465c4e4f9d51b613c4360f16b665d337d32892e413cdf2584d5505"
+    }
+  ],
+  "counts": {
+    "moved_haunt_modules": 50,
+    "moved_haunt_manuals": 50,
+    "moved_ww_placeholders": 50
+  }
+}

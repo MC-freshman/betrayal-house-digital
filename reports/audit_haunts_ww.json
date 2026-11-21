@@ -1,0 +1,6110 @@
+{
+ "rows": [
+  {
+   "haunt": 1,
+   "mode": "banishment_escort",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "BanishmentEscortMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_enter_room",
+    "on_room_discovered",
+    "on_monster_move",
+    "on_monster_attack"
+   ],
+   "hook_count": 8,
+   "tracks": {
+    "banishment_steps": 2
+   },
+   "actions": 3,
+   "monsters": 1,
+   "tokens": 4,
+   "required_cards": 4,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [
+     "catacombs",
+     "research_laboratory",
+     "library",
+     "chapel",
+     "entrance_hall"
+    ],
+    "action_rooms": [
+     "catacombs",
+     "research_laboratory",
+     "library"
+    ],
+    "profile_targets": [
+     "地下墓穴",
+     "入口大厅",
+     "小教堂",
+     "地下墓穴"
+    ],
+    "dynamic": false
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 6,
+   "issues": []
+  },
+  {
+   "haunt": 2,
+   "mode": "seance_race",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "SeanceRaceMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "perform_action",
+    "attack_allowed",
+    "action_room_override",
+    "on_turn_start",
+    "on_monster_move",
+    "on_monster_attack",
+    "on_monster_defeated",
+    "bot_action_blocked"
+   ],
+   "hook_count": 10,
+   "tracks": {
+    "ghost_rest_timer": 5,
+    "hero_seance": "half_players_floor",
+    "traitor_seance": 2
+   },
+   "actions": 3,
+   "monsters": 1,
+   "tokens": 4,
+   "required_cards": 2,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [
+     "pentagram_chamber",
+     "attic",
+     "bedroom",
+     "master_bedroom",
+     "crypt",
+     "graveyard"
+    ],
+    "action_rooms": [
+     "pentagram_chamber",
+     "attic",
+     "bedroom",
+     "master_bedroom",
+     "crypt",
+     "graveyard"
+    ],
+    "profile_targets": [
+     "pentagram_chamber",
+     "attic",
+     "bedroom",
+     "master_bedroom",
+     "crypt",
+     "graveyard",
+     "pentagram_chamber"
+    ],
+    "dynamic": false
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 9,
+   "issues": []
+  },
+  {
+   "haunt": 3,
+   "mode": "witch_and_frogs",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "WitchAndFrogsMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_turn_start",
+    "on_player_moved",
+    "on_room_discovered",
+    "on_monster_move",
+    "on_monster_attack",
+    "on_monster_defeated",
+    "bot_goal_rooms"
+   ],
+   "hook_count": 11,
+   "tracks": {
+    "mortal_form": 1
+   },
+   "actions": 5,
+   "monsters": 2,
+   "tokens": 4,
+   "required_cards": 1,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [
+     "entrance_hall",
+     "conservatory",
+     "larder",
+     "kitchen"
+    ],
+    "action_rooms": [],
+    "profile_targets": [
+     "conservatory",
+     "larder",
+     "kitchen",
+     "entrance_hall",
+     "entrance_hall",
+     "conservatory",
+     "larder",
+     "kitchen"
+    ],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 8,
+   "issues": []
+  },
+  {
+   "haunt": 4,
+   "mode": "web_escape",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "WebEscapeMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "monster_rerolls_blanks",
+    "on_turn_start",
+    "on_monster_move",
+    "bot_goal_rooms",
+    "bot_leave_after_action",
+    "bot_action_blocked"
+   ],
+   "hook_count": 10,
+   "tracks": {
+    "spider_timer": 9,
+    "web_damage": "player_count"
+   },
+   "actions": 4,
+   "monsters": 1,
+   "tokens": 4,
+   "required_cards": 3,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [
+     "entrance_hall"
+    ],
+    "action_rooms": [
+     "entrance_hall"
+    ],
+    "profile_targets": [
+     "entrance_hall"
+    ],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 6,
+   "issues": []
+  },
+  {
+   "haunt": 5,
+   "mode": "werewolf_hunt",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "WerewolfHuntMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "available_actions",
+    "perform_action",
+    "on_turn_start"
+   ],
+   "hook_count": 3,
+   "tracks": {
+    "silver_bullets": 1
+   },
+   "actions": 3,
+   "monsters": 1,
+   "tokens": 2,
+   "required_cards": 2,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "attic",
+     "game_room",
+     "junk_room",
+     "master_bedroom",
+     "vault",
+     "research_laboratory",
+     "furnace_room"
+    ],
+    "action_rooms": [
+     "attic",
+     "game_room",
+     "junk_room",
+     "master_bedroom",
+     "vault",
+     "research_laboratory",
+     "furnace_room"
+    ],
+    "profile_targets": [
+     "熔炉房",
+     "研究实验室",
+     "手术室"
+    ],
+    "dynamic": false
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": [
+    "未覆盖 check_victory（走基类兜底：仅 traitor_dead → 英雄胜）",
+    "声明了 1 只剧本怪物却没有任何怪物钩子"
+   ]
+  },
+  {
+   "haunt": 6,
+   "mode": "alien_abduction",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "AlienAbductionMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "on_turn_start",
+    "on_monster_turn_attack",
+    "on_monster_move"
+   ],
+   "hook_count": 6,
+   "tracks": {
+    "spaceship_damage": "player_count"
+   },
+   "actions": 1,
+   "monsters": 1,
+   "tokens": 4,
+   "required_cards": 0,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 5,
+   "issues": [
+    "有剧本行动但没有任何目标来源（既无 bot_goal_rooms，静态目标字段也全空）"
+   ]
+  },
+  {
+   "haunt": 7,
+   "mode": "carnivorous_ivy",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "CarnivorousIvyMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "item_pickup_blocked",
+    "mystic_elevator_blocked",
+    "on_turn_start",
+    "on_room_discovered",
+    "on_monster_turn_start",
+    "on_monster_turn_attack",
+    "on_monster_move",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "bot_action_blocked",
+    "bot_goal_suppressed",
+    "bot_captor_monster"
+   ],
+   "hook_count": 16,
+   "tracks": {
+    "creepers_killed": "player_count"
+   },
+   "actions": 3,
+   "monsters": 1,
+   "tokens": 3,
+   "required_cards": 1,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [
+     "research_laboratory",
+     "kitchen",
+     "chasm",
+     "furnace_room",
+     "underground_lake"
+    ],
+    "action_rooms": [
+     "research_laboratory",
+     "kitchen",
+     "chasm",
+     "furnace_room",
+     "underground_lake"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 6,
+   "issues": []
+  },
+  {
+   "haunt": 8,
+   "mode": "exorcism",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "ExorcismMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_monster_turn_start",
+    "bot_action_blocked"
+   ],
+   "hook_count": 6,
+   "tracks": {
+    "exorcism_successes": "player_count"
+   },
+   "actions": 9,
+   "monsters": 1,
+   "tokens": 3,
+   "required_cards": 4,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [
+     "chapel",
+     "crypt",
+     "pentagram_chamber",
+     "library",
+     "research_laboratory"
+    ],
+    "action_rooms": [
+     "chapel",
+     "crypt",
+     "pentagram_chamber",
+     "library",
+     "research_laboratory"
+    ],
+    "profile_targets": [
+     "chapel",
+     "crypt",
+     "pentagram_chamber",
+     "library",
+     "research_laboratory",
+     "chapel",
+     "crypt",
+     "pentagram_chamber",
+     "library",
+     "research_laboratory"
+    ],
+    "dynamic": false
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 9,
+   "mode": "delayed_traitor_relic",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "DeathDanceMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "item_trade_blocked",
+    "on_turn_start",
+    "bot_goal_rooms",
+    "bot_action_blocked",
+    "bot_goal_suppressed"
+   ],
+   "hook_count": 9,
+   "tracks": {
+    "fiddler_banishment": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 2,
+   "required_cards": 1,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [
+     "pentagram_chamber",
+     "ballroom",
+     "chasm",
+     "furnace_room",
+     "underground_lake"
+    ],
+    "action_rooms": [
+     "pentagram_chamber",
+     "chasm",
+     "furnace_room",
+     "underground_lake"
+    ],
+    "profile_targets": [
+     "pentagram_chamber"
+    ],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 10,
+   "mode": "trap_zombies",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "ZombieTrapMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "on_monster_turn_start",
+    "on_monster_move",
+    "on_monster_defeated"
+   ],
+   "hook_count": 5,
+   "tracks": {
+    "madman_damage": 5,
+    "zombies_trapped": "player_count"
+   },
+   "actions": 0,
+   "monsters": 2,
+   "tokens": 3,
+   "required_cards": 1,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [
+     "master_bedroom",
+     "chapel",
+     "conservatory",
+     "game_room",
+     "library",
+     "attic"
+    ],
+    "action_rooms": [],
+    "profile_targets": [
+     "master_bedroom",
+     "chapel",
+     "conservatory",
+     "game_room",
+     "library",
+     "attic",
+     "master_bedroom",
+     "chapel",
+     "conservatory",
+     "game_room",
+     "library",
+     "attic"
+    ],
+    "dynamic": false
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 11,
+   "mode": "spectre_exorcism",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "SpecterInvasionMode",
+   "bases": [
+    "ExorcismMode",
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "attack_attr_override",
+    "on_room_discovered",
+    "on_monster_turn_start",
+    "on_monster_turn_attack",
+    "on_monster_defeated",
+    "bot_action_blocked"
+   ],
+   "hook_count": 11,
+   "tracks": {
+    "exorcism_successes": "player_count"
+   },
+   "actions": 10,
+   "monsters": 2,
+   "tokens": 4,
+   "required_cards": 4,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "entrance_hall",
+     "grand_staircase",
+     "master_bedroom",
+     "bedroom",
+     "chapel",
+     "dining_room",
+     "crypt",
+     "pentagram_chamber",
+     "library",
+     "research_laboratory"
+    ],
+    "action_rooms": [
+     "chapel",
+     "crypt",
+     "pentagram_chamber",
+     "library",
+     "research_laboratory"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 12,
+   "mode": "fleshwalkers",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "FleshwalkerMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "attack_allowed",
+    "monster_counterattack_disabled",
+    "on_attack_resolved",
+    "on_monster_turn_attack",
+    "on_monster_move",
+    "on_monster_defeated"
+   ],
+   "hook_count": 8,
+   "tracks": {
+    "twins_killed": "player_count"
+   },
+   "actions": 0,
+   "monsters": 1,
+   "tokens": 1,
+   "required_cards": 1,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "entrance_hall"
+    ],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 13,
+   "mode": "nightmare_escape",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "NightmareDreamMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "on_turn_start",
+    "on_monster_turn_start",
+    "on_monster_defeated",
+    "bot_goal_rooms"
+   ],
+   "hook_count": 9,
+   "tracks": {
+    "waking_progress": "player_count"
+   },
+   "actions": 1,
+   "monsters": 1,
+   "tokens": 3,
+   "required_cards": 1,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "entrance_hall",
+     "grand_staircase",
+     "master_bedroom",
+     "bedroom",
+     "chapel",
+     "dining_room",
+     "conservatory",
+     "garden",
+     "graveyard",
+     "patio",
+     "tower",
+     "balcony"
+    ],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 3,
+   "issues": []
+  },
+  {
+   "haunt": 14,
+   "mode": "paint_the_pentagram",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "StarsRightMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "movement_cost_multiplier",
+    "on_player_died",
+    "on_monster_attack",
+    "bot_goal_rooms"
+   ],
+   "hook_count": 8,
+   "tracks": {
+    "desecration": "player_count",
+    "sacrifice_points": 13
+   },
+   "actions": 4,
+   "monsters": 1,
+   "tokens": 3,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "pentagram_chamber",
+     "kitchen",
+     "larder",
+     "junk_room",
+     "research_laboratory",
+     "attic"
+    ],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 15,
+   "mode": "dragon_siege",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "DragonSiegeMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_attr_override",
+    "attack_roll_bonus",
+    "physical_damage_reduction",
+    "on_turn_start",
+    "on_room_discovered",
+    "on_monster_turn_start",
+    "on_monster_defeated",
+    "bot_goal_rooms"
+   ],
+   "hook_count": 12,
+   "tracks": {
+    "dragon_damage": "player_count"
+   },
+   "actions": 2,
+   "monsters": 1,
+   "tokens": 3,
+   "required_cards": 1,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "entrance_hall",
+     "catacombs",
+     "underground_lake",
+     "chasm",
+     "crypt"
+    ],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 16,
+   "mode": "phantom_bomb",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "PhantomBombMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "suppress_room_draw",
+    "on_turn_start",
+    "on_enter_room",
+    "on_room_discovered",
+    "on_attack_resolved",
+    "on_monster_turn_attack",
+    "on_monster_move",
+    "bot_goal_rooms"
+   ],
+   "hook_count": 12,
+   "tracks": {
+    "bomb_timer": 20
+   },
+   "actions": 2,
+   "monsters": 1,
+   "tokens": 3,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "entrance_hall",
+     "catacombs",
+     "crypt",
+     "furnace_room",
+     "basement_landing"
+    ],
+    "action_rooms": [
+     "entrance_hall"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 3,
+   "issues": []
+  },
+  {
+   "haunt": 17,
+   "mode": "bug_spray",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "BugSprayMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_attr_override",
+    "attack_loss_damage_disabled",
+    "movement_cost_floor",
+    "on_turn_start",
+    "on_player_died",
+    "on_room_discovered",
+    "on_monster_move",
+    "on_monster_attack",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "bot_stay_in_room"
+   ],
+   "hook_count": 15,
+   "tracks": {
+    "bugs_killed": 3,
+    "ingredients_destroyed": 4
+   },
+   "actions": 4,
+   "monsters": 1,
+   "tokens": 8,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "research_laboratory",
+     "larder",
+     "attic",
+     "servants_quarters",
+     "kitchen",
+     "garden",
+     "junk_room",
+     "crypt",
+     "chasm",
+     "furnace_room",
+     "underground_lake"
+    ],
+    "action_rooms": [
+     "research_laboratory",
+     "kitchen",
+     "chasm",
+     "furnace_room",
+     "underground_lake"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 18,
+   "mode": "poisonous_plant",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "OffspringMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_turn_start",
+    "on_player_moved",
+    "on_enter_room",
+    "bot_goal_rooms",
+    "bot_action_blocked"
+   ],
+   "hook_count": 9,
+   "tracks": {
+    "weaken_count": 3
+   },
+   "actions": 3,
+   "monsters": 0,
+   "tokens": 4,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "conservatory",
+     "garden",
+     "graveyard",
+     "chasm",
+     "furnace_room",
+     "underground_lake"
+    ],
+    "action_rooms": [
+     "conservatory",
+     "garden",
+     "graveyard"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 19,
+   "mode": "beastmaster",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "BeastmasterMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "attack_attr_override",
+    "special_steal",
+    "on_monster_defeated"
+   ],
+   "hook_count": 5,
+   "tracks": {
+    "minions_slain": "player_count"
+   },
+   "actions": 0,
+   "monsters": 5,
+   "tokens": 5,
+   "required_cards": 1,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "entrance_hall",
+     "underground_lake",
+     "basement_landing",
+     "garden",
+     "graveyard",
+     "patio",
+     "balcony",
+     "tower"
+    ],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 20,
+   "mode": "ghost_bride",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "GhostBrideMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "perform_action",
+    "movement_cost_multiplier",
+    "on_turn_start",
+    "on_player_died",
+    "on_enter_room",
+    "on_monster_turn_attack",
+    "on_monster_move",
+    "bot_goal_rooms"
+   ],
+   "hook_count": 10,
+   "tracks": {
+    "wedding_timer": 3
+   },
+   "actions": 4,
+   "monsters": 1,
+   "tokens": 2,
+   "required_cards": 1,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "chapel",
+     "crypt",
+     "bedroom",
+     "dining_room",
+     "library"
+    ],
+    "action_rooms": [
+     "bedroom",
+     "dining_room",
+     "library",
+     "crypt",
+     "crypt"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 21,
+   "mode": "zombie_lord",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "ZombieLordMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "attack_allowed",
+    "monster_killed_on_defeat",
+    "monster_attack_roll_bonus",
+    "on_player_died",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "quest_carrier"
+   ],
+   "hook_count": 9,
+   "tracks": {
+    "lord_damage": 7
+   },
+   "actions": 0,
+   "monsters": 2,
+   "tokens": 0,
+   "required_cards": 2,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 22,
+   "mode": "abyss_exorcism",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "AbyssExorcismMode",
+   "bases": [
+    "ExorcismMode",
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_turn_end",
+    "on_monster_turn_start",
+    "bot_action_blocked"
+   ],
+   "hook_count": 7,
+   "tracks": {
+    "abyss_turn": 5,
+    "exorcism_successes": "player_count"
+   },
+   "actions": 10,
+   "monsters": 0,
+   "tokens": 2,
+   "required_cards": 4,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "chapel",
+     "crypt",
+     "pentagram_chamber",
+     "library",
+     "research_laboratory"
+    ],
+    "action_rooms": [
+     "chapel",
+     "crypt",
+     "pentagram_chamber",
+     "library",
+     "research_laboratory"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 23,
+   "mode": "tentacled_horror",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "TentacledHorrorMode",
+   "bases": [
+    "CarnivorousIvyMode",
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "item_pickup_blocked",
+    "mystic_elevator_blocked",
+    "movement_cost_multiplier",
+    "on_turn_start",
+    "on_turn_end",
+    "on_room_discovered",
+    "on_monster_turn_start",
+    "on_monster_turn_attack",
+    "on_monster_move",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "bot_action_blocked",
+    "bot_goal_suppressed",
+    "bot_captor_monster"
+   ],
+   "hook_count": 18,
+   "tracks": {
+    "tentacle_turn": 8
+   },
+   "actions": 2,
+   "monsters": 1,
+   "tokens": 2,
+   "required_cards": 3,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "furnace_room",
+     "conservatory",
+     "organ_room",
+     "underground_lake",
+     "garden",
+     "chasm"
+    ],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 24,
+   "mode": "bat_exodus",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "BatSwarmMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "perform_action",
+    "monster_killed_on_defeat",
+    "on_turn_start",
+    "on_turn_end",
+    "on_player_moved",
+    "on_monster_turn_start",
+    "bot_goal_rooms"
+   ],
+   "hook_count": 9,
+   "tracks": {
+    "bats_released": 24
+   },
+   "actions": 2,
+   "monsters": 1,
+   "tokens": 1,
+   "required_cards": 1,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "organ_room"
+    ],
+    "action_rooms": [
+     "organ_room",
+     "organ_room"
+    ],
+    "profile_targets": [
+     "organ_room"
+    ],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 25,
+   "mode": "voodoo_dolls",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "VoodooMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "suppress_room_draw",
+    "explore_stop_suspended",
+    "on_turn_end",
+    "on_player_died",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 10,
+   "tracks": {
+    "turn_damage": 0
+   },
+   "actions": 1,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 26,
+   "mode": "rat_ritual",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "RatRitualMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "perform_action",
+    "attack_allowed",
+    "monster_killed_on_defeat",
+    "room_entry_blocked",
+    "on_enter_room",
+    "on_monster_turn_start",
+    "progress_summary"
+   ],
+   "hook_count": 9,
+   "tracks": {
+    "ritual_rolls": 5
+   },
+   "actions": 1,
+   "monsters": 1,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [
+     "pentagram_chamber"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 3,
+   "issues": []
+  },
+  {
+   "haunt": 27,
+   "mode": "blob_weakness",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "AmokFleshMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "can_discover_rooms",
+    "mystic_elevator_blocked",
+    "suppress_room_draw",
+    "on_turn_start",
+    "on_turn_end",
+    "on_enter_room",
+    "bot_goal_rooms",
+    "bot_blocked_rooms",
+    "bot_hazard_rooms",
+    "bot_stay_in_room",
+    "bot_leave_after_action",
+    "bot_action_blocked",
+    "progress_summary"
+   ],
+   "hook_count": 18,
+   "tracks": {
+    "blob_ingredients": "player_count",
+    "knowledge_rolls": "player_count"
+   },
+   "actions": 3,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [
+     "attic",
+     "conservatory",
+     "furnace_room",
+     "garden",
+     "library",
+     "research_laboratory",
+     "junk_room",
+     "kitchen",
+     "larder",
+     "vault",
+     "wine_cellar"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 28,
+   "mode": "demon_ring",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "DemonRingMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "attack_attr_override",
+    "attack_roll_bonus",
+    "monster_killed_on_defeat",
+    "on_turn_start",
+    "on_monster_turn_start",
+    "on_monster_attack",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 11,
+   "tracks": {
+    "lord_defeats": 2
+   },
+   "actions": 0,
+   "monsters": 6,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 29,
+   "mode": "frankenstein_fire",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "FrankensteinMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "monster_attack_roll_bonus",
+    "on_monster_attack",
+    "bot_goal_rooms",
+    "bot_blocked_rooms",
+    "bot_hazard_rooms",
+    "bot_leave_after_action",
+    "progress_summary"
+   ],
+   "hook_count": 11,
+   "tracks": {
+    "torch_hits": "player_count"
+   },
+   "actions": 3,
+   "monsters": 1,
+   "tokens": 1,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [
+     "charred_room",
+     "furnace_room",
+     "pentagram_chamber",
+     "kitchen",
+     "tower",
+     "chasm"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 30,
+   "mode": "dracula_rising",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "DraculaRisingMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "monster_killed_on_defeat",
+    "room_entry_blocked",
+    "on_turn_start",
+    "on_player_moved",
+    "on_monster_turn_start",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 12,
+   "tracks": {
+    "sun_track": 0
+   },
+   "actions": 1,
+   "monsters": 2,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 31,
+   "mode": "living_house",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "LivingHouseMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "perform_action",
+    "attack_allowed",
+    "monster_killed_on_defeat",
+    "monster_counterattack_disabled",
+    "on_turn_start",
+    "on_enter_room",
+    "on_attack_resolved",
+    "on_monster_turn_start",
+    "on_monster_move",
+    "progress_summary"
+   ],
+   "hook_count": 12,
+   "tracks": {
+    "house_slain": 1
+   },
+   "actions": 1,
+   "monsters": 3,
+   "tokens": 7,
+   "required_cards": 1,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "organ_room",
+     "attic",
+     "dining_room",
+     "kitchen",
+     "larder",
+     "wine_cellar",
+     "conservatory",
+     "balcony",
+     "entrance_hall",
+     "research_laboratory",
+     "operating_laboratory",
+     "furnace_room",
+     "underground_lake",
+     "library",
+     "chasm"
+    ],
+    "action_rooms": [
+     "chasm",
+     "furnace_room",
+     "underground_lake"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 3,
+   "issues": []
+  },
+  {
+   "haunt": 32,
+   "mode": "lost_dimension",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "LostDimensionMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_turn_start",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 7,
+   "tracks": {
+    "clues_found": 3,
+    "sabotage": 4
+   },
+   "actions": 5,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "organ_room"
+    ],
+    "action_rooms": [
+     "organ_room",
+     "library",
+     "game_room",
+     "tower",
+     "chapel",
+     "game_room",
+     "research_laboratory",
+     "operating_laboratory",
+     "pentagram_chamber"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 33,
+   "mode": "lake_rescue",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "LakeRescueMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "can_discover_rooms",
+    "movement_cost_floor",
+    "lake_move",
+    "extra_move_options",
+    "on_turn_start",
+    "on_item_dropped"
+   ],
+   "hook_count": 8,
+   "tracks": {
+    "drown_timer": 20
+   },
+   "actions": 0,
+   "monsters": 0,
+   "tokens": 1,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 34,
+   "mode": "mad_world",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "MadWorldMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_loss_damage_disabled",
+    "movement_cost_multiplier",
+    "on_turn_start",
+    "on_player_died",
+    "on_attack_resolved",
+    "on_monster_defeated"
+   ],
+   "hook_count": 10,
+   "tracks": {
+    "captives_locked": "player_count"
+   },
+   "actions": 2,
+   "monsters": 1,
+   "tokens": 2,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "vault",
+     "basement_landing"
+    ],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 35,
+   "mode": "small_change_escape",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "SmallChangeMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "movement_cost_multiplier",
+    "on_turn_start",
+    "on_monster_turn_start",
+    "on_monster_attack",
+    "on_monster_defeated",
+    "bot_goal_rooms"
+   ],
+   "hook_count": 11,
+   "tracks": {
+    "heroes_escaped": "half_players_ceil"
+   },
+   "actions": 3,
+   "monsters": 1,
+   "tokens": 2,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "entrance_hall",
+     "bedroom",
+     "master_bedroom",
+     "attic",
+     "garden",
+     "graveyard",
+     "patio",
+     "tower"
+    ],
+    "action_rooms": [
+     "bedroom",
+     "master_bedroom",
+     "larder",
+     "attic",
+     "game_room"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 36,
+   "mode": "swamp_escape",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "SwampEscapeMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "movement_cost_floor",
+    "movement_cost_multiplier",
+    "on_turn_start",
+    "on_turn_end",
+    "on_player_died",
+    "on_monster_turn_start",
+    "bot_goal_rooms",
+    "bot_stay_in_room",
+    "bot_action_blocked"
+   ],
+   "hook_count": 13,
+   "tracks": {
+    "boat_damage": 5,
+    "flood_timer": 6
+   },
+   "actions": 3,
+   "monsters": 0,
+   "tokens": 1,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "attic",
+     "balcony",
+     "tower",
+     "basement_landing"
+    ],
+    "action_rooms": [
+     "attic"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 37,
+   "mode": "death_checkmate",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "DeathCheckmateMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "monster_rerolls_blanks",
+    "on_room_discovered",
+    "on_monster_turn_start",
+    "bot_goal_rooms",
+    "bot_blocked_rooms",
+    "bot_stay_in_room"
+   ],
+   "hook_count": 11,
+   "tracks": {
+    "seals_broken": 5
+   },
+   "actions": 1,
+   "monsters": 1,
+   "tokens": 2,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "vault",
+     "crypt",
+     "research_laboratory",
+     "operating_laboratory",
+     "game_room"
+    ],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 38,
+   "mode": "hellbeast_exorcism",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "HellbeastMode",
+   "bases": [
+    "ExorcismMode",
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_monster_turn_start",
+    "bot_goal_rooms",
+    "bot_action_blocked",
+    "progress_summary"
+   ],
+   "hook_count": 8,
+   "tracks": {
+    "exorcism_successes": "player_count"
+   },
+   "actions": 9,
+   "monsters": 1,
+   "tokens": 3,
+   "required_cards": 5,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "chapel",
+     "crypt",
+     "pentagram_chamber",
+     "library",
+     "research_laboratory"
+    ],
+    "action_rooms": [
+     "chapel",
+     "crypt",
+     "pentagram_chamber",
+     "library",
+     "research_laboratory"
+    ],
+    "profile_targets": [
+     "chapel",
+     "crypt",
+     "pentagram_chamber",
+     "library",
+     "research_laboratory"
+    ],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 39,
+   "mode": "secret_heir",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "HeirAssassinMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "on_turn_start",
+    "on_enter_room",
+    "on_monster_move",
+    "bot_goal_rooms",
+    "bot_stay_in_room",
+    "quest_carrier"
+   ],
+   "hook_count": 8,
+   "tracks": {
+    "assassin_timer": 6
+   },
+   "actions": 0,
+   "monsters": 1,
+   "tokens": 2,
+   "required_cards": 2,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 3,
+   "issues": []
+  },
+  {
+   "haunt": 40,
+   "mode": "buried_alive",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "BuriedAliveMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_turn_end",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 7,
+   "tracks": {
+    "burial_damage": 12,
+    "dig_progress": "player_count"
+   },
+   "actions": 0,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 41,
+   "mode": "invisible_traitor",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "InvisibleTraitorMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "perform_action",
+    "defense_roll_disabled",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 7,
+   "tracks": {
+    "detections": 10
+   },
+   "actions": 1,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 42,
+   "mode": "hell_gate_hero",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "HellGateHeroMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "bot_goal_rooms"
+   ],
+   "hook_count": 6,
+   "tracks": {
+    "progress": 10
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 4,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 43,
+   "mode": "shadow_exorcism",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "ShadowExorcismMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_monster_move",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 8,
+   "tracks": {
+    "ritual_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 1,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "pentagram_chamber",
+     "catacombs",
+     "chapel",
+     "library",
+     "research_laboratory",
+     "balcony",
+     "garden",
+     "graveyard",
+     "patio",
+     "tower"
+    ],
+    "action_rooms": [
+     "catacombs",
+     "chapel",
+     "library",
+     "research_laboratory",
+     "balcony",
+     "garden",
+     "graveyard",
+     "patio",
+     "tower"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 44,
+   "mode": "supernatural_aging",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "SupernaturalAgingMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_turn_start",
+    "bot_goal_rooms"
+   ],
+   "hook_count": 6,
+   "tracks": {
+    "ritual_progress": "player_count"
+   },
+   "actions": 1,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [
+     "catacombs",
+     "charred_room",
+     "crypt",
+     "gallery",
+     "kitchen",
+     "pentagram_chamber",
+     "tower"
+    ],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 45,
+   "mode": "time_bomb",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "TimeBombMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "movement_cost_floor",
+    "on_turn_end",
+    "on_enter_room",
+    "bot_blocked_rooms"
+   ],
+   "hook_count": 8,
+   "tracks": {
+    "big_bomb_timer": 12
+   },
+   "actions": 1,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 1,
+   "issues": [
+    "有剧本行动但没有任何目标来源（既无 bot_goal_rooms，静态目标字段也全空）"
+   ]
+  },
+  {
+   "haunt": 46,
+   "mode": "cannibal_feast",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "CannibalFeastMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "monster_killed_on_defeat",
+    "on_turn_start",
+    "on_player_died",
+    "on_monster_turn_start",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 10,
+   "tracks": {
+    "victims_escaped": 6
+   },
+   "actions": 5,
+   "monsters": 0,
+   "tokens": 1,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "attic",
+     "dining_room",
+     "entrance_hall"
+    ],
+    "action_rooms": [
+     "entrance_hall",
+     "entrance_hall",
+     "entrance_hall"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 47,
+   "mode": "worm_ouroboros",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "OuroborosMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "on_monster_turn_start",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 9,
+   "tracks": {
+    "ouroboros_body": 16
+   },
+   "actions": 1,
+   "monsters": 1,
+   "tokens": 1,
+   "required_cards": 1,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 48,
+   "mode": "cursed_weapon",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "CrimsonJackMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "monster_killed_on_defeat",
+    "on_turn_start",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 9,
+   "tracks": {
+    "study_tokens": 6
+   },
+   "actions": 2,
+   "monsters": 1,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "entrance_hall",
+     "library",
+     "chapel",
+     "vault",
+     "attic"
+    ],
+    "action_rooms": [
+     "library",
+     "chapel",
+     "vault",
+     "attic"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 49,
+   "mode": "astral_spirit",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "AstralSpiritMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "attack_attr_override",
+    "attack_loss_damage_disabled",
+    "can_discover_rooms",
+    "on_player_died",
+    "on_monster_turn_start",
+    "on_monster_turn_attack",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 11,
+   "tracks": {
+    "banish_tokens": 6
+   },
+   "actions": 0,
+   "monsters": 1,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 50,
+   "mode": "night_survival",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "NightMurderMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "on_turn_end",
+    "progress_summary"
+   ],
+   "hook_count": 4,
+   "tracks": {
+    "night_timer": 10
+   },
+   "actions": 0,
+   "monsters": 1,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": [
+    "声明了 1 只剧本怪物却没有任何怪物钩子"
+   ]
+  },
+  {
+   "haunt": 51,
+   "mode": "darker_than_night",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "DarkerThanNightMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "on_turn_start"
+   ],
+   "hook_count": 3,
+   "tracks": {
+    "hero_progress": "player_count"
+   },
+   "actions": 1,
+   "monsters": 0,
+   "tokens": 2,
+   "required_cards": 0,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [
+     "bedroom",
+     "chapel",
+     "conservatory",
+     "dining_room",
+     "grand_staircase",
+     "master_bedroom",
+     "balcony",
+     "garden",
+     "graveyard",
+     "patio",
+     "tower"
+    ],
+    "action_rooms": [
+     "bedroom",
+     "chapel",
+     "conservatory",
+     "dining_room",
+     "grand_staircase",
+     "master_bedroom"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 52,
+   "mode": "ring_exorcism",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 4,
+   "handler": "CracklingAuraMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "attack_attr_override",
+    "attack_loss_damage_disabled",
+    "defense_roll_override",
+    "damage_reduction_label",
+    "physical_damage_reduction",
+    "on_turn_start",
+    "on_turn_end",
+    "on_player_died",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "bot_leave_after_action"
+   ],
+   "hook_count": 16,
+   "tracks": {
+    "ring_track": "hero_count"
+   },
+   "actions": 9,
+   "monsters": 1,
+   "tokens": 2,
+   "required_cards": 0,
+   "win_conditions": 1,
+   "goals": {
+    "key_rooms": [
+     "pentagram_chamber"
+    ],
+    "action_rooms": [
+     "pentagram_chamber"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 53,
+   "mode": "toxic_object_escape",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "ToxicObjectEscapeMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "special_steal",
+    "on_turn_start",
+    "on_player_died",
+    "on_enter_room",
+    "bot_goal_rooms"
+   ],
+   "hook_count": 9,
+   "tracks": {
+    "barricade_tokens": "player_count",
+    "escaped_count": "half_players_ceil"
+   },
+   "actions": 4,
+   "monsters": 1,
+   "tokens": 2,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "entrance_hall",
+     "furnace_room",
+     "underground_lake"
+    ],
+    "action_rooms": [
+     "entrance_hall",
+     "entrance_hall"
+    ],
+    "profile_targets": [
+     "furnace_room",
+     "underground_lake",
+     "entrance_hall"
+    ],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": [
+    "声明了 1 只剧本怪物却没有任何怪物钩子"
+   ]
+  },
+  {
+   "haunt": 54,
+   "mode": "arkanok_skull",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "ArkanokSkullMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_enter_room",
+    "bot_goal_rooms"
+   ],
+   "hook_count": 6,
+   "tracks": {
+    "ritual_progress": 1
+   },
+   "actions": 2,
+   "monsters": 1,
+   "tokens": 1,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "chapel",
+     "crypt",
+     "graveyard",
+     "furnace_room",
+     "bloody_room",
+     "charred_room"
+    ],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": [
+    "声明了 1 只剧本怪物却没有任何怪物钩子"
+   ]
+  },
+  {
+   "haunt": 55,
+   "mode": "kings_roads",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 4,
+   "handler": "KingsRoadsMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_turn_start",
+    "on_attack_resolved",
+    "on_monster_turn_attack",
+    "on_monster_move",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "bot_hazard_rooms",
+    "bot_stay_in_room"
+   ],
+   "hook_count": 12,
+   "tracks": {
+    "disenchant_progress": "player_count"
+   },
+   "actions": 1,
+   "monsters": 1,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "research_laboratory",
+     "chapel",
+     "conservatory",
+     "crypt",
+     "mystic_elevator",
+     "garden",
+     "graveyard",
+     "patio",
+     "tower",
+     "balcony"
+    ],
+    "action_rooms": [],
+    "profile_targets": [
+     "research_laboratory",
+     "mystic_elevator",
+     "chapel",
+     "conservatory",
+     "crypt"
+    ],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 56,
+   "mode": "time_sands",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "SandsOfTimeMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_attr_override",
+    "attack_loss_damage_disabled",
+    "on_turn_start",
+    "on_turn_end",
+    "on_monster_turn_start",
+    "on_monster_turn_attack",
+    "on_monster_move",
+    "bot_goal_rooms",
+    "bot_leave_after_action",
+    "bot_action_blocked",
+    "progress_summary"
+   ],
+   "hook_count": 15,
+   "tracks": {
+    "time_track": 10
+   },
+   "actions": 4,
+   "monsters": 1,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 3,
+   "issues": []
+  },
+  {
+   "haunt": 57,
+   "mode": "portrait_curse",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "PortraitCurseMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "physical_damage_reduction",
+    "special_steal",
+    "on_turn_start",
+    "on_enter_room",
+    "on_room_discovered",
+    "bot_goal_rooms",
+    "bot_leave_after_action",
+    "bot_action_blocked",
+    "progress_summary"
+   ],
+   "hook_count": 14,
+   "tracks": {
+    "paint_destroyed": 3,
+    "repaint": "hero_count"
+   },
+   "actions": 5,
+   "monsters": 0,
+   "tokens": 2,
+   "required_cards": 0,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 58,
+   "mode": "nightfall_twilight",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "NightfallMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "attack_attr_override",
+    "on_turn_start",
+    "on_player_died",
+    "on_monster_turn_start",
+    "on_monster_turn_attack",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "bot_hazard_rooms",
+    "bot_stay_in_room",
+    "bot_leave_after_action",
+    "bot_action_blocked",
+    "bot_goal_suppressed",
+    "progress_summary"
+   ],
+   "hook_count": 18,
+   "tracks": {
+    "banished_floors": 3
+   },
+   "actions": 2,
+   "monsters": 1,
+   "tokens": 3,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "furnace_room"
+    ],
+    "action_rooms": [
+     "furnace_room"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 59,
+   "mode": "badge_curse",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "ForAThousandYearsMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_turn_start",
+    "on_turn_end",
+    "on_player_moved",
+    "on_player_died",
+    "on_attack_resolved",
+    "on_monster_turn_start",
+    "on_monster_turn_attack",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "bot_hazard_rooms",
+    "bot_leave_after_action",
+    "bot_action_blocked",
+    "progress_summary"
+   ],
+   "hook_count": 17,
+   "tracks": {
+    "medallion": 1
+   },
+   "actions": 1,
+   "monsters": 4,
+   "tokens": 5,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "tower",
+     "underground_lake"
+    ],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 60,
+   "mode": "sphinx_riddle",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "BurningSandsMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "movement_cost_floor",
+    "on_monster_turn_attack",
+    "on_monster_move",
+    "bot_goal_rooms",
+    "bot_hazard_rooms",
+    "bot_stay_in_room",
+    "bot_leave_after_action",
+    "bot_action_blocked",
+    "bot_goal_suppressed",
+    "progress_summary"
+   ],
+   "hook_count": 14,
+   "tracks": {
+    "riddle": 3
+   },
+   "actions": 5,
+   "monsters": 1,
+   "tokens": 4,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "entrance_hall",
+     "junk_room",
+     "game_room",
+     "organ_room"
+    ],
+    "action_rooms": [
+     "junk_room",
+     "game_room",
+     "organ_room"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 2,
+   "issues": []
+  },
+  {
+   "haunt": 61,
+   "mode": "ghost_warrior",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 4,
+   "handler": "EternalGloryMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "on_turn_start",
+    "on_turn_end",
+    "on_enter_room",
+    "on_monster_move",
+    "bot_goal_rooms",
+    "bot_leave_after_action",
+    "bot_action_blocked",
+    "progress_summary"
+   ],
+   "hook_count": 13,
+   "tracks": {
+    "inspire_track": 6,
+    "persuasion_track": 20
+   },
+   "actions": 3,
+   "monsters": 1,
+   "tokens": 5,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "gallery",
+     "graveyard",
+     "wine_cellar"
+    ],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 62,
+   "mode": "bag_of_tricks",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 4,
+   "handler": "BagOfTricksMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "monster_counterattack_disabled",
+    "on_attack_resolved",
+    "on_monster_turn_start",
+    "on_monster_defeated",
+    "bot_stay_in_room",
+    "bot_action_blocked",
+    "progress_summary"
+   ],
+   "hook_count": 11,
+   "tracks": {
+    "souvenir_count": 4,
+    "trinket_progress": 8,
+    "trinket_tokens": "hero_count"
+   },
+   "actions": 2,
+   "monsters": 1,
+   "tokens": 2,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": [
+    "有剧本行动但没有任何目标来源（既无 bot_goal_rooms，静态目标字段也全空）"
+   ]
+  },
+  {
+   "haunt": 63,
+   "mode": "twisting_nether",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 4,
+   "handler": "TwistingNetherMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_attr_override",
+    "monster_attack_roll_bonus",
+    "on_turn_start",
+    "on_turn_end",
+    "on_monster_turn_start",
+    "on_monster_turn_attack",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 12,
+   "tracks": {
+    "anchor_progress": 12
+   },
+   "actions": 1,
+   "monsters": 4,
+   "tokens": 1,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 64,
+   "mode": "blood_offering",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 4,
+   "handler": "BloodOfferingMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "monster_killed_on_defeat",
+    "on_turn_start",
+    "on_turn_end",
+    "on_monster_turn_start",
+    "bot_goal_rooms",
+    "bot_hazard_rooms",
+    "bot_action_blocked",
+    "progress_summary"
+   ],
+   "hook_count": 12,
+   "tracks": {
+    "demon_timer": 7,
+    "girl_wounds": 5
+   },
+   "actions": 2,
+   "monsters": 2,
+   "tokens": 3,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 65,
+   "mode": "haunt_exorcism",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 4,
+   "handler": "BreathOfWindMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_attr_override",
+    "on_monster_turn_start",
+    "on_monster_turn_attack",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "bot_action_blocked",
+    "progress_summary"
+   ],
+   "hook_count": 11,
+   "tracks": {
+    "exorcism_progress": "player_count",
+    "poltergeist_timer": 8
+   },
+   "actions": 2,
+   "monsters": 1,
+   "tokens": 2,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "kitchen",
+     "dining_room",
+     "chapel",
+     "gallery"
+    ],
+    "action_rooms": [
+     "kitchen",
+     "dining_room",
+     "chapel",
+     "gallery"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 66,
+   "mode": "hell_on_earth",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "HellOnEarthMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "item_pickup_blocked",
+    "item_trade_blocked",
+    "mystic_elevator_blocked",
+    "on_turn_start",
+    "on_monster_turn_start",
+    "on_monster_turn_attack",
+    "on_monster_move",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "bot_stay_in_room",
+    "bot_action_blocked",
+    "progress_summary"
+   ],
+   "hook_count": 17,
+   "tracks": {
+    "holy_power": 8
+   },
+   "actions": 3,
+   "monsters": 1,
+   "tokens": 1,
+   "required_cards": 1,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 67,
+   "mode": "storybook_twists",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "StorybookTwistsMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "physical_damage_reduction",
+    "item_use_blocked",
+    "can_discover_rooms",
+    "counts_as_movement_obstacle",
+    "on_turn_start",
+    "on_player_moved",
+    "on_attack_resolved",
+    "on_monster_turn_start",
+    "on_monster_turn_attack",
+    "on_monster_attack",
+    "on_monster_defeated",
+    "bot_goal_rooms",
+    "bot_action_blocked",
+    "progress_summary"
+   ],
+   "hook_count": 19,
+   "tracks": {
+    "quests": "hero_count",
+    "story": 7
+   },
+   "actions": 4,
+   "monsters": 3,
+   "tokens": 5,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 1,
+   "issues": []
+  },
+  {
+   "haunt": 68,
+   "mode": "labyrinth_escape",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "LabyrinthEscapeMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "on_turn_start",
+    "on_turn_end",
+    "on_monster_turn_attack",
+    "bot_goal_rooms",
+    "bot_stay_in_room",
+    "progress_summary"
+   ],
+   "hook_count": 10,
+   "tracks": {
+    "labyrinth_turn": 12
+   },
+   "actions": 5,
+   "monsters": 1,
+   "tokens": 2,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "monster",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 4,
+   "issues": []
+  },
+  {
+   "haunt": 69,
+   "mode": "wisp_capture",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "WispCaptureMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "movement_cost_floor",
+    "on_turn_start",
+    "on_monster_turn_start",
+    "on_monster_turn_attack",
+    "bot_goal_rooms",
+    "progress_summary"
+   ],
+   "hook_count": 10,
+   "tracks": {
+    "capture_tokens": 6,
+    "escape_track": 6
+   },
+   "actions": 1,
+   "monsters": 1,
+   "tokens": 3,
+   "required_cards": 0,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [],
+    "action_rooms": [],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 4,
+   "issues": []
+  },
+  {
+   "haunt": 70,
+   "mode": "inhuman_transformation",
+   "status": "playable",
+   "fidelity": "refined",
+   "version": 3,
+   "handler": "InhumanTransformationMode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory",
+    "available_actions",
+    "perform_action",
+    "attack_allowed",
+    "attack_attr_override",
+    "on_turn_start",
+    "on_turn_end",
+    "on_player_moved",
+    "on_attack_resolved",
+    "bot_goal_rooms",
+    "bot_stay_in_room",
+    "bot_leave_after_action",
+    "bot_action_blocked",
+    "progress_summary"
+   ],
+   "hook_count": 15,
+   "tracks": {
+    "form_visits": 5
+   },
+   "actions": 10,
+   "monsters": 0,
+   "tokens": 3,
+   "required_cards": 3,
+   "win_conditions": 0,
+   "goals": {
+    "key_rooms": [
+     "crypt",
+     "graveyard",
+     "bloody_room",
+     "balcony",
+     "tower",
+     "patio",
+     "garden",
+     "charred_room",
+     "conservatory",
+     "creaky_hallway",
+     "statuary_corridor",
+     "mystic_elevator",
+     "chapel",
+     "wine_cellar",
+     "underground_lake",
+     "furnace_room",
+     "research_laboratory",
+     "operating_laboratory",
+     "kitchen",
+     "larder",
+     "attic",
+     "junk_room"
+    ],
+    "action_rooms": [
+     "chapel",
+     "wine_cellar",
+     "underground_lake",
+     "furnace_room",
+     "research_laboratory",
+     "operating_laboratory",
+     "vault",
+     "kitchen",
+     "larder",
+     "garden",
+     "patio",
+     "attic",
+     "junk_room"
+    ],
+    "profile_targets": [],
+    "dynamic": true
+   },
+   "ai_profile": [
+    "hero",
+    "scenario",
+    "traitor"
+   ],
+   "golden": 0,
+   "verify": 3,
+   "issues": []
+  },
+  {
+   "haunt": 71,
+   "mode": "ww_haunt_71",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt71Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "theater"
+    ],
+    "action_rooms": [
+     "theater",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 72,
+   "mode": "ww_haunt_72",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt72Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "gallery",
+     "gymnasium",
+     "junk_room",
+     "servants_quarters"
+    ],
+    "action_rooms": [
+     "gallery",
+     "gymnasium",
+     "junk_room",
+     "servants_quarters",
+     "gallery",
+     "gymnasium",
+     "junk_room",
+     "servants_quarters"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 73,
+   "mode": "ww_haunt_73",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt73Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "catacombs",
+     "gallery",
+     "kitchen"
+    ],
+    "action_rooms": [
+     "catacombs",
+     "gallery",
+     "kitchen",
+     "catacombs",
+     "gallery",
+     "kitchen"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 74,
+   "mode": "ww_haunt_74",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt74Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dining_room",
+     "gallery",
+     "master_bedroom",
+     "servants_quarters"
+    ],
+    "action_rooms": [
+     "dining_room",
+     "gallery",
+     "master_bedroom",
+     "servants_quarters",
+     "dining_room",
+     "gallery",
+     "master_bedroom",
+     "servants_quarters"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 75,
+   "mode": "ww_haunt_75",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt75Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 2,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dungeon"
+    ],
+    "action_rooms": [
+     "dungeon",
+     "dungeon"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 76,
+   "mode": "ww_haunt_76",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt76Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dungeon",
+     "rookery",
+     "study",
+     "theater"
+    ],
+    "action_rooms": [
+     "dungeon",
+     "rookery",
+     "study",
+     "theater",
+     "dungeon",
+     "rookery",
+     "study",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 77,
+   "mode": "ww_haunt_77",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt77Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "rookery"
+    ],
+    "action_rooms": [
+     "rookery",
+     "rookery"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 78,
+   "mode": "ww_haunt_78",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt78Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "nursery",
+     "rookery",
+     "study",
+     "theater"
+    ],
+    "action_rooms": [
+     "nursery",
+     "rookery",
+     "study",
+     "theater",
+     "nursery",
+     "rookery",
+     "study",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 79,
+   "mode": "ww_haunt_79",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt79Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "catacombs",
+     "furnace_room",
+     "pentagram_chamber",
+     "servants_quarters",
+     "study"
+    ],
+    "action_rooms": [
+     "catacombs",
+     "furnace_room",
+     "pentagram_chamber",
+     "servants_quarters",
+     "study",
+     "catacombs",
+     "furnace_room",
+     "pentagram_chamber",
+     "servants_quarters",
+     "study"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 80,
+   "mode": "ww_haunt_80",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt80Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dining_room",
+     "kitchen",
+     "servants_quarters",
+     "theater"
+    ],
+    "action_rooms": [
+     "dining_room",
+     "kitchen",
+     "servants_quarters",
+     "theater",
+     "dining_room",
+     "kitchen",
+     "servants_quarters",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 81,
+   "mode": "ww_haunt_81",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt81Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "catacombs",
+     "dungeon",
+     "furnace_room",
+     "pentagram_chamber"
+    ],
+    "action_rooms": [
+     "catacombs",
+     "dungeon",
+     "furnace_room",
+     "pentagram_chamber",
+     "catacombs",
+     "dungeon",
+     "furnace_room",
+     "pentagram_chamber"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 82,
+   "mode": "ww_haunt_82",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt82Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "theater"
+    ],
+    "action_rooms": [
+     "theater",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 83,
+   "mode": "ww_haunt_83",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt83Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 2,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "abandoned_room",
+     "balcony",
+     "charred_room",
+     "theater"
+    ],
+    "action_rooms": [
+     "abandoned_room",
+     "balcony",
+     "charred_room",
+     "theater",
+     "abandoned_room",
+     "balcony",
+     "charred_room",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 84,
+   "mode": "ww_haunt_84",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt84Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dungeon",
+     "rookery",
+     "study",
+     "theater"
+    ],
+    "action_rooms": [
+     "dungeon",
+     "rookery",
+     "study",
+     "theater",
+     "dungeon",
+     "rookery",
+     "study",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 85,
+   "mode": "ww_haunt_85",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt85Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dungeon",
+     "nursery",
+     "rookery",
+     "study"
+    ],
+    "action_rooms": [
+     "dungeon",
+     "nursery",
+     "rookery",
+     "study",
+     "dungeon",
+     "nursery",
+     "rookery",
+     "study"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 86,
+   "mode": "ww_haunt_86",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt86Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dungeon",
+     "nursery",
+     "rookery",
+     "theater"
+    ],
+    "action_rooms": [
+     "dungeon",
+     "nursery",
+     "rookery",
+     "theater",
+     "dungeon",
+     "nursery",
+     "rookery",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 87,
+   "mode": "ww_haunt_87",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt87Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "balcony",
+     "dining_room",
+     "kitchen",
+     "nursery"
+    ],
+    "action_rooms": [
+     "balcony",
+     "dining_room",
+     "kitchen",
+     "nursery",
+     "balcony",
+     "dining_room",
+     "kitchen",
+     "nursery"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 88,
+   "mode": "ww_haunt_88",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt88Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "junk_room",
+     "nursery",
+     "servants_quarters",
+     "theater"
+    ],
+    "action_rooms": [
+     "junk_room",
+     "nursery",
+     "servants_quarters",
+     "theater",
+     "junk_room",
+     "nursery",
+     "servants_quarters",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 89,
+   "mode": "ww_haunt_89",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt89Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "catacombs",
+     "charred_room",
+     "cave"
+    ],
+    "action_rooms": [
+     "catacombs",
+     "charred_room",
+     "cave",
+     "catacombs",
+     "charred_room",
+     "cave"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 90,
+   "mode": "ww_haunt_90",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt90Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "balcony",
+     "gallery",
+     "rookery",
+     "study"
+    ],
+    "action_rooms": [
+     "balcony",
+     "gallery",
+     "rookery",
+     "study",
+     "balcony",
+     "gallery",
+     "rookery",
+     "study"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 91,
+   "mode": "ww_haunt_91",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt91Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "balcony",
+     "gallery",
+     "junk_room",
+     "servants_quarters"
+    ],
+    "action_rooms": [
+     "balcony",
+     "gallery",
+     "junk_room",
+     "servants_quarters",
+     "balcony",
+     "gallery",
+     "junk_room",
+     "servants_quarters"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 92,
+   "mode": "ww_haunt_92",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt92Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dungeon",
+     "nursery",
+     "study",
+     "theater"
+    ],
+    "action_rooms": [
+     "dungeon",
+     "nursery",
+     "study",
+     "theater",
+     "dungeon",
+     "nursery",
+     "study",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 93,
+   "mode": "ww_haunt_93",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt93Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dungeon",
+     "nursery",
+     "rookery",
+     "study"
+    ],
+    "action_rooms": [
+     "dungeon",
+     "nursery",
+     "rookery",
+     "study",
+     "dungeon",
+     "nursery",
+     "rookery",
+     "study"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 94,
+   "mode": "ww_haunt_94",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt94Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "nursery"
+    ],
+    "action_rooms": [
+     "nursery",
+     "nursery"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 95,
+   "mode": "ww_haunt_95",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt95Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "furnace_room"
+    ],
+    "action_rooms": [
+     "furnace_room",
+     "furnace_room"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 96,
+   "mode": "ww_haunt_96",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt96Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "gallery",
+     "junk_room",
+     "master_bedroom",
+     "study"
+    ],
+    "action_rooms": [
+     "gallery",
+     "junk_room",
+     "master_bedroom",
+     "study",
+     "gallery",
+     "junk_room",
+     "master_bedroom",
+     "study"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 97,
+   "mode": "ww_haunt_97",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt97Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dungeon",
+     "rookery",
+     "study",
+     "theater"
+    ],
+    "action_rooms": [
+     "dungeon",
+     "rookery",
+     "study",
+     "theater",
+     "dungeon",
+     "rookery",
+     "study",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 98,
+   "mode": "ww_haunt_98",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt98Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "study"
+    ],
+    "action_rooms": [
+     "study",
+     "study"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 99,
+   "mode": "ww_haunt_99",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt99Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "charred_room",
+     "gallery",
+     "gymnasium",
+     "junk_room"
+    ],
+    "action_rooms": [
+     "charred_room",
+     "gallery",
+     "gymnasium",
+     "junk_room",
+     "charred_room",
+     "gallery",
+     "gymnasium",
+     "junk_room"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 100,
+   "mode": "ww_haunt_100",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt100Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dungeon",
+     "kitchen",
+     "nursery",
+     "servants_quarters"
+    ],
+    "action_rooms": [
+     "dungeon",
+     "kitchen",
+     "nursery",
+     "servants_quarters",
+     "dungeon",
+     "kitchen",
+     "nursery",
+     "servants_quarters"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 101,
+   "mode": "ww_haunt_101",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt101Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "pentagram_chamber"
+    ],
+    "action_rooms": [
+     "pentagram_chamber",
+     "pentagram_chamber"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 102,
+   "mode": "ww_haunt_102",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt102Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dining_room",
+     "kitchen",
+     "master_bedroom",
+     "study"
+    ],
+    "action_rooms": [
+     "dining_room",
+     "kitchen",
+     "master_bedroom",
+     "study",
+     "dining_room",
+     "kitchen",
+     "master_bedroom",
+     "study"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 103,
+   "mode": "ww_haunt_103",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt103Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "catacombs",
+     "charred_room",
+     "furnace_room",
+     "pentagram_chamber"
+    ],
+    "action_rooms": [
+     "catacombs",
+     "charred_room",
+     "furnace_room",
+     "pentagram_chamber",
+     "catacombs",
+     "charred_room",
+     "furnace_room",
+     "pentagram_chamber"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 104,
+   "mode": "ww_haunt_104",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt104Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dungeon",
+     "nursery",
+     "study",
+     "theater"
+    ],
+    "action_rooms": [
+     "dungeon",
+     "nursery",
+     "study",
+     "theater",
+     "dungeon",
+     "nursery",
+     "study",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 105,
+   "mode": "ww_haunt_105",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt105Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dungeon",
+     "nursery",
+     "rookery",
+     "study"
+    ],
+    "action_rooms": [
+     "dungeon",
+     "nursery",
+     "rookery",
+     "study",
+     "dungeon",
+     "nursery",
+     "rookery",
+     "study"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 106,
+   "mode": "ww_haunt_106",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt106Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 0,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "abandoned_room",
+     "gymnasium",
+     "nursery",
+     "rookery"
+    ],
+    "action_rooms": [
+     "abandoned_room",
+     "gymnasium",
+     "nursery",
+     "rookery",
+     "abandoned_room",
+     "gymnasium",
+     "nursery",
+     "rookery"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 107,
+   "mode": "ww_haunt_107",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt107Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "balcony",
+     "kitchen",
+     "nursery",
+     "rookery"
+    ],
+    "action_rooms": [
+     "balcony",
+     "kitchen",
+     "nursery",
+     "rookery",
+     "balcony",
+     "kitchen",
+     "nursery",
+     "rookery"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 108,
+   "mode": "ww_haunt_108",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt108Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "abandoned_room",
+     "balcony",
+     "catacombs",
+     "gallery",
+     "junk_room"
+    ],
+    "action_rooms": [
+     "abandoned_room",
+     "balcony",
+     "catacombs",
+     "gallery",
+     "junk_room",
+     "abandoned_room",
+     "balcony",
+     "catacombs",
+     "gallery",
+     "junk_room"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 109,
+   "mode": "ww_haunt_109",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt109Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "balcony",
+     "dining_room",
+     "dungeon",
+     "kitchen"
+    ],
+    "action_rooms": [
+     "balcony",
+     "dining_room",
+     "dungeon",
+     "kitchen",
+     "balcony",
+     "dining_room",
+     "dungeon",
+     "kitchen"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 110,
+   "mode": "ww_haunt_110",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt110Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "balcony",
+     "dining_room",
+     "master_bedroom",
+     "study"
+    ],
+    "action_rooms": [
+     "balcony",
+     "dining_room",
+     "master_bedroom",
+     "study",
+     "balcony",
+     "dining_room",
+     "master_bedroom",
+     "study"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 111,
+   "mode": "ww_haunt_111",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt111Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "catacombs",
+     "dining_room",
+     "furnace_room",
+     "junk_room"
+    ],
+    "action_rooms": [
+     "catacombs",
+     "dining_room",
+     "furnace_room",
+     "junk_room",
+     "catacombs",
+     "dining_room",
+     "furnace_room",
+     "junk_room"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 112,
+   "mode": "ww_haunt_112",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt112Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "gymnasium"
+    ],
+    "action_rooms": [
+     "gymnasium",
+     "gymnasium"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 113,
+   "mode": "ww_haunt_113",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt113Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 2,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "rookery"
+    ],
+    "action_rooms": [
+     "rookery",
+     "rookery"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 114,
+   "mode": "ww_haunt_114",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt114Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 2,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "catacombs",
+     "pentagram_chamber",
+     "rookery",
+     "servants_quarters"
+    ],
+    "action_rooms": [
+     "catacombs",
+     "pentagram_chamber",
+     "rookery",
+     "servants_quarters",
+     "catacombs",
+     "pentagram_chamber",
+     "rookery",
+     "servants_quarters"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 115,
+   "mode": "ww_haunt_115",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt115Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 2,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "nursery"
+    ],
+    "action_rooms": [
+     "nursery",
+     "nursery"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 116,
+   "mode": "ww_haunt_116",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt116Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 4,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "abandoned_room"
+    ],
+    "action_rooms": [
+     "abandoned_room",
+     "abandoned_room"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 117,
+   "mode": "ww_haunt_117",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt117Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dungeon",
+     "rookery",
+     "study",
+     "theater"
+    ],
+    "action_rooms": [
+     "dungeon",
+     "rookery",
+     "study",
+     "theater",
+     "dungeon",
+     "rookery",
+     "study",
+     "theater"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 118,
+   "mode": "ww_haunt_118",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt118Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 3,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "master_bedroom"
+    ],
+    "action_rooms": [
+     "master_bedroom",
+     "master_bedroom"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 119,
+   "mode": "ww_haunt_119",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt119Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "dining_room",
+     "kitchen",
+     "nursery",
+     "study"
+    ],
+    "action_rooms": [
+     "dining_room",
+     "kitchen",
+     "nursery",
+     "study",
+     "dining_room",
+     "kitchen",
+     "nursery",
+     "study"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  },
+  {
+   "haunt": 120,
+   "mode": "ww_haunt_120",
+   "status": "playable",
+   "fidelity": "skeleton",
+   "version": 2,
+   "handler": "WWHaunt120Mode",
+   "bases": [
+    "GenericModeHandler"
+   ],
+   "hooks": [
+    "setup",
+    "check_victory"
+   ],
+   "hook_count": 2,
+   "tracks": {
+    "hero_progress": "player_count",
+    "traitor_progress": "player_count"
+   },
+   "actions": 2,
+   "monsters": 0,
+   "tokens": 0,
+   "required_cards": 1,
+   "win_conditions": 2,
+   "goals": {
+    "key_rooms": [
+     "abandoned_room",
+     "dungeon",
+     "gymnasium",
+     "junk_room"
+    ],
+    "action_rooms": [
+     "abandoned_room",
+     "dungeon",
+     "gymnasium",
+     "junk_room",
+     "abandoned_room",
+     "dungeon",
+     "gymnasium",
+     "junk_room"
+    ],
+    "profile_targets": [],
+    "dynamic": false
+   },
+   "ai_profile": [],
+   "golden": 0,
+   "verify": 0,
+   "issues": []
+  }
+ ]
+}

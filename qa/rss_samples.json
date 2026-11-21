@@ -1,0 +1,4981 @@
+{
+  "tool": "qa/rss_probe.py",
+  "metric": "psapi.GetProcessMemoryInfo/PeakWorkingSetSize",
+  "backend": "psutil 7.2.2",
+  "stage": "all",
+  "command": "python asset_pipeline.py --stage all",
+  "sampling_interval_ms": 200,
+  "run_count": 5,
+  "budget_mib": 1536.0,
+  "budget_bytes": 1610612736,
+  "verdict_basis": "max",
+  "verdict_note": "按 5 次峰值的最大值判定；任一次 >1536 MiB 即 fail；不用中位数替代峰值",
+  "runs": [
+    {
+      "run_id": 1,
+      "stage": "all",
+      "command": "python asset_pipeline.py --stage all",
+      "exit_code": 0,
+      "exit_ok": true,
+      "duration_ms": 37240,
+      "sampling_interval_ms": 200,
+      "sample_count": 174,
+      "samples": [
+        {
+          "t_ms": 25,
+          "peak_bytes": 2125824,
+          "peak_mib": 2.03
+        },
+        {
+          "t_ms": 227,
+          "peak_bytes": 22208512,
+          "peak_mib": 21.18
+        },
+        {
+          "t_ms": 441,
+          "peak_bytes": 26935296,
+          "peak_mib": 25.69
+        },
+        {
+          "t_ms": 655,
+          "peak_bytes": 32112640,
+          "peak_mib": 30.62
+        },
+        {
+          "t_ms": 869,
+          "peak_bytes": 33705984,
+          "peak_mib": 32.14
+        },
+        {
+          "t_ms": 1086,
+          "peak_bytes": 33705984,
+          "peak_mib": 32.14
+        },
+        {
+          "t_ms": 1300,
+          "peak_bytes": 66281472,
+          "peak_mib": 63.21
+        },
+        {
+          "t_ms": 1509,
+          "peak_bytes": 69844992,
+          "peak_mib": 66.61
+        },
+        {
+          "t_ms": 1722,
+          "peak_bytes": 70709248,
+          "peak_mib": 67.43
+        },
+        {
+          "t_ms": 1936,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 2152,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 2369,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 2581,
+          "peak_bytes": 71204864,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 2795,
+          "peak_bytes": 71204864,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 3013,
+          "peak_bytes": 71204864,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 3227,
+          "peak_bytes": 71204864,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 3440,
+          "peak_bytes": 71204864,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 3654,
+          "peak_bytes": 71204864,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 3868,
+          "peak_bytes": 71204864,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 4080,
+          "peak_bytes": 71204864,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 4295,
+          "peak_bytes": 71208960,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 4512,
+          "peak_bytes": 71208960,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 4725,
+          "peak_bytes": 71208960,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 4937,
+          "peak_bytes": 71208960,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 5151,
+          "peak_bytes": 71208960,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 5366,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 5577,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 5793,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 6008,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 6227,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 6433,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 6646,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 6860,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 7075,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 7288,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 7502,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 7717,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 7928,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 8141,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 8355,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 8568,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 8783,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 8995,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 9211,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 9425,
+          "peak_bytes": 71213056,
+          "peak_mib": 67.91
+        },
+        {
+          "t_ms": 9639,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 9852,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 10067,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 10281,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 10492,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 10708,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 10919,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 11134,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 11350,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 11560,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 11775,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 11986,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 12202,
+          "peak_bytes": 71217152,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 12416,
+          "peak_bytes": 71221248,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 12631,
+          "peak_bytes": 71221248,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 12848,
+          "peak_bytes": 71221248,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 13061,
+          "peak_bytes": 71221248,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 13275,
+          "peak_bytes": 71221248,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 13493,
+          "peak_bytes": 71221248,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 13708,
+          "peak_bytes": 71221248,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 13921,
+          "peak_bytes": 71221248,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 14136,
+          "peak_bytes": 71221248,
+          "peak_mib": 67.92
+        },
+        {
+          "t_ms": 14349,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 14561,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 14777,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 14992,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 15205,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 15421,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 15635,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 15849,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 16060,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 16275,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 16487,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 16705,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 16916,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 17130,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 17347,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 17561,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 17776,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 17989,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 18203,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 18420,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 18633,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 18845,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 19061,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 19277,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 19494,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 19703,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 19918,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 20133,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 20343,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 20559,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 20772,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 20987,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 21201,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 21415,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 21630,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 21843,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 22056,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 22268,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 22482,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 22695,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 22909,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 23124,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 23336,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 23552,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 23765,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 23975,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 24189,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 24408,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 24618,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 24831,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 25051,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 25259,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 25471,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 25690,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 25900,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 26112,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 26327,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 26542,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 26758,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 26968,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 27184,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 27398,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 27615,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 27827,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 28040,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 28256,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 28474,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 28686,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 28902,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 29116,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 29327,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 29541,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 29759,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 29968,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 30184,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 30400,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 30611,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 30825,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 31041,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 31255,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 31468,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 31685,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 31896,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 32111,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 32327,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 32543,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 32757,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 32973,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 33184,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 33396,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 33610,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 33825,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 34037,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 34250,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 34466,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 34680,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 34892,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 35107,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 35318,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 35535,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 35750,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 35965,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 36178,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 36394,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 36601,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 36814,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        },
+        {
+          "t_ms": 37026,
+          "peak_bytes": 71720960,
+          "peak_mib": 68.4
+        }
+      ],
+      "peak_bytes": 71720960,
+      "peak_mib": 68.4,
+      "budget_mib": 1536.0,
+      "budget_bytes": 1610612736,
+      "within_budget": true,
+      "process_tree": [
+        "36372:python.exe"
+      ],
+      "stdout_tail": "运行时状态：ok=142\n[placeholders] 3 张\n  character source/desktop/game/assets/placeholders/character_missing.png 320x320 8075 B\n  room      source/desktop/game/assets/placeholders/room_missing.png 512x512 11400 B\n  event     source/desktop/game/assets/placeholders/event_missing.png 480x672 11758 B\n[normalize] 写出 142 张，合计 61472233 字节（58.62 MiB）",
+      "stderr_tail": "",
+      "reader_error": ""
+    },
+    {
+      "run_id": 2,
+      "stage": "all",
+      "command": "python asset_pipeline.py --stage all",
+      "exit_code": 0,
+      "exit_ok": true,
+      "duration_ms": 37441,
+      "sampling_interval_ms": 200,
+      "sample_count": 175,
+      "samples": [
+        {
+          "t_ms": 16,
+          "peak_bytes": 2101248,
+          "peak_mib": 2.0
+        },
+        {
+          "t_ms": 227,
+          "peak_bytes": 22241280,
+          "peak_mib": 21.21
+        },
+        {
+          "t_ms": 429,
+          "peak_bytes": 26669056,
+          "peak_mib": 25.43
+        },
+        {
+          "t_ms": 644,
+          "peak_bytes": 32878592,
+          "peak_mib": 31.36
+        },
+        {
+          "t_ms": 855,
+          "peak_bytes": 33439744,
+          "peak_mib": 31.89
+        },
+        {
+          "t_ms": 1069,
+          "peak_bytes": 33439744,
+          "peak_mib": 31.89
+        },
+        {
+          "t_ms": 1284,
+          "peak_bytes": 69259264,
+          "peak_mib": 66.05
+        },
+        {
+          "t_ms": 1497,
+          "peak_bytes": 69533696,
+          "peak_mib": 66.31
+        },
+        {
+          "t_ms": 1711,
+          "peak_bytes": 70180864,
+          "peak_mib": 66.93
+        },
+        {
+          "t_ms": 1925,
+          "peak_bytes": 70246400,
+          "peak_mib": 66.99
+        },
+        {
+          "t_ms": 2139,
+          "peak_bytes": 70246400,
+          "peak_mib": 66.99
+        },
+        {
+          "t_ms": 2351,
+          "peak_bytes": 70258688,
+          "peak_mib": 67.0
+        },
+        {
+          "t_ms": 2566,
+          "peak_bytes": 70258688,
+          "peak_mib": 67.0
+        },
+        {
+          "t_ms": 2778,
+          "peak_bytes": 70258688,
+          "peak_mib": 67.0
+        },
+        {
+          "t_ms": 2992,
+          "peak_bytes": 70258688,
+          "peak_mib": 67.0
+        },
+        {
+          "t_ms": 3208,
+          "peak_bytes": 70258688,
+          "peak_mib": 67.0
+        },
+        {
+          "t_ms": 3421,
+          "peak_bytes": 70258688,
+          "peak_mib": 67.0
+        },
+        {
+          "t_ms": 3635,
+          "peak_bytes": 70258688,
+          "peak_mib": 67.0
+        },
+        {
+          "t_ms": 3848,
+          "peak_bytes": 70258688,
+          "peak_mib": 67.0
+        },
+        {
+          "t_ms": 4061,
+          "peak_bytes": 70258688,
+          "peak_mib": 67.0
+        },
+        {
+          "t_ms": 4277,
+          "peak_bytes": 70262784,
+          "peak_mib": 67.01
+        },
+        {
+          "t_ms": 4490,
+          "peak_bytes": 70262784,
+          "peak_mib": 67.01
+        },
+        {
+          "t_ms": 4706,
+          "peak_bytes": 70262784,
+          "peak_mib": 67.01
+        },
+        {
+          "t_ms": 4918,
+          "peak_bytes": 70262784,
+          "peak_mib": 67.01
+        },
+        {
+          "t_ms": 5133,
+          "peak_bytes": 70266880,
+          "peak_mib": 67.01
+        },
+        {
+          "t_ms": 5346,
+          "peak_bytes": 70266880,
+          "peak_mib": 67.01
+        },
+        {
+          "t_ms": 5559,
+          "peak_bytes": 70266880,
+          "peak_mib": 67.01
+        },
+        {
+          "t_ms": 5775,
+          "peak_bytes": 70266880,
+          "peak_mib": 67.01
+        },
+        {
+          "t_ms": 5987,
+          "peak_bytes": 70279168,
+          "peak_mib": 67.02
+        },
+        {
+          "t_ms": 6202,
+          "peak_bytes": 70279168,
+          "peak_mib": 67.02
+        },
+        {
+          "t_ms": 6414,
+          "peak_bytes": 70279168,
+          "peak_mib": 67.02
+        },
+        {
+          "t_ms": 6628,
+          "peak_bytes": 70279168,
+          "peak_mib": 67.02
+        },
+        {
+          "t_ms": 6842,
+          "peak_bytes": 70279168,
+          "peak_mib": 67.02
+        },
+        {
+          "t_ms": 7057,
+          "peak_bytes": 70279168,
+          "peak_mib": 67.02
+        },
+        {
+          "t_ms": 7269,
+          "peak_bytes": 70279168,
+          "peak_mib": 67.02
+        },
+        {
+          "t_ms": 7484,
+          "peak_bytes": 70279168,
+          "peak_mib": 67.02
+        },
+        {
+          "t_ms": 7696,
+          "peak_bytes": 70279168,
+          "peak_mib": 67.02
+        },
+        {
+          "t_ms": 7912,
+          "peak_bytes": 70279168,
+          "peak_mib": 67.02
+        },
+        {
+          "t_ms": 8128,
+          "peak_bytes": 70279168,
+          "peak_mib": 67.02
+        },
+        {
+          "t_ms": 8342,
+          "peak_bytes": 70279168,
+          "peak_mib": 67.02
+        },
+        {
+          "t_ms": 8553,
+          "peak_bytes": 70283264,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 8767,
+          "peak_bytes": 70283264,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 8982,
+          "peak_bytes": 70283264,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 9197,
+          "peak_bytes": 70283264,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 9411,
+          "peak_bytes": 70283264,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 9623,
+          "peak_bytes": 70283264,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 9836,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 10053,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 10270,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 10485,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 10695,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 10909,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 11123,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 11339,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 11552,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 11769,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 11978,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 12193,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 12406,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 12618,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 12834,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 13048,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 13259,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 13472,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 13685,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 13896,
+          "peak_bytes": 70287360,
+          "peak_mib": 67.03
+        },
+        {
+          "t_ms": 14109,
+          "peak_bytes": 70291456,
+          "peak_mib": 67.04
+        },
+        {
+          "t_ms": 14326,
+          "peak_bytes": 70811648,
+          "peak_mib": 67.53
+        },
+        {
+          "t_ms": 14536,
+          "peak_bytes": 71049216,
+          "peak_mib": 67.76
+        },
+        {
+          "t_ms": 14752,
+          "peak_bytes": 71049216,
+          "peak_mib": 67.76
+        },
+        {
+          "t_ms": 14964,
+          "peak_bytes": 71049216,
+          "peak_mib": 67.76
+        },
+        {
+          "t_ms": 15178,
+          "peak_bytes": 71053312,
+          "peak_mib": 67.76
+        },
+        {
+          "t_ms": 15393,
+          "peak_bytes": 71053312,
+          "peak_mib": 67.76
+        },
+        {
+          "t_ms": 15610,
+          "peak_bytes": 71053312,
+          "peak_mib": 67.76
+        },
+        {
+          "t_ms": 15826,
+          "peak_bytes": 71053312,
+          "peak_mib": 67.76
+        },
+        {
+          "t_ms": 16040,
+          "peak_bytes": 71053312,
+          "peak_mib": 67.76
+        },
+        {
+          "t_ms": 16256,
+          "peak_bytes": 71057408,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 16468,
+          "peak_bytes": 71057408,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 16682,
+          "peak_bytes": 71057408,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 16896,
+          "peak_bytes": 71057408,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 17110,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 17325,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 17537,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 17751,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 17967,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 18178,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 18394,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 18608,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 18825,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 19038,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 19251,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 19468,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 19685,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 19900,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 20113,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 20326,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 20541,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 20752,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 20964,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 21180,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 21396,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 21611,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 21825,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 22036,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 22253,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 22468,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 22679,
+          "peak_bytes": 71061504,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 22894,
+          "peak_bytes": 71065600,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 23110,
+          "peak_bytes": 71065600,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 23325,
+          "peak_bytes": 71065600,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 23536,
+          "peak_bytes": 71065600,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 23752,
+          "peak_bytes": 71065600,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 23966,
+          "peak_bytes": 71065600,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 24177,
+          "peak_bytes": 71065600,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 24389,
+          "peak_bytes": 71065600,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 24606,
+          "peak_bytes": 71065600,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 24817,
+          "peak_bytes": 71065600,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 25034,
+          "peak_bytes": 71065600,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 25246,
+          "peak_bytes": 71065600,
+          "peak_mib": 67.77
+        },
+        {
+          "t_ms": 25459,
+          "peak_bytes": 71069696,
+          "peak_mib": 67.78
+        },
+        {
+          "t_ms": 25672,
+          "peak_bytes": 71069696,
+          "peak_mib": 67.78
+        },
+        {
+          "t_ms": 25887,
+          "peak_bytes": 71073792,
+          "peak_mib": 67.78
+        },
+        {
+          "t_ms": 26101,
+          "peak_bytes": 71073792,
+          "peak_mib": 67.78
+        },
+        {
+          "t_ms": 26317,
+          "peak_bytes": 71073792,
+          "peak_mib": 67.78
+        },
+        {
+          "t_ms": 26533,
+          "peak_bytes": 71073792,
+          "peak_mib": 67.78
+        },
+        {
+          "t_ms": 26744,
+          "peak_bytes": 71073792,
+          "peak_mib": 67.78
+        },
+        {
+          "t_ms": 26961,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 27174,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 27387,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 27602,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 27816,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 28027,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 28242,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 28456,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 28672,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 28885,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 29097,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 29310,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 29529,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 29737,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 29951,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 30166,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 30383,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 30593,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 30810,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 31023,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 31235,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 31450,
+          "peak_bytes": 71077888,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 31665,
+          "peak_bytes": 71081984,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 31877,
+          "peak_bytes": 71081984,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 32087,
+          "peak_bytes": 71081984,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 32301,
+          "peak_bytes": 71081984,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 32515,
+          "peak_bytes": 71081984,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 32729,
+          "peak_bytes": 71081984,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 32943,
+          "peak_bytes": 71081984,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 33157,
+          "peak_bytes": 71081984,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 33372,
+          "peak_bytes": 71081984,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 33584,
+          "peak_bytes": 71081984,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 33800,
+          "peak_bytes": 71081984,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 34011,
+          "peak_bytes": 71086080,
+          "peak_mib": 67.79
+        },
+        {
+          "t_ms": 34232,
+          "peak_bytes": 71151616,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 34442,
+          "peak_bytes": 71151616,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 34659,
+          "peak_bytes": 71151616,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 34871,
+          "peak_bytes": 71151616,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 35085,
+          "peak_bytes": 71151616,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 35302,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 35516,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 35730,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 35944,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 36156,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 36370,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 36585,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 36800,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 37017,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 37228,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        }
+      ],
+      "peak_bytes": 71155712,
+      "peak_mib": 67.86,
+      "budget_mib": 1536.0,
+      "budget_bytes": 1610612736,
+      "within_budget": true,
+      "process_tree": [
+        "23648:python.exe"
+      ],
+      "stdout_tail": "运行时状态：ok=142\n[placeholders] 3 张\n  character source/desktop/game/assets/placeholders/character_missing.png 320x320 8075 B\n  room      source/desktop/game/assets/placeholders/room_missing.png 512x512 11400 B\n  event     source/desktop/game/assets/placeholders/event_missing.png 480x672 11758 B\n[normalize] 写出 142 张，合计 61472233 字节（58.62 MiB）",
+      "stderr_tail": "",
+      "reader_error": ""
+    },
+    {
+      "run_id": 3,
+      "stage": "all",
+      "command": "python asset_pipeline.py --stage all",
+      "exit_code": 0,
+      "exit_ok": true,
+      "duration_ms": 37426,
+      "sampling_interval_ms": 200,
+      "sample_count": 175,
+      "samples": [
+        {
+          "t_ms": 22,
+          "peak_bytes": 2134016,
+          "peak_mib": 2.04
+        },
+        {
+          "t_ms": 231,
+          "peak_bytes": 21737472,
+          "peak_mib": 20.73
+        },
+        {
+          "t_ms": 444,
+          "peak_bytes": 26828800,
+          "peak_mib": 25.59
+        },
+        {
+          "t_ms": 646,
+          "peak_bytes": 31535104,
+          "peak_mib": 30.07
+        },
+        {
+          "t_ms": 860,
+          "peak_bytes": 33665024,
+          "peak_mib": 32.11
+        },
+        {
+          "t_ms": 1073,
+          "peak_bytes": 33665024,
+          "peak_mib": 32.11
+        },
+        {
+          "t_ms": 1289,
+          "peak_bytes": 66461696,
+          "peak_mib": 63.38
+        },
+        {
+          "t_ms": 1501,
+          "peak_bytes": 69795840,
+          "peak_mib": 66.56
+        },
+        {
+          "t_ms": 1715,
+          "peak_bytes": 70438912,
+          "peak_mib": 67.18
+        },
+        {
+          "t_ms": 1926,
+          "peak_bytes": 70942720,
+          "peak_mib": 67.66
+        },
+        {
+          "t_ms": 2138,
+          "peak_bytes": 70975488,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 2352,
+          "peak_bytes": 70975488,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 2568,
+          "peak_bytes": 70975488,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 2783,
+          "peak_bytes": 70975488,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 2995,
+          "peak_bytes": 70975488,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 3211,
+          "peak_bytes": 70975488,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 3421,
+          "peak_bytes": 70975488,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 3635,
+          "peak_bytes": 70975488,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 3851,
+          "peak_bytes": 70975488,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 4064,
+          "peak_bytes": 70975488,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 4282,
+          "peak_bytes": 70979584,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 4494,
+          "peak_bytes": 70979584,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 4710,
+          "peak_bytes": 70979584,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 4923,
+          "peak_bytes": 70979584,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 5139,
+          "peak_bytes": 70979584,
+          "peak_mib": 67.69
+        },
+        {
+          "t_ms": 5352,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 5566,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 5782,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 5993,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 6208,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 6421,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 6633,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 6843,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 7060,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 7274,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 7492,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 7701,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 7914,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 8129,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 8349,
+          "peak_bytes": 70983680,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 8557,
+          "peak_bytes": 70991872,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 8771,
+          "peak_bytes": 70991872,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 8985,
+          "peak_bytes": 70991872,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 9200,
+          "peak_bytes": 70991872,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 9412,
+          "peak_bytes": 70991872,
+          "peak_mib": 67.7
+        },
+        {
+          "t_ms": 9627,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 9842,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 10054,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 10267,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 10483,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 10696,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 10909,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 11126,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 11337,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 11551,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 11767,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 11980,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 12195,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 12404,
+          "peak_bytes": 70995968,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 12619,
+          "peak_bytes": 71000064,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 12834,
+          "peak_bytes": 71000064,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 13045,
+          "peak_bytes": 71000064,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 13259,
+          "peak_bytes": 71000064,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 13472,
+          "peak_bytes": 71000064,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 13686,
+          "peak_bytes": 71000064,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 13899,
+          "peak_bytes": 71000064,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 14112,
+          "peak_bytes": 71000064,
+          "peak_mib": 67.71
+        },
+        {
+          "t_ms": 14326,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 14544,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 14751,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 14967,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 15183,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 15395,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 15609,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 15823,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 16036,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 16251,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 16465,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 16679,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 16894,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 17105,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 17319,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 17534,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 17749,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 17962,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 18179,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 18393,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 18608,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 18821,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 19035,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 19247,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 19462,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 19677,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 19890,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 20101,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 20315,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 20528,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 20739,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 20953,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 21166,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 21382,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 21596,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 21811,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 22024,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 22237,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 22450,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 22667,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 22883,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 23094,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 23311,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 23525,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 23741,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 23950,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 24167,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 24383,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 24596,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 24813,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 25024,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 25245,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 25450,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 25663,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 25875,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 26091,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 26303,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 26519,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 26735,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 26952,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 27160,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 27377,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 27591,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 27806,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 28019,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 28234,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 28449,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 28663,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 28876,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 29090,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 29304,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 29518,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 29732,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 29949,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 30162,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 30376,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 30591,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 30806,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 31021,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 31234,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 31449,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 31662,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 31875,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 32088,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 32301,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 32517,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 32729,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 32942,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 33157,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 33373,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 33585,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 33798,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 34013,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 34226,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 34441,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 34656,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 34869,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 35079,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 35292,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 35507,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 35721,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 35934,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 36150,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 36367,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 36577,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 36792,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 37002,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        },
+        {
+          "t_ms": 37215,
+          "peak_bytes": 71516160,
+          "peak_mib": 68.2
+        }
+      ],
+      "peak_bytes": 71516160,
+      "peak_mib": 68.2,
+      "budget_mib": 1536.0,
+      "budget_bytes": 1610612736,
+      "within_budget": true,
+      "process_tree": [
+        "15672:python.exe"
+      ],
+      "stdout_tail": "运行时状态：ok=142\n[placeholders] 3 张\n  character source/desktop/game/assets/placeholders/character_missing.png 320x320 8075 B\n  room      source/desktop/game/assets/placeholders/room_missing.png 512x512 11400 B\n  event     source/desktop/game/assets/placeholders/event_missing.png 480x672 11758 B\n[normalize] 写出 142 张，合计 61472233 字节（58.62 MiB）",
+      "stderr_tail": "",
+      "reader_error": ""
+    },
+    {
+      "run_id": 4,
+      "stage": "all",
+      "command": "python asset_pipeline.py --stage all",
+      "exit_code": 0,
+      "exit_ok": true,
+      "duration_ms": 41699,
+      "sampling_interval_ms": 200,
+      "sample_count": 195,
+      "samples": [
+        {
+          "t_ms": 16,
+          "peak_bytes": 2138112,
+          "peak_mib": 2.04
+        },
+        {
+          "t_ms": 227,
+          "peak_bytes": 22454272,
+          "peak_mib": 21.41
+        },
+        {
+          "t_ms": 443,
+          "peak_bytes": 26923008,
+          "peak_mib": 25.68
+        },
+        {
+          "t_ms": 656,
+          "peak_bytes": 32317440,
+          "peak_mib": 30.82
+        },
+        {
+          "t_ms": 857,
+          "peak_bytes": 33898496,
+          "peak_mib": 32.33
+        },
+        {
+          "t_ms": 1073,
+          "peak_bytes": 33898496,
+          "peak_mib": 32.33
+        },
+        {
+          "t_ms": 1289,
+          "peak_bytes": 67547136,
+          "peak_mib": 64.42
+        },
+        {
+          "t_ms": 1503,
+          "peak_bytes": 69894144,
+          "peak_mib": 66.66
+        },
+        {
+          "t_ms": 1715,
+          "peak_bytes": 70533120,
+          "peak_mib": 67.27
+        },
+        {
+          "t_ms": 1932,
+          "peak_bytes": 71110656,
+          "peak_mib": 67.82
+        },
+        {
+          "t_ms": 2146,
+          "peak_bytes": 71127040,
+          "peak_mib": 67.83
+        },
+        {
+          "t_ms": 2361,
+          "peak_bytes": 71143424,
+          "peak_mib": 67.85
+        },
+        {
+          "t_ms": 2572,
+          "peak_bytes": 71143424,
+          "peak_mib": 67.85
+        },
+        {
+          "t_ms": 2787,
+          "peak_bytes": 71143424,
+          "peak_mib": 67.85
+        },
+        {
+          "t_ms": 3002,
+          "peak_bytes": 71143424,
+          "peak_mib": 67.85
+        },
+        {
+          "t_ms": 3216,
+          "peak_bytes": 71143424,
+          "peak_mib": 67.85
+        },
+        {
+          "t_ms": 3430,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 3641,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 3856,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 4069,
+          "peak_bytes": 71155712,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 4284,
+          "peak_bytes": 71159808,
+          "peak_mib": 67.86
+        },
+        {
+          "t_ms": 4501,
+          "peak_bytes": 71163904,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 4717,
+          "peak_bytes": 71163904,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 4932,
+          "peak_bytes": 71163904,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 5146,
+          "peak_bytes": 71163904,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 5357,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 5573,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 5783,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 5988,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 6199,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 6417,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 6628,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 6843,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 7060,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 7275,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 7488,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 7702,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 7917,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 8132,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 8348,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 8561,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 8775,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 8991,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 9202,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 9415,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 9629,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 9841,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 10067,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 10269,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 10481,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 10696,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 10910,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 11125,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 11341,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 11556,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 11770,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 11981,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 12197,
+          "peak_bytes": 71180288,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 12411,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 12625,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 12838,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 13048,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 13262,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 13479,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 13689,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 13904,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 14114,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 14330,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 14542,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 14755,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 14966,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 15181,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 15398,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 15611,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 15823,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 16041,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 16254,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 16464,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 16676,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 16890,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 17106,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 17321,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 17535,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 17747,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 17960,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 18180,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 18385,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 18601,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 18813,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 19024,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 19236,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 19450,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 19667,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 19876,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 20088,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 20301,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 20515,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 20729,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 20944,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 21159,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 21373,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 21584,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 21800,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 22018,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 22231,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 22441,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 22655,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 22872,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 23085,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 23300,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 23513,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 23724,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 23941,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 24155,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 24371,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 24583,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 24797,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 25013,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 25229,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 25448,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 25662,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 25878,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 26090,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 26306,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 26517,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 26734,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 26946,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 27164,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 27380,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 27594,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 27805,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 28020,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 28234,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 28448,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 28670,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 28873,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 29076,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 29289,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 29507,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 29717,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 29932,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 30144,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 30357,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 30573,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 30787,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 30999,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 31215,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 31429,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 31643,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 31857,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 32073,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 32286,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 32500,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 32716,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 32929,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 33142,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 33356,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 33572,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 33789,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 34001,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 34215,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 34426,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 34639,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 34853,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 35067,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 35282,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 35495,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 35706,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 35922,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 36133,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 36348,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 36564,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 36775,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 36991,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 37207,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 37423,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 37637,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 37853,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 38064,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 38279,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 38493,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 38710,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 38912,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 39127,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 39339,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 39556,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 39772,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 39988,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 40198,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 40415,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 40629,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 40842,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 41057,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 41267,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        },
+        {
+          "t_ms": 41483,
+          "peak_bytes": 71708672,
+          "peak_mib": 68.39
+        }
+      ],
+      "peak_bytes": 71708672,
+      "peak_mib": 68.39,
+      "budget_mib": 1536.0,
+      "budget_bytes": 1610612736,
+      "within_budget": true,
+      "process_tree": [
+        "17428:python.exe"
+      ],
+      "stdout_tail": "运行时状态：ok=142\n[placeholders] 3 张\n  character source/desktop/game/assets/placeholders/character_missing.png 320x320 8075 B\n  room      source/desktop/game/assets/placeholders/room_missing.png 512x512 11400 B\n  event     source/desktop/game/assets/placeholders/event_missing.png 480x672 11758 B\n[normalize] 写出 142 张，合计 61472233 字节（58.62 MiB）",
+      "stderr_tail": "",
+      "reader_error": ""
+    },
+    {
+      "run_id": 5,
+      "stage": "all",
+      "command": "python asset_pipeline.py --stage all",
+      "exit_code": 0,
+      "exit_ok": true,
+      "duration_ms": 51971,
+      "sampling_interval_ms": 200,
+      "sample_count": 243,
+      "samples": [
+        {
+          "t_ms": 20,
+          "peak_bytes": 2117632,
+          "peak_mib": 2.02
+        },
+        {
+          "t_ms": 229,
+          "peak_bytes": 15482880,
+          "peak_mib": 14.77
+        },
+        {
+          "t_ms": 441,
+          "peak_bytes": 25817088,
+          "peak_mib": 24.62
+        },
+        {
+          "t_ms": 656,
+          "peak_bytes": 26689536,
+          "peak_mib": 25.45
+        },
+        {
+          "t_ms": 873,
+          "peak_bytes": 31211520,
+          "peak_mib": 29.77
+        },
+        {
+          "t_ms": 1088,
+          "peak_bytes": 33509376,
+          "peak_mib": 31.96
+        },
+        {
+          "t_ms": 1304,
+          "peak_bytes": 33509376,
+          "peak_mib": 31.96
+        },
+        {
+          "t_ms": 1516,
+          "peak_bytes": 33509376,
+          "peak_mib": 31.96
+        },
+        {
+          "t_ms": 1731,
+          "peak_bytes": 64831488,
+          "peak_mib": 61.83
+        },
+        {
+          "t_ms": 1946,
+          "peak_bytes": 69672960,
+          "peak_mib": 66.45
+        },
+        {
+          "t_ms": 2160,
+          "peak_bytes": 70320128,
+          "peak_mib": 67.06
+        },
+        {
+          "t_ms": 2372,
+          "peak_bytes": 70320128,
+          "peak_mib": 67.06
+        },
+        {
+          "t_ms": 2585,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 2798,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 3017,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 3230,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 3445,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 3659,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 3866,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 4081,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 4297,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 4512,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 4726,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 4939,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 5155,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 5370,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 5582,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 5794,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 6009,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 6224,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 6439,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 6656,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 6869,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 7082,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 7297,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 7513,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 7725,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 7936,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 8148,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 8364,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 8579,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 8792,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 9006,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 9222,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 9434,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 9650,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 9864,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 10085,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 10293,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 10497,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 10709,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 10924,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 11139,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 11353,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 11567,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 11781,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 11998,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 12213,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 12430,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 12641,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 12856,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 13067,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 13282,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 13498,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 13713,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 13924,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 14138,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 14351,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 14567,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 14780,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 14993,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 15208,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 15421,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 15636,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 15848,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 16063,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 16276,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 16489,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 16704,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 16918,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 17132,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 17347,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 17558,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 17773,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 17988,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 18204,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 18420,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 18631,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 18848,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 19062,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 19276,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 19489,
+          "peak_bytes": 70848512,
+          "peak_mib": 67.57
+        },
+        {
+          "t_ms": 19705,
+          "peak_bytes": 70930432,
+          "peak_mib": 67.64
+        },
+        {
+          "t_ms": 19919,
+          "peak_bytes": 70930432,
+          "peak_mib": 67.64
+        },
+        {
+          "t_ms": 20132,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 20345,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 20558,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 20772,
+          "peak_bytes": 71168000,
+          "peak_mib": 67.87
+        },
+        {
+          "t_ms": 20986,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 21201,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 21414,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 21631,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 21846,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 22058,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 22272,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 22489,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 22704,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 22908,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 23122,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 23339,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 23553,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 23764,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 23980,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 24193,
+          "peak_bytes": 71172096,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 24407,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 24620,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 24833,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 25048,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 25264,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 25481,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 25692,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 25907,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 26122,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 26341,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 26554,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 26770,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 26982,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 27196,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 27409,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 27625,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 27838,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 28054,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 28266,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 28479,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 28696,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 28908,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 29122,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 29338,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 29555,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 29772,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 29989,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 30205,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 30406,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 30621,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 30837,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 31055,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 31268,
+          "peak_bytes": 71176192,
+          "peak_mib": 67.88
+        },
+        {
+          "t_ms": 31485,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 31699,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 31913,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 32129,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 32340,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 32542,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 32755,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 32965,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 33181,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 33397,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 33606,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 33823,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 34037,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 34253,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 34464,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 34688,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 34891,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 35104,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 35321,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 35534,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 35747,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 35963,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 36175,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 36379,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 36590,
+          "peak_bytes": 71184384,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 36806,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 37015,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 37219,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 37429,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 37647,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 37862,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 38074,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 38287,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 38504,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 38717,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 38932,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 39145,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 39354,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 39573,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 39782,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 39997,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 40210,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 40425,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 40640,
+          "peak_bytes": 71188480,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 40855,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 41067,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 41284,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 41486,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 41699,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 41912,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 42127,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 42342,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 42558,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 42776,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 42994,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 43207,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 43422,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 43634,
+          "peak_bytes": 71192576,
+          "peak_mib": 67.89
+        },
+        {
+          "t_ms": 43849,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 44065,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 44279,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 44495,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 44713,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 44924,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 45138,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 45352,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 45567,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 45781,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 45992,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 46206,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 46420,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 46633,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 46849,
+          "peak_bytes": 71196672,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 47065,
+          "peak_bytes": 71200768,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 47282,
+          "peak_bytes": 71200768,
+          "peak_mib": 67.9
+        },
+        {
+          "t_ms": 47497,
+          "peak_bytes": 71266304,
+          "peak_mib": 67.96
+        },
+        {
+          "t_ms": 47712,
+          "peak_bytes": 71266304,
+          "peak_mib": 67.96
+        },
+        {
+          "t_ms": 47926,
+          "peak_bytes": 71266304,
+          "peak_mib": 67.96
+        },
+        {
+          "t_ms": 48144,
+          "peak_bytes": 71266304,
+          "peak_mib": 67.96
+        },
+        {
+          "t_ms": 48359,
+          "peak_bytes": 71266304,
+          "peak_mib": 67.96
+        },
+        {
+          "t_ms": 48568,
+          "peak_bytes": 71266304,
+          "peak_mib": 67.96
+        },
+        {
+          "t_ms": 48786,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 48996,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 49198,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 49414,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 49623,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 49840,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 50055,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 50271,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 50482,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 50697,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 50901,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 51117,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 51332,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 51548,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        },
+        {
+          "t_ms": 51758,
+          "peak_bytes": 71270400,
+          "peak_mib": 67.97
+        }
+      ],
+      "peak_bytes": 71270400,
+      "peak_mib": 67.97,
+      "budget_mib": 1536.0,
+      "budget_bytes": 1610612736,
+      "within_budget": true,
+      "process_tree": [
+        "14032:python.exe"
+      ],
+      "stdout_tail": "运行时状态：ok=142\n[placeholders] 3 张\n  character source/desktop/game/assets/placeholders/character_missing.png 320x320 8075 B\n  room      source/desktop/game/assets/placeholders/room_missing.png 512x512 11400 B\n  event     source/desktop/game/assets/placeholders/event_missing.png 480x672 11758 B\n[normalize] 写出 142 张，合计 61472233 字节（58.62 MiB）",
+      "stderr_tail": "",
+      "reader_error": ""
+    }
+  ],
+  "process_tree": [
+    "36372:python.exe"
+  ],
+  "process_tree_note": "进程树在运行期间枚举（--stage all 为单进程，无子进程）",
+  "peaks_mib": [
+    68.4,
+    67.86,
+    68.2,
+    68.39,
+    67.97
+  ],
+  "peaks_bytes": [
+    71720960,
+    71155712,
+    71516160,
+    71708672,
+    71270400
+  ],
+  "max_peak_mib": 68.4,
+  "max_peak_bytes": 71720960,
+  "median_mib": 68.2,
+  "min_peak_mib": 67.86,
+  "pass": true,
+  "environment": {
+    "python": "3.9.13",
+    "platform": "Windows-10-10.0.26300-SP0",
+    "machine": "AMD64",
+    "processor": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+    "timezone": "中国标准时间",
+    "pillow": "11.3.0",
+    "memory_total_mib": 23848.4,
+    "memory_available_mib": 1411.3
+  },
+  "input_sha256": {
+    "asset_pipeline.py": "560ff7549037b1ce6ed9c8a013989e82e69f0041a4a2526805e8469d6607d82b",
+    "content.py": "461f8aeb95e32fb31d185c1f65f46f13405d3233c5575a5c853a012e6964c147",
+    "assets/p_table.json": "5d459a8b82737c001f0101c3027b0fdcf5886b259dbce25c0b85177a54bcbc2f",
+    "assets/asset_mapping.json": "984c57d3759e38de8933c001df5d0301fa2457abd551b2fcd036bc3f0a381167"
+  },
+  "sampled_at": "2026-11-21T19:49:20",
+  "emitted_at": "2026-11-21T19:49:20"
+}

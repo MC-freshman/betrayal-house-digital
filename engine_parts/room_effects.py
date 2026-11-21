@@ -82,6 +82,26 @@ class RoomEffects:
             "room_organ_room": "无基础常规特效；首次发现时照房间符号抽预兆牌。",
             "room_crypt": "无基础常规特效；首次发现时照房间符号抽预兆牌。怪物无视本房间特殊规则。",
             "room_catacombs": "障碍房间：进入时速度检定（目标 4）失败受 1 点物理伤害并停下；怪物无视障碍。",
+            # ---- Widow's Walk 屋顶层 20 间 ----
+            "room_start_roof": "屋顶层起点，与二楼平台互通。",
+            "room_arsenal": "进入时抽 2 张物品卡选 1 保留，另一张放回牌堆底。",
+            "room_cave": "进入时力量检定（目标 4），失败受到 1 点物理伤害。",
+            "room_drawing_room": "首次发现时从任意牌堆抽 1 张牌。",
+            "room_dungeon": "进入时理智检定（目标 3），失败失去 1 点理智。",
+            "room_laundry": "结束回合在这里可弃 1 张物品卡，从物品弃牌堆抽 1 张。",
+            "room_locked_room": "进入时知识检定（目标 3），失败被锁在门外：受 1 点精神伤害并停下。",
+            "room_menagerie": "每局一次：结束回合在这里获得 1 点力量。",
+            "room_nursery": "结束回合在这里：理智低于起始值 +1，高于起始值 -1。",
+            "room_panic_room": "进入时速度检定（目标 3），成功立即移动到任意楼梯口。",
+            "room_rookery": "首次发现时从房间牌堆翻出 1 块放进房屋。",
+            "room_sewing_room": "结束回合在这里可弃 1 张物品卡，若力量低于起始值则 +1。",
+            "room_solarium": "结束回合在这里可弃 1 张物品卡获得 1 点理智。",
+            "room_spiral_staircase": "进入时速度检定（目标 3），成功移动到任意楼层的楼梯口。",
+            "room_storm_cellar": "无特殊效果；首次进入时照房间符号抽物品牌。",
+            "room_study": "每局一次：结束回合在这里获得 1 点知识。",
+            "room_theater": "无特殊效果；多场作祟的舞台。",
+            "room_tree_house": "进入时速度检定（目标 3），成功沿枝干移动到上层任意房间。",
+            "room_widows_walk": "高处风急：进入时知识检定（目标 3）成功 +1 知识，失败被吹得踉跄 -1 速度。",
         }.get(effect, "")
 
     def _notify_room_entry(self, player: Player, room: PlacedRoom) -> None:
@@ -257,6 +277,7 @@ class RoomEffects:
         if effect in {
             "room_start_hall", "room_start_foyer", "room_start_stairs",
             "room_start_above", "room_start_below", "room_stairs_from_basement",
+            "room_start_roof",
         }:
             return
         if self.state.phase == "HAUNT_PHASE" and player.role == "traitor" and effect in {"room_bloody_room", "room_charred_room", "room_furnace_room"}:
@@ -363,8 +384,342 @@ class RoomEffects:
         if effect == "room_catacombs":
             self._apply_catacombs(player, room)
             return
+        # ------------------------------------------------------------------
+        # Widow's Walk 屋顶层（ww_official_content.json §rooms；官方效果原文
+        # 见 content.py ROOF_ROOMS 的 text 字段）：
+        # * "结束回合时"类效果（laundry/menagerie/nursery/sewing_room/
+        #   solarium/study）由 _apply_room_end_of_turn 在回合结束时结算，
+        #   进入时只给提示；官方原文以回合结束为准。
+        # * 官方效果中依赖实体配件的部分（哑侍井道逐房标注、Plant token 相邻、
+        #   Lock token 逐门上锁）按 ww_architecture 的简化建模折算为检定/传送。
+        # ------------------------------------------------------------------
+        if effect == "room_arsenal":
+            self._apply_arsenal(player, room)
+            return
+        if effect == "room_cave":
+            self._apply_cave(player, room)
+            return
+        if effect == "room_drawing_room":
+            self._apply_drawing_room(player, room, first_entry=first_entry)
+            return
+        if effect == "room_dungeon":
+            self._apply_dungeon(player, room)
+            return
+        if effect == "room_locked_room":
+            self._apply_locked_room(player, room)
+            return
+        if effect == "room_panic_room":
+            self._apply_panic_room(player, room)
+            return
+        if effect == "room_rookery":
+            self._apply_rookery(player, room, first_entry=first_entry)
+            return
+        if effect == "room_spiral_staircase":
+            self._apply_spiral_staircase(player, room)
+            return
+        if effect == "room_tree_house":
+            self._apply_tree_house(player, room)
+            return
+        if effect == "room_widows_walk":
+            self._apply_widows_walk(player, room)
+            return
+        if effect in {
+            "room_laundry", "room_menagerie", "room_nursery",
+            "room_sewing_room", "room_solarium", "room_study",
+        }:
+            self._log(f"{room.name} 的效果在结束回合时结算。")
+            return
+        if effect in {"room_storm_cellar", "room_theater"}:
+            self._log(f"{room.name} 没有常规特效。")
+            return
         # 兜底：未识别的房间效果不再静默吞掉，记进日志便于排查。
         self._log(f"[规则缺口] {room.name} 的房间效果 {effect} 尚未实现，已跳过。")
+
+    # ------------------------------------------------------------------
+    # Widow's Walk 屋顶层房间效果（ww_official_content.json §rooms；官方
+    # 效果原文见 content.py ROOF_ROOMS 的 text 字段。凡与实体配件绑定的
+    # 规则按 ww_architecture 的简化建模折算，简记于各 docstring。）
+    # ------------------------------------------------------------------
+    def _starting_stats(self, player: Player) -> dict[str, int]:
+        """角色卡的起始属性（官方 "starting value" 的统一口径）。"""
+        face = self.catalog.characters.get(player.character_id)
+        return dict(getattr(face, "stats", {}) or {})
+
+    def _discard_one_item(self, player: Player, reason: str) -> str:
+        """为房间效果丢下一件携带物品（留在当前房间），返回被丢的卡 id。"""
+        disposable = [
+            card_id for card_id in player.items
+            if "companion" not in self.catalog.cards[card_id].tags
+        ]
+        if not disposable:
+            return ""
+        card_id = disposable[-1]
+        self._discard_card_from_player(player, card_id, return_to_room=True)
+        self._log(f"{player.name} 把{self.catalog.cards[card_id].name}留在了{reason}。")
+        return card_id
+
+    def _apply_arsenal(self, player: Player, room: PlacedRoom) -> None:
+        """军械库（官方规则表）："在此房间抽物品卡时抽 2 张选 1 保留，弃另一张。"
+
+        结算成进入房间时的即时抽选：两张候选从物品牌堆翻开；人类玩家弹窗
+        选择，机器人按卡面加值取较大的一件（与 _draw_item 的 choice_count
+        机制同口径）。落选的一张压回物品牌堆底——官方语义是"放回"而不是
+        弃置，进弃牌堆会让它很快被重新抽到。
+        """
+        candidates = [self._draw_card_id("item")]
+        extra = self._draw_card_id("item")
+        if extra:
+            candidates.append(extra)
+        candidates = [card_id for card_id in candidates if card_id]
+        if not candidates:
+            self._log("军械库的架子是空的：物品牌堆里没有牌可抽。")
+            return
+        if len(candidates) == 1 or player.control == "bot":
+            card_id = max(
+                candidates,
+                key=lambda cid: sum(self.catalog.cards[cid].bonus.values()) if self.catalog.cards[cid].bonus else 0,
+            )
+        else:
+            index = self.prompter.choose_from_list(
+                "军械库",
+                "抽到 2 张物品卡，选择保留 1 张（另一张放回牌堆底）：",
+                [self.catalog.cards[cid].name for cid in candidates],
+            )
+            card_id = candidates[index if index is not None and 0 <= index < len(candidates) else 0]
+        leftovers = [cid for cid in candidates if cid != card_id]
+        self.state.card_decks.setdefault("item", []).extend(leftovers)
+        player.items.append(card_id)
+        self._log(f"{player.name} 在军械库取得了{self.catalog.cards[card_id].name}。")
+        self._stop_movement_for_draw(player)
+
+    def _apply_cave(self, player: Player, room: PlacedRoom) -> None:
+        """洞穴（官方规则表）："若你在同一回合内进入并离开此房间，从一项物理
+        属性失去 1 骰。"
+
+        引擎的房间效果只在进入侧结算，没有"同回合进出"的入出口配对记账；
+        按 ww_architecture 的简化折算：寒气侵体——力量检定（目标 4）失败受
+        1 点物理伤害。物理伤害在引擎里正是"失去 1 点物理属性（速度/力量）"，
+        与官方"物理属性 -1 骰"同向。
+        """
+        self._log("洞穴深处的寒气侵人肌骨。")
+        if not self._resolve_check(player, "might", 4, "洞穴检定"):
+            self._deal_damage(player, "physical", 1, source="洞穴")
+
+    def _apply_drawing_room(self, player: Player, room: PlacedRoom, first_entry: bool) -> None:
+        """会客厅（官方规则表）："发现此房间时，抽 1 张任意类型的牌。"
+
+        三类牌堆等概率抽取；抽到事件则照常结算事件，物品/预兆入手。
+        只有首次发现（first_entry）时生效，后续进入不再触发。
+        """
+        if not first_entry:
+            return
+        kind = self.rng.choice(["event", "item", "omen"])
+        self._log(f"{room.name} 的抽屉里留着一张{ {'event': '事件', 'item': '物品', 'omen': '预兆'}[kind] }牌。")
+        self._draw_symbol_card(player, kind, stop_movement=False)
+
+    def _apply_dungeon(self, player: Player, room: PlacedRoom) -> None:
+        """地牢（官方规则表）："进入时必须进行理智检定（目标 3+）；失败失去
+        1 点理智。"
+        """
+        self._log("地牢里的黑暗贴着皮肤渗进来。")
+        if not self._resolve_check(player, "sanity", 3, "地牢检定"):
+            self._deal_damage(player, "mental", 1, source="地牢")
+
+    def _apply_locked_room(self, player: Player, room: PlacedRoom) -> None:
+        """上锁的房间（官方规则表）："每扇门放 1 个 Lock token；经过上锁的门
+        进出须过知识检定（目标 3+）移除锁。"
+
+        引擎的门没有"锁"状态字段（门位是纯方向元组），按简化折算：首次进入
+        时撬锁——知识检定（目标 3）失败视为被锁在门外，受 1 点精神伤害并
+        结束移动。房间内的行动不受影响。
+        """
+        self._log("这间房的每一扇门都挂着一把锁。")
+        if not self._resolve_check(player, "knowledge", 3, "撬锁检定"):
+            self._deal_damage(player, "mental", 1, source="上锁的房间")
+            player.movement_stopped = True
+            player.steps_remaining = 0
+
+    def _apply_panic_room(self, player: Player, room: PlacedRoom) -> None:
+        """安全室（官方规则表）："离开时可进行速度检定（目标 3+），成功立即
+        移动到任意带哑侍的房间。"
+
+        哑侍（dumbwaiter）井道按 ww_architecture 简化为"楼梯口快速通道"：
+        检定成功则立即传送到任一已放置的楼梯口（Basement Landing / Entrance
+        Hall / Foyer / Grand Staircase / Upper Landing / Roof Landing）。
+        """
+        self._log("安全室的哑侍井道还通着。")
+        if not self._resolve_check(player, "speed", 3, "安全室检定"):
+            self._log("检定失败，哑侍的绳索卡住了。")
+            return
+        landings = sorted(
+            key for key, other in self.state.board.items()
+            if other.template_id in {
+                "basement_landing", "entrance_hall", "foyer",
+                "grand_staircase", "upper_landing", "roof_landing",
+            }
+        )
+        if not landings:
+            self._log("没有楼梯口可以前往。")
+            return
+        target_key = self.rng.choice(landings)
+        self._move_to_room(player, target_key, via_effect=True)
+        player.movement_stopped = True
+        player.steps_remaining = 0
+
+    def _apply_rookery(self, player: Player, room: PlacedRoom, first_entry: bool) -> None:
+        """鸦舍（官方规则表）："发现时搜检房间板块堆，任选 1 块放进房屋，然后
+        洗牌。"
+
+        "任选"对机器人无意义，取牌堆顶部第一块能放下的房间；落位复用引擎
+        的通用放置器 _ensure_room_in_play（连通性优先，优先接在鸦舍旁）。
+        牌堆取不到或放不下时如实记日志，不凭空造房。
+        """
+        if not first_entry:
+            return
+        template_id = next(
+            (tid for tid in self.state.room_deck if self._can_place_template(self.catalog.room_templates[tid])),
+            None,
+        )
+        if template_id is None:
+            self._log("鸦舍的鸟群什么也没带回来：房间牌堆里没有放得下的板块。")
+            return
+        new_key = self._ensure_room_in_play(template_id, origin_room_key=room.key)
+        if new_key:
+            self._log(f"鸦舍的鸟群衔回了一块板块：{self.state.board[new_key].name} 出现在房屋里。")
+
+    def _apply_spiral_staircase(self, player: Player, room: PlacedRoom) -> None:
+        """螺旋楼梯（官方规则表）："可花 2 点移动移动到任意楼层的楼梯口
+        （landing）。"
+
+        引擎的楼梯口互通由房间 links 表达，跨层"花 2 移动"需要移动系统暴露
+        跨层入口；按简化折算：进入时速度检定（目标 3），成功立即传送到任一
+        已放置的楼梯口，失败则留在原地。
+        """
+        self._log("螺旋楼梯盘旋着通向各层。")
+        if not self._resolve_check(player, "speed", 3, "螺旋楼梯检定"):
+            self._log("楼梯太窄，没能通行。")
+            return
+        landings = sorted(
+            key for key, other in self.state.board.items()
+            if other.template_id in {
+                "basement_landing", "entrance_hall", "foyer",
+                "grand_staircase", "upper_landing", "roof_landing",
+            } and key != room.key
+        )
+        if not landings:
+            self._log("没有别的楼梯口可以前往。")
+            return
+        self._move_to_room(player, self.rng.choice(landings), via_effect=True)
+        player.movement_stopped = True
+        player.steps_remaining = 0
+
+    def _apply_tree_house(self, player: Player, room: PlacedRoom) -> None:
+        """树屋（官方规则表）："在屋顶层或上层的任一开启门上放 Plant token，
+        此房间与该门视为相邻。"
+
+        Plant token 相邻是实体配件规则；按简化折算：进入时速度检定（目标 3），
+        成功沿枝干攀到上层任意已放置房间，失败则留在树屋里。
+        """
+        self._log("树屋的枝干伸向二楼。")
+        if not self._resolve_check(player, "speed", 3, "树屋检定"):
+            self._log("枝干湿滑，没能爬上去。")
+            return
+        uppers = sorted(key for key, other in self.state.board.items() if other.floor == 1)
+        if not uppers:
+            self._log("上层还没有房间可以前往。")
+            return
+        self._move_to_room(player, self.rng.choice(uppers), via_effect=True)
+        player.movement_stopped = True
+        player.steps_remaining = 0
+
+    def _apply_widows_walk(self, player: Player, room: PlacedRoom) -> None:
+        """寡妇行（官方规则表）："在此房间知识掷骰 +1、速度掷骰 -1（最低 0）。"
+
+        引擎的掷骰修正是剧本钩子（attack_roll_bonus 等），房间没有掷骰光环
+        通道；按简化折算为驻留结算：强风既能让人看清远处（知识检定目标 3
+        成功 +1 知识），也会把人吹得踉跄（失败受 1 点物理伤害，速度/力量
+        二选一 -1）。数值修正的精确复刻待引擎支持房间掷骰修正后回填。
+        """
+        self._log("寡妇行的风声呜咽，远处的灯火反而更清楚了。")
+        if self._resolve_check(player, "knowledge", 3, "寡妇行检定"):
+            self._heal_stat(player, "knowledge", 1)
+        else:
+            self._deal_damage(player, "physical", 1, source="寡妇行的狂风")
+
+    def _apply_room_end_of_turn(self, player: Player) -> None:
+        """回合结束时结算当前房间的"end your turn here"效果。
+
+        Widow's Walk 官方 6 间房是"结束回合时"触发（laundry / menagerie /
+        nursery / sewing_room / solarium / study）；进入时只给提示（见
+        _apply_room_effect 的分发分支），真正的数值变化在这里结算。
+        由 engine.end_turn 在剧本 on_turn_end 钩子之后调用。
+        """
+        if player.dead or player.frog:
+            return
+        room = self.current_room(player)
+        effect = room.effect_id
+        if effect == "room_laundry":
+            # 洗衣房（官方）："回合结束时弃 1 张物品卡，从物品弃牌堆抽 1 张。"
+            # 引擎的弃牌堆随用随清（_draw_card_id 口径），按简化改为从物品牌堆
+            # 抽 1 张，其余与官方一致。
+            if not player.items:
+                return
+            self._log("洗衣房里可以换洗随身物品。")
+            if self._discard_one_item(player, "洗衣房"):
+                self._draw_item(player, stop_movement=False)
+            return
+        if effect == "room_menagerie":
+            # 动物笼舍（官方）："每局一次，回合结束时把探索者 token 放在这里
+            # 并获得 1 点物理属性。" 折算为每局一次力量 +1。
+            if room.data.get("menagerie_used"):
+                return
+            room.data["menagerie_used"] = True
+            self._log(f"{player.name} 在动物笼舍安顿下来，气力恢复了一些。")
+            self._heal_stat(player, "might", 1)
+            return
+        if effect == "room_nursery":
+            # 育儿室（官方）："回合结束时：理智低于起始值 +1；高于起始值 -1。"
+            starting = self._starting_stats(player).get("sanity")
+            current = player.stats.get("sanity", 0)
+            if starting is None or current == starting:
+                return
+            if current < starting:
+                self._log("育儿室的旧摇篮让人安心。")
+                self._heal_stat(player, "sanity", 1)
+            else:
+                self._log("育儿室里回荡着不属于任何人的抽泣，理智被抽走了一点。")
+                self._deal_damage(player, "mental", 1, source="育儿室")
+            return
+        if effect == "room_sewing_room":
+            # 缝纫室（官方）："回合结束时弃 1 张物品卡：若物理属性低于起始值
+            # 则 +1。" 折算为力量 +1（力量是官方"physical trait"的代表属性，
+            # 速度类增益在基础版没有先例）。
+            if not player.items:
+                return
+            starting = self._starting_stats(player).get("might")
+            if starting is not None and player.stats.get("might", 0) >= starting:
+                return
+            self._log("缝纫室里可以缝补衣裳与伤口。")
+            if self._discard_one_item(player, "缝纫室"):
+                self._heal_stat(player, "might", 1)
+            return
+        if effect == "room_solarium":
+            # 日光室（官方）："回合结束时弃 1 张物品卡获得 1 点理智。"
+            if not player.items:
+                return
+            self._log("日光室的暖意可以换一点安宁。")
+            if self._discard_one_item(player, "日光室"):
+                self._heal_stat(player, "sanity", 1)
+            return
+        if effect == "room_study":
+            # 书房（官方）："每局一次，回合结束时放置探索者 token 并获得 1 点
+            # 精神属性。" 折算为每局一次知识 +1。
+            if room.data.get("study_used"):
+                return
+            room.data["study_used"] = True
+            self._log(f"{player.name} 在书房翻阅旧籍，学问长进了一分。")
+            self._heal_stat(player, "knowledge", 1)
+            return
 
     def _apply_mystic_elevator(self, player: Player, room: PlacedRoom) -> None:
         if self._mode_handler().mystic_elevator_blocked(self, player):

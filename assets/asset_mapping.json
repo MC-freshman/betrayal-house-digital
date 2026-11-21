@@ -1,0 +1,1465 @@
+{
+  "version": "1.1.0",
+  "base_dir": "Betrayal at House on the Hill",
+  "generated_from": {
+    "p_table": "source/desktop/game/assets/p_table.json",
+    "content": "source/desktop/game/content.py"
+  },
+  "notes": {
+    "target_ref": "规范溯源键 content.py:<集合>#<id>；asset_registry 直接按它命中。",
+    "runtime_key": "运行时键（room:/card:/character:），与 target_ref 一一对应。",
+    "content_ref": "content.py 原始记录 id（角色为 face id card_1_0），供回溯。",
+    "fallback": "回退目标的 record_id（如 P-EVT-007）；pending_missing 行为空。",
+    "resolvable": "registry 同时接受 runtime_key / target_ref / record_id / content_ref / 裸 id。"
+  },
+  "runtime_specs": {
+    "character": {
+      "width": 320,
+      "height": 320,
+      "format": "png"
+    },
+    "room": {
+      "width": 512,
+      "height": 512,
+      "format": "png"
+    },
+    "card": {
+      "width": 480,
+      "height": 672,
+      "format": "png"
+    }
+  },
+  "stats": {
+    "entries": 142,
+    "unresolved": 0,
+    "mapping_status": {
+      "matched": 142
+    },
+    "runtime_status": {
+      "ok": 142
+    }
+  },
+  "entries": [
+    {
+      "target_ref": "content.py:CHARACTER_FACES#card_1@f0",
+      "runtime_key": "character:card_1:f0",
+      "record_id": "P-CHR-001",
+      "content_ref": "content.py:CHARACTER_FACES#card_1_0",
+      "path": "photos/role/character_card_1_f0.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/characters/card_1_0.png"
+    },
+    {
+      "target_ref": "content.py:CHARACTER_FACES#card_1@f1",
+      "runtime_key": "character:card_1:f1",
+      "record_id": "P-CHR-002",
+      "content_ref": "content.py:CHARACTER_FACES#card_1_1",
+      "path": "photos/role/character_card_1_f1.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/characters/card_1_1.png"
+    },
+    {
+      "target_ref": "content.py:CHARACTER_FACES#card_2@f0",
+      "runtime_key": "character:card_2:f0",
+      "record_id": "P-CHR-003",
+      "content_ref": "content.py:CHARACTER_FACES#card_2_0",
+      "path": "photos/role/character_card_2_f0.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/characters/card_2_0.png"
+    },
+    {
+      "target_ref": "content.py:CHARACTER_FACES#card_2@f1",
+      "runtime_key": "character:card_2:f1",
+      "record_id": "P-CHR-004",
+      "content_ref": "content.py:CHARACTER_FACES#card_2_1",
+      "path": "photos/role/character_card_2_f1.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/characters/card_2_1.png"
+    },
+    {
+      "target_ref": "content.py:CHARACTER_FACES#card_3@f0",
+      "runtime_key": "character:card_3:f0",
+      "record_id": "P-CHR-005",
+      "content_ref": "content.py:CHARACTER_FACES#card_3_0",
+      "path": "photos/role/character_card_3_f0.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/characters/card_3_0.png"
+    },
+    {
+      "target_ref": "content.py:CHARACTER_FACES#card_3@f1",
+      "runtime_key": "character:card_3:f1",
+      "record_id": "P-CHR-006",
+      "content_ref": "content.py:CHARACTER_FACES#card_3_1",
+      "path": "photos/role/character_card_3_f1.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/characters/card_3_1.png"
+    },
+    {
+      "target_ref": "content.py:CHARACTER_FACES#card_4@f0",
+      "runtime_key": "character:card_4:f0",
+      "record_id": "P-CHR-007",
+      "content_ref": "content.py:CHARACTER_FACES#card_4_0",
+      "path": "photos/role/character_card_4_f0.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/characters/card_4_0.png"
+    },
+    {
+      "target_ref": "content.py:CHARACTER_FACES#card_4@f1",
+      "runtime_key": "character:card_4:f1",
+      "record_id": "P-CHR-008",
+      "content_ref": "content.py:CHARACTER_FACES#card_4_1",
+      "path": "photos/role/character_card_4_f1.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/characters/card_4_1.png"
+    },
+    {
+      "target_ref": "content.py:CHARACTER_FACES#card_5@f0",
+      "runtime_key": "character:card_5:f0",
+      "record_id": "P-CHR-009",
+      "content_ref": "content.py:CHARACTER_FACES#card_5_0",
+      "path": "photos/role/character_card_5_f0.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/characters/card_5_0.png"
+    },
+    {
+      "target_ref": "content.py:CHARACTER_FACES#card_5@f1",
+      "runtime_key": "character:card_5:f1",
+      "record_id": "P-CHR-010",
+      "content_ref": "content.py:CHARACTER_FACES#card_5_1",
+      "path": "photos/role/character_card_5_f1.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/characters/card_5_1.png"
+    },
+    {
+      "target_ref": "content.py:CHARACTER_FACES#card_6@f0",
+      "runtime_key": "character:card_6:f0",
+      "record_id": "P-CHR-011",
+      "content_ref": "content.py:CHARACTER_FACES#card_6_0",
+      "path": "photos/role/character_card_6_f0.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/characters/card_6_0.png"
+    },
+    {
+      "target_ref": "content.py:CHARACTER_FACES#card_6@f1",
+      "runtime_key": "character:card_6:f1",
+      "record_id": "P-CHR-012",
+      "content_ref": "content.py:CHARACTER_FACES#card_6_1",
+      "path": "photos/role/character_card_6_f1.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/characters/card_6_1.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#basement_landing",
+      "runtime_key": "room:basement_landing",
+      "record_id": "P-ROOM-001",
+      "content_ref": "content.py:ROOM_BASES#basement_landing",
+      "path": "photos/room/basement_landing.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/basement_landing.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#entrance_hall",
+      "runtime_key": "room:entrance_hall",
+      "record_id": "P-ROOM-002",
+      "content_ref": "content.py:ROOM_BASES#entrance_hall",
+      "path": "photos/room/entrance_hall.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/entrance_hall.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#foyer",
+      "runtime_key": "room:foyer",
+      "record_id": "P-ROOM-003",
+      "content_ref": "content.py:ROOM_BASES#foyer",
+      "path": "photos/room/foyer.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/foyer.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#grand_staircase",
+      "runtime_key": "room:grand_staircase",
+      "record_id": "P-ROOM-004",
+      "content_ref": "content.py:ROOM_BASES#grand_staircase",
+      "path": "photos/room/grand_staircase.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/grand_staircase.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#upper_landing",
+      "runtime_key": "room:upper_landing",
+      "record_id": "P-ROOM-005",
+      "content_ref": "content.py:ROOM_BASES#upper_landing",
+      "path": "photos/room/upper_landing.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/upper_landing.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#catacombs",
+      "runtime_key": "room:catacombs",
+      "record_id": "P-ROOM-006",
+      "content_ref": "content.py:ROOM_BASES#catacombs",
+      "path": "photos/room/catacombs.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/catacombs.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#crypt",
+      "runtime_key": "room:crypt",
+      "record_id": "P-ROOM-007",
+      "content_ref": "content.py:ROOM_BASES#crypt",
+      "path": "photos/room/crypt.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/crypt.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#furnace_room",
+      "runtime_key": "room:furnace_room",
+      "record_id": "P-ROOM-008",
+      "content_ref": "content.py:ROOM_BASES#furnace_room",
+      "path": "photos/room/furnace_room.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/furnace_room.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#stairs_from_basement",
+      "runtime_key": "room:stairs_from_basement",
+      "record_id": "P-ROOM-009",
+      "content_ref": "content.py:ROOM_BASES#stairs_from_basement",
+      "path": "photos/room/stairs_from_basement.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/stairs_from_basement.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#vault",
+      "runtime_key": "room:vault",
+      "record_id": "P-ROOM-010",
+      "content_ref": "content.py:ROOM_BASES#vault",
+      "path": "photos/room/vault.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/vault.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#coal_chute",
+      "runtime_key": "room:coal_chute",
+      "record_id": "P-ROOM-011",
+      "content_ref": "content.py:ROOM_BASES#coal_chute",
+      "path": "photos/room/coal_chute.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/coal_chute.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#abandoned_room",
+      "runtime_key": "room:abandoned_room",
+      "record_id": "P-ROOM-012",
+      "content_ref": "content.py:ROOM_BASES#abandoned_room",
+      "path": "photos/room/abandoned_room.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/abandoned_room.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#ballroom",
+      "runtime_key": "room:ballroom",
+      "record_id": "P-ROOM-013",
+      "content_ref": "content.py:ROOM_BASES#ballroom",
+      "path": "photos/room/ballroom.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/ballroom.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#bloody_room",
+      "runtime_key": "room:bloody_room",
+      "record_id": "P-ROOM-014",
+      "content_ref": "content.py:ROOM_BASES#bloody_room",
+      "path": "photos/room/bloody_room.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/bloody_room.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#chapel",
+      "runtime_key": "room:chapel",
+      "record_id": "P-ROOM-015",
+      "content_ref": "content.py:ROOM_BASES#chapel",
+      "path": "photos/room/chapel.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/chapel.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#conservatory",
+      "runtime_key": "room:conservatory",
+      "record_id": "P-ROOM-016",
+      "content_ref": "content.py:ROOM_BASES#conservatory",
+      "path": "photos/room/conservatory.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/conservatory.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#dining_room",
+      "runtime_key": "room:dining_room",
+      "record_id": "P-ROOM-017",
+      "content_ref": "content.py:ROOM_BASES#dining_room",
+      "path": "photos/room/dining_room.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/dining_room.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#garden",
+      "runtime_key": "room:garden",
+      "record_id": "P-ROOM-018",
+      "content_ref": "content.py:ROOM_BASES#garden",
+      "path": "photos/room/garden.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/garden.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#graveyard",
+      "runtime_key": "room:graveyard",
+      "record_id": "P-ROOM-019",
+      "content_ref": "content.py:ROOM_BASES#graveyard",
+      "path": "photos/room/graveyard.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/graveyard.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#gymnasium",
+      "runtime_key": "room:gymnasium",
+      "record_id": "P-ROOM-020",
+      "content_ref": "content.py:ROOM_BASES#gymnasium",
+      "path": "photos/room/gymnasium.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/gymnasium.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#junk_room",
+      "runtime_key": "room:junk_room",
+      "record_id": "P-ROOM-021",
+      "content_ref": "content.py:ROOM_BASES#junk_room",
+      "path": "photos/room/junk_room.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/junk_room.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#kitchen",
+      "runtime_key": "room:kitchen",
+      "record_id": "P-ROOM-022",
+      "content_ref": "content.py:ROOM_BASES#kitchen",
+      "path": "photos/room/kitchen.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/kitchen.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#library",
+      "runtime_key": "room:library",
+      "record_id": "P-ROOM-023",
+      "content_ref": "content.py:ROOM_BASES#library",
+      "path": "photos/room/library.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/library.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#larder",
+      "runtime_key": "room:larder",
+      "record_id": "P-ROOM-024",
+      "content_ref": "content.py:ROOM_BASES#larder",
+      "path": "photos/room/larder.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/larder.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#mystic_elevator",
+      "runtime_key": "room:mystic_elevator",
+      "record_id": "P-ROOM-025",
+      "content_ref": "content.py:ROOM_BASES#mystic_elevator",
+      "path": "photos/room/mystic_elevator.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/mystic_elevator.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#organ_room",
+      "runtime_key": "room:organ_room",
+      "record_id": "P-ROOM-026",
+      "content_ref": "content.py:ROOM_BASES#organ_room",
+      "path": "photos/room/organ_room.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/organ_room.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#patio",
+      "runtime_key": "room:patio",
+      "record_id": "P-ROOM-027",
+      "content_ref": "content.py:ROOM_BASES#patio",
+      "path": "photos/room/patio.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/patio.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#research_laboratory",
+      "runtime_key": "room:research_laboratory",
+      "record_id": "P-ROOM-028",
+      "content_ref": "content.py:ROOM_BASES#research_laboratory",
+      "path": "photos/room/research_laboratory.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/research_laboratory.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#chasm",
+      "runtime_key": "room:chasm",
+      "record_id": "P-ROOM-029",
+      "content_ref": "content.py:ROOM_BASES#chasm",
+      "path": "photos/room/chasm.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/chasm.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#pentagram_chamber",
+      "runtime_key": "room:pentagram_chamber",
+      "record_id": "P-ROOM-030",
+      "content_ref": "content.py:ROOM_BASES#pentagram_chamber",
+      "path": "photos/room/pentagram_chamber.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/pentagram_chamber.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#balcony",
+      "runtime_key": "room:balcony",
+      "record_id": "P-ROOM-031",
+      "content_ref": "content.py:ROOM_BASES#balcony",
+      "path": "photos/room/balcony.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/balcony.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#bedroom",
+      "runtime_key": "room:bedroom",
+      "record_id": "P-ROOM-032",
+      "content_ref": "content.py:ROOM_BASES#bedroom",
+      "path": "photos/room/bedroom.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/bedroom.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#charred_room",
+      "runtime_key": "room:charred_room",
+      "record_id": "P-ROOM-033",
+      "content_ref": "content.py:ROOM_BASES#charred_room",
+      "path": "photos/room/charred_room.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/charred_room.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#collapsed_room",
+      "runtime_key": "room:collapsed_room",
+      "record_id": "P-ROOM-034",
+      "content_ref": "content.py:ROOM_BASES#collapsed_room",
+      "path": "photos/room/collapsed_room.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/collapsed_room.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#gallery",
+      "runtime_key": "room:gallery",
+      "record_id": "P-ROOM-035",
+      "content_ref": "content.py:ROOM_BASES#gallery",
+      "path": "photos/room/gallery.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/gallery.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#master_bedroom",
+      "runtime_key": "room:master_bedroom",
+      "record_id": "P-ROOM-036",
+      "content_ref": "content.py:ROOM_BASES#master_bedroom",
+      "path": "photos/room/master_bedroom.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/master_bedroom.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#operating_laboratory",
+      "runtime_key": "room:operating_laboratory",
+      "record_id": "P-ROOM-037",
+      "content_ref": "content.py:ROOM_BASES#operating_laboratory",
+      "path": "photos/room/operating_laboratory.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/operating_laboratory.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#servants_quarters",
+      "runtime_key": "room:servants_quarters",
+      "record_id": "P-ROOM-038",
+      "content_ref": "content.py:ROOM_BASES#servants_quarters",
+      "path": "photos/room/servants_quarters.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/servants_quarters.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_BASES#tower",
+      "runtime_key": "room:tower",
+      "record_id": "P-ROOM-039",
+      "content_ref": "content.py:ROOM_BASES#tower",
+      "path": "photos/room/tower.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/tower.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#attic",
+      "runtime_key": "room:attic",
+      "record_id": "P-ROOM-040",
+      "content_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#attic",
+      "path": "photos/room/attic.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/attic.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#bathroom",
+      "runtime_key": "room:bathroom",
+      "record_id": "P-ROOM-041",
+      "content_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#bathroom",
+      "path": "photos/room/bathroom.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/bathroom.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#game_room",
+      "runtime_key": "room:game_room",
+      "record_id": "P-ROOM-042",
+      "content_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#game_room",
+      "path": "photos/room/game_room.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/game_room.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#inner_hall",
+      "runtime_key": "room:inner_hall",
+      "record_id": "P-ROOM-043",
+      "content_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#inner_hall",
+      "path": "photos/room/inner_hall.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/inner_hall.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#creaky_hallway",
+      "runtime_key": "room:creaky_hallway",
+      "record_id": "P-ROOM-044",
+      "content_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#creaky_hallway",
+      "path": "photos/room/creaky_hallway.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/creaky_hallway.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#dusty_hallway",
+      "runtime_key": "room:dusty_hallway",
+      "record_id": "P-ROOM-045",
+      "content_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#dusty_hallway",
+      "path": "photos/room/dusty_hallway.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/dusty_hallway.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#statuary_corridor",
+      "runtime_key": "room:statuary_corridor",
+      "record_id": "P-ROOM-046",
+      "content_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#statuary_corridor",
+      "path": "photos/room/statuary_corridor.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/statuary_corridor.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#crawlspace",
+      "runtime_key": "room:crawlspace",
+      "record_id": "P-ROOM-047",
+      "content_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#crawlspace",
+      "path": "photos/room/crawlspace.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/crawlspace.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#storeroom",
+      "runtime_key": "room:storeroom",
+      "record_id": "P-ROOM-048",
+      "content_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#storeroom",
+      "path": "photos/room/storeroom.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/storeroom.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#underground_lake",
+      "runtime_key": "room:underground_lake",
+      "record_id": "P-ROOM-049",
+      "content_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#underground_lake",
+      "path": "photos/room/underground_lake.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/underground_lake.png"
+    },
+    {
+      "target_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#wine_cellar",
+      "runtime_key": "room:wine_cellar",
+      "record_id": "P-ROOM-050",
+      "content_ref": "content.py:ROOM_SUPPLEMENTAL_SPECS#wine_cellar",
+      "path": "photos/room/wine_cellar.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/rooms/wine_cellar.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_bite",
+      "runtime_key": "card:omen:omen_bite",
+      "record_id": "P-OMEN-001",
+      "content_ref": "content.py:OMEN_CARDS#omen_bite",
+      "path": "photos/omen/omen_bite.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_bite.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_book",
+      "runtime_key": "card:omen:omen_book",
+      "record_id": "P-OMEN-002",
+      "content_ref": "content.py:OMEN_CARDS#omen_book",
+      "path": "photos/omen/omen_book.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_book.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_crystal_ball",
+      "runtime_key": "card:omen:omen_crystal_ball",
+      "record_id": "P-OMEN-003",
+      "content_ref": "content.py:OMEN_CARDS#omen_crystal_ball",
+      "path": "photos/omen/omen_crystal_ball.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_crystal_ball.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_dog",
+      "runtime_key": "card:omen:omen_dog",
+      "record_id": "P-OMEN-004",
+      "content_ref": "content.py:OMEN_CARDS#omen_dog",
+      "path": "photos/omen/omen_dog.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_dog.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_girl",
+      "runtime_key": "card:omen:omen_girl",
+      "record_id": "P-OMEN-005",
+      "content_ref": "content.py:OMEN_CARDS#omen_girl",
+      "path": "photos/omen/omen_girl.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_girl.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_holy_symbol",
+      "runtime_key": "card:omen:omen_holy_symbol",
+      "record_id": "P-OMEN-006",
+      "content_ref": "content.py:OMEN_CARDS#omen_holy_symbol",
+      "path": "photos/omen/omen_holy_symbol.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_holy_symbol.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_madman",
+      "runtime_key": "card:omen:omen_madman",
+      "record_id": "P-OMEN-007",
+      "content_ref": "content.py:OMEN_CARDS#omen_madman",
+      "path": "photos/omen/omen_madman.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_madman.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_mask",
+      "runtime_key": "card:omen:omen_mask",
+      "record_id": "P-OMEN-008",
+      "content_ref": "content.py:OMEN_CARDS#omen_mask",
+      "path": "photos/omen/omen_mask.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_mask.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_medallion",
+      "runtime_key": "card:omen:omen_medallion",
+      "record_id": "P-OMEN-009",
+      "content_ref": "content.py:OMEN_CARDS#omen_medallion",
+      "path": "photos/omen/omen_medallion.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_medallion.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_ring",
+      "runtime_key": "card:omen:omen_ring",
+      "record_id": "P-OMEN-010",
+      "content_ref": "content.py:OMEN_CARDS#omen_ring",
+      "path": "photos/omen/omen_ring.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_ring.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_skull",
+      "runtime_key": "card:omen:omen_skull",
+      "record_id": "P-OMEN-011",
+      "content_ref": "content.py:OMEN_CARDS#omen_skull",
+      "path": "photos/omen/omen_skull.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_skull.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_spear",
+      "runtime_key": "card:omen:omen_spear",
+      "record_id": "P-OMEN-012",
+      "content_ref": "content.py:OMEN_CARDS#omen_spear",
+      "path": "photos/omen/omen_spear.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_spear.png"
+    },
+    {
+      "target_ref": "content.py:OMEN_CARDS#omen_spirit_board",
+      "runtime_key": "card:omen:omen_spirit_board",
+      "record_id": "P-OMEN-013",
+      "content_ref": "content.py:OMEN_CARDS#omen_spirit_board",
+      "path": "photos/omen/omen_spirit_board.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/omen/omen_spirit_board.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_axe",
+      "runtime_key": "card:item:item_axe",
+      "record_id": "P-ITEM-001",
+      "content_ref": "content.py:ITEM_CARDS#item_axe",
+      "path": "photos/item/item_axe.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_axe.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_blood_dagger",
+      "runtime_key": "card:item:item_blood_dagger",
+      "record_id": "P-ITEM-002",
+      "content_ref": "content.py:ITEM_CARDS#item_blood_dagger",
+      "path": "photos/item/item_blood_dagger.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_blood_dagger.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_dynamite",
+      "runtime_key": "card:item:item_dynamite",
+      "record_id": "P-ITEM-003",
+      "content_ref": "content.py:ITEM_CARDS#item_dynamite",
+      "path": "photos/item/item_dynamite.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_dynamite.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_revolver",
+      "runtime_key": "card:item:item_revolver",
+      "record_id": "P-ITEM-004",
+      "content_ref": "content.py:ITEM_CARDS#item_revolver",
+      "path": "photos/item/item_revolver.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_revolver.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_sacrificial_dagger",
+      "runtime_key": "card:item:item_sacrificial_dagger",
+      "record_id": "P-ITEM-005",
+      "content_ref": "content.py:ITEM_CARDS#item_sacrificial_dagger",
+      "path": "photos/item/item_sacrificial_dagger.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_sacrificial_dagger.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_idol",
+      "runtime_key": "card:item:item_idol",
+      "record_id": "P-ITEM-006",
+      "content_ref": "content.py:ITEM_CARDS#item_idol",
+      "path": "photos/item/item_idol.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_idol.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_lucky_stone",
+      "runtime_key": "card:item:item_lucky_stone",
+      "record_id": "P-ITEM-007",
+      "content_ref": "content.py:ITEM_CARDS#item_lucky_stone",
+      "path": "photos/item/item_lucky_stone.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_lucky_stone.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_rabbit_foot",
+      "runtime_key": "card:item:item_rabbit_foot",
+      "record_id": "P-ITEM-008",
+      "content_ref": "content.py:ITEM_CARDS#item_rabbit_foot",
+      "path": "photos/item/item_rabbit_foot.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_rabbit_foot.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_healing_salve",
+      "runtime_key": "card:item:item_healing_salve",
+      "record_id": "P-ITEM-009",
+      "content_ref": "content.py:ITEM_CARDS#item_healing_salve",
+      "path": "photos/item/item_healing_salve.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_healing_salve.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_medical_kit",
+      "runtime_key": "card:item:item_medical_kit",
+      "record_id": "P-ITEM-010",
+      "content_ref": "content.py:ITEM_CARDS#item_medical_kit",
+      "path": "photos/item/item_medical_kit.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_medical_kit.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_smelling_salts",
+      "runtime_key": "card:item:item_smelling_salts",
+      "record_id": "P-ITEM-011",
+      "content_ref": "content.py:ITEM_CARDS#item_smelling_salts",
+      "path": "photos/item/item_smelling_salts.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_smelling_salts.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_adrenaline_shot",
+      "runtime_key": "card:item:item_adrenaline_shot",
+      "record_id": "P-ITEM-012",
+      "content_ref": "content.py:ITEM_CARDS#item_adrenaline_shot",
+      "path": "photos/item/item_adrenaline_shot.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_adrenaline_shot.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_angel_feather",
+      "runtime_key": "card:item:item_angel_feather",
+      "record_id": "P-ITEM-013",
+      "content_ref": "content.py:ITEM_CARDS#item_angel_feather",
+      "path": "photos/item/item_angel_feather.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_angel_feather.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_armor",
+      "runtime_key": "card:item:item_armor",
+      "record_id": "P-ITEM-014",
+      "content_ref": "content.py:ITEM_CARDS#item_armor",
+      "path": "photos/item/item_armor.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_armor.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_bell",
+      "runtime_key": "card:item:item_bell",
+      "record_id": "P-ITEM-015",
+      "content_ref": "content.py:ITEM_CARDS#item_bell",
+      "path": "photos/item/item_bell.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_bell.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_candle",
+      "runtime_key": "card:item:item_candle",
+      "record_id": "P-ITEM-016",
+      "content_ref": "content.py:ITEM_CARDS#item_candle",
+      "path": "photos/item/item_candle.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_candle.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_music_box",
+      "runtime_key": "card:item:item_music_box",
+      "record_id": "P-ITEM-017",
+      "content_ref": "content.py:ITEM_CARDS#item_music_box",
+      "path": "photos/item/item_music_box.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_music_box.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_bottle",
+      "runtime_key": "card:item:item_bottle",
+      "record_id": "P-ITEM-018",
+      "content_ref": "content.py:ITEM_CARDS#item_bottle",
+      "path": "photos/item/item_bottle.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_bottle.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_dark_dice",
+      "runtime_key": "card:item:item_dark_dice",
+      "record_id": "P-ITEM-019",
+      "content_ref": "content.py:ITEM_CARDS#item_dark_dice",
+      "path": "photos/item/item_dark_dice.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_dark_dice.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_amulet_of_the_ages",
+      "runtime_key": "card:item:item_amulet_of_the_ages",
+      "record_id": "P-ITEM-020",
+      "content_ref": "content.py:ITEM_CARDS#item_amulet_of_the_ages",
+      "path": "photos/item/item_amulet_of_the_ages.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_amulet_of_the_ages.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_pickpockets_gloves",
+      "runtime_key": "card:item:item_pickpockets_gloves",
+      "record_id": "P-ITEM-021",
+      "content_ref": "content.py:ITEM_CARDS#item_pickpockets_gloves",
+      "path": "photos/item/item_pickpockets_gloves.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_pickpockets_gloves.png"
+    },
+    {
+      "target_ref": "content.py:ITEM_CARDS#item_puzzle_box",
+      "runtime_key": "card:item:item_puzzle_box",
+      "record_id": "P-ITEM-022",
+      "content_ref": "content.py:ITEM_CARDS#item_puzzle_box",
+      "path": "photos/item/item_puzzle_box.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/item/item_puzzle_box.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_BASES#event_awful_waffles",
+      "runtime_key": "card:event:event_awful_waffles",
+      "record_id": "P-EVT-001",
+      "content_ref": "content.py:EVENT_BASES#event_awful_waffles",
+      "path": "photos/event/event_awful_waffles.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_awful_waffles.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_BASES#event_bloody_vision",
+      "runtime_key": "card:event:event_bloody_vision",
+      "record_id": "P-EVT-002",
+      "content_ref": "content.py:EVENT_BASES#event_bloody_vision",
+      "path": "photos/event/event_bloody_vision.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_bloody_vision.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_BASES#event_grave_dirt",
+      "runtime_key": "card:event:event_grave_dirt",
+      "record_id": "P-EVT-003",
+      "content_ref": "content.py:EVENT_BASES#event_grave_dirt",
+      "path": "photos/event/event_grave_dirt.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_grave_dirt.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_BASES#event_lights_out",
+      "runtime_key": "card:event:event_lights_out",
+      "record_id": "P-EVT-004",
+      "content_ref": "content.py:EVENT_BASES#event_lights_out",
+      "path": "photos/event/event_lights_out.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_lights_out.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_BASES#event_mists_from_the_walls",
+      "runtime_key": "card:event:event_mists_from_the_walls",
+      "record_id": "P-EVT-005",
+      "content_ref": "content.py:EVENT_BASES#event_mists_from_the_walls",
+      "path": "photos/event/event_mists_from_the_walls.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_mists_from_the_walls.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_BASES#event_mystic_slide",
+      "runtime_key": "card:event:event_mystic_slide",
+      "record_id": "P-EVT-006",
+      "content_ref": "content.py:EVENT_BASES#event_mystic_slide",
+      "path": "photos/event/event_mystic_slide.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_mystic_slide.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_BASES#event_secret_passage",
+      "runtime_key": "card:event:event_secret_passage",
+      "record_id": "P-EVT-007",
+      "content_ref": "content.py:EVENT_BASES#event_secret_passage",
+      "path": "photos/event/event_secret_passage.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_secret_passage.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_BASES#event_secret_stairs",
+      "runtime_key": "card:event:event_secret_stairs",
+      "record_id": "P-EVT-008",
+      "content_ref": "content.py:EVENT_BASES#event_secret_stairs",
+      "path": "photos/event/event_secret_stairs.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_secret_stairs.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_BASES#event_silence",
+      "runtime_key": "card:event:event_silence",
+      "record_id": "P-EVT-009",
+      "content_ref": "content.py:EVENT_BASES#event_silence",
+      "path": "photos/event/event_silence.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_silence.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_BASES#event_lost_one",
+      "runtime_key": "card:event:event_lost_one",
+      "record_id": "P-EVT-010",
+      "content_ref": "content.py:EVENT_BASES#event_lost_one",
+      "path": "photos/event/event_lost_one.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_lost_one.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_BASES#event_the_walls",
+      "runtime_key": "card:event:event_the_walls",
+      "record_id": "P-EVT-011",
+      "content_ref": "content.py:EVENT_BASES#event_the_walls",
+      "path": "photos/event/event_the_walls.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_the_walls.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_shrieking_wind",
+      "runtime_key": "card:event:event_shrieking_wind",
+      "record_id": "P-EVT-012",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_shrieking_wind",
+      "path": "photos/event/event_shrieking_wind.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_shrieking_wind.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_smoke",
+      "runtime_key": "card:event:event_smoke",
+      "record_id": "P-EVT-013",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_smoke",
+      "path": "photos/event/event_smoke.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_smoke.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_whoops",
+      "runtime_key": "card:event:event_whoops",
+      "record_id": "P-EVT-014",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_whoops",
+      "path": "photos/event/event_whoops.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_whoops.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_drip_drip_drip",
+      "runtime_key": "card:event:event_drip_drip_drip",
+      "record_id": "P-EVT-015",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_drip_drip_drip",
+      "path": "photos/event/event_drip_drip_drip.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_drip_drip_drip.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_possession",
+      "runtime_key": "card:event:event_possession",
+      "record_id": "P-EVT-016",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_possession",
+      "path": "photos/event/event_possession.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_possession.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_disquieting_sounds",
+      "runtime_key": "card:event:event_disquieting_sounds",
+      "record_id": "P-EVT-017",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_disquieting_sounds",
+      "path": "photos/event/event_disquieting_sounds.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_disquieting_sounds.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_spider",
+      "runtime_key": "card:event:event_spider",
+      "record_id": "P-EVT-018",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_spider",
+      "path": "photos/event/event_spider.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_spider.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_closet_door",
+      "runtime_key": "card:event:event_closet_door",
+      "record_id": "P-EVT-019",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_closet_door",
+      "path": "photos/event/event_closet_door.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_closet_door.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_locked_safe",
+      "runtime_key": "card:event:event_locked_safe",
+      "record_id": "P-EVT-020",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_locked_safe",
+      "path": "photos/event/event_locked_safe.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_locked_safe.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_rotten",
+      "runtime_key": "card:event:event_rotten",
+      "record_id": "P-EVT-021",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_rotten",
+      "path": "photos/event/event_rotten.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_rotten.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_revolving_wall",
+      "runtime_key": "card:event:event_revolving_wall",
+      "record_id": "P-EVT-022",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_revolving_wall",
+      "path": "photos/event/event_revolving_wall.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_revolving_wall.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_creepy_puppet",
+      "runtime_key": "card:event:event_creepy_puppet",
+      "record_id": "P-EVT-023",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_creepy_puppet",
+      "path": "photos/event/event_creepy_puppet.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_creepy_puppet.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_burning_man",
+      "runtime_key": "card:event:event_burning_man",
+      "record_id": "P-EVT-024",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_burning_man",
+      "path": "photos/event/event_burning_man.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_burning_man.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_image_in_the_mirror_backwards",
+      "runtime_key": "card:event:event_image_in_the_mirror_backwards",
+      "record_id": "P-EVT-025",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_image_in_the_mirror_backwards",
+      "path": "photos/event/event_image_in_the_mirror_backwards.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_image_in_the_mirror_backwards.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_angry_being",
+      "runtime_key": "card:event:event_angry_being",
+      "record_id": "P-EVT-026",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_angry_being",
+      "path": "photos/event/event_angry_being.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_angry_being.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_groundskeeper",
+      "runtime_key": "card:event:event_groundskeeper",
+      "record_id": "P-EVT-027",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_groundskeeper",
+      "path": "photos/event/event_groundskeeper.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_groundskeeper.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_something_slimy",
+      "runtime_key": "card:event:event_something_slimy",
+      "record_id": "P-EVT-028",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_something_slimy",
+      "path": "photos/event/event_something_slimy.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_something_slimy.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_a_moment_of_hope",
+      "runtime_key": "card:event:event_a_moment_of_hope",
+      "record_id": "P-EVT-029",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_a_moment_of_hope",
+      "path": "photos/event/event_a_moment_of_hope.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_a_moment_of_hope.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_hanged_men",
+      "runtime_key": "card:event:event_hanged_men",
+      "record_id": "P-EVT-030",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_hanged_men",
+      "path": "photos/event/event_hanged_men.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_hanged_men.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_jonahs_turn",
+      "runtime_key": "card:event:event_jonahs_turn",
+      "record_id": "P-EVT-031",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_jonahs_turn",
+      "path": "photos/event/event_jonahs_turn.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_jonahs_turn.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_it_is_meant_to_be",
+      "runtime_key": "card:event:event_it_is_meant_to_be",
+      "record_id": "P-EVT-032",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_it_is_meant_to_be",
+      "path": "photos/event/event_it_is_meant_to_be.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_it_is_meant_to_be.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_something_hidden",
+      "runtime_key": "card:event:event_something_hidden",
+      "record_id": "P-EVT-033",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_something_hidden",
+      "path": "photos/event/event_something_hidden.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_something_hidden.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_debris",
+      "runtime_key": "card:event:event_debris",
+      "record_id": "P-EVT-034",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_debris",
+      "path": "photos/event/event_debris.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_debris.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_funeral",
+      "runtime_key": "card:event:event_funeral",
+      "record_id": "P-EVT-035",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_funeral",
+      "path": "photos/event/event_funeral.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_funeral.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_the_voice",
+      "runtime_key": "card:event:event_the_voice",
+      "record_id": "P-EVT-036",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_the_voice",
+      "path": "photos/event/event_the_voice.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_the_voice.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_the_beckoning",
+      "runtime_key": "card:event:event_the_beckoning",
+      "record_id": "P-EVT-037",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_the_beckoning",
+      "path": "photos/event/event_the_beckoning.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_the_beckoning.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_image_in_the_mirror",
+      "runtime_key": "card:event:event_image_in_the_mirror",
+      "record_id": "P-EVT-038",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_image_in_the_mirror",
+      "path": "photos/event/event_image_in_the_mirror.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_image_in_the_mirror.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_hideous_shriek",
+      "runtime_key": "card:event:event_hideous_shriek",
+      "record_id": "P-EVT-039",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_hideous_shriek",
+      "path": "photos/event/event_hideous_shriek.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_hideous_shriek.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_webs",
+      "runtime_key": "card:event:event_webs",
+      "record_id": "P-EVT-040",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_webs",
+      "path": "photos/event/event_webs.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_webs.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_night_view",
+      "runtime_key": "card:event:event_night_view",
+      "record_id": "P-EVT-041",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_night_view",
+      "path": "photos/event/event_night_view.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_night_view.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_creepy_crawlies",
+      "runtime_key": "card:event:event_creepy_crawlies",
+      "record_id": "P-EVT-042",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_creepy_crawlies",
+      "path": "photos/event/event_creepy_crawlies.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_creepy_crawlies.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_footsteps",
+      "runtime_key": "card:event:event_footsteps",
+      "record_id": "P-EVT-043",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_footsteps",
+      "path": "photos/event/event_footsteps.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_footsteps.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_phone_call",
+      "runtime_key": "card:event:event_phone_call",
+      "record_id": "P-EVT-044",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_phone_call",
+      "path": "photos/event/event_phone_call.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_phone_call.png"
+    },
+    {
+      "target_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_skeletons",
+      "runtime_key": "card:event:event_skeletons",
+      "record_id": "P-EVT-045",
+      "content_ref": "content.py:EVENT_SUPPLEMENTAL_SPECS#event_skeletons",
+      "path": "photos/event/event_skeletons.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/cards/event/event_skeletons.png"
+    }
+  ],
+  "unresolved": []
+}

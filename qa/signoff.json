@@ -1,0 +1,20 @@
+{
+  "schema": "p-table-signoff/v1",
+  "claim_scope": "execution",
+  "product_owner": {
+    "role": "产品负责人",
+    "decision": "approved",
+    "scope_confirmed": "47 个美术缺口为内容积压，不阻断 completion_claim@execution；小程序端不在本轮范围",
+    "evidence": "2026-11-20 会话中用户确认推进 A-28 签发流程；PT-SCOPE-001/PT-ART-001 已以产品负责人身份关闭",
+    "date": "2026-11-20"
+  },
+  "independent_acceptance": {
+    "tool": "qa/verify_p_table_final.py --tk --json",
+    "note": "独立验收 0 FAIL，verdict 由 INCOMPLETE 随 claim 刷新"
+  },
+  "invalidates_on": [
+    "任一关键产物 sha256 变化",
+    "OS/DPI 设置变化导致 UI 截图不再代表当前环境",
+    "问题日志新增 S1/S2 open 缺陷"
+  ]
+}

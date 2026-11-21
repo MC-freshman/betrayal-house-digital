@@ -86,9 +86,35 @@ TRACK_RE = re.compile(
 
 
 def _handler_for(haunt_id: int):
-    rule = hr.HAUNT_RULE_OVERRIDES.get(haunt_id) or {}
+    # 71-120（Widow's Walk）走 get_haunt_rule_override 的合并查询——它们的
+    # rule_data 在 hr.WW_HAUNT_RULES，不在 HAUNT_RULE_OVERRIDES。
+    rule = hr.get_haunt_rule_override(haunt_id) or {}
     mode = rule.get("mode", "")
     return rule, mode, hm._MODE_HANDLERS.get(mode)
+
+
+HAUNT_TOTAL = 120
+_HAUNTS_DIR = Path(__file__).resolve().parent / "haunts"
+_HAUNTS_ZH_DIR = Path(__file__).resolve().parent / "haunts_zh"
+
+
+def _file_gaps(haunt_id: int) -> list[str]:
+    """剧本交付物完整性：模块文件 + 入口函数 + 中文手册（120/120 无缺口）。"""
+    issues: list[str] = []
+    if haunt_id <= 70:
+        if not any(_HAUNTS_DIR.glob(f"haunt_{haunt_id:02d}_*.py")):
+            issues.append("缺少 haunts/ 剧本模块文件")
+    else:
+        module = _HAUNTS_DIR / f"haunt_haunt{haunt_id}.py"
+        if not module.is_file():
+            issues.append("缺少 haunts/haunt_haunt%d.py" % haunt_id)
+        else:
+            src = module.read_text(encoding="utf-8", errors="replace")
+            if f"def haunt_haunt{haunt_id}(" not in src:
+                issues.append(f"模块缺少入口函数 haunt_haunt{haunt_id}")
+    if not (_HAUNTS_ZH_DIR / f"haunt_{haunt_id:02d}.md").is_file():
+        issues.append("缺少 haunts_zh/haunt_%02d.md 中文手册" % haunt_id)
+    return issues
 
 
 def _overridden_hooks(cls) -> list[str]:
@@ -230,14 +256,14 @@ def collect() -> list[dict]:
     golden = _golden_counts()
     verifies = _verify_counts()
     rows = []
-    for haunt_id in range(1, 71):
+    for haunt_id in range(1, HAUNT_TOTAL + 1):
         rule, mode, handler = _handler_for(haunt_id)
         cls = type(handler) if handler is not None else None
         hooks = _overridden_hooks(cls) if cls is not None else []
         tracks = _declared_tracks(rule)
         profile = hap.HAUNT_AI_PROFILE_OVERRIDES.get(haunt_id)
         goals = _goal_sources(rule, hooks, profile) if cls is not None else {}
-        issues = []
+        issues = list(_file_gaps(haunt_id))
         if handler is None:
             issues.append(f"mode {mode!r} 没有注册 handler")
         else:

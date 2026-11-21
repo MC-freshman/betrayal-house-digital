@@ -1,0 +1,244 @@
+{
+  "profile": "baseline",
+  "root": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill",
+  "p_table": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\assets\\p_table.json",
+  "mapping": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\assets\\asset_mapping.json",
+  "registry": "",
+  "pillow": "11.3.0",
+  "checks": [
+    {
+      "id": "C01",
+      "title": "资源位总数与 stats 自洽",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "records=142；stats 自洽"
+    },
+    {
+      "id": "C02",
+      "title": "分类计数 12/50/13/22/45",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "角色 12 / 房间 50 / 预兆 13 / 物品 22 / 事件 45"
+    },
+    {
+      "id": "C03",
+      "title": "availability 分布（baseline 95 partial + 47 missing）",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "[baseline(v2)] usable=142, partial=0, missing=0, corrupted=0, duplicate=0"
+    },
+    {
+      "id": "C04",
+      "title": "missing 分类计数 12/1/34",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "missing 合计 0（v2：47 个缺口已全部落实）"
+    },
+    {
+      "id": "C05",
+      "title": "target_ref 与 content.py 全集双向一致",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "七集合 12/39/11/13/22/11/34；142 条按 asset_type 与 content.py 双向一致"
+    },
+    {
+      "id": "C06",
+      "title": "target_ref 规范格式与 id 可解析",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "142 条 target_ref 均为 content.py:<集合>#<id> 且 id 可解析"
+    },
+    {
+      "id": "C07",
+      "title": "资源位唯一性（角色按 card+face）",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "142 条资源位唯一（角色按 card + face 区分）"
+    },
+    {
+      "id": "C08",
+      "title": "record_id 唯一、格式与类别前缀",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "record_id 唯一且前缀与 asset_type 一致（142 条）"
+    },
+    {
+      "id": "C09",
+      "title": "非 missing 行路径可 stat",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "全部非 missing 行路径可 stat"
+    },
+    {
+      "id": "C10",
+      "title": "路径逐段大小写与磁盘一致",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "逐段大小写与磁盘一致"
+    },
+    {
+      "id": "C11",
+      "title": "missing 行路径为空且 note 齐全",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "47 条 missing 路径为空、note 齐全、无可用用途"
+    },
+    {
+      "id": "C12",
+      "title": "路径口径（相对、正斜杠、无 ..）",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "路径均为相对项目根的 / 分隔小写路径"
+    },
+    {
+      "id": "C13",
+      "title": "魔数与扩展名/format 一致",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "实测 142 张：0 张扩展名与魔数不一致，均已标 ext_mismatch 且非 usable（基线已知）"
+    },
+    {
+      "id": "C14",
+      "title": "尺寸字段与实测自洽",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "实测 142 张尺寸与 width/height/aspect_ratio 自洽（dimensions 字段缺失见 C32）"
+    },
+    {
+      "id": "C15",
+      "title": "has_alpha 与实测一致",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "Pillow 11.3.0：142 张 alpha 与实测一致（基线均 false）"
+    },
+    {
+      "id": "C16",
+      "title": "逐图 verify+load 可解码",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "Pillow 11.3.0：142 张 verify+load 通过且与 decodable 一致"
+    },
+    {
+      "id": "C17",
+      "title": "sha256/bytes/尺寸与清单三方一致",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "142 张 sha256/bytes/尺寸与清单及磁盘三方一致"
+    },
+    {
+      "id": "C18",
+      "title": "95 文件全覆盖、无孤立",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "142 ↔ 142 双向覆盖，无孤立文件、无重复引用"
+    },
+    {
+      "id": "C19",
+      "title": "不得伪造 usable",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "usable=142；逐行核对真 PNG/无阻断标记/尺寸达标/alpha 与用途一致"
+    },
+    {
+      "id": "C20",
+      "title": "partial 降级说明与用途约束",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "95 条 partial 均写明降级原因且未越权用于立绘/图标"
+    },
+    {
+      "id": "C21",
+      "title": "availability ↔ mapping_status 相容",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "availability ↔ mapping_status 相容，fallback 均带引用"
+    },
+    {
+      "id": "C22",
+      "title": "usable_fields 与 asset_type 相容",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "usable_fields 枚举与 asset_type 相容"
+    },
+    {
+      "id": "C23",
+      "title": "重复与别名一致性",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "sha256 分组无冲突（基线重复组 0）"
+    },
+    {
+      "id": "C24",
+      "title": "映射 entries 双向覆盖",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "entries 142 条与 matched 记录双向覆盖"
+    },
+    {
+      "id": "C25",
+      "title": "unresolved 与缺口一一对应",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "unresolved 0 条与 47 个缺口一一对应"
+    },
+    {
+      "id": "C26",
+      "title": "运行时 PNG 真实性与尺寸",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "142 个运行时 PNG 真实性与尺寸通过（房间 512×512、卡牌 480×672）"
+    },
+    {
+      "id": "C27",
+      "title": "Registry resolve/validate 契约",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "resolve 142 条均可 stat；未知 id 返回 None；validate 返回列表"
+    },
+    {
+      "id": "C28",
+      "title": "缺失 fallback 不得伪造路径",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "0 条缺失资源位无伪造路径；0 条显式 fallback 同类别且指向可用行"
+    },
+    {
+      "id": "C29",
+      "title": "分档门禁（release 不可宣称）",
+      "priority": "P1",
+      "status": "PASS",
+      "detail": "baseline 档门禁：usable=142 / partial=0 / missing=0；release 仍需 C-01…C-06 通过，本契约不签发"
+    },
+    {
+      "id": "C30",
+      "title": "content.py 同步摘要",
+      "priority": "P2",
+      "status": "PASS",
+      "detail": "content.py sha256 与 P 表记录一致（461f8aeb95e3…），集合计数一致"
+    },
+    {
+      "id": "C31",
+      "title": "p_table.csv 与 JSON 一致",
+      "priority": "P2",
+      "status": "PASS",
+      "detail": "CSV 含 BOM、142 行、33 列，record_id 与 JSON 双向一致"
+    },
+    {
+      "id": "C32",
+      "title": "P 表必填字段与 CSV 列合规",
+      "priority": "P0",
+      "status": "PASS",
+      "detail": "16 个必填字段齐全；CSV 列集与规范一致；fallback_ref 均为 record_id"
+    }
+  ],
+  "summary": {
+    "total": 32,
+    "pass": 32,
+    "fail": 0,
+    "warn": 0,
+    "skip": 0,
+    "error": 0,
+    "verdict": "PASS（仅代表契约一致，不代表素材可发布）",
+    "exit_code": 0
+  }
+}

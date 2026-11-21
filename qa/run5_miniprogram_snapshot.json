@@ -1,0 +1,296 @@
+{
+  "schema": "run5_miniprogram_snapshot/v1",
+  "captured_at": "2026-11-21T12:36:15",
+  "note": "run5 S0 基线：本轮只改桌面端 P 表与资源，未触碰 source/miniprogram。",
+  "tree": "source/miniprogram",
+  "files": 57,
+  "tree_sha256": "2d05aba92f9f73ea7c7aa9e163113f5dcdaad9af6cbb443432de6f48de48c008",
+  "newest_mtime": "2026-11-20T11:57:50",
+  "entries": [
+    {
+      "path": "source/miniprogram/.gitignore",
+      "bytes": 79,
+      "sha256": "8d476e639b3472017a7105a11aa74f986f8612d24e376296ca66dca315760f2f"
+    },
+    {
+      "path": "source/miniprogram/backend/.dockerignore",
+      "bytes": 57,
+      "sha256": "13f74fe7751feaa1ea485759033f15925453b9725837aa5195c798076eabf4cd"
+    },
+    {
+      "path": "source/miniprogram/backend/.env.example",
+      "bytes": 126,
+      "sha256": "7493bcc07394fea46c9513f5e780715707e4609d10997a058e4ba898b6a5b4ff"
+    },
+    {
+      "path": "source/miniprogram/backend/app/__init__.py",
+      "bytes": 44,
+      "sha256": "8fff2d63e61893659b379486b3be2573a00b9d14fe826b338670b491f5eea59c"
+    },
+    {
+      "path": "source/miniprogram/backend/app/__pycache__/__init__.cpython-39.pyc",
+      "bytes": 241,
+      "sha256": "51bcd47301837c8ab25e0673d7528749592e84347834349fa4d77682f53f2fa0"
+    },
+    {
+      "path": "source/miniprogram/backend/app/auth.py",
+      "bytes": 4293,
+      "sha256": "0fb94203698d9c88d8d30db6bac62d01a31bbd1fa90bc141f14561dbabf0a71e"
+    },
+    {
+      "path": "source/miniprogram/backend/app/game_core/__init__.py",
+      "bytes": 2244,
+      "sha256": "d361da8a5b20d07e79fc0fe49245bdb312d3e7d6e70b1f9cd4df0033a287cc1f"
+    },
+    {
+      "path": "source/miniprogram/backend/app/game_core/__pycache__/__init__.cpython-39.pyc",
+      "bytes": 2098,
+      "sha256": "6c1518cbd945398a6d2bf0e69a2ec4f4bb90f1a3fa62dc821fc344e95989afa3"
+    },
+    {
+      "path": "source/miniprogram/backend/app/main.py",
+      "bytes": 7007,
+      "sha256": "19cd0e385d482b11dcbbb580923c6b2078407e0e0b83ec230142919ae437b950"
+    },
+    {
+      "path": "source/miniprogram/backend/app/protocol.py",
+      "bytes": 499,
+      "sha256": "6bb96ab8cbe4834e13fa9f113cbddd76ec4ef4e86d79f27d8ded1bba9693dcb1"
+    },
+    {
+      "path": "source/miniprogram/backend/app/room.py",
+      "bytes": 37161,
+      "sha256": "56d8c7077c3df0809881a4fc611e0d435aa303de8aa5659ea803f178c66fa3e6"
+    },
+    {
+      "path": "source/miniprogram/backend/data/saves/room_33PNNJ.json",
+      "bytes": 29937,
+      "sha256": "b5a3b98dfc3e3bf6074d7b9cef4e48e3be7d4420942e11586cf01d536dbe904d"
+    },
+    {
+      "path": "source/miniprogram/backend/data/saves/room_3AMSWJ.json",
+      "bytes": 29001,
+      "sha256": "85e8eba411a097e066a7b91b6c37fe8d101ffac7bc2cd3ab6f9e5cbf2bf8238e"
+    },
+    {
+      "path": "source/miniprogram/backend/data/saves/room_44KTR8.json",
+      "bytes": 28921,
+      "sha256": "3097077247d3431d0e3db223fa59769bdfc3de8c2b8491abf55b66411cdf187e"
+    },
+    {
+      "path": "source/miniprogram/backend/data/saves/room_EFBVEX.json",
+      "bytes": 29142,
+      "sha256": "7af00fc212ff3b3337316f1d7bc5bdeb6e57140e2caf9170e8f975d460cd933f"
+    },
+    {
+      "path": "source/miniprogram/backend/data/saves/room_F2T57G.json",
+      "bytes": 28993,
+      "sha256": "2d8767ea1dd456e3a387f88b9e4a4b5e047834cac4d1e287e115d724ec0ed77e"
+    },
+    {
+      "path": "source/miniprogram/backend/data/saves/room_RTLRNU.json",
+      "bytes": 29300,
+      "sha256": "9cb424d34dee474ee6fa5cad53f7161b6b6f7c990e302ebd534f3fe4f02cba15"
+    },
+    {
+      "path": "source/miniprogram/backend/data/saves/room_RZLT5N.json",
+      "bytes": 30102,
+      "sha256": "93f6d5838c9d0505f0bb90a4c96e61842f62205ef3a8f3ac4057b30da8424487"
+    },
+    {
+      "path": "source/miniprogram/backend/data/saves/room_SVKKVY.json",
+      "bytes": 30215,
+      "sha256": "ad859f4ae3c714de6f7e85629f658104f44e675ebf0936bf7780521cc03316c6"
+    },
+    {
+      "path": "source/miniprogram/backend/Dockerfile",
+      "bytes": 833,
+      "sha256": "daf07c87a13bca3a808f4310a6ebe50787f2053073729400782e5d052b63e5fe"
+    },
+    {
+      "path": "source/miniprogram/backend/requirements-dev.txt",
+      "bytes": 49,
+      "sha256": "cfa72fcbb3608eaf7db44ae69c34dcbebe714d79a40018d998a570828146604b"
+    },
+    {
+      "path": "source/miniprogram/backend/requirements.txt",
+      "bytes": 44,
+      "sha256": "841e0ad2557e3df0692333be6d55ba582a33359f49655e5f616f9baf2cfa4a70"
+    },
+    {
+      "path": "source/miniprogram/backend/tests/integration_smoke.py",
+      "bytes": 6520,
+      "sha256": "663c7884a0169ff755354a0bce23e2665987fa43e37f6eefdd551b2287d86572"
+    },
+    {
+      "path": "source/miniprogram/backend/tests/test_core.py",
+      "bytes": 4497,
+      "sha256": "fdf7dc8e3bc56e1792ed0a475ef9503b76b37a1e228770b824cf4c7b76c98fae"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/app.js",
+      "bytes": 2249,
+      "sha256": "4f16ba86eb75e8298bc0585998059d5f7d90a7b4ed9182d600ad356597e8f61d"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/app.json",
+      "bytes": 434,
+      "sha256": "88a21d5002b1a6eed03b67ffb85b5d814af9e9c72aff125537b64160cd8a47c7"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/app.wxss",
+      "bytes": 1633,
+      "sha256": "51c7e8ef88c7310d5cc6f1e159d50cda2710725b0abed870fc143d26e7a0d8a0"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/config.js",
+      "bytes": 179,
+      "sha256": "31fbcf676b6e5d7a3ca6daf87ae872aafbfc7e67d97167b45800485dfe6e6598"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/game/net/NetworkManager.js",
+      "bytes": 7183,
+      "sha256": "8e28bc07065d893fde3a1ce6fc7d2635fe0fa30228bb5fb101c1368df1255e37"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/game/render/BoardRenderer.js",
+      "bytes": 537,
+      "sha256": "845df477c51d451ee4f5de09f30666c16b07aaf367bf9553e40a95e0eae2af88"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/game/render/DiceRenderer.js",
+      "bytes": 190,
+      "sha256": "b9af97d34373815757ede5d1616a2b6e366949d267bb2850a72835bbb19a5967"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/game/render/MapRenderer.js",
+      "bytes": 4749,
+      "sha256": "9b4adf6e3a653a480f51ad7b93be513f94dd3aff4aa21d47c640b38496026b97"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/game/render/Renderer.js",
+      "bytes": 663,
+      "sha256": "efc6abcc015757d59dbc174723ec17c7c9217f58e5262c113eb764fb7018c58e"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/game/render/TokenRenderer.js",
+      "bytes": 271,
+      "sha256": "ba88016ef12105bbfe98264b64add1be53ed6c4ed6bc7cc6d48d7d88d8426744"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/game/game.js",
+      "bytes": 17359,
+      "sha256": "b11c3ff70adbf0e6a03477dd385856f034a64c8df69c721cd6f34f9974ffed38"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/game/game.json",
+      "bytes": 73,
+      "sha256": "6c52168786e3d06af87050ddaab35253f519020de557d82fbeb4f1a6e61bc164"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/game/game.wxml",
+      "bytes": 8812,
+      "sha256": "fa589c910b53f22da77d682faf8b5d70075eeba3ea24850f4c3602ad1558a890"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/game/game.wxss",
+      "bytes": 9398,
+      "sha256": "8688cfc67e690cdd52f7127845b80d2e89189975af381df51dc8e4538be49d39"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/help/help.js",
+      "bytes": 1821,
+      "sha256": "cb2516b794ca768802b20db5534495fffa9ee7bba153c1ca8b33fc19846d24a6"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/help/help.json",
+      "bytes": 51,
+      "sha256": "fd9ae9f6601867102bddceef81cb8f86e13397361ec979ef5add6d6304f6a84e"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/help/help.wxml",
+      "bytes": 1382,
+      "sha256": "9e16f4959af7b019459a622407d32ed85899ab85e3aedbae3fcba24de8f3c7fb"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/help/help.wxss",
+      "bytes": 1348,
+      "sha256": "a4073324a8b8a5fe7748c4d708c0e449772dd713a1d88f36fd2686f9ca767686"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/index/index.js",
+      "bytes": 5777,
+      "sha256": "b26667c2b3767fd6bef2526bd42e73a449b68f0d580e94c849e4eda6b3095cf0"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/index/index.json",
+      "bytes": 74,
+      "sha256": "78fb1375c4d9555eb8394fb730cd089ffeefeab32dee1bee4b2d37607e686229"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/index/index.wxml",
+      "bytes": 3046,
+      "sha256": "065d1884026d7883c59ba6c9e9a574c5be7d426282fcf7655c39acde53b6cb1a"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/index/index.wxss",
+      "bytes": 2095,
+      "sha256": "053781e0e8d16f9b0a16b938d0e1664563056dddda234fdf56297b3fdd8f6d11"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/lobby/lobby.js",
+      "bytes": 4891,
+      "sha256": "0ff3fb343456618735a40fc81e3bc89c86239b4cfe6f90109a4fc9d71f26a88b"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/lobby/lobby.json",
+      "bytes": 48,
+      "sha256": "7946e30c57ce0df0109468aecbb5486bd72d18c1bb61be3d1ecb7663a9dc21ba"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/lobby/lobby.wxml",
+      "bytes": 3223,
+      "sha256": "83fee5f1f23aed034f3999498fbd2a2ca717583c8a742f55763c4268873e3c7a"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/pages/lobby/lobby.wxss",
+      "bytes": 2715,
+      "sha256": "45f27afb270eb7a5a17f794ca7336e164926fb2469ba2140bcefe18900fa14ae"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/sitemap.json",
+      "bytes": 88,
+      "sha256": "3308f778e0db2c180f54ee38538d2015092e01cf5722c6ade6d33a5772a084a1"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/miniprogram/utils/storage.js",
+      "bytes": 793,
+      "sha256": "e7cfaff43a0b79f3d5aff8a32dcd8c88b69aed202da6575b6933fd541898a1d6"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/project.config.json",
+      "bytes": 363,
+      "sha256": "7a557ad0869c8f95d9001baed42430c37def2e625f3bb172c28f395fe5031c61"
+    },
+    {
+      "path": "source/miniprogram/miniprogram/tests/check_miniprogram.js",
+      "bytes": 3115,
+      "sha256": "0b988fb77678c63a14bfc8abf0d8163d4b0e1724f0e1cb731fa75a16a91113a3"
+    },
+    {
+      "path": "source/miniprogram/README.md",
+      "bytes": 3562,
+      "sha256": "4f874eb14a572ead774c0a47d78a5f69cd053f56bb85fa7ecf99a21185a59ad2"
+    },
+    {
+      "path": "source/miniprogram/交接说明.md",
+      "bytes": 8983,
+      "sha256": "075fec0c10cbffe017599a2852105577fb725d2ea116bff1249512da8ed87539"
+    },
+    {
+      "path": "source/miniprogram/启动本地服务.bat",
+      "bytes": 533,
+      "sha256": "1527ac30c1c82f808efef163e476bd7033cf990cde25457f87644267030a4e2d"
+    }
+  ]
+}

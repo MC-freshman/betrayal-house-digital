@@ -220,10 +220,77 @@ class HostControlApp(tk.Tk):
         self.destroy()
 
 
+def selftest_assets(out_path: str) -> int:
+    """发布包资源自检：验证冻结环境能解析 142 条 runtime_path 且图片可解码。
+
+    --windowed 打包没有控制台，结果写到 out_path（JSON）。退出码 0 表示全部通过。
+    """
+    import json
+    from PIL import Image
+
+    from game.asset_registry import AssetRegistry, resolve_manifest_path
+
+    game_dir = Path(__file__).resolve().parent
+    manifest = resolve_manifest_path()
+    report = {
+        "frozen": bool(getattr(sys, "frozen", False)),
+        "executable": sys.executable,
+        "game_dir": str(game_dir),
+        "manifest": str(manifest),
+        "manifest_exists": manifest.is_file(),
+        "records": 0,
+        "resolved": 0,
+        "missing": [],
+        "undecodable": [],
+        "sizes_ok": 0,
+        "error": "",
+    }
+    try:
+        registry = AssetRegistry.load(str(manifest))
+        report["records"] = len(registry)
+        for record in registry.records:
+            ref = registry.resolve(record.get("target_ref"))
+            if ref is None or not ref.path:
+                report["missing"].append(record.get("record_id"))
+                continue
+            path = Path(ref.path)
+            if not path.is_file():
+                report["missing"].append(record.get("record_id"))
+                continue
+            report["resolved"] += 1
+            try:
+                with Image.open(path) as image:
+                    width, height = image.size
+                    image.verify()
+                want_w, want_h = record.get("width"), record.get("height")
+                if want_w and want_h and (width, height) == (int(want_w), int(want_h)):
+                    report["sizes_ok"] += 1
+            except Exception as exc:
+                report["undecodable"].append(
+                    "%s: %s: %s" % (record.get("record_id"), type(exc).__name__, exc))
+    except Exception as exc:
+        report["error"] = "%s: %s" % (type(exc).__name__, exc)
+
+    ok = (report["manifest_exists"] and report["records"] > 0
+          and not report["missing"] and not report["undecodable"]
+          and not report["error"])
+    report["ok"] = ok
+    try:
+        Path(out_path).write_text(
+            json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")
+    except Exception:
+        return 2
+    return 0 if ok else 1
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="《山中小屋》统一启动器")
     parser.add_argument("--mode", choices=("launcher", "local", "client", "host"), default="launcher")
+    parser.add_argument("--selftest-assets", metavar="OUT_JSON", default="",
+                        help="发布包资源自检，把结果写入指定 JSON 后退出")
     args = parser.parse_args()
+    if args.selftest_assets:
+        raise SystemExit(selftest_assets(args.selftest_assets))
     if args.mode == "local":
         run_app()
     elif args.mode == "client":

@@ -41,6 +41,17 @@ except ImportError:  # pragma: no cover - direct script execution
             return {}
 
 
+# ----------------------------------------------------------------------
+# 楼层枚举（基础版三层；WW 屋顶层见 content_ww.FLOOR_ROOF）
+# ----------------------------------------------------------------------
+# 基础版楼层沿用整数约定（-1=地下室 / 0=一层 / 1=二层），引擎内
+# _room_key / pos_index 直接拼 key，不需要连续整数。
+# run5：WW 屋顶层（独立字符串值 "roof"）已随 20 块板块隔离到 content_ww.py。
+FLOOR_BASEMENT = -1
+FLOOR_GROUND = 0
+FLOOR_UPPER = 1
+
+
 def character_face(
     *,
     card_id: str,
@@ -1333,6 +1344,7 @@ ROOM_SUPPLEMENTAL_SPECS = [
 ]
 
 
+
 def _event_spec_text(name: str, effect_id: str) -> str:
     if effect_id == "event_bloody_vision":
         return f"{name} 逼得你先稳住心神。"
@@ -2125,7 +2137,10 @@ def build_catalog(seed: int | None = None) -> Catalog:
         character_cards.setdefault(face["card_id"], []).append(face["id"])
 
     cards: dict[str, Card] = {}
-    for spec in OMEN_CARDS + ITEM_CARDS + EVENT_BASES + _make_supplemental_events(rng, 45 - len(EVENT_BASES)):
+    # 基础版事件总数为 45（EVENT_BASES + 补充事件）。
+    # run5：Widow's Walk 的 15 张新事件已隔离到 content_ww.py，不再计入。
+    event_target = 45
+    for spec in OMEN_CARDS + ITEM_CARDS + EVENT_BASES + _make_supplemental_events(rng, event_target - len(EVENT_BASES)):
         cards[spec["id"]] = Card(**spec)
 
     room_template_specs = ROOM_BASES[:]
@@ -2135,6 +2150,9 @@ def build_catalog(seed: int | None = None) -> Catalog:
     for spec in _make_supplemental_rooms(rng, room_template_map, room_targets, start_ids):
         room_template_specs.append(spec)
         room_template_map[spec["id"]] = spec
+
+    # run5：Widow's Walk 屋顶层 20 块板块已隔离到 content_ww.py；
+    # ROOM_BASES(39) + ROOM_SUPPLEMENTAL_SPECS(11) = 50 个房间模板。
 
     room_templates = {spec["id"]: RoomTemplate(**spec) for spec in room_template_specs}
     room_draw_pool = [
