@@ -33,7 +33,9 @@ from collections import OrderedDict
 from pathlib import Path
 
 DEFAULT_MAX_SIZE = (256, 256)
-DEFAULT_CACHE_CAPACITY = 64
+# 容量要同时容纳：棋盘 50 间房 + 玩家头像 6 张 + 弹窗卡面/房间缩略图若干。
+# 64 只够一个 tile 尺寸档（实测两档并发 evictions=36、hit_rate=0），故上调到 160。
+DEFAULT_CACHE_CAPACITY = 160
 
 # 内置占位图目录：run5 之后 142 位全部落实到真图，p_table 里已没有
 # ``runtime_status=placeholder`` 的行，清单同目录也不一定有 placeholders/。

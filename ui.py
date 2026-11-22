@@ -8,6 +8,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 try:
+    from . import game_art
     from . import help_text as HT
     from .asset_registry import AssetRegistry, resolve_manifest_path
     from .bot_ai import BotController
@@ -15,6 +16,7 @@ try:
     from .models import DIRECTION_DELTAS, GameState, OPPOSITE, Player, PlacedRoom
     from .ui_asset_binding import load_asset_photo
 except ImportError:  # pragma: no cover - direct script execution
+    import game_art  # type: ignore
     import help_text as HT  # type: ignore
     from asset_registry import AssetRegistry, resolve_manifest_path  # type: ignore
     from bot_ai import BotController  # type: ignore
@@ -53,6 +55,24 @@ FONT_UI_BOLD = ("Microsoft YaHei UI", 10, "bold")
 FONT_PANEL = ("Microsoft YaHei UI", 9)
 FONT_TITLE = ("Microsoft YaHei UI", 26, "bold")
 FONT_SUBTITLE = ("Microsoft YaHei UI", 11)
+
+# 对局侧美术显示尺寸（逻辑 px @96dpi）。取图统一走 game_art.GameArt，
+# 具体缩放由 ui_asset_binding 在 PIL 侧完成（Tk 8.6 没有图片缩放能力）。
+AVATAR_PANEL_SIZE = 48      # 右侧玩家面板头像条
+AVATAR_DETAIL_SIZE = 96     # 玩家详情弹窗头像
+ROOM_TOOLTIP_SIZE = 112     # 房间悬停 tooltip 缩略图
+ROOM_DETAIL_SIZE = 160      # 房间详情弹窗缩略图
+# 卡面 5:7，与 _HelpDialog.ART_CARD_BASE 同源（240×336 @96dpi）。
+CARD_FACE_SIZE = (240, 336)
+
+# 抽卡提示标题前缀 -> 卡牌类别（engine_parts/room_effects.py:200/231/241 的既有契约）。
+# DecisionProvider 只传字符串，这里按标题前缀 + catalog 中文名反查 Card，
+# 不扩协议、不改引擎调用点。
+CARD_NOTICE_PREFIXES = (
+    ("抽到预兆：", "omen"),
+    ("获得物品：", "item"),
+    ("触发事件：", "event"),
+)
 
 
 def _configure_windows_dpi_awareness() -> None:
@@ -145,14 +165,49 @@ def _append_stat_track(widget: tk.Text, player: Player, stat: str) -> None:
     widget.insert("end", "\n")
 
 
+def _card_from_notice(catalog, title: str):
+    """按提示标题反查 Card：'抽到预兆：X' -> (kind=omen, name=X)。
+
+    DecisionProvider 的契约是 ``notify(title, message)`` 两个字符串，不扩协议，
+    所以 UI 侧用「标题前缀 + catalog 中文名」还原 card 对象；同 kind 内重名时取首个，
+    反查不到返回 None（调用方退化为原纯文字弹窗，不报错）。
+    """
+    if catalog is None or not title:
+        return None
+    for prefix, kind in CARD_NOTICE_PREFIXES:
+        if not title.startswith(prefix):
+            continue
+        name = title[len(prefix):].strip()
+        for card in catalog.cards.values():
+            if card.kind == kind and card.name == name:
+                return card
+    return None
+
+
 class TkDecisionProvider(DecisionProvider):
     def __init__(self, root: tk.Tk):
         self.root = root
 
     def notify(self, title: str, message: str) -> None:
         # 自定义静音弹窗，替代系统 messagebox（去掉 Windows 提示音/系统样式）
-        dialog = _InfoDialog(self.root, title, message)
+        image, image_size = self._card_face(title)
+        dialog = _InfoDialog(self.root, title, message, image=image, image_size=image_size)
         self.root.wait_window(dialog.top)
+
+    def _card_face(self, title: str):
+        """抽卡提示命中时返回 (卡面 PhotoImage, 尺寸)；否则 (None, None)。"""
+        app = self.root
+        art = getattr(app, "art", None)
+        engine = getattr(app, "engine", None)
+        if art is None or engine is None:
+            return None, None
+        card = _card_from_notice(getattr(engine, "catalog", None), title)
+        if card is None:
+            return None, None
+        photo = art.photo("card", art.card_key(card.kind, card.id), app, CARD_FACE_SIZE)
+        if photo is None:
+            return None, None
+        return photo, CARD_FACE_SIZE
 
     def confirm(self, title: str, message: str) -> bool:
         dialog = _ConfirmDialog(self.root, title, message)
@@ -400,9 +455,21 @@ class _DiceDialog:
 
 
 class _InfoDialog:
-    """静音的自定义信息弹窗（替代系统 messagebox，去掉 Windows 提示音）。"""
+    """静音的自定义信息弹窗（替代系统 messagebox，去掉 Windows 提示音）。
 
-    def __init__(self, root: tk.Tk, title: str, message: str, error: bool = False) -> None:
+    ``image`` / ``image_size`` 为可选参数：有图时在标题下方插一条固定尺寸的图片区，
+    正文整体下移；无图时布局与改造前完全一致（20+ 处纯文字调用不受影响）。
+    """
+
+    def __init__(
+        self,
+        root: tk.Tk,
+        title: str,
+        message: str,
+        error: bool = False,
+        image=None,
+        image_size=None,
+    ) -> None:
         self.top = tk.Toplevel(root)
         self.top.title(title)
         self.top.configure(bg=PALETTE["panel"])
@@ -420,6 +487,22 @@ class _InfoDialog:
             padx=20,
             pady=4,
         ).pack(fill="x", pady=(16, 0))
+        # 卡面/缩略图（可选）：Label 持有 Tk 图片名，PhotoImage 对象必须挂在 self 上，
+        # 否则被 GC 回收后 Tcl 会删图、标签随即变空白。
+        self.photo = image
+        if image is not None:
+            image_options = {}
+            if image_size:
+                image_options["width"] = int(image_size[0])
+                image_options["height"] = int(image_size[1])
+            tk.Label(
+                self.top,
+                image=image,
+                bg=PALETTE["panel"],
+                bd=0,
+                highlightthickness=0,
+                **image_options,
+            ).pack(pady=(8, 2))
         tk.Label(
             self.top,
             text=message,
@@ -737,7 +820,7 @@ class _RotationDialog:
 class _PlayerDetailDialog:
     """点击玩家标志后弹出的玩家详情（属性以卡尺轨道显示）。"""
 
-    def __init__(self, root, player, catalog, room_name, role_label: str = "未知"):
+    def __init__(self, root, player, catalog, room_name, role_label: str = "未知", art=None):
         self.top = tk.Toplevel(root)
         self.top.title(f"{player.name} 详情")
         self.top.configure(bg=PALETTE["panel"])
@@ -749,17 +832,38 @@ class _PlayerDetailDialog:
         if player.source_name:
             head.append(f"原版：{player.source_name}")
         head.extend([f"生日：{player.birthday}", f"阵营：{role_label}", f"位置：{room_name}"])
+        # 头部：左侧 96×96 角色立绘 + 右侧文本块；窗口几何保持 480x620 不变。
+        head_row = tk.Frame(self.top, bg=PALETTE["panel"])
+        head_row.pack(fill="x", pady=(12, 0))
+        self.photo = None
+        if art is not None:
+            face = catalog.characters.get(player.character_id) if catalog else None
+            photo = art.photo(
+                "character",
+                art.character_key(face),
+                root,
+                (AVATAR_DETAIL_SIZE, AVATAR_DETAIL_SIZE),
+            )
+            if photo is not None:
+                self.photo = photo
+                tk.Label(
+                    head_row,
+                    image=photo,
+                    bg=PALETTE["panel"],
+                    bd=0,
+                    highlightthickness=0,
+                ).pack(side="left", padx=(16, 10))
         tk.Label(
-            self.top,
+            head_row,
             text="\n".join(head),
             bg=PALETTE["panel"],
             fg=PALETTE["text"],
             font=FONT_PANEL,
             justify="left",
-            padx=16,
+            padx=0 if self.photo is not None else 16,
             pady=4,
             anchor="w",
-        ).pack(fill="x", pady=(12, 0))
+        ).pack(side="left", fill="x", expand=True)
 
         tk.Label(
             self.top,
@@ -1112,6 +1216,9 @@ class GameApp(tk.Tk):
         self.minsize(1024, 680)
         self.configure(bg=PALETTE["bg"])
 
+        # 统一取图入口（懒加载注册表，构造时不读盘）。TkDecisionProvider.notify
+        # 会从 self.art 取卡面，所以必须在构造 engine 之前就位。
+        self.art = game_art.get_shared()
         self.engine = GameEngine(prompter=TkDecisionProvider(self))
         self.selected_player_index = 0
         self.current_move_options: list[ExitOption] = []
@@ -1125,6 +1232,11 @@ class GameApp(tk.Tk):
         self.bot_controller = BotController()
         self._exploration_slots: dict[str, dict] = {}
         self._exploration_hover_tag: str | None = None
+        # 显示中的 PhotoImage 强引用：GameArt 的记忆化有 LRU 上限，
+        # 命中淘汰时不能把画布/标签已经用上的图一起回收。
+        self._board_photos: list = []
+        self._avatar_photos: dict = {}
+        self._room_tooltip_photo = None
         # 已主动展示过手册的作祟号（换局/读档时随"无作祟"状态自动清空）。
         self._haunt_briefed_id: int | None = None
         # 弹出阅读窗期间暂停机器人推进，避免"边读边被机器人跳过"。
@@ -1252,6 +1364,9 @@ class GameApp(tk.Tk):
             pady=5,
             font=FONT_UI_BOLD,
         ).pack(fill="x")
+        # 玩家头像条：每名玩家一只 48×48 头像，当前玩家 2px accent 描边。
+        self.avatar_strip = tk.Frame(self.info_panel, bg=PALETTE["panel"])
+        self.avatar_strip.pack(fill="x", padx=10, pady=(6, 0))
         info_body = tk.Frame(self.info_panel, bg=PALETTE["panel"])
         info_body.pack(fill="both", expand=True)
         self.info_scroll = tk.Scrollbar(info_body, orient="vertical")
@@ -1846,6 +1961,9 @@ class GameApp(tk.Tk):
     def _redraw_board(self) -> None:
         canvas = self.board_canvas
         canvas.delete("all")
+        # 上一帧的图元已经全删，图片引用可以整体换掉；本帧新取的图逐张 append 回来，
+        # 保证「画布还在显示」期间 PhotoImage 一定被 Python 侧持有。
+        self._board_photos = []
         self._exploration_slots = {}
         self._exploration_hover_tag = None
         canvas.configure(cursor="")
@@ -2009,18 +2127,57 @@ class GameApp(tk.Tk):
             ts = tile_size - 8
             name_size = max(8, min(11, int(tile_size / 11)))
             floor_size = max(7, min(9, int(tile_size / 13)))
-            # 顶部：楼层标签；下方：房间名（中间留给玩家序号）
+            # 房间底图：与矩形同尺寸（ts×ts），anchor="nw" 才能整块贴合；
+            # 缺图（photo 为 None）时保持上面的纯色矩形外观，不抛异常。
+            photo = self.art.photo(
+                game_art.ROOM_KIND,
+                self.art.room_key(room.template_id),
+                self,
+                (ts, ts),
+            )
+            image_item = None
+            if photo is not None:
+                image_item = canvas.create_image(
+                    px, py, anchor="nw", image=photo, tags=(troom_tag, "roomimg")
+                )
+                # 本帧保活：canvas 图元只持有 Tcl 图片名，Python 对象一旦被回收即空白。
+                self._board_photos.append(photo)
+                # 底图盖住了 fill 色块，起始房/符号房的语义改由 2px 描边承载。
+                ring = (
+                    color
+                    if (room.symbol and room.revealed)
+                    or room.template_id in self.engine.catalog.start_room_ids
+                    else "#111"
+                )
+                canvas.create_rectangle(
+                    px, py, px + ts, py + ts,
+                    fill="", outline=ring, width=2, tags=(troom_tag,),
+                )
+            # 顶部：楼层标签（深色小底条）；底部：房间名（深色底条 + 白字）。
+            # Tk 文字没有 alpha，也不接受 #RRGGBBAA，底条只能是实色；白字对
+            # PALETTE["outline"]#111820 ≈ 16:1、对 panel3#20252d ≈ 12.6:1，均 ≥3:1。
+            floor_band = max(12, min(16, int(round(ts * 0.16))))
+            canvas.create_rectangle(
+                px + 2, py + 2, px + ts - 2, py + 2 + floor_band,
+                fill=PALETTE["panel3"], outline="", tags=(troom_tag,),
+            )
             canvas.create_text(
                 px + ts / 2,
-                py + max(9, ts * 0.18),
+                py + 2 + floor_band / 2,
                 text=floor_label.get(room.floor, f"{room.floor}F"),
                 fill=PALETTE["muted"],
                 font=("Microsoft YaHei UI", floor_size),
                 tags=(troom_tag,),
             )
+            name_band = max(16, min(name_size * 2 + 10, ts - floor_band - 8))
+            band_top = py + ts - 2 - name_band
+            canvas.create_rectangle(
+                px + 2, band_top, px + ts - 2, py + ts - 2,
+                fill=PALETTE["outline"], outline="", tags=(troom_tag,),
+            )
             canvas.create_text(
                 px + ts / 2,
-                py + ts * 0.64,
+                band_top + name_band / 2,
                 text=room.name,
                 fill=PALETTE["text"],
                 width=max(34, ts - 16),
@@ -2041,7 +2198,7 @@ class GameApp(tk.Tk):
                     canvas.create_rectangle(px + ts - 3, py + ts / 2 - 7, px + ts + 3, py + ts / 2 + 7, fill=door_mark, outline="")
                 elif direction == "west":
                     canvas.create_rectangle(px - 3, py + ts / 2 - 7, px + 3, py + ts / 2 + 7, fill=door_mark, outline="")
-            self.tile_widgets[room.key] = {"rect": rect, "room": room}
+            self.tile_widgets[room.key] = {"rect": rect, "image": image_item, "room": room}
 
         # 特殊连接（楼梯/密道；跨楼层时呈纵向虚线，表示上下连通）
         for room in state.board.values():
@@ -2247,7 +2404,18 @@ class GameApp(tk.Tk):
             lines.append(f"效果：{desc}")
         if room.text:
             lines.append(f"描述：{room.text}")
-        self._show_info(f"房间：{room.name}", "\n".join(lines))
+        photo = self.art.photo(
+            game_art.ROOM_KIND,
+            self.art.room_key(room.template_id),
+            self,
+            (ROOM_DETAIL_SIZE, ROOM_DETAIL_SIZE),
+        )
+        self._show_info(
+            f"房间：{room.name}",
+            "\n".join(lines),
+            image=photo,
+            image_size=(ROOM_DETAIL_SIZE, ROOM_DETAIL_SIZE) if photo is not None else None,
+        )
 
     def _show_player_detail(self, player_id: int) -> None:
         if not 0 <= player_id < len(self.engine.state.players):
@@ -2255,7 +2423,14 @@ class GameApp(tk.Tk):
         player = self.engine.state.players[player_id]
         room = self.engine.state.board.get(player.room_key)
         room_name = room.name if room else "未知"
-        _PlayerDetailDialog(self, player, self.engine.catalog, room_name, self._role_label_for_viewer(player))
+        _PlayerDetailDialog(
+            self,
+            player,
+            self.engine.catalog,
+            room_name,
+            self._role_label_for_viewer(player),
+            art=self.art,
+        )
 
     def _on_player_token_hover(self, player_id: int, event) -> None:
         if not 0 <= player_id < len(self.engine.state.players):
@@ -2340,10 +2515,22 @@ class GameApp(tk.Tk):
         items = self.engine.room_items(room.key)
         if items:
             lines.append("物品：" + "、".join(self.engine.catalog.cards[c].name for c in items))
+        photo = self.art.photo(
+            game_art.ROOM_KIND,
+            self.art.room_key(room.template_id),
+            self,
+            (ROOM_TOOLTIP_SIZE, ROOM_TOOLTIP_SIZE),
+        )
         tip = tk.Toplevel(self)
         tip.overrideredirect(True)
         tip.attributes("-topmost", True)
         tip.configure(bg="#0d1013")
+        # 缩略图在上，文本在下；无图时保持原纯文字布局。
+        self._room_tooltip_photo = photo
+        if photo is not None:
+            tk.Label(tip, image=photo, bg="#0d1013", bd=0, highlightthickness=0).pack(
+                padx=1, pady=(1, 0)
+            )
         tk.Label(
             tip,
             text="\n".join(lines),
@@ -2368,6 +2555,7 @@ class GameApp(tk.Tk):
             except Exception:
                 pass
             self._room_tooltip = None
+        self._room_tooltip_photo = None
 
     def _set_action_button(self, button: tk.Button, enabled: bool, reason: str = "") -> None:
         button.config(
@@ -2403,8 +2591,8 @@ class GameApp(tk.Tk):
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
-    def _show_info(self, title: str, message: str) -> None:
-        dialog = _InfoDialog(self, title, message)
+    def _show_info(self, title: str, message: str, image=None, image_size=None) -> None:
+        dialog = _InfoDialog(self, title, message, image=image, image_size=image_size)
         self.wait_window(dialog.top)
 
     def _show_error(self, title: str, message: str) -> None:
@@ -2681,14 +2869,63 @@ class GameApp(tk.Tk):
             text=f"阶段：{phase_label}   回合：{state.turn_count}   当前：{current_name}   预兆：{state.omens_drawn}   剧本：{state.haunt.name if state.haunt else '未揭示'}"
         )
 
+    def _refresh_avatar_strip(self, state) -> None:
+        """玩家头像条：每名玩家一只 48×48 头像，当前玩家 2px accent 描边。
+
+        取图键走 character:{face.card_id}:f{face.face_index}；``Player.character_id``
+        是 face id（card_1_0），不能直接拼键，必须先回 catalog.characters 取 face。
+        取不到图时退回序号色块，面板文字内容不受影响。
+        """
+        strip = getattr(self, "avatar_strip", None)
+        if strip is None:
+            return
+        for child in strip.winfo_children():
+            child.destroy()
+        self._avatar_photos = {}
+        if not state.players:
+            return
+        try:
+            current_id = self.engine.current_player.id
+        except Exception:
+            current_id = None
+        characters = getattr(self.engine.catalog, "characters", {}) or {}
+        for player in state.players:
+            face = characters.get(player.character_id)
+            photo = self.art.photo(
+                game_art.CHARACTER_KIND,
+                self.art.character_key(face),
+                self,
+                (AVATAR_PANEL_SIZE, AVATAR_PANEL_SIZE),
+            )
+            label = tk.Label(
+                strip,
+                bg=PALETTE["panel"],
+                fg=PALETTE["text"],
+                font=FONT_UI_BOLD,
+                bd=0,
+                highlightthickness=2,
+                highlightbackground=(
+                    PALETTE["accent"] if player.id == current_id else PALETTE["outline"]
+                ),
+            )
+            if photo is not None:
+                label.configure(image=photo)
+                # Label 只持有 Tk 图片名，PhotoImage 对象必须在这里保活。
+                self._avatar_photos[player.id] = photo
+            else:
+                label.configure(text=str(player.id + 1), width=4, height=3)
+            label.pack(side="left", padx=(0, 4))
+
     def _refresh_player_panel(self) -> None:
         state = self.engine.state
         self.player_info.config(state="normal")
         self.player_info.delete("1.0", "end")
         if not state.players:
             self.player_info.config(state="disabled")
+            self._refresh_avatar_strip(state)
             return
         current = self.engine.current_player
+        self._refresh_avatar_strip(state)
         self.player_info.insert("end", f"当前玩家：{current.name} / {current.character_name}\n", "tr_label")
         self.player_info.insert("end", f"身份：{self._role_label_for_viewer(current)}\n", "tr_label")
         self.player_info.insert(

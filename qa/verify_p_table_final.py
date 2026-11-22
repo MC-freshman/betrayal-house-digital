@@ -1869,6 +1869,7 @@ A_TITLES = {
     "A-30": "47 位 0 missing",
     "A-31": "130 张真 PNG",
     "A-32": "142 张规格",
+    "A-33": "对局美术渲染",
 }
 
 MANUAL_ITEMS = [
@@ -2632,6 +2633,49 @@ def _readability_scan(ctx, records):
     return {"items": items, "failures": failures, "method": READABILITY_METHOD}
 
 
+def check_a33(ctx):
+    """A-33 对局美术渲染（run6）：资源可用 ≠ 对局可见。
+
+    独立调用 qa/verify_game_art.py（只读脚本），取它的 verdict 与逐项状态。
+    该脚本自身已实现 J0 证据归属 + J1…J6 + S1…S3；本函数不重复判定，
+    只做「证据缺失即 NOT_RUN、任一 FAIL 即 FAIL」的口径转述。
+    """
+    script = ctx.qa / "verify_game_art.py"
+    if not script.is_file():
+        return NOT_RUN, "缺少 qa/verify_game_art.py（A-33 验收脚本未交付）", [
+            "qa/verify_game_art.py"]
+    if not (ctx.qa / "game_art_probe.json").is_file():
+        return NOT_RUN, "缺少 qa/game_art_probe.json（对局美术探针未运行）", [
+            "qa/game_art_probe.json"]
+    env = dict(os.environ)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-B", str(script)], cwd=str(ctx.game),
+            capture_output=True, text=True, encoding="utf-8",
+            errors="replace", timeout=900, env=env)
+        payload = json.loads(proc.stdout or "{}")
+    except Exception as exc:  # noqa: BLE001 - 证据不可用要显式落 NOT_RUN
+        return NOT_RUN, "A-33 脚本执行失败：%s: %s" % (type(exc).__name__, exc), [
+            "qa/verify_game_art.py"]
+    checks = payload.get("checks") or []
+    failed = [c.get("id") for c in checks if c.get("status") == "FAIL"]
+    not_run = [c.get("id") for c in checks if c.get("status") == "NOT_RUN"]
+    passed = [c.get("id") for c in checks if c.get("status") == "PASS"]
+    verdict = str(payload.get("verdict") or "").upper()
+    evidence = ["qa/game_art_probe.json", "qa/verify_game_art.py"]
+    if failed:
+        return FAIL, "对局美术渲染未达标：FAIL=%s；NOT_RUN=%s" % (
+            ",".join(failed), ",".join(not_run) or "无"), evidence
+    if not_run:
+        return NOT_RUN, "对局美术证据不完整：NOT_RUN=%s" % ",".join(not_run), evidence
+    if verdict != "PASS" or not checks:
+        return NOT_RUN, "A-33 verdict=%r，检查项 %d 个" % (verdict or "空", len(checks)), evidence
+    return PASS, "对局美术渲染 %d/%d 项 PASS（%s）" % (
+        len(passed), len(checks), "/".join(passed)), evidence
+
+
 def check_a32(ctx):
     """A-32 142 张图片技术规格（尺寸/格式/对比度，run5 §4.5）。"""
     records = _records(ctx)
@@ -2788,6 +2832,8 @@ def main(argv=None):
     audit.run("A-30", "G1", "P0", A_TITLES["A-30"], lambda: check_a30(ctx))
     audit.run("A-31", "G1", "P0", A_TITLES["A-31"], lambda: check_a31(ctx))
     audit.run("A-32", "G5", "P1", A_TITLES["A-32"], lambda: check_a32(ctx))
+    # run6 新增：A-33 对局美术渲染（补「资源可用 ≠ 对局可见」的验收缺口）
+    audit.run("A-33", "G5", "P0", A_TITLES["A-33"], lambda: check_a33(ctx))
     audit.run("X-DRIFT", "G2", "P1", "check_core_drift", lambda: check_x_drift(ctx),
               a_table=False)
     audit.run("X-V1", "G2", "P1", "verify_v1", lambda: check_x_v1(ctx), a_table=False)

@@ -3,8 +3,9 @@
 《山中小屋》（Betrayal at House on the Hill）的桌面电子版：Python 3.9 + tkinter。
 剧本 1–70 全部为专属机制实现（令牌、怪物特殊规则、逐步剧本行动、独立胜负判定），无通用兜底脚本。
 
-当前状态 **v3.9（2026-11-21）**：P 表 142 个资源位全部落实到真图，完成判定
-`completion_claim = attested`、`verdict = PASS`（A 表 33 PASS / 0 FAIL / 0 NOT_RUN / 1 N/A，
+当前状态 **v3.10（2026-11-22）**：P 表 142 个资源位全部落实到真图，且美术已真正进入对局
+（棋盘房间贴图、抽卡卡面、玩家头像、房间缩略图）。完成判定
+`completion_claim = attested`、`verdict = PASS`（A 表 34 PASS / 0 FAIL / 0 NOT_RUN / 1 N/A，
 G1–G7 全 PASS，独立验收 0 FAIL）。
 
 Windows 便携包下载：[GitHub Releases](https://github.com/MC-freshman/betrayal-house-digital/releases/latest)。
@@ -15,6 +16,8 @@ Windows 便携包下载：[GitHub Releases](https://github.com/MC-freshman/betra
 - 本地模式：单人 / 同屏热座，可加入机器人，4–6 人
 - 机器人：三档难度 × 三种风格；带同源攻击合法性判定、集火、分散、护送揭示者等策略
 - 联机：主机/客户端模式（局域网或 NATFRP 隧道），支持断线重连与联机存读档
+- **对局内的美术**：棋盘每个房间贴真实房间图（叠加深色底条保证房名可读）、抽卡弹窗显示卡面、
+  玩家面板与详情显示角色立绘、房间悬停与详情显示缩略图；缺图自动退回纯色块，不崩不空白
 - 内置规则、道具/房间图鉴、美术预览、骰子结果展示
 - 美术资源：142 个资源位全部为真实图片（角色 320×320、房间 512×512、卡牌 480×672），
   由 `photos/` 母版经 `asset_pipeline.py` 规范化生成运行时 PNG
@@ -55,6 +58,8 @@ release\山中小屋.exe --selftest-assets %TEMP%\selftest.json
 python verify_assets.py                          :: P 表自检 17 项
 python qa\verify_assets_contract.py --json       :: 契约 32 条
 python qa\test_p_table_execution.py              :: 新测试 63 条
+python qa\game_art_probe.py                      :: 对局美术探针（真实 Tk 驱动一局取证）
+python qa\verify_game_art.py                     :: A-33 对局美术渲染验收（J0-J6 + S1-S3）
 python qa\coverage_probe.py --json qa\coverage_probe.json
 python qa\run_p_table_execution.py --profile final
 python qa\verify_p_table_execution.py --tk --json > qa\p_table_verify_final.json
@@ -62,8 +67,9 @@ python qa\verify_p_table_final.py --tk --json    :: 独立验收（只读）
 ```
 
 最近一次实测：行覆盖 `asset_pipeline.py` 86.33% / `asset_registry.py` 90.64%；
-分支覆盖 83.62% / 75.20%（阈值 75%）；15 项性能全部达标（ptable 构建中位 0.59 s，
-预算 5 s）；峰值 RSS 68.3 MiB（预算 1536 MiB）；UI 三档 100% / 125% / 150% 真实截图全 PASS。
+分支覆盖 83.24% / 76.56%（阈值 75%）；15 项性能全部达标（ptable 构建中位 0.59 s，
+预算 5 s）；峰值 RSS 68.7 MiB（预算 1536 MiB）；UI 三档 100% / 125% / 150% 真实截图全 PASS；
+对局美术 A-33 十项全 PASS（12/12 房间贴图、卡面 240×336、4/4 头像、零占位）。
 
 ## 目录结构
 
@@ -77,6 +83,7 @@ game/
 ├─ content_ww.py            Widow's Walk 扩充内容（已隔离，默认不导入）
 ├─ haunts/                  剧本 1–70 专属模块；_ww_deferred/ 为后延的扩充剧本
 ├─ haunts_zh/               剧本中文文案；_ww_deferred/ 同上
+├─ game_art.py              对局侧统一取图：键换算 / 按尺寸记忆化 / 强引用 / 渲染账本
 ├─ asset_pipeline.py        photos/ → P 表 + 运行时 PNG（含探测缓存）
 ├─ asset_registry.py        P 表 → 运行时索引（支持源码与冻结包两种布局）
 ├─ ui_asset_binding.py      图片绑定与缓存、缺图兜底
@@ -107,6 +114,8 @@ python asset_pipeline.py                       :: 全量：P 表 + 占位图 + �
 - **Widow's Walk 扩充**（20 房间 / 50 剧本 / 30 卡牌 / 屋顶层）已完成调研与内容隔离，
   但按产品决策**后延**：内容位于 `content_ww.py`、`haunts/_ww_deferred/`、`assets_ww/`，
   默认不参与构建与验收（A-29 校验隔离完整性）。重新纳入时改为显式导入即可。
+- **9 类渲染面暂无美术**：怪物标记、剧本插图、结算画面、牌堆卡背、骰面、探索落点预览等，
+  P 表没有对应资源位（仅角色/房间/事件/物品/预兆五类），A-33 已显式登记为排除项。
 - **微信小程序端**不在本仓库范围。
 
 ## 声明

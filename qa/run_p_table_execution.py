@@ -1466,7 +1466,9 @@ A_GATE_MAP = {
     "A-24": "G6", "A-26": "G6",
     "A-25": "G7", "A-27": "G7", "A-28": "G7",
     # run5 §4.1：A-29（G1）、A-30（G1/G7）、A-31（G1）、A-32（G5/G1）
+    # run6：A-33（G5）对局美术渲染——补上「资源可用 ≠ 对局可见」的验收缺口
     "A-29": "G1", "A-30": "G1", "A-31": "G1", "A-32": "G5",
+    "A-33": "G5",
 }
 # run5：新测试基线 48 条；后续只允许增加（新增代码必须带测试），不允许减少
 NEW_TEST_BASELINE = 48
@@ -1482,6 +1484,7 @@ A_TITLES = {
     "A-28": "声明与签发",
     "A-29": "WW 隔离完整", "A-30": "47 位 0 missing",
     "A-31": "130 张真 PNG", "A-32": "142 张规格",
+    "A-33": "对局美术渲染",
 }
 GATE_TITLES = {
     "G1": "数据完整性", "G2": "测试门禁", "G3": "覆盖率", "G4": "性能与峰值 RSS",
@@ -1992,6 +1995,52 @@ def check_a_table(report, probes, not_run_list):
                 runtime_sizes_ok, alpha_ok, readability.get("count"),
                 len(readability.get("failures") or [])),
             ["qa/run5_readability.json"])
+
+    # A-33 对局美术渲染（run6）：资源可用 ≠ 对局可见。
+    # 判据由 qa/verify_game_art.py 给出（J0 证据归属 + J1 棋盘贴图 + J2 卡面 +
+    # J3 零占位 + J4 头像 + J5 缩略图 + J6 键可反查 + S1/S2/S3 静态检查）；
+    # 这里只做「调用 + 取 verdict」，避免两套判定口径。
+    a33_script = QA_DIR / "verify_game_art.py"
+    if not a33_script.is_file():
+        put("A-33", "NOT_RUN",
+            "缺少 qa/verify_game_art.py（A-33 验收脚本未交付，记 NOT_RUN 而非 PASS）",
+            ["qa/verify_game_art.py"])
+    else:
+        try:
+            a33_proc = subprocess.run(
+                [sys.executable, "-B", str(a33_script)],
+                cwd=str(GAME_DIR), capture_output=True, text=True,
+                encoding="utf-8", errors="replace", timeout=900)
+            a33_payload = json.loads(a33_proc.stdout or "{}")
+        except Exception as exc:  # noqa: BLE001 - 证据不可用要显式落 NOT_RUN
+            a33_payload = {}
+            a33_error = "%s: %s" % (type(exc).__name__, exc)
+        else:
+            a33_error = ""
+        a33_checks = a33_payload.get("checks") or []
+        a33_verdict = str(a33_payload.get("verdict") or "").upper()
+        a33_failed = [c.get("id") for c in a33_checks if c.get("status") == "FAIL"]
+        a33_notrun = [c.get("id") for c in a33_checks if c.get("status") == "NOT_RUN"]
+        a33_pass = [c.get("id") for c in a33_checks if c.get("status") == "PASS"]
+        if a33_error:
+            put("A-33", "NOT_RUN",
+                "A-33 脚本执行失败：%s" % a33_error,
+                ["qa/verify_game_art.py"])
+        elif a33_verdict == "PASS" and not a33_failed and not a33_notrun:
+            put("A-33", "PASS",
+                "对局美术渲染 %d/%d 项 PASS（%s）；探针见 qa/game_art_probe.json"
+                % (len(a33_pass), len(a33_checks), "/".join(a33_pass)),
+                ["qa/game_art_probe.json", "qa/verify_game_art.py"])
+        elif a33_failed:
+            put("A-33", "FAIL",
+                "对局美术渲染未达标：FAIL=%s；NOT_RUN=%s" % (
+                    ",".join(a33_failed) or "无", ",".join(a33_notrun) or "无"),
+                ["qa/game_art_probe.json", "qa/verify_game_art.py"])
+        else:
+            put("A-33", "NOT_RUN",
+                "对局美术证据不完整：verdict=%r；NOT_RUN=%s" % (
+                    a33_verdict or "空", ",".join(a33_notrun) or "无"),
+                ["qa/game_art_probe.json", "qa/verify_game_art.py"])
 
     # A-10 / A-11 旧测试
     final_verify = s1.get("verify_assets_final") or {}

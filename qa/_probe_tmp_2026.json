@@ -1,0 +1,20 @@
+{
+  "tool": "qa/game_art_probe.py",
+  "mode": "real-tk",
+  "seed": 2026,
+  "generated_at": "2026-11-21T23:36:15",
+  "environment": {
+    "python": "3.9.13",
+    "tk": "8.6",
+    "platform": "win32",
+    "pillow": "11.3.0"
+  },
+  "rooms": 10,
+  "image_items": 10,
+  "ledger_entries": 10,
+  "placeholder_hits": 0,
+  "turns_played": 6,
+  "pass": true,
+  "error": "",
+  "rooms_with_image": 10
+}

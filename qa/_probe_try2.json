@@ -1,0 +1,675 @@
+{
+  "tool": "qa/game_art_probe.py",
+  "mode": "real-tk",
+  "seed": 20261122,
+  "generated_at": "2026-11-22T01:04:53",
+  "environment": {
+    "python": "3.9.13",
+    "tk": "8.6",
+    "platform": "win32",
+    "system": "Windows-10-10.0.26300-SP0",
+    "pillow": "11.3.0",
+    "system_dpi": 168,
+    "scale": 1.75,
+    "art_dpi": 96,
+    "art_scale": 1.0,
+    "dpi_awareness": 1,
+    "dpi_note": "system_dpi 为宿主显示器 DPI，仅作环境记录；对局美术按 art_dpi=96 的固定像素布局渲染，期望尺寸按 art_dpi/96 复算（ui.py:61-66）。",
+    "screen": [
+      2560,
+      1440
+    ]
+  },
+  "inputs": {
+    "ui_py_sha256": "53f7b7d53cb1fcffac612dda10f502324332347ffdb915aee9502f536cd300a0",
+    "ui_asset_binding_sha256": "70f5f9b6c2c927571e6380a95151353e50da969578723e598f69afcb3a13db60",
+    "p_table_sha256": "e5a92967322f1b81f844dd189b17b93041caaf1abefe5989cb151ed4b3ea6898",
+    "asset_mapping_sha256": "984c57d3759e38de8933c001df5d0301fa2457abd551b2fcd036bc3f0a381167"
+  },
+  "board": {
+    "turns_played": 8,
+    "rooms_placed": 12,
+    "canvas_image_items": 12,
+    "rooms_with_image": 12,
+    "rounds": 9,
+    "board_keys": 12,
+    "screenshot": "qa/screenshots/art_board_100.png",
+    "shot_size": [
+      960,
+      699
+    ]
+  },
+  "players": {
+    "count": 4,
+    "avatar_records": [
+      "P-CHR-001",
+      "P-CHR-002",
+      "P-CHR-003",
+      "P-CHR-004"
+    ],
+    "panel_images": 4,
+    "portrait_images": 0,
+    "records": [
+      {
+        "player_id": 0,
+        "name": "探针机器人1",
+        "character_id": "card_1_0",
+        "key": "character:card_1:f0",
+        "record_id": "P-CHR-001",
+        "photo_size": [
+          48,
+          48
+        ],
+        "placeholder": false
+      },
+      {
+        "player_id": 1,
+        "name": "探针机器人2",
+        "character_id": "card_1_1",
+        "key": "character:card_1:f1",
+        "record_id": "P-CHR-002",
+        "photo_size": [
+          48,
+          48
+        ],
+        "placeholder": false
+      },
+      {
+        "player_id": 2,
+        "name": "探针机器人3",
+        "character_id": "card_2_0",
+        "key": "character:card_2:f0",
+        "record_id": "P-CHR-003",
+        "photo_size": [
+          48,
+          48
+        ],
+        "placeholder": false
+      },
+      {
+        "player_id": 3,
+        "name": "探针机器人4",
+        "character_id": "card_2_1",
+        "key": "character:card_2:f1",
+        "record_id": "P-CHR-004",
+        "photo_size": [
+          48,
+          48
+        ],
+        "placeholder": false
+      }
+    ],
+    "screenshot": "qa/screenshots/art_player_panel.png",
+    "shot_size": [
+      358,
+      52
+    ]
+  },
+  "room_tooltip": {
+    "hovered": [
+      "-1:0:0",
+      "0:0:0",
+      "0:1:0",
+      "0:2:0"
+    ],
+    "photo_refs_after_close": 0,
+    "tooltip_size": [
+      112,
+      112
+    ],
+    "screenshot": "qa/screenshots/art_room_tooltip.png",
+    "shot_size": [
+      421,
+      299
+    ]
+  },
+  "room_detail": {
+    "opened": 1,
+    "room": "地下室平台",
+    "detail_size": [
+      160,
+      160
+    ],
+    "screenshot": "qa/screenshots/art_room_detail.png",
+    "shot_size": [
+      464,
+      512
+    ]
+  },
+  "ledger": [
+    {
+      "seq": 1,
+      "surface": "board",
+      "key": "room:basement_landing",
+      "asset_type": "room",
+      "record_id": "P-ROOM-001",
+      "rel_path": "source/desktop/game/assets/rooms/basement_landing.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 2,
+      "surface": "board",
+      "key": "room:entrance_hall",
+      "asset_type": "room",
+      "record_id": "P-ROOM-002",
+      "rel_path": "source/desktop/game/assets/rooms/entrance_hall.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 3,
+      "surface": "board",
+      "key": "room:foyer",
+      "asset_type": "room",
+      "record_id": "P-ROOM-003",
+      "rel_path": "source/desktop/game/assets/rooms/foyer.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 4,
+      "surface": "board",
+      "key": "room:grand_staircase",
+      "asset_type": "room",
+      "record_id": "P-ROOM-004",
+      "rel_path": "source/desktop/game/assets/rooms/grand_staircase.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 5,
+      "surface": "board",
+      "key": "room:upper_landing",
+      "asset_type": "room",
+      "record_id": "P-ROOM-005",
+      "rel_path": "source/desktop/game/assets/rooms/upper_landing.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 6,
+      "surface": "board",
+      "key": "room:coal_chute",
+      "asset_type": "room",
+      "record_id": "P-ROOM-011",
+      "rel_path": "source/desktop/game/assets/rooms/coal_chute.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 7,
+      "surface": "board",
+      "key": "room:tower",
+      "asset_type": "room",
+      "record_id": "P-ROOM-039",
+      "rel_path": "source/desktop/game/assets/rooms/tower.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 8,
+      "surface": "board",
+      "key": "room:junk_room",
+      "asset_type": "room",
+      "record_id": "P-ROOM-021",
+      "rel_path": "source/desktop/game/assets/rooms/junk_room.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 9,
+      "surface": "board",
+      "key": "room:library",
+      "asset_type": "room",
+      "record_id": "P-ROOM-023",
+      "rel_path": "source/desktop/game/assets/rooms/library.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 10,
+      "surface": "board",
+      "key": "room:underground_lake",
+      "asset_type": "room",
+      "record_id": "P-ROOM-049",
+      "rel_path": "source/desktop/game/assets/rooms/underground_lake.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 11,
+      "surface": "board",
+      "key": "room:bathroom",
+      "asset_type": "room",
+      "record_id": "P-ROOM-041",
+      "rel_path": "source/desktop/game/assets/rooms/bathroom.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 12,
+      "surface": "board",
+      "key": "room:pentagram_chamber",
+      "asset_type": "room",
+      "record_id": "P-ROOM-030",
+      "rel_path": "source/desktop/game/assets/rooms/pentagram_chamber.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 13,
+      "surface": "panel",
+      "key": "character:card_1:f0",
+      "asset_type": "character",
+      "record_id": "P-CHR-001",
+      "rel_path": "source/desktop/game/assets/characters/card_1_0.png",
+      "placeholder": false,
+      "requested": [
+        48,
+        48
+      ],
+      "actual": [
+        48,
+        48
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 14,
+      "surface": "panel",
+      "key": "character:card_1:f1",
+      "asset_type": "character",
+      "record_id": "P-CHR-002",
+      "rel_path": "source/desktop/game/assets/characters/card_1_1.png",
+      "placeholder": false,
+      "requested": [
+        48,
+        48
+      ],
+      "actual": [
+        48,
+        48
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 15,
+      "surface": "panel",
+      "key": "character:card_2:f0",
+      "asset_type": "character",
+      "record_id": "P-CHR-003",
+      "rel_path": "source/desktop/game/assets/characters/card_2_0.png",
+      "placeholder": false,
+      "requested": [
+        48,
+        48
+      ],
+      "actual": [
+        48,
+        48
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 16,
+      "surface": "panel",
+      "key": "character:card_2:f1",
+      "asset_type": "character",
+      "record_id": "P-CHR-004",
+      "rel_path": "source/desktop/game/assets/characters/card_2_1.png",
+      "placeholder": false,
+      "requested": [
+        48,
+        48
+      ],
+      "actual": [
+        48,
+        48
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 17,
+      "surface": "room_tooltip",
+      "key": "room:basement_landing",
+      "asset_type": "room",
+      "record_id": "P-ROOM-001",
+      "rel_path": "source/desktop/game/assets/rooms/basement_landing.png",
+      "placeholder": false,
+      "requested": [
+        112,
+        112
+      ],
+      "actual": [
+        112,
+        112
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 18,
+      "surface": "room_tooltip",
+      "key": "room:entrance_hall",
+      "asset_type": "room",
+      "record_id": "P-ROOM-002",
+      "rel_path": "source/desktop/game/assets/rooms/entrance_hall.png",
+      "placeholder": false,
+      "requested": [
+        112,
+        112
+      ],
+      "actual": [
+        112,
+        112
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 19,
+      "surface": "room_tooltip",
+      "key": "room:foyer",
+      "asset_type": "room",
+      "record_id": "P-ROOM-003",
+      "rel_path": "source/desktop/game/assets/rooms/foyer.png",
+      "placeholder": false,
+      "requested": [
+        112,
+        112
+      ],
+      "actual": [
+        112,
+        112
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 20,
+      "surface": "room_tooltip",
+      "key": "room:grand_staircase",
+      "asset_type": "room",
+      "record_id": "P-ROOM-004",
+      "rel_path": "source/desktop/game/assets/rooms/grand_staircase.png",
+      "placeholder": false,
+      "requested": [
+        112,
+        112
+      ],
+      "actual": [
+        112,
+        112
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 21,
+      "surface": "room_detail",
+      "key": "room:basement_landing",
+      "asset_type": "room",
+      "record_id": "P-ROOM-001",
+      "rel_path": "source/desktop/game/assets/rooms/basement_landing.png",
+      "placeholder": false,
+      "requested": [
+        160,
+        160
+      ],
+      "actual": [
+        160,
+        160
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 22,
+      "surface": "card",
+      "key": "card:omen:omen_medallion",
+      "asset_type": "card_omen",
+      "record_id": "P-OMEN-009",
+      "rel_path": "source/desktop/game/assets/cards/omen/omen_medallion.png",
+      "placeholder": false,
+      "requested": [
+        240,
+        336
+      ],
+      "actual": [
+        240,
+        336
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 23,
+      "surface": "card",
+      "key": "card:item:item_adrenaline_shot",
+      "asset_type": "card_item",
+      "record_id": "P-ITEM-012",
+      "rel_path": "source/desktop/game/assets/cards/item/item_adrenaline_shot.png",
+      "placeholder": false,
+      "requested": [
+        240,
+        336
+      ],
+      "actual": [
+        240,
+        336
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 24,
+      "surface": "card",
+      "key": "card:event:event_creepy_puppet",
+      "asset_type": "card_event",
+      "record_id": "P-EVT-023",
+      "rel_path": "source/desktop/game/assets/cards/event/event_creepy_puppet.png",
+      "placeholder": false,
+      "requested": [
+        240,
+        336
+      ],
+      "actual": [
+        240,
+        336
+      ],
+      "resolved": true
+    }
+  ],
+  "counters": {
+    "rooms_placed": 12,
+    "image_items": 12,
+    "ledger_entries": 24,
+    "placeholder_hits": 0,
+    "resolve_failures": 0,
+    "loader_errors": 0,
+    "requests": 24,
+    "misses": 8,
+    "name_ambiguous": 0
+  },
+  "cards": [
+    {
+      "kind": "omen",
+      "card_id": "omen_medallion",
+      "title": "抽到预兆：徽章",
+      "record_id": "P-OMEN-009",
+      "photo_size": [
+        240,
+        336
+      ],
+      "expected_size": [
+        240,
+        336
+      ],
+      "ratio_ok": true,
+      "placeholder": false,
+      "popup_opened": true,
+      "screenshot": "qa/screenshots/art_card_omen.png",
+      "shot_size": [
+        338,
+        548
+      ],
+      "trigger": "engine._draw_omen → prompter.notify（真实抽卡调用）"
+    },
+    {
+      "kind": "item",
+      "card_id": "item_adrenaline_shot",
+      "title": "获得物品：肾上腺素针",
+      "record_id": "P-ITEM-012",
+      "photo_size": [
+        240,
+        336
+      ],
+      "expected_size": [
+        240,
+        336
+      ],
+      "ratio_ok": true,
+      "placeholder": false,
+      "popup_opened": true,
+      "screenshot": "qa/screenshots/art_card_item.png",
+      "shot_size": [
+        344,
+        548
+      ],
+      "trigger": "engine._draw_item → prompter.notify（真实抽卡调用）"
+    },
+    {
+      "kind": "event",
+      "card_id": "event_creepy_puppet",
+      "title": "触发事件：诡异木偶",
+      "record_id": "P-EVT-023",
+      "photo_size": [
+        240,
+        336
+      ],
+      "expected_size": [
+        240,
+        336
+      ],
+      "ratio_ok": true,
+      "placeholder": false,
+      "popup_opened": true,
+      "screenshot": "qa/screenshots/art_card_event.png",
+      "shot_size": [
+        323,
+        548
+      ],
+      "trigger": "engine._draw_event → prompter.notify（真实抽卡调用）"
+    }
+  ],
+  "screenshots": [
+    "qa/screenshots/art_board_100.png",
+    "qa/screenshots/art_player_panel.png",
+    "qa/screenshots/art_room_tooltip.png",
+    "qa/screenshots/art_room_detail.png",
+    "qa/screenshots/art_card_omen.png",
+    "qa/screenshots/art_card_item.png",
+    "qa/screenshots/art_card_event.png"
+  ],
+  "unreachable": [
+    "storeroom"
+  ],
+  "instrumentation": [
+    "app._idle_poll 置空（停掉 300ms 轮询，回合由探针驱动）",
+    "ui._InfoDialog 换成跟踪子类（持 PhotoImage 引用 + 读实测尺寸）",
+    "engine.prompter 在抽卡期间包一层（notify 走真弹窗，规则问答自动作答）"
+  ],
+  "errors": [],
+  "warnings": [],
+  "pass": true
+}

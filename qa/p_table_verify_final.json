@@ -2,7 +2,7 @@
   "tool": "verify_p_table_execution.py",
   "readonly": true,
   "root": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill",
-  "snapshot_time": "2026-11-21T19:51:01",
+  "snapshot_time": "2026-11-22T01:54:54",
   "environment": {
     "python": "3.9.13",
     "platform": "Windows-10-10.0.26300-SP0",
@@ -12,7 +12,7 @@
   },
   "inputs": {
     "p_table": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\assets\\p_table.json",
-    "p_table_sha256": "5d459a8b82737c001f0101c3027b0fdcf5886b259dbce25c0b85177a54bcbc2f",
+    "p_table_sha256": "e5a92967322f1b81f844dd189b17b93041caaf1abefe5989cb151ed4b3ea6898",
     "p_table_columns": 33,
     "p_table_records": 142,
     "contract_json": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\qa\\contract_result.json",
@@ -661,7 +661,7 @@
       "title": "P 表可解析且 142 行",
       "priority": "P0",
       "status": "PASS",
-      "detail": "records=142，schema=1.2.0，generated_at=2026-11-21",
+      "detail": "records=142，schema=1.2.0，generated_at=2026-11-22",
       "evidence": []
     },
     {
@@ -1080,7 +1080,7 @@
       "title": "内存重建 = 磁盘 P 表",
       "priority": "P0",
       "status": "PASS",
-      "detail": "内存重建 142 行 × 33 列与磁盘逐字段一致；stats 一致（耗时 0.29s）",
+      "detail": "内存重建 142 行 × 33 列与磁盘逐字段一致；stats 一致（耗时 0.18s）",
       "evidence": []
     },
     {
@@ -1089,7 +1089,7 @@
       "title": "二次 scan/build 指纹一致",
       "priority": "P1",
       "status": "PASS",
-      "detail": "95 文件二次扫描与 142 行二次构建指纹一致（首次 0.27s）",
+      "detail": "95 文件二次扫描与 142 行二次构建指纹一致（首次 0.17s）",
       "evidence": []
     },
     {
@@ -1118,9 +1118,9 @@
       "title": "ui.py 接入绑定层",
       "priority": "P1",
       "status": "PASS",
-      "detail": "ui.py 已出现资源绑定引用：{'ui_asset_binding': 4, 'load_asset_photo': 5, 'AssetRegistry': 5, 'PhotoImage': 2, 'assets/': 3}",
+      "detail": "ui.py 已出现资源绑定引用：{'ui_asset_binding': 5, 'load_asset_photo': 5, 'AssetRegistry': 5, 'PhotoImage': 7, 'assets/': 3}",
       "evidence": [
-        "{'ui_asset_binding': 4, 'load_asset_photo': 5, 'AssetRegistry': 5, 'PhotoImage': 2, 'ImageTk': 0, 'assets/': 3}"
+        "{'ui_asset_binding': 5, 'load_asset_photo': 5, 'AssetRegistry': 5, 'PhotoImage': 7, 'ImageTk': 0, 'assets/': 3}"
       ]
     },
     {
@@ -1201,9 +1201,9 @@
       "title": "AssetRegistry.load 耗时",
       "priority": "P1",
       "status": "PASS",
-      "detail": "load ×10：median=10.49ms p95=11.75ms（预算 150ms）",
+      "detail": "load ×10：median=6.06ms p95=7.38ms（预算 150ms）",
       "evidence": [
-        "load ×10：median=10.49ms p95=11.75ms（预算 150ms）"
+        "load ×10：median=6.06ms p95=7.38ms（预算 150ms）"
       ]
     },
     {
@@ -1212,9 +1212,9 @@
       "title": "10k resolve 耗时",
       "priority": "P1",
       "status": "PASS",
-      "detail": "10k resolve ×10：round p95=13.7ms（预算 500ms）；单次 p95=3.50us（预算 50us）",
+      "detail": "10k resolve ×10：round p95=7.7ms（预算 500ms）；单次 p95=2.10us（预算 50us）",
       "evidence": [
-        "10k resolve ×10：round p95=13.7ms（预算 500ms）；单次 p95=3.50us（预算 50us）"
+        "10k resolve ×10：round p95=7.7ms（预算 500ms）；单次 p95=2.10us（预算 50us）"
       ]
     },
     {
@@ -1259,9 +1259,9 @@
       "title": "load 峰值增量 RSS",
       "priority": "P1",
       "status": "PASS",
-      "detail": "load ×10 RSS 增量 7.40MB（预算 80MB；before=46.9MB after=54.3MB）",
+      "detail": "load ×10 RSS 增量 7.44MB（预算 80MB；before=46.9MB after=54.4MB）",
       "evidence": [
-        "load ×10 RSS 增量 7.40MB（预算 80MB；before=46.9MB after=54.3MB）"
+        "load ×10 RSS 增量 7.44MB（预算 80MB；before=46.9MB after=54.4MB）"
       ]
     },
     {
@@ -1376,8 +1376,8 @@
       "status": "PASS",
       "detail": "旧结果均晚于当前输入：validation_report.json, contract_result.json",
       "evidence": [
-        "{'artifact': 'validation_report.json', 'mtime': 1795261830.3304317, 'newest_input': 1795261793.6183112, 'fresh': True}",
-        "{'artifact': 'contract_result.json', 'mtime': 1795261851.5453324, 'newest_input': 1795261793.4291408, 'fresh': True}"
+        "{'artifact': 'validation_report.json', 'mtime': 1795283665.5603418, 'newest_input': 1795283632.9342616, 'fresh': True}",
+        "{'artifact': 'contract_result.json', 'mtime': 1795283680.9606278, 'newest_input': 1795283632.8117151, 'fresh': True}"
       ]
     },
     {

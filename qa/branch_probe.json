@@ -4,7 +4,7 @@
   "trace_precision": "opcode+line",
   "same_run_as_tests": true,
   "method_detail": "静态 dis 递归枚举条件跳转两条出边；动态 sys.settrace 同帧采集 line 弧（上一事件行 -> 当前指令偏移）与 opcode 弧（上一指令偏移 -> 当前指令偏移）。覆盖判定：opcode 精确弧优先；Python 3.9 跳转指令不发 opcode 事件，改用 line-landing 弧（跳转指令所在行 -> 落点行首）无歧义判定，同行汇合（shared_line_arc）保守记未覆盖，不虚报。分支覆盖与 qa/test_p_table_execution.py 的 48 项测试在同一次 trace 运行内采集。",
-  "generated_at": "2026-11-21T19:49:43",
+  "generated_at": "2026-11-22T01:53:46",
   "python": "3.9.13",
   "threshold": 75.0,
   "files": [
@@ -1416,7 +1416,7 @@
     "failure_ids": []
   },
   "runner_error": "",
-  "duration_ms": 22609.1,
+  "duration_ms": 14975.599999999999,
   "exceptions_sample": [
     [
       "d:\\game\\桌游模拟器\\betrayal at house on the hill\\source\\desktop\\game\\asset_registry.py",
@@ -1574,7 +1574,7 @@
   "runs": [
     {
       "index": 1,
-      "duration_ms": 11703.5,
+      "duration_ms": 7892.9,
       "opcode_arcs": 1928,
       "line_arcs": 1342,
       "runner": {
@@ -1587,7 +1587,7 @@
     },
     {
       "index": 2,
-      "duration_ms": 10905.6,
+      "duration_ms": 7082.7,
       "opcode_arcs": 1634,
       "line_arcs": 1092,
       "runner": {
@@ -1599,7 +1599,7 @@
       }
     }
   ],
-  "original_generated_at": "2026-11-21T19:49:43",
-  "reemitted_at": "2026-11-21T19:49:59",
+  "original_generated_at": "2026-11-22T01:53:46",
+  "reemitted_at": "2026-11-22T01:53:56",
   "reemit_note": "收口序列时序重落盘：数据为 original_generated_at 时刻的真实 trace 采集；此后 coverage 探针重写过 assets/（内容逐字节一致），本次只刷新文件 mtime 以满足证据新鲜度，未重跑测试、未改任何数字。"
 }
