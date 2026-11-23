@@ -1,6 +1,6 @@
 {
   "tool": "qa/ui_capture.py",
-  "generated_at": "2026-11-22T01:53:57",
+  "generated_at": "2026-11-23T19:18:53",
   "dpi": {
     "system_dpi": 192,
     "dpi_awareness": 1,
@@ -58,12 +58,12 @@
       "contrast_method": "wcag-relative-luminance(ui.PALETTE design values)",
       "screenshot_full": "source/desktop/game/qa/screenshots/ui_100.png",
       "screenshot_crop": "source/desktop/game/qa/screenshots/ui_100_crop.png",
-      "sha256_full": "8d827b437fd52fe77f7a36e36ae14e599a72af17de13db43faf95ea0d134447a",
-      "sha256_crop": "7a18348829bf3b5262ca53f2995f1006a1b4699fe7a4844771fab0c40cbb91bd",
-      "captured_at": "2026-11-20T16:15:40",
+      "sha256_full": "eac1483d58772f258428c7b575de8af84b71cf64f7bc966a9837de9e54f43c73",
+      "sha256_crop": "625432f53ec2e1338053b0435ea288f8fb5e47063c75236d403b0f143e84bb8f",
+      "captured_at": "2026-11-22T11:06:31",
       "reviewer": "qa/ui_capture.py 自动采集；人工复核待办",
-      "app_source_sha256": "59b61f883544f3158455c4563fc211d727b25699abd578fabc95b87dc68ea151",
-      "assets_sha256": "c233a1f040cc857dcc8a75ce1d33da7cfbc181b2a7589e25b62c99b19f67a66c",
+      "app_source_sha256": "53f7b7d53cb1fcffac612dda10f502324332347ffdb915aee9502f536cd300a0",
+      "assets_sha256": "e5a92967322f1b81f844dd189b17b93041caaf1abefe5989cb151ed4b3ea6898",
       "size_assertions": {
         "room_ok": true,
         "card_ok": true
@@ -99,12 +99,12 @@
       "contrast_method": "wcag-relative-luminance(ui.PALETTE design values)",
       "screenshot_full": "source/desktop/game/qa/screenshots/ui_125.png",
       "screenshot_crop": "source/desktop/game/qa/screenshots/ui_125_crop.png",
-      "sha256_full": "b18a7ea66750710fe85acf1b672e62137cb6dd3f80b6d98be35e053cde0ed960",
-      "sha256_crop": "026be3bc894d5e87b2789f72b1c2589543aaccb024850442271ce2de793af5e6",
-      "captured_at": "2026-11-20T16:21:26",
+      "sha256_full": "f3721858cdcb5eb493d67235fa5b2676bc4bfc299b9cb46fa26d3ed4289c9148",
+      "sha256_crop": "3d9c858f9bcd1c794c67ed1af594865b290244f14a5f0ebd418fdd891e61d32d",
+      "captured_at": "2026-11-22T11:07:33",
       "reviewer": "qa/ui_capture.py 自动采集；人工复核待办",
-      "app_source_sha256": "59b61f883544f3158455c4563fc211d727b25699abd578fabc95b87dc68ea151",
-      "assets_sha256": "c233a1f040cc857dcc8a75ce1d33da7cfbc181b2a7589e25b62c99b19f67a66c",
+      "app_source_sha256": "53f7b7d53cb1fcffac612dda10f502324332347ffdb915aee9502f536cd300a0",
+      "assets_sha256": "e5a92967322f1b81f844dd189b17b93041caaf1abefe5989cb151ed4b3ea6898",
       "size_assertions": {
         "room_ok": true,
         "card_ok": true
@@ -140,12 +140,12 @@
       "contrast_method": "wcag-relative-luminance(ui.PALETTE design values)",
       "screenshot_full": "source/desktop/game/qa/screenshots/ui_150.png",
       "screenshot_crop": "source/desktop/game/qa/screenshots/ui_150_crop.png",
-      "sha256_full": "5c970dc631dad4d81ca32bece1be2cbc6ab6b21a12fef20a8c6ef0a90cc9e9dc",
-      "sha256_crop": "ce721d971c0640be1134999b7dff0d4fa00e985c688fd175912c7b4b9b49469d",
-      "captured_at": "2026-11-20T17:48:50",
+      "sha256_full": "11704cbf0126232cf9b1c70caf87eb4d44cf07b6588a114edb9a0fbff324d500",
+      "sha256_crop": "eca229d8201cb75440d00ee7ff05be84309d8142106562c557a1a4183e16e937",
+      "captured_at": "2026-11-22T11:59:25",
       "reviewer": "qa/ui_capture.py 自动采集；人工复核待办",
-      "app_source_sha256": "59b61f883544f3158455c4563fc211d727b25699abd578fabc95b87dc68ea151",
-      "assets_sha256": "c233a1f040cc857dcc8a75ce1d33da7cfbc181b2a7589e25b62c99b19f67a66c",
+      "app_source_sha256": "53f7b7d53cb1fcffac612dda10f502324332347ffdb915aee9502f536cd300a0",
+      "assets_sha256": "e5a92967322f1b81f844dd189b17b93041caaf1abefe5989cb151ed4b3ea6898",
       "size_assertions": {
         "room_ok": true,
         "card_ok": true

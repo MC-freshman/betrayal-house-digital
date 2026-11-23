@@ -56,10 +56,18 @@ SPEC_BY_TYPE = {
     "card_omen": "card",
     "card_item": "card",
     "card_event": "card",
+    # run6 六类渲染面：尺寸由 P 表 runtime_specs 提供（工程自定）
+    "monster": "monster",
+    "haunt": "haunt",
+    "ending": "ending",
+    "card_back": "card_back",
+    "room_back": "room_back",
+    "dice": "dice",
 }
 
 CHARACTER_KEY_RE = re.compile(r"^(card_\d+)#f(\d+)$", re.IGNORECASE)
-RECORD_ID_RE = re.compile(r"^P-(?:CHR|ROOM|OMEN|ITEM|EVT)-\d{3}$")
+RECORD_ID_RE = re.compile(
+    r"^P-(?:CHR|ROOM|OMEN|ITEM|EVT|MONS|HAUNT|END|CBACK|RBACK|DICE)-\d{3}$")
 
 
 def png_size(path):

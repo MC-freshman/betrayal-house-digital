@@ -1,0 +1,60 @@
+{
+ "cases": [
+  {
+   "seed": 7,
+   "players": 3
+  },
+  {
+   "seed": 11,
+   "players": 3
+  },
+  {
+   "seed": 11,
+   "players": 4
+  },
+  {
+   "seed": 17,
+   "players": 4
+  },
+  {
+   "seed": 23,
+   "players": 5
+  },
+  {
+   "seed": 113,
+   "players": 3
+  },
+  {
+   "seed": 109,
+   "players": 4
+  }
+ ],
+ "same_hash": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "all_same": true,
+ "turns": [
+  27,
+  74,
+  71,
+  26,
+  49,
+  60,
+  52
+ ],
+ "haunt_ids": [
+  56,
+  18,
+  38,
+  4,
+  17,
+  38,
+  4
+ ]
+}

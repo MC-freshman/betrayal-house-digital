@@ -124,6 +124,19 @@ class MonsterRules:
         candidates.sort(key=lambda player: self._monster_path_length(monster.room_key, player.room_key))
         return candidates[0]
 
+    #: K5 怪物专属上行通道：{爬上去的模板 id: 起点模板 id}。
+    #:
+    #: 出处：官方 2nd Ed. 规则手册 p2（docs/BetrayalHouseHill_v4.2.pdf）——
+    #:   "Monsters, but not traitors, are able to climb up the Coal Chute,
+    #:    Collapsed Room, and Gallery without making a roll."
+    #:
+    #: 落点只取仓库里已经有的一端：``room_effects._apply_coal_chute`` 把进入煤导槽
+    #: 的人送到 ``basement_landing``，所以反方向「平台 → 导槽」就是"爬上去"。
+    #: 塌方房（collapsed_room）的上下行已由下面的 below_key 逻辑覆盖；
+    #: 画廊（gallery）在本仓库没有"从画廊落到舞厅"的边，没有可爬的下行落点，
+    #: 因此**不接线**（见第 4 项返回里的"依据不足"清单）。
+    MONSTER_ONLY_CLIMB = {"coal_chute": "basement_landing"}
+
     def _monster_graph(self) -> dict[str, list[str]]:
         """怪物可免伤使用、逆行塌方通道；普通探险者图不增加这些边。"""
         graph = self._build_graph()
@@ -144,6 +157,17 @@ class MonsterRules:
                 if below in graph:
                     graph[key] = sorted(set(graph.get(key, [])) | {below})
                     graph[below] = sorted(set(graph[below]) | {key})
+        # 怪物专属通道：单向边（只加 起点 -> 通道），英雄图里没有这条边。
+        by_template: dict[str, list[str]] = {}
+        for key, room in sorted(self.state.board.items()):
+            if not self._is_collapsed(key):
+                by_template.setdefault(room.template_id, []).append(key)
+        for climb_id, from_id in self.MONSTER_ONLY_CLIMB.items():
+            for start in by_template.get(from_id, []):
+                for climb in by_template.get(climb_id, []):
+                    if start == climb:
+                        continue
+                    graph[start] = sorted(set(graph.get(start, [])) | {climb})
         return graph
 
     def _monster_path(self, start_key: str, target_key: str) -> list[str]:

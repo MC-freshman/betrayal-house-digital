@@ -1292,6 +1292,30 @@ ROOM_BASES = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# K2 障碍房两侧模型（T-13）：只有卡面/规则原文能给出全部四项的房间才允许登记
+# ---------------------------------------------------------------------------
+# 登记格式（键 = room 模板 id，与 ROOM_BASES 的 room_id 同源）::
+#
+#   {"doors": {"north": 0, "east": 1, ...},   # 键集合必须等于该模板 doors，
+#                                             # 值只能是 0/1（同侧门同号）
+#    "stat": "speed" | "might" | "sanity" | "knowledge",
+#    "target": 4,                             # 跨越检定的目标值
+#    "source": "<版次 + 卡面/规则出处>"}       # 空串或缺失会被 barriers.configure_barrier 拒绝
+#
+# **当前故意为空**：仓库里没有任何一条能同时给出这四项的依据——
+#   * photos/room/{vault,tower,chasm,catacombs}.png 只有插画，印字框是空的；
+#   * docs/BetrayalHouseHill_v4.2.pdf p2 只说明"Vault/Tower/Chasm/Catacombs 是
+#     barrier rooms；跨越不耗移动格；怪物无视障碍"，没写属性、目标值，也没写
+#     哪几扇门在同一侧（门侧只印在实体房间牌上）；
+#   * docs/执行收口-20261012.md:10 已把口径钉死：障碍门分组、门侧与卡面数值未校准，
+#     因此没有启用猜测参数。
+# 所以 engine 的接线点（GameEngine._place_room -> configure_disclosed_barrier）
+# 现在不会给任何房间加障碍，4 个障碍房继续走 room_effects 里既有的近似检定。
+# 拿到实体房间牌后，按上面四项补一条即自动生效，不需要再改引擎代码。
+BARRIER_SPECS: dict[str, dict] = {}
+
+
 EVENT_SUPPLEMENTAL_SPECS = [
     ("event_shrieking_wind", "尖啸之风", "Shrieking Wind", "event_lights_out"),
     ("event_smoke", "烟雾", "Smoke", "event_smoke"),
@@ -2202,3 +2226,23 @@ def build_catalog(seed: int | None = None) -> Catalog:
         start_room_ids=["basement_landing", "entrance_hall", "foyer", "grand_staircase", "upper_landing"],
         room_targets=room_targets,
     )
+
+# ----------------------------------------------------------------------
+# run6 九类渲染面：固定渲染位声明（非规则实体）
+# ----------------------------------------------------------------------
+# 结算画面 / 牌背 / 未翻地块 / 骰面 不对应游戏规则实体，但同样需要 P 表
+# 登记、哈希校验与渲染接入，故以「渲染面规格」形式声明在此。
+# monster(52) 与 haunt(70) 不在此处：分别来自 MONSTER_BASES 与
+# build_catalog().haunt_defs，避免重复声明。
+RENDER_SURFACE_SPECS = [
+    {'id': 'ending_heroes', 'name': '英雄胜利', 'surface': 'ending'},
+    {'id': 'ending_traitor', 'name': '叛徒胜利', 'surface': 'ending'},
+    {'id': 'card_back_omen', 'name': '预兆牌背', 'surface': 'card_back'},
+    {'id': 'card_back_item', 'name': '物品牌背', 'surface': 'card_back'},
+    {'id': 'card_back_event', 'name': '事件牌背', 'surface': 'card_back'},
+    {'id': 'room_back', 'name': '未翻地块', 'surface': 'room_back'},
+    {'id': 'room_ghost', 'name': '落点虚影', 'surface': 'room_back'},
+    {'id': 'dice_0', 'name': '骰面 0', 'surface': 'dice'},
+    {'id': 'dice_1', 'name': '骰面 1', 'surface': 'dice'},
+    {'id': 'dice_2', 'name': '骰面 2', 'surface': 'dice'},
+]

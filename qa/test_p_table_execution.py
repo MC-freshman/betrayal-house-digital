@@ -4,9 +4,9 @@
 
 覆盖范围
 --------
-* 结构：142 行、分类 12/50/45/22/13、0/95/47/0/0、33 列（含 runtime_key）、发布档 7 列取值；
+* 结构：274 行、分类 12/50/45/22/13、0/95/47/0/0、33 列（含 runtime_key）、发布档 7 列取值；
 * 产物：95 个源文件、98 个运行时 PNG、路径逐段大小写、运行时尺寸；
-* 注册表：142 个 target_ref/runtime_key/record_id/content_ref 全解析、未知键 None、重复键拒绝、
+* 注册表：274 个 target_ref/runtime_key/record_id/content_ref 全解析、未知键 None、重复键拒绝、
   BOM 清单可读、含 ``../`` 的键被拒；
 * 异常：0 字节 PNG、截断 PNG、坏 JSON、运行时文件缺失、清单缺 records；
 * 回归：两次加载一致、两次构建逐字节一致（generated_at 除外）；
@@ -57,18 +57,25 @@ import asset_registry  # noqa: E402
 import ui_asset_binding  # noqa: E402
 from asset_registry import AssetRegistry, png_size  # noqa: E402
 
-EXPECTED_TOTAL = 142
+EXPECTED_TOTAL = 274
 EXPECTED_BY_TYPE = {
     "character": 12,
     "room": 50,
     "card_event": 45,
     "card_item": 22,
     "card_omen": 13,
+    # run6 六类渲染面：274 = 142 + 132
+    "monster": 52,
+    "haunt": 70,
+    "ending": 2,
+    "card_back": 3,
+    "room_back": 2,
+    "dice": 3,
 }
-# run5 v2：47 位登记 + 130 张 JPEG 无损转码后，142 位全部 usable。
+# run5 v2：47 位登记 + 130 张 JPEG 无损转码后，274 位全部 usable。
 # 旧 0/95/47 已退役（见 qa/run5_baseline_diff.json），断言不删、只改期望值。
 EXPECTED_AVAILABILITY = {
-    "usable": 142,
+    "usable": 274,
     "partial": 0,
     "missing": 0,
     "corrupted": 0,
@@ -80,6 +87,13 @@ RUNTIME_SIZE = {
     "card_omen": (480, 672),
     "card_item": (480, 672),
     "card_event": (480, 672),
+    # run6 六类渲染面：尺寸取 P 表 runtime_specs（工程自定，见 asset_pipeline.RUNTIME_SPECS）
+    "monster": (512, 512),
+    "haunt": (1280, 720),
+    "ending": (1024, 576),
+    "card_back": (480, 640),
+    "room_back": (512, 512),
+    "dice": (256, 256),
 }
 CATEGORY_DIR = {
     "character": "char",
@@ -87,7 +101,16 @@ CATEGORY_DIR = {
     "card_omen": "omen",
     "card_item": "item",
     "card_event": "event",
+    # run6 六类渲染面的 category_dir 与 FAMILIES.dir 同名
+    "monster": "monster",
+    "haunt": "haunt",
+    "ending": "ending",
+    "card_back": "card_back",
+    "room_back": "room_back",
+    "dice": "dice",
 }
+# 需要 alpha 的类别（asset_pipeline.ALPHA_REQUIRED）：角色 + 三类贴图型渲染面
+ALPHA_REQUIRED_TYPES = {"character", "monster", "room_back", "dice"}
 RELEASE_COLUMNS = [
     "bytes",
     "sha256",
@@ -248,7 +271,7 @@ class TestPTableStructure(unittest.TestCase):
 
     def test_04_missing_rows_are_split_and_documented(self):
         # run5 v2：0 个缺口。断言不删除——改为"任何 missing 即失败"，
-        # 并核对 142 行全部有源文件、missing_note 为空、无回退残留。
+        # 并核对 274 行全部有源文件、missing_note 为空、无回退残留。
         _, rows = read_csv()
         missing = [row for row in rows if row["availability"] == "missing"]
         self.assertEqual(len(missing), 0, [row["record_id"] for row in missing[:5]])
@@ -272,7 +295,8 @@ class TestPTableStructure(unittest.TestCase):
             self.assertTrue(VERIFIED_AT_RE.match(row["verified_at"]), record_id)
             self.assertEqual(row["verified_at"], expected_verified, record_id)
             self.assertEqual(row["category_dir"], CATEGORY_DIR[row["asset_type"]], record_id)
-            expected_alpha = "true" if row["asset_type"] == "character" else "false"
+            expected_alpha = (
+                "true" if row["asset_type"] in ALPHA_REQUIRED_TYPES else "false")
             self.assertEqual(row["alpha_required"], expected_alpha, record_id)
             self.assertIn(row["canonical_record_id"], ids, record_id)
             self.assertEqual(row["canonical_record_id"], record_id, record_id)
@@ -294,7 +318,7 @@ class TestPTableStructure(unittest.TestCase):
             self.assertEqual(source.suffix.lower(), ".png", row["record_id"])
             self.assertEqual(source.read_bytes()[:8], PNG_SIGNATURE, row["record_id"])
             checked += 1
-        self.assertEqual(checked, 142)
+        self.assertEqual(checked, 274)
 
 
 # ----------------------------------------------------------------------
@@ -304,14 +328,14 @@ class TestRuntimeArtifacts(unittest.TestCase):
     def test_01_source_photos_exist_with_exact_case(self):
         _, rows = read_csv()
         present = [row for row in rows if row["availability"] != "missing"]
-        self.assertEqual(len(present), 142)
+        self.assertEqual(len(present), 274)
         for row in present:
             self.assertTrue(case_consistent(row["source_path"]), row["source_path"])
         # run5：photos/_source_jpeg/ 是 130 个转码原件备份，必须排除在源文件集合外。
         disk = [path for path in (PROJECT_ROOT / "photos").rglob("*")
                 if path.is_file() and path.relative_to(PROJECT_ROOT / "photos").parts[0]
                 != "_source_jpeg"]
-        self.assertEqual(len(disk), 142)
+        self.assertEqual(len(disk), 274)
         backups = [path for path in (PROJECT_ROOT / "photos" / "_source_jpeg").rglob("*.jpg")]
         self.assertEqual(len(backups), 130)
         if INVENTORY_JSON.is_file():
@@ -328,14 +352,32 @@ class TestRuntimeArtifacts(unittest.TestCase):
         cards = sorted((ASSETS / "cards").rglob("*.png"))
         characters = sorted((ASSETS / "characters").glob("*.png"))
         placeholders = sorted((ASSETS / "placeholders").glob("*.png"))
-        # run5 v2：50 rooms / 80 cards / 12 characters / 3 placeholders = 145
+        # run6：六类渲染面各自的运行时目录（274 位里占 132 位）
+        monsters = sorted((ASSETS / "monsters").glob("*.png"))
+        haunts = sorted((ASSETS / "haunts").glob("*.png"))
+        endings = sorted((ASSETS / "endings").glob("*.png"))
+        card_backs = sorted((ASSETS / "card_backs").glob("*.png"))
+        room_backs = sorted((ASSETS / "room_backs").glob("*.png"))
+        dice = sorted((ASSETS / "dice").glob("*.png"))
+        # 50 rooms / 80 cards / 12 characters / 3 placeholders = 145（与原断言同源）
         self.assertEqual(len(rooms), 50)
         self.assertEqual(len(cards), 80)
         self.assertEqual(len(characters), 12)
         self.assertEqual(len(placeholders), 3)
-        self.assertEqual(len(rooms) + len(cards) + len(characters) + len(placeholders), 145)
+        # run6 六类：52 monsters / 70 haunts / 2 endings / 3 card_backs / 2 room_backs / 3 dice
+        self.assertEqual(len(monsters), 52)
+        self.assertEqual(len(haunts), 70)
+        self.assertEqual(len(endings), 2)
+        self.assertEqual(len(card_backs), 3)
+        self.assertEqual(len(room_backs), 2)
+        self.assertEqual(len(dice), 3)
+        # 145（五类含占位）+ 132（六类渲染面）= 277 张运行时 PNG
+        total = (len(rooms) + len(cards) + len(characters) + len(placeholders)
+                 + len(monsters) + len(haunts) + len(endings)
+                 + len(card_backs) + len(room_backs) + len(dice))
+        self.assertEqual(total, 277)
         runtime_paths = {row["runtime_path"] for row in rows}
-        self.assertEqual(len(runtime_paths), 142)
+        self.assertEqual(len(runtime_paths), 274)
         for rel in runtime_paths:
             path = PROJECT_ROOT / rel
             self.assertTrue(path.is_file(), rel)
@@ -376,7 +418,7 @@ class TestRegistryContract(unittest.TestCase):
         self.assertEqual(len(self.registry.missing()), 0)
 
     def test_02_unknown_and_empty_keys_return_none(self):
-        for key in (None, "", "   ", "no:such:key", 142, ["x"], "room:no_such_room"):
+        for key in (None, "", "   ", "no:such:key", 274, ["x"], "room:no_such_room"):
             self.assertIsNone(self.registry.resolve(key), repr(key))
 
     def test_03_case_insensitive_and_bare_id(self):
@@ -471,7 +513,7 @@ class TestRegistryContract(unittest.TestCase):
         self.assertFalse(ref.is_missing)
         self.assertFalse(ref.is_placeholder)
         self.assertIn("AssetRef", repr(ref))
-        # run5 v2：真实表 142 位全部落实，已无 missing 行；用合成清单守住
+        # run5 v2：真实表 274 位全部落实，已无 missing 行；用合成清单守住
         # "missing / placeholder 语义"这条契约（不删断言，只换样本来源）。
         payload = json.loads(PTABLE_JSON.read_text(encoding="utf-8"))
         record = copy.deepcopy(payload["records"][0])
@@ -857,6 +899,9 @@ class TestRepeatability(unittest.TestCase):
             self.assertEqual(a.to_dict(), b.to_dict())
 
     def test_02_two_generations_identical(self):
+        # 预热一次：首次生成（或管线描述变更后的首次）会改写 assets/ 三件产物，
+        # setUpModule 已先冻结当前产物作为对照；这里再跑一次必须逐字节一致，
+        # 不跳过、不放宽断言（历史上 142 门槛返回 1，曾把本条误报为"生成不稳定"）。
         self.assertIn("csv", _GENERATION_SNAPSHOT, "setUpModule 未冻结构建快照")
         run_ptable_stage()
         self.assertEqual(PTABLE_CSV.read_bytes(), _GENERATION_SNAPSHOT["csv"],
@@ -1212,6 +1257,525 @@ class TestManifestResolver(unittest.TestCase):
         detected = asset_registry.AssetRegistry._detect_project_root(
             manifest, "", str(explicit))
         self.assertEqual(detected, explicit.resolve())
+
+
+# ----------------------------------------------------------------------
+# 11. run6 六类渲染面：规范化 / 槽位 / 运行时路径（asset_pipeline 侧）
+# ----------------------------------------------------------------------
+EXTRA_RUNTIME_SPECS = {
+    "monster": ((512, 512), "monsters"),
+    "haunt": ((1280, 720), "haunts"),
+    "ending": ((1024, 576), "endings"),
+    "card_back": ((480, 640), "card_backs"),
+    "room_back": ((512, 512), "room_backs"),
+    "dice": ((256, 256), "dice"),
+}
+
+
+class TestRenderSurfacePipeline(unittest.TestCase):
+    """normalize_extra / collect_slots / runtime_rel_path / normalize_assets 分派。
+
+    只用临时目录造小图：不写 photos/，也不写 assets/。
+    """
+
+    def setUp(self):
+        self.directory = Path(tempfile.mkdtemp(prefix="ptable_extra_"))
+        self.addCleanup(shutil.rmtree, str(self.directory), True)
+
+    @staticmethod
+    def _make_image(path, size, color=(10, 20, 30), mode="RGB"):
+        from PIL import Image
+
+        image = Image.new(mode, size, color)
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        image.save(str(path), format="PNG")
+        return image
+
+    def test_01_normalize_extra_alpha_keeps_transparent_canvas(self):
+        from PIL import Image
+
+        source = self.directory / "src_alpha.png"
+        self._make_image(source, (1000, 500), (200, 10, 10))
+        target = self.directory / "out" / "alpha.png"
+
+        size = asset_pipeline.normalize_extra(source, target, (512, 512), True)
+        self.assertEqual(size, (512, 512))
+        with Image.open(target) as out:
+            self.assertEqual(out.size, (512, 512))
+            self.assertEqual(out.mode, "RGBA")
+            # 补边是透明画布（不是白底），否则怪物标记叠在地块上会出现白方块
+            self.assertEqual(out.getpixel((0, 0))[3], 0)
+            self.assertEqual(out.getpixel((511, 511))[3], 0)
+            # 画面本身不透明：1000x500 -> 512x256，居中粘贴
+            self.assertEqual(out.getpixel((256, 256))[3], 255)
+            self.assertEqual(out.getpixel((256, 256))[:3], (200, 10, 10))
+
+    def test_02_normalize_extra_opaque_pads_with_corner_mean(self):
+        from PIL import Image
+
+        source = self.directory / "src_rgb.png"
+        self._make_image(source, (100, 50), (10, 20, 30))
+        target = self.directory / "out" / "rgb.png"
+
+        size = asset_pipeline.normalize_extra(source, target, (480, 640), False)
+        self.assertEqual(size, (480, 640))
+        with Image.open(target) as out:
+            self.assertEqual(out.size, (480, 640))
+            self.assertEqual(out.mode, "RGB")
+            # 四角均值补边：源图纯色 -> 补边色等于源色
+            self.assertEqual(out.getpixel((0, 0)), (10, 20, 30))
+            self.assertEqual(out.getpixel((240, 320)), (10, 20, 30))
+
+    def test_03_normalize_extra_never_exceeds_target(self):
+        from PIL import Image
+
+        source = self.directory / "wide.png"
+        self._make_image(source, (2000, 500), (0, 128, 0))
+        target = self.directory / "out" / "wide.png"
+
+        asset_pipeline.normalize_extra(source, target, (256, 256), True)
+        with Image.open(target) as out:
+            self.assertEqual(out.size, (256, 256))
+            bbox = out.getchannel("A").getbbox()
+        self.assertIsNotNone(bbox)
+        width, height = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        self.assertLessEqual(width, 256)
+        self.assertLessEqual(height, 256)
+        self.assertEqual((width, height), (256, 64), "等比缩放：2000x500 -> 256x64")
+
+    def test_04_normalize_card_and_character_sizes(self):
+        from PIL import Image
+
+        source = self.directory / "card.png"
+        self._make_image(source, (1773, 2364), (5, 6, 7))
+        card = self.directory / "out" / "card.png"
+        self.assertEqual(asset_pipeline.normalize_card(source, card),
+                         asset_pipeline.CARD_SIZE)
+        with Image.open(card) as out:
+            self.assertEqual(out.size, asset_pipeline.CARD_SIZE)
+            self.assertEqual(out.mode, "RGB")
+        portrait = self.directory / "out" / "char.png"
+        self.assertEqual(asset_pipeline.normalize_character(source, portrait),
+                         asset_pipeline.CHARACTER_SIZE)
+        with Image.open(portrait) as out:
+            self.assertEqual(out.size, asset_pipeline.CHARACTER_SIZE)
+            self.assertEqual(out.mode, "RGBA")
+            self.assertEqual(out.getpixel((0, 0))[3], 0)
+
+    def test_05_collect_slots_has_eleven_categories(self):
+        slots = asset_pipeline.collect_slots(asset_pipeline.load_content())
+        self.assertEqual(len(slots), EXPECTED_TOTAL)
+        counts = {}
+        for slot in slots:
+            counts[slot["family"]] = counts.get(slot["family"], 0) + 1
+        self.assertEqual(counts, {
+            "character": 12, "room": 50, "omen": 13, "item": 22, "event": 45,
+            # 六类渲染面：monster 52 + haunt 70 + ending 2 + card_back 3
+            # + room_back 2 + dice 3 = 132
+            "monster": 52, "haunt": 70, "ending": 2,
+            "card_back": 3, "room_back": 2, "dice": 3,
+        })
+        self.assertEqual(sum(counts.values()), EXPECTED_TOTAL)
+
+    def test_06_new_record_id_segments_start_after_evt(self):
+        slots = asset_pipeline.collect_slots(asset_pipeline.load_content())
+        counters = {}
+        assigned = []
+        for slot in slots:
+            cat = asset_pipeline.FAMILIES[slot["family"]]["cat"]
+            counters[cat] = counters.get(cat, 0) + 1
+            assigned.append("P-%s-%03d" % (cat, counters[cat]))
+        self.assertEqual(counters, {
+            "CHR": 12, "ROOM": 50, "OMEN": 13, "ITEM": 22, "EVT": 45,
+            "MONS": 52, "HAUNT": 70, "END": 2, "CBACK": 3, "RBACK": 2, "DICE": 3,
+        })
+        rows = read_json()["records"]
+        self.assertEqual(len(rows), EXPECTED_TOTAL)
+        # 既有 142 位（CHR..EVT）的 record_id 与声明顺序完全不变
+        self.assertEqual(assigned[:142], [row["record_id"] for row in rows[:142]])
+        # 全表顺序一致：新六类段号接在 EVT 之后，不从 001 重排旧段
+        self.assertEqual(assigned, [row["record_id"] for row in rows])
+        self.assertEqual(assigned.index("P-MONS-001"), 142)
+        self.assertEqual(assigned[142:145],
+                         ["P-MONS-001", "P-MONS-002", "P-MONS-003"])
+        self.assertEqual(assigned[-3:], ["P-DICE-001", "P-DICE-002", "P-DICE-003"])
+
+    def test_07_collect_slots_tolerates_legacy_content_module(self):
+        import types
+
+        stub = types.SimpleNamespace(
+            CHARACTER_FACES=[{"card_id": "card_1", "face_index": 1,
+                              "id": "card_1_1", "name": "背面", "source_name": "back"}],
+            ROOM_BASES=[{"id": "entrance_hall", "name": "门厅",
+                         "source_name": "hall", "effect_id": ""}],
+            # 3 元组：旧形态补充房间位没有 effect_id
+            ROOM_SUPPLEMENTAL_SPECS=[("room_legacy", "旧房间", "legacy")],
+            OMEN_CARDS=[], ITEM_CARDS=[], EVENT_BASES=[],
+            EVENT_SUPPLEMENTAL_SPECS=[("event_legacy", "旧事件", "legacy", "effect")],
+            RENDER_SURFACE_SPECS=[
+                {"id": "ending_heroes", "name": "英雄胜利", "surface": "ending"},
+                {"id": "card_back_omen", "name": "预兆牌背", "surface": "card_back"},
+                {"id": "room_back", "name": "未翻地块", "surface": "room_back"},
+                {"id": "room_ghost", "name": "落点虚影", "surface": "room_back"},
+                {"id": "dice_0", "name": "骰面 0", "surface": "dice"},
+            ],
+        )
+        stub.build_catalog = lambda seed=0: types.SimpleNamespace(haunt_defs={})
+        slots = asset_pipeline.collect_slots(stub)
+        self.assertEqual([slot["family"] for slot in slots],
+                         ["character", "room", "room", "event",
+                          "ending", "card_back", "room_back", "room_back", "dice"])
+        self.assertEqual(slots[0]["semantic_hint"], "角色面：card_1 背面（back）")
+        self.assertEqual(slots[2]["effect_id"], "", "旧 3 元组没有 effect_id")
+        self.assertEqual([slot["runtime_key"] for slot in slots[4:]],
+                         ["ending:heroes", "card_back:omen", "room_back:back",
+                          "room_back:ghost", "dice:0"])
+
+        # 完全没有 MONSTER_BASES / RENDER_SURFACE_SPECS 的旧 content 模块不抛异常
+        del stub.RENDER_SURFACE_SPECS
+        legacy = asset_pipeline.collect_slots(stub)
+        self.assertEqual([slot["family"] for slot in legacy],
+                         ["character", "room", "room", "event"])
+
+    def test_08_runtime_rel_path_six_extra_dirs(self):
+        for family, (_, dir_name) in EXTRA_RUNTIME_SPECS.items():
+            slot = {"family": family, "runtime_name": "%s_probe" % family}
+            rel = asset_pipeline.runtime_rel_path(slot)
+            self.assertEqual(rel.parent, asset_pipeline.RUNTIME_EXTRA_DIRS[family], family)
+            self.assertEqual(rel.name, "%s_probe.png" % family)
+            self.assertTrue(
+                str(rel).replace("\\", "/").endswith("/assets/%s/%s_probe.png"
+                                                     % (dir_name, family)),
+                str(rel))
+        with self.assertRaises(ValueError):
+            asset_pipeline.runtime_rel_path({"family": "unknown", "runtime_name": "x"})
+
+    def test_09_normalize_assets_dispatches_extra_family(self):
+        from PIL import Image
+
+        root = Path(tempfile.mkdtemp(prefix="ptable_norm_root_"))
+        self.addCleanup(shutil.rmtree, str(root), True)
+        photos = root / "photos"
+        self._make_image(photos / "monster" / "mummy.png", (64, 32), (1, 2, 3))
+        target = root / "assets" / "monsters" / "mummy.png"
+        records = [{
+            "record_id": "P-MONS-001",
+            "target_ref": "content.py:MONSTER_BASES#mummy",
+            "runtime_path": "assets/monsters/mummy.png",
+            "source_path": "photos/monster/mummy.png",
+            "availability": "usable",
+            "_family": "monster",
+            "_runtime_abs": target,
+        }]
+        with mock.patch.object(asset_pipeline, "PROJECT_ROOT", root), \
+                mock.patch.object(asset_pipeline, "PHOTOS_DIR", photos):
+            result = asset_pipeline.normalize_assets(records)
+        self.assertEqual(result["failures"], [])
+        self.assertEqual(result["written"], 1)
+        with Image.open(target) as out:
+            self.assertEqual(out.size, asset_pipeline.MONSTER_SIZE)
+            self.assertEqual(out.mode, "RGBA")
+
+        # 目标落回 photos/ 时必须拒绝写入（源目录只读）
+        records[0]["_runtime_abs"] = photos / "monster" / "evil.png"
+        with mock.patch.object(asset_pipeline, "PROJECT_ROOT", root), \
+                mock.patch.object(asset_pipeline, "PHOTOS_DIR", photos):
+            blocked = asset_pipeline.normalize_assets(records)
+        self.assertEqual(blocked["written"], 0)
+        self.assertIn("拒绝写入 photos", blocked["failures"][0]["reason"])
+        self.assertFalse((photos / "monster" / "evil.png").exists())
+
+        # 卡牌类仍走 normalize_card（六类之外的老分派），不能被 extra 分支吞掉
+        self._make_image(photos / "omen" / "omen_probe.png", (1773, 2364), (9, 8, 7))
+        card_target = root / "assets" / "cards" / "omen" / "omen_probe.png"
+        card_records = [{
+            "record_id": "P-OMEN-001",
+            "target_ref": "content.py:OMEN_CARDS#omen_probe",
+            "runtime_path": "assets/cards/omen/omen_probe.png",
+            "source_path": "photos/omen/omen_probe.png",
+            "availability": "usable",
+            "_family": "omen",
+            "_runtime_abs": card_target,
+        }]
+        with mock.patch.object(asset_pipeline, "PROJECT_ROOT", root), \
+                mock.patch.object(asset_pipeline, "PHOTOS_DIR", photos):
+            card_result = asset_pipeline.normalize_assets(card_records)
+        self.assertEqual(card_result["failures"], [])
+        with Image.open(card_target) as out:
+            self.assertEqual(out.size, asset_pipeline.CARD_SIZE)
+
+    def test_10_main_placeholders_stage_builds_three_files(self):
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            code = asset_pipeline.main(["--stage", "placeholders"])
+        self.assertEqual(code, 0, buffer.getvalue())
+        self.assertIn("[placeholders] 3 张", buffer.getvalue())
+        for kind in asset_pipeline.PLACEHOLDER_FILES:
+            path = asset_pipeline.placeholder_path(kind)
+            self.assertTrue(path.is_file(), path)
+            data = path.read_bytes()
+            self.assertTrue(data.startswith(PNG_SIGNATURE), kind)
+
+    def test_11_assign_fallback_refs_resolves_and_rejects(self):
+        records = [
+            {"record_id": "P-EVT-001", "runtime_key": "card:event:target_row"},
+            {"record_id": "P-EVT-002", "runtime_key": "card:event:source_row",
+             "_fallback_target": "card:event:target_row"},
+            {"record_id": "P-EVT-003", "runtime_key": "card:event:plain_row"},
+        ]
+        asset_pipeline.assign_fallback_refs(records)
+        self.assertEqual(records[1]["fallback_ref"], "P-EVT-001")
+        self.assertEqual(records[2]["fallback_ref"], "")
+        broken = [{"record_id": "P-EVT-004", "runtime_key": "card:event:broken",
+                   "_fallback_target": "card:event:absent"}]
+        with self.assertRaises(SystemExit):
+            asset_pipeline.assign_fallback_refs(broken)
+
+
+# ----------------------------------------------------------------------
+# 12. run6 六类渲染面：registry 映射 / 键空间 / 索引（asset_registry 侧）
+# ----------------------------------------------------------------------
+class TestRegistryRenderSurfaces(unittest.TestCase):
+    """SPEC_BY_TYPE 六类映射、RECORD_ID_RE 扩展、键注册与三级索引回退。"""
+
+    def setUp(self):
+        self.directory = Path(tempfile.mkdtemp(prefix="ptable_registry_"))
+        self.addCleanup(shutil.rmtree, str(self.directory), True)
+
+    def _write_manifest(self, name, payload):
+        path = self.directory / name
+        path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        return path
+
+    def test_01_spec_by_type_covers_six_surfaces(self):
+        registry = load_registry()
+        rows_by_type = {}
+        for row in read_json()["records"]:
+            if row["asset_type"] in EXTRA_RUNTIME_SPECS:
+                rows_by_type.setdefault(row["asset_type"], row)
+        for asset_type, (size, _) in EXTRA_RUNTIME_SPECS.items():
+            self.assertEqual(asset_registry.SPEC_BY_TYPE.get(asset_type), asset_type)
+            spec = asset_registry.SPEC_BY_TYPE[asset_type]
+            self.assertIn(spec, registry.runtime_specs)
+            raw = registry.runtime_specs[spec]
+            self.assertEqual((raw["width"], raw["height"]), size)
+            ref = registry.resolve(rows_by_type[asset_type]["record_id"])
+            self.assertIsNotNone(ref, asset_type)
+            self.assertEqual((ref.width, ref.height), size, asset_type)
+
+    def test_02_record_id_re_accepts_new_prefixes(self):
+        accepted = ["P-MONS-001", "P-HAUNT-070", "P-END-002",
+                    "P-CBACK-003", "P-RBACK-002", "P-DICE-003"]
+        for value in accepted:
+            self.assertTrue(asset_registry.RECORD_ID_RE.match(value), value)
+        for value in ("P-XXXX-001", "P-MONSTER-001", "P-MONS-1",
+                      "P-MONS-0001", "p-mons-001", "P-MONS-001-x"):
+            self.assertIsNone(asset_registry.RECORD_ID_RE.match(value), value)
+        registry = load_registry()
+        self.assertIsNotNone(registry.resolve("P-MONS-001"))
+        self.assertIsNone(registry.resolve("P-XXXX-001"))
+
+    def test_03_duplicate_registration_key_rejected(self):
+        records = [
+            {"record_id": "P-ROOM-001", "target_ref": "content.py:ROOM_BASES#dup",
+             "runtime_key": "room:a", "asset_type": "room"},
+            {"record_id": "P-ROOM-002", "target_ref": "content.py:ROOM_BASES#dup",
+             "runtime_key": "room:b", "asset_type": "room"},
+        ]
+        with self.assertRaises(ValueError):
+            AssetRegistry(records=records, runtime_specs={}, base_dir_name="",
+                          project_root=str(PROJECT_ROOT), manifest_path="")
+
+    def test_04_same_ref_registered_under_same_key(self):
+        records = [{"record_id": "P-DICE-001", "target_ref": "dice:0",
+                    "runtime_key": "dice:0", "asset_type": "dice"}]
+        registry = AssetRegistry(
+            records=records,
+            runtime_specs={"dice": {"width": 256, "height": 256, "format": "png"}},
+            base_dir_name="", project_root=str(PROJECT_ROOT), manifest_path="")
+        # target_ref 与 runtime_key 相同：同一 AssetRef 重复注册不得报错
+        self.assertEqual(len(registry), 1)
+        self.assertIs(registry._refs["dice:0"], registry._refs["P-DICE-001"])
+        self.assertEqual((registry.resolve("P-DICE-001").width,
+                          registry.resolve("P-DICE-001").height), (256, 256))
+
+    def test_05_legacy_content_refs_index_bare_ids(self):
+        payload = {
+            "base_dir": "game",
+            "runtime_specs": {"card": {"width": 480, "height": 672, "format": "png"}},
+            "records": [
+                {"record_id": "P-OMEN-001",
+                 "target_ref": "content.py:OMEN_CARDS#omen_bite",
+                 "runtime_key": "card:omen:omen_bite", "asset_type": "card_omen"},
+                {"record_id": "P-OMEN-002",
+                 "target_ref": "content.py:OMEN_CARDS#omen_mask",
+                 "runtime_key": "card:omen:omen_mask", "asset_type": "card_omen"},
+                {"record_id": "P-ROOM-001",
+                 "target_ref": "content.py:ROOM_BASES#entrance_hall",
+                 "runtime_key": "", "asset_type": "room"},
+                {"record_id": "P-ROOM-002",
+                 "target_ref": "legacy:bare_only", "asset_type": "room"},
+                {"record_id": "P-CHR-001",
+                 "target_ref": "content.py:CHARACTER_FACES#card_1@f0",
+                 "runtime_key": "card_1@f0", "asset_type": "character"},
+            ],
+            # 旧表/合成样本的 content_refs 反向表：content.py: -> 运行时键
+            "content_refs": {
+                "content.py:OMEN_CARDS#omen_bite": "card:omen:omen_bite",
+                "content.py:OMEN_CARDS#omen_gap": "card:omen:absent_key",
+            },
+        }
+        manifest = self._write_manifest("p_table.json", payload)
+        registry = AssetRegistry.load(manifest, base_dir=str(self.directory))
+        # 没有 content_ref 列时按 content_refs 反向表补内容侧入口
+        self.assertEqual(registry.resolve("content.py:OMEN_CARDS#omen_bite").record_id,
+                         "P-OMEN-001")
+        self.assertEqual(registry.resolve("omen_bite").record_id, "P-OMEN-001")
+        # 反向表指向不存在的运行时键：跳过，不建错误索引
+        self.assertIsNone(registry.resolve("content.py:OMEN_CARDS#omen_gap"))
+        # 裸 id 三级回退：runtime_key 缺失时用 target_ref 末段
+        self.assertEqual(registry.resolve("bare_only").record_id, "P-ROOM-002")
+        # runtime_key 为空时裸 id 由 target_ref 的 id 段补上（第二级索引）
+        self.assertEqual(registry.resolve("entrance_hall").record_id, "P-ROOM-001")
+        # 角色裸键走 runtime_key（face 后缀），不被裸 id 规则改名
+        self.assertEqual(registry.resolve("card_1@f0").record_id, "P-CHR-001")
+
+    def test_06_load_falls_back_to_sibling_p_table(self):
+        payload = {"base_dir": "", "records": [
+            {"record_id": "P-DICE-001", "target_ref": "dice:0",
+             "runtime_key": "dice:0", "asset_type": "dice"}]}
+        self._write_manifest("p_table.json", payload)
+        manifest = self._write_manifest("asset_mapping.json", {"base_dir": ""})
+        registry = AssetRegistry.load(manifest, base_dir=str(self.directory))
+        self.assertIsNotNone(registry.resolve("P-DICE-001"))
+        self.assertEqual(registry.manifest_path.name, "p_table.json")
+
+    def test_07_load_reports_missing_and_records_absent(self):
+        with self.assertRaises(FileNotFoundError):
+            AssetRegistry.load(self.directory / "no_such_manifest.json")
+        lonely = self._write_manifest("lonely.json", {"base_dir": ""})
+        with self.assertRaises(ValueError):
+            AssetRegistry.load(lonely, base_dir=str(self.directory))
+
+    def test_08_detect_project_root_fallbacks(self):
+        base = Path(tempfile.mkdtemp(prefix="ptable_root_"))
+        self.addCleanup(shutil.rmtree, str(base), True)
+        # 打包布局：没有 photos，但有 source/desktop/game/assets
+        packed = base / "app"
+        packed_assets = packed / "source" / "desktop" / "game" / "assets"
+        packed_assets.mkdir(parents=True)
+        packed_manifest = packed_assets / "p_table.json"
+        packed_manifest.write_text("{}", encoding="utf-8")
+        self.assertEqual(
+            AssetRegistry._detect_project_root(packed_manifest, "", None),
+            packed.resolve())
+        # 只有 base_dir_name 命中祖先目录名
+        named = base / "portable" / "inner" / "assets"
+        named.mkdir(parents=True)
+        named_manifest = named / "p_table.json"
+        named_manifest.write_text("{}", encoding="utf-8")
+        self.assertEqual(
+            AssetRegistry._detect_project_root(named_manifest, "portable", None),
+            (base / "portable").resolve())
+        # 三个特征都没有：退回祖先第 5 层，不抛异常
+        deep = base / "a" / "b" / "c" / "d" / "e" / "f" / "assets"
+        deep.mkdir(parents=True)
+        deep_manifest = deep / "p_table.json"
+        deep_manifest.write_text("{}", encoding="utf-8")
+        detected = AssetRegistry._detect_project_root(deep_manifest, "", None)
+        self.assertIsInstance(detected, Path)
+        self.assertTrue(detected.is_dir())
+
+    def test_09_defaults_without_project_root_or_manifest(self):
+        registry = AssetRegistry(records=[], runtime_specs=None, base_dir_name="",
+                                 project_root=None, manifest_path=None)
+        self.assertEqual(registry.project_root, Path.cwd())
+        self.assertIsNone(registry.manifest_path)
+        self.assertEqual(registry.runtime_specs, {})
+        self.assertEqual(len(registry), 0)
+        self.assertEqual(registry.summary(), {
+            "records": 0, "availability": {}, "runtime_status": {}})
+
+    def test_10_asset_ref_exists_and_validate_without_root(self):
+        self.assertFalse(asset_registry.AssetRef(record_id="P-ROOM-001", path="").exists())
+        real = first_row("room")["runtime_path"]
+        self.assertTrue(asset_registry.AssetRef(
+            record_id="P-ROOM-001", path=str(PROJECT_ROOT / real)).exists())
+        # assets_root=None：不校验越界，其余判定照旧（当前 0 missing -> 无 issue）
+        self.assertEqual(load_registry().validate(), [])
+
+    def test_11_png_size_rejects_non_png_input(self):
+        self.assertIsNone(asset_registry.png_size(self.directory))
+        broken = self.directory / "broken.png"
+        broken.write_bytes(PNG_SIGNATURE + b"\x00\x00")
+        self.assertIsNone(asset_registry.png_size(broken))
+
+    def test_12_resolve_manifest_path_falls_back_to_first_candidate(self):
+        missing = [self.directory / "a.json", self.directory / "b.json"]
+        with mock.patch.object(asset_registry, "default_manifest_candidates",
+                               return_value=missing):
+            self.assertEqual(asset_registry.resolve_manifest_path(), missing[0])
+        with mock.patch.object(asset_registry, "default_manifest_candidates",
+                               return_value=[missing[0], MAPPING_JSON]):
+            self.assertEqual(asset_registry.resolve_manifest_path(), MAPPING_JSON)
+
+    def test_13_missing_and_by_type_listings(self):
+        registry = load_registry()
+        self.assertEqual(registry.missing(), [])
+        self.assertEqual(len(registry.by_type("monster")), 52)
+        self.assertEqual(len(registry.by_type("haunt")), 70)
+        self.assertEqual(registry.by_type("no_such_type"), [])
+        self.assertEqual(len(asset_registry.load_registry(PTABLE_JSON, str(PROJECT_ROOT))),
+                         EXPECTED_TOTAL)
+
+    def test_15_indexes_skip_empty_content_and_target_ids(self):
+        payload = {
+            "base_dir": "",
+            "runtime_specs": {"room": {"width": 512, "height": 512, "format": "png"}},
+            "records": [
+                # content_ref 的 "#" 后为空：内容侧不建索引
+                {"record_id": "P-ROOM-001", "asset_type": "room",
+                 "target_ref": "content.py:ROOM_BASES#room_a",
+                 "runtime_key": "room:room_a",
+                 "content_ref": "content.py:ROOM_BASES#"},
+                # target_ref 的 "#" 后为空：id 段索引跳过
+                {"record_id": "P-ROOM-002", "asset_type": "room",
+                 "target_ref": "content.py:ROOM_BASES#",
+                 "runtime_key": "room:room_b",
+                 "content_ref": "content.py:ROOM_BASES#room_b"},
+            ],
+            # 反向表里 "#" 后为空：裸 id 建不出来，只能建内容侧入口
+            "content_refs": {"content.py:ROOM_BASES#": "room:room_a"},
+        }
+        manifest = self._write_manifest("p_table.json", payload)
+        registry = AssetRegistry.load(manifest, base_dir=str(self.directory))
+        # target_ref 本身就是键：空 id 的 target_ref 仍按原样注册（不自作聪明截断）
+        self.assertEqual(registry.resolve("content.py:ROOM_BASES#").record_id,
+                         "P-ROOM-002")
+        self.assertEqual(registry.resolve("room_a").record_id, "P-ROOM-001")
+        self.assertEqual(registry.resolve("room_b").record_id, "P-ROOM-002")
+        self.assertEqual(registry.resolve("content.py:ROOM_BASES#room_a").record_id,
+                         "P-ROOM-001")
+        # 空串不得进键空间（否则会解析出未定义的资源位）
+        self.assertNotIn("", registry._refs)
+
+    def test_16_project_root_base_dir_scan_exhausts_without_match(self):
+        base = Path(tempfile.mkdtemp(prefix="ptable_root_scan_"))
+        self.addCleanup(shutil.rmtree, str(base), True)
+        assets = base / "alpha" / "beta" / "assets"
+        assets.mkdir(parents=True)
+        manifest = assets / "p_table.json"
+        manifest.write_text("{}", encoding="utf-8")
+        detected = AssetRegistry._detect_project_root(manifest, "no_such_dir_name", None)
+        self.assertIsInstance(detected, Path)
+        self.assertTrue(detected.is_dir())
+
+    def test_14_key_space_rejects_traversal_and_unknown_faces(self):
+        registry = load_registry()
+        for key in ("card_999#f0", "room:..\\escape", "content.py:ROOM_BASES#../etc"):
+            self.assertIsNone(registry.resolve(key), key)
+        self.assertEqual(registry.resolve("card_1#f0").record_id,
+                         registry.resolve("character:card_1:f0").record_id)
 
 
 if __name__ == "__main__":

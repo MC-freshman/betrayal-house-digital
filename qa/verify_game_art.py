@@ -16,7 +16,7 @@
 
 验收对象
 --------
-``docs/qa_game_art.md``（A-33 验收矩阵）的 6 条判据 + 3 条静态检查：
+``docs/qa_game_art.md``（A-33 验收矩阵）的 12 条判据 + 3 条静态检查：
 
 * J1 棋盘贴图：canvas image 图元数 ≥ 已放置房间数，且每间房都有非占位贴图；
 * J2 抽卡卡面：omen/item/event 各弹一次，卡面 240×336×art_dpi/96 ±2、5:7 不拉伸，
@@ -27,6 +27,10 @@
 * J5 tooltip/详情缩略图：112×112 / 160×160（×art_dpi/96）图元，关闭后不泄漏引用；
 * J6 键可反查：账本每条 key 都能 ``AssetRegistry.resolve`` 命中且 record_id 相等，
   ``unreachable == ["storeroom"]``；
+* J7–J12（run6 六类渲染面）：怪物标记 ``monster:*``（canvas 图元数 ≥ 场上怪物数）、
+  作祟揭示 ``haunt:*``、结算画面 ``ending:*``、牌堆卡背 ``card_back:*``、
+  未翻地块 ``room_back:*``、骰面 ``dice:*``；证据来自
+  ``qa/game_art_probe.json`` 的 ``surfaces``，缺证据只落 NOT_RUN；
 * S1 ``ui.py`` 的**图片渲染点**覆盖四个渲染面：棋盘（``create_image``）、卡面
   （``Label(..., image=)``）、头像（``Label(..., image=)`` 或 ``.configure(image=)``）、
   tooltip/详情（``Label(..., image=)``）；四类缺任一即 FAIL；
@@ -144,42 +148,37 @@ CARD_ASSET_TYPES = {"card_omen", "card_item", "card_event"}
 UNREACHABLE_EXPECTED = ["storeroom"]
 PLACEHOLDER_PATH_TOKENS = ("assets/placeholders/", "assets_ww/")
 
-SURFACES = ("board", "card", "panel", "portrait", "room_tooltip", "room_detail")
+SURFACES = ("board", "card", "panel", "portrait", "room_tooltip", "room_detail",
+            # run6 六类渲染面（J7–J12）；缺一不可，否则 J3 的账本 surface 白名单会报未知面
+            "monster", "haunt", "ending", "card_back", "room_back", "dice")
+# 六类渲染面的键前缀与允许段值（与 game_art.*_key / content.py 一致）
+SURFACE_KEY_PREFIX = {
+    "monster": "monster:",
+    "haunt": "haunt:",
+    "ending": "ending:",
+    "card_back": "card_back:",
+    "room_back": "room_back:",
+    "dice": "dice:",
+}
+SURFACE_KEY_VALUES = {
+    "ending": {"heroes", "traitor"},
+    "card_back": {"omen", "item", "event"},
+    "room_back": {"back", "ghost"},
+    "dice": {"0", "1", "2"},
+}
+CARD_BACK_KINDS = ("omen", "item", "event")
 # cache/reason 只用于观测，不作必填（避免对没有断言消费的字段制造 FAIL）。
 LEDGER_REQUIRED = ("seq", "surface", "key", "asset_type", "record_id",
                    "rel_path", "placeholder")
 
-# 9 类无资源位渲染面：显式排除，不做断言（详见文档 §6）。
-# U-06 在本轮收窄为 S-11 多选弹窗；S-10 抽卡弹窗由 J2 承担（裁决 K-02）。
+# 尚未纳入机读断言的渲染面：显式排除（详见文档 §6）。
+# run6 已把 U-01/U-02/U-03/U-04/U-05/U-07 六类渲染面接成 J7–J12，故不再排除；
+# U-06 仍收窄为 S-11 多选弹窗；S-10 抽卡弹窗由 J2 承担（裁决 K-02）。
 EXCLUDED_UNMAPPED = (
-    {"id": "U-01", "surface": "S-03 探索落点预览",
-     "reason": "落点房间尚未翻牌，state 无 template_id，P 表也无牌背键",
-     "proof": "registry.resolve('card:back:omen') = None",
-     "asserted_by": "无（结构性不可达）"},
-    {"id": "U-02", "surface": "S-05 怪物标记",
-     "reason": "P 表只有 character/room/card_* 五类，无 monster 资源类型",
-     "proof": "registry.resolve('monster:mummy') = None",
-     "asserted_by": "无（结构性不可达）"},
-    {"id": "U-03", "surface": "S-18 剧本揭示/手册",
-     "reason": "Haunt 无插画字段；haunts_zh 无图片引用；无 haunt:* 资源位",
-     "proof": "registry.resolve('haunt:1') = None",
-     "asserted_by": "无（需新增资源类型）"},
-    {"id": "U-04", "surface": "S-19 结算画面",
-     "reason": "画面本身不存在；ending:* 资源位不存在",
-     "proof": "registry.resolve('ending:heroes') = None",
-     "asserted_by": "无（需新建绘制层）"},
-    {"id": "U-05", "surface": "S-21 局势面板牌堆卡背",
-     "reason": "无 card:back:* 资源位",
-     "proof": "registry.resolve('card:back:omen') = None",
-     "asserted_by": "无（结构性不可达）"},
     {"id": "U-06", "surface": "S-11 多选舍弹窗（原含 S-10 抽卡弹窗）",
      "reason": "choose_from_list 只收 list[str]，无 card_id；S-11 不可达",
-     "proof": "ui.py:162-167 choose_from_list(options) 无 card 参数",
+     "proof": "ui.py choose_from_list(options) 无 card 参数",
      "asserted_by": "S-10 抽卡弹窗不排除，由 J2 断言（裁决 K-02）"},
-    {"id": "U-07", "surface": "S-24 骰子",
-     "reason": "P 表五类资源中没有 dice",
-     "proof": "p_table 检索 dice 命中 0",
-     "asserted_by": "无（结构性不可达）"},
     {"id": "U-08", "surface": "反向孤儿 room:storeroom",
      "reason": "P 表 50 房间 vs catalog 49 模板；storeroom 有图无模板，永不被画",
      "proof": "差集实测 ['room:storeroom']（P-ROOM-048）",
@@ -207,6 +206,12 @@ TITLES = {
     "J4": "玩家头像：面板/头像档覆盖全部玩家（48/96×art_dpi/96）",
     "J5": "tooltip/详情缩略图：112×112 / 160×160 图元",
     "J6": "取图键可反查：每条 key 都能 resolve 且 record_id 相等",
+    "J7": "怪物标记：canvas 上 monster:* 图元数 ≥ 场上怪物数",
+    "J8": "剧本插画：作祟揭示后存在 haunt:* 图元",
+    "J9": "结算画面：GAME_OVER 后存在 ending:* 图元",
+    "J10": "牌堆卡背：抽卡弹窗未翻开时存在 card_back:* 图元",
+    "J11": "未翻地块：探索预览存在 room_back:* 图元",
+    "J12": "骰面：骰子结果区存在 dice:* 图元",
     "S1": "ui.py 四类图片渲染面齐备（canvas create_image / Label image= / configure(image=)）",
     "S2": "game_art.py 存在且三键前缀 room:/card:/character: 齐备",
     "S3": "ui_asset_binding.DEFAULT_CACHE_CAPACITY ≥ 128",
@@ -215,6 +220,7 @@ TITLES = {
 # 断言条数（文档 §4/§5 的细分断言计数；用于自检文档与脚本是否同步）
 ASSERTION_COUNT = {
     "J0": 4, "J1": 5, "J2": 6, "J3": 7, "J4": 6, "J5": 6, "J6": 5,
+    "J7": 4, "J8": 4, "J9": 4, "J10": 4, "J11": 3, "J12": 3,
     "S1": 2, "S2": 3, "S3": 2,
 }
 
@@ -862,7 +868,15 @@ def check_j4(ctx, probe):
     elif players:
         shortfalls.append("players.records 缺失，无法逐人核对")
 
-    portrait_ids = [str(r.get("record_id") or "") for r in panel_rows]
+    # 账本会跨多帧累积（面板/作祟/结算各刷一次），同一玩家同一 key 的重复行不算冲突；
+    # 断言的是「不同头像 key 不得共用同一条角色记录」——与旧口径同义，只是按帧去重。
+    record_by_key = {}
+    for row in panel_rows:
+        key = str(row.get("key") or "")
+        record_id = str(row.get("record_id") or "")
+        if key and record_id:
+            record_by_key[key] = record_id
+    portrait_ids = list(record_by_key.values())
     if len(set(portrait_ids)) != len(portrait_ids):
         problems.append("同一角色记录被绑到多个玩家头像（record_id 重复）")
 
@@ -1091,6 +1105,225 @@ def check_j6(ctx, probe):
     if status == NOT_RUN:
         return NOT_RUN, join_unique(shortfalls, 4), evidence
     return PASS, "账本 %d 条 key 全部 resolve 命中且 record_id 相等；resolve_failures=0；name_ambiguous=0；unreachable=['storeroom']" % len(ledger), evidence
+
+
+# ---------------------------------------------------------------------------
+# J7–J12 六类渲染面（run6）
+# ---------------------------------------------------------------------------
+
+def _surface(probe, name):
+    """取 ``probe.surfaces.<name>``；缺失/类型不对统一返回空 dict（落 NOT_RUN）。"""
+    surfaces = probe.data.get("surfaces")
+    if not isinstance(surfaces, dict):
+        return {}
+    value = surfaces.get(name)
+    return value if isinstance(value, dict) else {}
+
+
+def _surface_keys(section):
+    values = section.get("keys")
+    return [str(item) for item in values] if isinstance(values, list) else []
+
+
+def _surface_evidence_list(ctx, probe, section):
+    evidence = [ctx.rel(probe.path)]
+    shot = resolve_shot(ctx, section.get("screenshot"))
+    if shot is not None:
+        evidence.append(ctx.rel(shot))
+    return evidence
+
+
+def _key_shape_problems(name, keys, problems):
+    """键前缀 + 段值合法性（不依赖 P 表；record 级一致性由 J6/账本保证）。"""
+    prefix = SURFACE_KEY_PREFIX[name]
+    allowed = SURFACE_KEY_VALUES.get(name)
+    bad_prefix = [key for key in keys
+                  if not key.startswith(prefix) or len(key) <= len(prefix)]
+    if bad_prefix:
+        problems.append("%s 键口径错误 %d 条：%s"
+                        % (name, len(bad_prefix), ", ".join(bad_prefix[:3])))
+    if allowed is not None:
+        bad_value = [key for key in keys if key[len(prefix):] not in allowed]
+        if bad_value:
+            problems.append("%s 键段值非法 %d 条：%s"
+                            % (name, len(bad_value), ", ".join(bad_value[:3])))
+
+
+def check_j7(ctx, probe):
+    blocked = _gate(probe)
+    if blocked:
+        return NOT_RUN, blocked, [ctx.rel(probe.path)]
+    section = _surface(probe, "monster")
+    if not section:
+        return NOT_RUN, "probe.surfaces.monster 缺失（未采集怪物标记）", [ctx.rel(probe.path)]
+    evidence = _surface_evidence_list(ctx, probe, section)
+    monsters = as_int(section.get("monsters_on_board"), -1)
+    items = as_int(section.get("image_items"), -1)
+    keys = _surface_keys(section)
+    if monsters <= 0:
+        return NOT_RUN, "场上无怪物（monsters_on_board=%s），怪物标记无从取证" % monsters, evidence
+    problems, shortfalls = [], []
+    if items < 0:
+        shortfalls.append("monster.image_items 缺失")
+    elif items < monsters:
+        problems.append("monster 图元 %d < 场上怪物 %d" % (items, monsters))
+    if not keys:
+        problems.append("monster 图元缺少 art:monster:* 键标签（无法证明画的是真图）")
+    _key_shape_problems("monster", keys, problems)
+    if as_int(section.get("placeholder"), 0):
+        problems.append("怪物标记落在占位 %d 条" % as_int(section.get("placeholder")))
+    status = decide(problems, shortfalls)
+    if status == FAIL:
+        return FAIL, join_unique(problems), evidence
+    if status == NOT_RUN:
+        return NOT_RUN, join_unique(shortfalls, 4), evidence
+    return PASS, "场上怪物 %d；monster 图元 %d ≥ %d；键 %d 个；占位 0" % (
+        monsters, items, monsters, len(set(keys))), evidence
+
+
+def check_j8(ctx, probe):
+    blocked = _gate(probe)
+    if blocked:
+        return NOT_RUN, blocked, [ctx.rel(probe.path)]
+    section = _surface(probe, "haunt")
+    if not section:
+        return NOT_RUN, "probe.surfaces.haunt 缺失（未采集作祟揭示）", [ctx.rel(probe.path)]
+    evidence = _surface_evidence_list(ctx, probe, section)
+    keys = _surface_keys(section)
+    problems, shortfalls = [], []
+    if not keys:
+        shortfalls.append("作祟揭示未采集到 haunt:* 图元")
+    if as_int(section.get("image_items"), 0) < 1:
+        shortfalls.append("haunt.image_items<1")
+    if section.get("dialog_opened") is not True:
+        shortfalls.append("作祟手册弹窗未打开（dialog_opened != true）")
+    _key_shape_problems("haunt", keys, problems)
+    if as_int(section.get("placeholder"), 0):
+        problems.append("作祟插画落在占位 %d 条" % as_int(section.get("placeholder")))
+    status = decide(problems, shortfalls)
+    if status == FAIL:
+        return FAIL, join_unique(problems), evidence
+    if status == NOT_RUN:
+        return NOT_RUN, join_unique(shortfalls, 4), evidence
+    return PASS, "作祟揭示：haunt 图元 %d；键 %s；弹窗已打开" % (
+        as_int(section.get("image_items")), ", ".join(keys[:3])), evidence
+
+
+def check_j9(ctx, probe):
+    blocked = _gate(probe)
+    if blocked:
+        return NOT_RUN, blocked, [ctx.rel(probe.path)]
+    section = _surface(probe, "ending")
+    if not section:
+        return NOT_RUN, "probe.surfaces.ending 缺失（未采集结算画面）", [ctx.rel(probe.path)]
+    evidence = _surface_evidence_list(ctx, probe, section)
+    keys = _surface_keys(section)
+    problems, shortfalls = [], []
+    if not keys:
+        shortfalls.append("GAME_OVER 后未采集到 ending:* 图元")
+    if section.get("dialog_opened") is not True:
+        shortfalls.append("结算画面未打开（dialog_opened != true）")
+    winner = str(section.get("winner") or "")
+    if not winner:
+        shortfalls.append("ending.winner 缺失")
+    elif winner not in SURFACE_KEY_VALUES["ending"]:
+        problems.append("ending.winner=%r 不是 heroes/traitor" % winner)
+    _key_shape_problems("ending", keys, problems)
+    if as_int(section.get("placeholder"), 0):
+        problems.append("结算插画落在占位 %d 条" % as_int(section.get("placeholder")))
+    status = decide(problems, shortfalls)
+    if status == FAIL:
+        return FAIL, join_unique(problems), evidence
+    if status == NOT_RUN:
+        return NOT_RUN, join_unique(shortfalls, 4), evidence
+    return PASS, "结算画面：ending 图元 %d；键 %s" % (
+        as_int(section.get("image_items")), ", ".join(keys[:3])), evidence
+
+
+def check_j10(ctx, probe):
+    blocked = _gate(probe)
+    if blocked:
+        return NOT_RUN, blocked, [ctx.rel(probe.path)]
+    section = _surface(probe, "card_back")
+    if not section:
+        return NOT_RUN, "probe.surfaces.card_back 缺失（未采集牌堆卡背）", [ctx.rel(probe.path)]
+    evidence = _surface_evidence_list(ctx, probe, section)
+    keys = _surface_keys(section)
+    problems, shortfalls = [], []
+    if not keys:
+        shortfalls.append("抽卡弹窗未采集到 card_back:* 图元")
+    if as_int(section.get("image_items"), 0) < 1:
+        shortfalls.append("card_back.image_items<1")
+    missing = [kind for kind in CARD_BACK_KINDS
+               if "card_back:%s" % kind not in keys]
+    if missing:
+        shortfalls.append("三类牌堆卡背缺 %s" % ", ".join(missing))
+    _key_shape_problems("card_back", keys, problems)
+    if as_int(section.get("placeholder"), 0):
+        problems.append("卡背落在占位 %d 条" % as_int(section.get("placeholder")))
+    status = decide(problems, shortfalls)
+    if status == FAIL:
+        return FAIL, join_unique(problems), evidence
+    if status == NOT_RUN:
+        return NOT_RUN, join_unique(shortfalls, 4), evidence
+    return PASS, "抽卡弹窗卡背：%d 个图元；键 %s" % (
+        as_int(section.get("image_items")), ", ".join(keys[:3])), evidence
+
+
+def check_j11(ctx, probe):
+    blocked = _gate(probe)
+    if blocked:
+        return NOT_RUN, blocked, [ctx.rel(probe.path)]
+    section = _surface(probe, "room_back")
+    if not section:
+        return NOT_RUN, "probe.surfaces.room_back 缺失（未采集未翻地块）", [ctx.rel(probe.path)]
+    evidence = _surface_evidence_list(ctx, probe, section)
+    keys = _surface_keys(section)
+    problems, shortfalls = [], []
+    if as_int(section.get("exploration_slots"), 0) <= 0:
+        shortfalls.append("探索预览没有落点格（exploration_slots=0）")
+    if not keys:
+        shortfalls.append("探索预览未采集到 room_back:* 图元")
+    if keys and "room_back:back" not in keys:
+        problems.append("未翻地块缺 room_back:back（只有 ghost 不足以说明牌背已画）")
+    _key_shape_problems("room_back", keys, problems)
+    if as_int(section.get("placeholder"), 0):
+        problems.append("未翻地块落在占位 %d 条" % as_int(section.get("placeholder")))
+    status = decide(problems, shortfalls)
+    if status == FAIL:
+        return FAIL, join_unique(problems), evidence
+    if status == NOT_RUN:
+        return NOT_RUN, join_unique(shortfalls, 4), evidence
+    ghost = "room_back:ghost" in keys
+    return PASS, "未翻地块：图元 %d；键 %s%s" % (
+        as_int(section.get("image_items")), ", ".join(keys[:3]),
+        "（含悬停虚影）" if ghost else ""), evidence
+
+
+def check_j12(ctx, probe):
+    blocked = _gate(probe)
+    if blocked:
+        return NOT_RUN, blocked, [ctx.rel(probe.path)]
+    section = _surface(probe, "dice")
+    if not section:
+        return NOT_RUN, "probe.surfaces.dice 缺失（未采集骰面）", [ctx.rel(probe.path)]
+    evidence = _surface_evidence_list(ctx, probe, section)
+    keys = _surface_keys(section)
+    problems, shortfalls = [], []
+    if not keys:
+        shortfalls.append("骰子结果区未采集到 dice:* 图元")
+    if as_int(section.get("image_items"), 0) < 1:
+        shortfalls.append("dice.image_items<1")
+    _key_shape_problems("dice", keys, problems)
+    if as_int(section.get("placeholder"), 0):
+        problems.append("骰面落在占位 %d 条" % as_int(section.get("placeholder")))
+    status = decide(problems, shortfalls)
+    if status == FAIL:
+        return FAIL, join_unique(problems), evidence
+    if status == NOT_RUN:
+        return NOT_RUN, join_unique(shortfalls, 4), evidence
+    return PASS, "骰子结果区：图元 %d；键 %s" % (
+        as_int(section.get("image_items")), ", ".join(keys[:3])), evidence
 
 
 # ---------------------------------------------------------------------------
@@ -1356,7 +1589,8 @@ def build_payload(ctx, probe, checks, changed):
     return {
         "tool": "qa/verify_game_art.py",
         "mode": "a33-game-art-acceptance",
-        "scope": "A-33 对局美术渲染（G5/P0）：J1-J6 判据 + S1-S3 静态检查",
+        "scope": ("A-33 对局美术渲染（G5/P0）：J1-J12 判据 + S1-S3 静态检查"
+                  "（J7-J12 覆盖 run6 六类渲染面）"),
         "scope_claim_note": ("本结论只覆盖「已渲染且非占位」；不替代 A-19/A-20/A-21/A-22/A-32，"
                              "也不抵消任何 NOT_RUN"),
         "readonly": not changed,
@@ -1431,7 +1665,7 @@ def print_human(payload):
         status.get(NOT_RUN, 0), status.get(CONFLICT, 0)))
     for item in payload["checks"]:
         print("  [%s] %s %s | %s" % (item["status"], item["id"], item["title"], item["detail"]))
-    print("排除项: %d 条（U-01…U-09，不做断言）" % payload["excluded_count"])
+    print("排除项: %d 条（U-06/U-08/U-09，不做断言）" % payload["excluded_count"])
     if payload["readonly_evidence"]["changed_during_audit"]:
         print("只读: 运行期变化 %s" % ", ".join(payload["readonly_evidence"]["changed_during_audit"]))
 
@@ -1459,6 +1693,12 @@ def main(argv=None):
     add_check(checks, "J4", "G5", "P0", *check_j4(ctx, probe))
     add_check(checks, "J5", "G5", "P0", *check_j5(ctx, probe))
     add_check(checks, "J6", "G5", "P0", *check_j6(ctx, probe))
+    add_check(checks, "J7", "G5", "P1", *check_j7(ctx, probe))
+    add_check(checks, "J8", "G5", "P1", *check_j8(ctx, probe))
+    add_check(checks, "J9", "G5", "P1", *check_j9(ctx, probe))
+    add_check(checks, "J10", "G5", "P1", *check_j10(ctx, probe))
+    add_check(checks, "J11", "G5", "P1", *check_j11(ctx, probe))
+    add_check(checks, "J12", "G5", "P1", *check_j12(ctx, probe))
     add_check(checks, "S1", "G5", "P1", *check_s1(ctx))
     add_check(checks, "S2", "G5", "P1", *check_s2(ctx))
     add_check(checks, "S3", "G5", "P1", *check_s3(ctx))

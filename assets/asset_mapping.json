@@ -27,16 +27,46 @@
       "width": 480,
       "height": 672,
       "format": "png"
+    },
+    "monster": {
+      "width": 512,
+      "height": 512,
+      "format": "png"
+    },
+    "haunt": {
+      "width": 1280,
+      "height": 720,
+      "format": "png"
+    },
+    "ending": {
+      "width": 1024,
+      "height": 576,
+      "format": "png"
+    },
+    "card_back": {
+      "width": 480,
+      "height": 640,
+      "format": "png"
+    },
+    "room_back": {
+      "width": 512,
+      "height": 512,
+      "format": "png"
+    },
+    "dice": {
+      "width": 256,
+      "height": 256,
+      "format": "png"
     }
   },
   "stats": {
-    "entries": 142,
+    "entries": 274,
     "unresolved": 0,
     "mapping_status": {
-      "matched": 142
+      "matched": 274
     },
     "runtime_status": {
-      "ok": 142
+      "ok": 274
     }
   },
   "entries": [
@@ -1459,6 +1489,1326 @@
       "status": "matched",
       "fallback": "",
       "runtime_path": "source/desktop/game/assets/cards/event/event_skeletons.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#mummy",
+      "runtime_key": "monster:mummy",
+      "record_id": "P-MONS-001",
+      "content_ref": "content.py:MONSTER_BASES#mummy",
+      "path": "photos/monster/mummy.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/mummy.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#ghost",
+      "runtime_key": "monster:ghost",
+      "record_id": "P-MONS-002",
+      "content_ref": "content.py:MONSTER_BASES#ghost",
+      "path": "photos/monster/ghost.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/ghost.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#beast",
+      "runtime_key": "monster:beast",
+      "record_id": "P-MONS-003",
+      "content_ref": "content.py:MONSTER_BASES#beast",
+      "path": "photos/monster/beast.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/beast.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#spider",
+      "runtime_key": "monster:spider",
+      "record_id": "P-MONS-004",
+      "content_ref": "content.py:MONSTER_BASES#spider",
+      "path": "photos/monster/spider.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/spider.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#cultist",
+      "runtime_key": "monster:cultist",
+      "record_id": "P-MONS-005",
+      "content_ref": "content.py:MONSTER_BASES#cultist",
+      "path": "photos/monster/cultist.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/cultist.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#zombie",
+      "runtime_key": "monster:zombie",
+      "record_id": "P-MONS-006",
+      "content_ref": "content.py:MONSTER_BASES#zombie",
+      "path": "photos/monster/zombie.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/zombie.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#zombie_lord",
+      "runtime_key": "monster:zombie_lord",
+      "record_id": "P-MONS-007",
+      "content_ref": "content.py:MONSTER_BASES#zombie_lord",
+      "path": "photos/monster/zombie_lord.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/zombie_lord.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#shadow",
+      "runtime_key": "monster:shadow",
+      "record_id": "P-MONS-008",
+      "content_ref": "content.py:MONSTER_BASES#shadow",
+      "path": "photos/monster/shadow.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/shadow.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#wolf",
+      "runtime_key": "monster:wolf",
+      "record_id": "P-MONS-009",
+      "content_ref": "content.py:MONSTER_BASES#wolf",
+      "path": "photos/monster/wolf.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/wolf.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#bat",
+      "runtime_key": "monster:bat",
+      "record_id": "P-MONS-010",
+      "content_ref": "content.py:MONSTER_BASES#bat",
+      "path": "photos/monster/bat.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/bat.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#rat",
+      "runtime_key": "monster:rat",
+      "record_id": "P-MONS-011",
+      "content_ref": "content.py:MONSTER_BASES#rat",
+      "path": "photos/monster/rat.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/rat.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#demon_1",
+      "runtime_key": "monster:demon_1",
+      "record_id": "P-MONS-012",
+      "content_ref": "content.py:MONSTER_BASES#demon_1",
+      "path": "photos/monster/demon_1.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/demon_1.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#demon_2",
+      "runtime_key": "monster:demon_2",
+      "record_id": "P-MONS-013",
+      "content_ref": "content.py:MONSTER_BASES#demon_2",
+      "path": "photos/monster/demon_2.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/demon_2.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#demon_3",
+      "runtime_key": "monster:demon_3",
+      "record_id": "P-MONS-014",
+      "content_ref": "content.py:MONSTER_BASES#demon_3",
+      "path": "photos/monster/demon_3.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/demon_3.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#demon_4",
+      "runtime_key": "monster:demon_4",
+      "record_id": "P-MONS-015",
+      "content_ref": "content.py:MONSTER_BASES#demon_4",
+      "path": "photos/monster/demon_4.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/demon_4.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#demon_5",
+      "runtime_key": "monster:demon_5",
+      "record_id": "P-MONS-016",
+      "content_ref": "content.py:MONSTER_BASES#demon_5",
+      "path": "photos/monster/demon_5.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/demon_5.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#demon_lord",
+      "runtime_key": "monster:demon_lord",
+      "record_id": "P-MONS-017",
+      "content_ref": "content.py:MONSTER_BASES#demon_lord",
+      "path": "photos/monster/demon_lord.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/demon_lord.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#dracula",
+      "runtime_key": "monster:dracula",
+      "record_id": "P-MONS-018",
+      "content_ref": "content.py:MONSTER_BASES#dracula",
+      "path": "photos/monster/dracula.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/dracula.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#bride",
+      "runtime_key": "monster:bride",
+      "record_id": "P-MONS-019",
+      "content_ref": "content.py:MONSTER_BASES#bride",
+      "path": "photos/monster/bride.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/bride.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#plant",
+      "runtime_key": "monster:plant",
+      "record_id": "P-MONS-020",
+      "content_ref": "content.py:MONSTER_BASES#plant",
+      "path": "photos/monster/plant.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/plant.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#frankenstein",
+      "runtime_key": "monster:frankenstein",
+      "record_id": "P-MONS-021",
+      "content_ref": "content.py:MONSTER_BASES#frankenstein",
+      "path": "photos/monster/frankenstein.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/frankenstein.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#witch",
+      "runtime_key": "monster:witch",
+      "record_id": "P-MONS-022",
+      "content_ref": "content.py:MONSTER_BASES#witch",
+      "path": "photos/monster/witch.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/witch.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#cat",
+      "runtime_key": "monster:cat",
+      "record_id": "P-MONS-023",
+      "content_ref": "content.py:MONSTER_BASES#cat",
+      "path": "photos/monster/cat.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/cat.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#giant_spider",
+      "runtime_key": "monster:giant_spider",
+      "record_id": "P-MONS-024",
+      "content_ref": "content.py:MONSTER_BASES#giant_spider",
+      "path": "photos/monster/giant_spider.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/giant_spider.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#dog",
+      "runtime_key": "monster:dog",
+      "record_id": "P-MONS-025",
+      "content_ref": "content.py:MONSTER_BASES#dog",
+      "path": "photos/monster/dog.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/dog.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#alien",
+      "runtime_key": "monster:alien",
+      "record_id": "P-MONS-026",
+      "content_ref": "content.py:MONSTER_BASES#alien",
+      "path": "photos/monster/alien.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/alien.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#creeper_tip",
+      "runtime_key": "monster:creeper_tip",
+      "record_id": "P-MONS-027",
+      "content_ref": "content.py:MONSTER_BASES#creeper_tip",
+      "path": "photos/monster/creeper_tip.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/creeper_tip.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#banshee",
+      "runtime_key": "monster:banshee",
+      "record_id": "P-MONS-028",
+      "content_ref": "content.py:MONSTER_BASES#banshee",
+      "path": "photos/monster/banshee.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/banshee.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#madman",
+      "runtime_key": "monster:madman",
+      "record_id": "P-MONS-029",
+      "content_ref": "content.py:MONSTER_BASES#madman",
+      "path": "photos/monster/madman.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/madman.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#giant",
+      "runtime_key": "monster:giant",
+      "record_id": "P-MONS-030",
+      "content_ref": "content.py:MONSTER_BASES#giant",
+      "path": "photos/monster/giant.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/giant.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#antibody",
+      "runtime_key": "monster:antibody",
+      "record_id": "P-MONS-031",
+      "content_ref": "content.py:MONSTER_BASES#antibody",
+      "path": "photos/monster/antibody.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/antibody.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#heart",
+      "runtime_key": "monster:heart",
+      "record_id": "P-MONS-032",
+      "content_ref": "content.py:MONSTER_BASES#heart",
+      "path": "photos/monster/heart.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/heart.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#brain",
+      "runtime_key": "monster:brain",
+      "record_id": "P-MONS-033",
+      "content_ref": "content.py:MONSTER_BASES#brain",
+      "path": "photos/monster/brain.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/brain.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#victim",
+      "runtime_key": "monster:victim",
+      "record_id": "P-MONS-034",
+      "content_ref": "content.py:MONSTER_BASES#victim",
+      "path": "photos/monster/victim.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/victim.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#cannibal_freak",
+      "runtime_key": "monster:cannibal_freak",
+      "record_id": "P-MONS-035",
+      "content_ref": "content.py:MONSTER_BASES#cannibal_freak",
+      "path": "photos/monster/cannibal_freak.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/cannibal_freak.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#ouroboros_head",
+      "runtime_key": "monster:ouroboros_head",
+      "record_id": "P-MONS-036",
+      "content_ref": "content.py:MONSTER_BASES#ouroboros_head",
+      "path": "photos/monster/ouroboros_head.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/ouroboros_head.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#crimson_jack",
+      "runtime_key": "monster:crimson_jack",
+      "record_id": "P-MONS-037",
+      "content_ref": "content.py:MONSTER_BASES#crimson_jack",
+      "path": "photos/monster/crimson_jack.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/crimson_jack.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#astral_spirit",
+      "runtime_key": "monster:astral_spirit",
+      "record_id": "P-MONS-038",
+      "content_ref": "content.py:MONSTER_BASES#astral_spirit",
+      "path": "photos/monster/astral_spirit.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/astral_spirit.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#servant",
+      "runtime_key": "monster:servant",
+      "record_id": "P-MONS-039",
+      "content_ref": "content.py:MONSTER_BASES#servant",
+      "path": "photos/monster/servant.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/servant.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#spectre",
+      "runtime_key": "monster:spectre",
+      "record_id": "P-MONS-040",
+      "content_ref": "content.py:MONSTER_BASES#spectre",
+      "path": "photos/monster/spectre.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/spectre.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#nightmare",
+      "runtime_key": "monster:nightmare",
+      "record_id": "P-MONS-041",
+      "content_ref": "content.py:MONSTER_BASES#nightmare",
+      "path": "photos/monster/nightmare.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/nightmare.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#curse_witch",
+      "runtime_key": "monster:curse_witch",
+      "record_id": "P-MONS-042",
+      "content_ref": "content.py:MONSTER_BASES#curse_witch",
+      "path": "photos/monster/curse_witch.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/curse_witch.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#curse_bear",
+      "runtime_key": "monster:curse_bear",
+      "record_id": "P-MONS-043",
+      "content_ref": "content.py:MONSTER_BASES#curse_bear",
+      "path": "photos/monster/curse_bear.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/curse_bear.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#curse_cat",
+      "runtime_key": "monster:curse_cat",
+      "record_id": "P-MONS-044",
+      "content_ref": "content.py:MONSTER_BASES#curse_cat",
+      "path": "photos/monster/curse_cat.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/curse_cat.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#curse_cultist",
+      "runtime_key": "monster:curse_cultist",
+      "record_id": "P-MONS-045",
+      "content_ref": "content.py:MONSTER_BASES#curse_cultist",
+      "path": "photos/monster/curse_cultist.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/curse_cultist.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#sphinx",
+      "runtime_key": "monster:sphinx",
+      "record_id": "P-MONS-046",
+      "content_ref": "content.py:MONSTER_BASES#sphinx",
+      "path": "photos/monster/sphinx.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/sphinx.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#hell_demon_lord",
+      "runtime_key": "monster:hell_demon_lord",
+      "record_id": "P-MONS-047",
+      "content_ref": "content.py:MONSTER_BASES#hell_demon_lord",
+      "path": "photos/monster/hell_demon_lord.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/hell_demon_lord.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#story_spider",
+      "runtime_key": "monster:story_spider",
+      "record_id": "P-MONS-048",
+      "content_ref": "content.py:MONSTER_BASES#story_spider",
+      "path": "photos/monster/story_spider.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/story_spider.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#story_witch",
+      "runtime_key": "monster:story_witch",
+      "record_id": "P-MONS-049",
+      "content_ref": "content.py:MONSTER_BASES#story_witch",
+      "path": "photos/monster/story_witch.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/story_witch.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#story_dragon",
+      "runtime_key": "monster:story_dragon",
+      "record_id": "P-MONS-050",
+      "content_ref": "content.py:MONSTER_BASES#story_dragon",
+      "path": "photos/monster/story_dragon.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/story_dragon.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#labyrinth_servant",
+      "runtime_key": "monster:labyrinth_servant",
+      "record_id": "P-MONS-051",
+      "content_ref": "content.py:MONSTER_BASES#labyrinth_servant",
+      "path": "photos/monster/labyrinth_servant.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/labyrinth_servant.png"
+    },
+    {
+      "target_ref": "content.py:MONSTER_BASES#wisp",
+      "runtime_key": "monster:wisp",
+      "record_id": "P-MONS-052",
+      "content_ref": "content.py:MONSTER_BASES#wisp",
+      "path": "photos/monster/wisp.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/monsters/wisp.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#1",
+      "runtime_key": "haunt:1",
+      "record_id": "P-HAUNT-001",
+      "content_ref": "content.py:HAUNT_DEFS#1",
+      "path": "photos/haunt/haunt_1.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_1.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#2",
+      "runtime_key": "haunt:2",
+      "record_id": "P-HAUNT-002",
+      "content_ref": "content.py:HAUNT_DEFS#2",
+      "path": "photos/haunt/haunt_2.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_2.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#3",
+      "runtime_key": "haunt:3",
+      "record_id": "P-HAUNT-003",
+      "content_ref": "content.py:HAUNT_DEFS#3",
+      "path": "photos/haunt/haunt_3.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_3.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#4",
+      "runtime_key": "haunt:4",
+      "record_id": "P-HAUNT-004",
+      "content_ref": "content.py:HAUNT_DEFS#4",
+      "path": "photos/haunt/haunt_4.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_4.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#5",
+      "runtime_key": "haunt:5",
+      "record_id": "P-HAUNT-005",
+      "content_ref": "content.py:HAUNT_DEFS#5",
+      "path": "photos/haunt/haunt_5.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_5.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#6",
+      "runtime_key": "haunt:6",
+      "record_id": "P-HAUNT-006",
+      "content_ref": "content.py:HAUNT_DEFS#6",
+      "path": "photos/haunt/haunt_6.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_6.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#7",
+      "runtime_key": "haunt:7",
+      "record_id": "P-HAUNT-007",
+      "content_ref": "content.py:HAUNT_DEFS#7",
+      "path": "photos/haunt/haunt_7.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_7.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#8",
+      "runtime_key": "haunt:8",
+      "record_id": "P-HAUNT-008",
+      "content_ref": "content.py:HAUNT_DEFS#8",
+      "path": "photos/haunt/haunt_8.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_8.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#9",
+      "runtime_key": "haunt:9",
+      "record_id": "P-HAUNT-009",
+      "content_ref": "content.py:HAUNT_DEFS#9",
+      "path": "photos/haunt/haunt_9.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_9.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#10",
+      "runtime_key": "haunt:10",
+      "record_id": "P-HAUNT-010",
+      "content_ref": "content.py:HAUNT_DEFS#10",
+      "path": "photos/haunt/haunt_10.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_10.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#11",
+      "runtime_key": "haunt:11",
+      "record_id": "P-HAUNT-011",
+      "content_ref": "content.py:HAUNT_DEFS#11",
+      "path": "photos/haunt/haunt_11.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_11.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#12",
+      "runtime_key": "haunt:12",
+      "record_id": "P-HAUNT-012",
+      "content_ref": "content.py:HAUNT_DEFS#12",
+      "path": "photos/haunt/haunt_12.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_12.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#13",
+      "runtime_key": "haunt:13",
+      "record_id": "P-HAUNT-013",
+      "content_ref": "content.py:HAUNT_DEFS#13",
+      "path": "photos/haunt/haunt_13.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_13.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#14",
+      "runtime_key": "haunt:14",
+      "record_id": "P-HAUNT-014",
+      "content_ref": "content.py:HAUNT_DEFS#14",
+      "path": "photos/haunt/haunt_14.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_14.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#15",
+      "runtime_key": "haunt:15",
+      "record_id": "P-HAUNT-015",
+      "content_ref": "content.py:HAUNT_DEFS#15",
+      "path": "photos/haunt/haunt_15.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_15.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#16",
+      "runtime_key": "haunt:16",
+      "record_id": "P-HAUNT-016",
+      "content_ref": "content.py:HAUNT_DEFS#16",
+      "path": "photos/haunt/haunt_16.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_16.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#17",
+      "runtime_key": "haunt:17",
+      "record_id": "P-HAUNT-017",
+      "content_ref": "content.py:HAUNT_DEFS#17",
+      "path": "photos/haunt/haunt_17.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_17.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#18",
+      "runtime_key": "haunt:18",
+      "record_id": "P-HAUNT-018",
+      "content_ref": "content.py:HAUNT_DEFS#18",
+      "path": "photos/haunt/haunt_18.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_18.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#19",
+      "runtime_key": "haunt:19",
+      "record_id": "P-HAUNT-019",
+      "content_ref": "content.py:HAUNT_DEFS#19",
+      "path": "photos/haunt/haunt_19.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_19.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#20",
+      "runtime_key": "haunt:20",
+      "record_id": "P-HAUNT-020",
+      "content_ref": "content.py:HAUNT_DEFS#20",
+      "path": "photos/haunt/haunt_20.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_20.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#21",
+      "runtime_key": "haunt:21",
+      "record_id": "P-HAUNT-021",
+      "content_ref": "content.py:HAUNT_DEFS#21",
+      "path": "photos/haunt/haunt_21.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_21.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#22",
+      "runtime_key": "haunt:22",
+      "record_id": "P-HAUNT-022",
+      "content_ref": "content.py:HAUNT_DEFS#22",
+      "path": "photos/haunt/haunt_22.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_22.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#23",
+      "runtime_key": "haunt:23",
+      "record_id": "P-HAUNT-023",
+      "content_ref": "content.py:HAUNT_DEFS#23",
+      "path": "photos/haunt/haunt_23.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_23.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#24",
+      "runtime_key": "haunt:24",
+      "record_id": "P-HAUNT-024",
+      "content_ref": "content.py:HAUNT_DEFS#24",
+      "path": "photos/haunt/haunt_24.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_24.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#25",
+      "runtime_key": "haunt:25",
+      "record_id": "P-HAUNT-025",
+      "content_ref": "content.py:HAUNT_DEFS#25",
+      "path": "photos/haunt/haunt_25.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_25.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#26",
+      "runtime_key": "haunt:26",
+      "record_id": "P-HAUNT-026",
+      "content_ref": "content.py:HAUNT_DEFS#26",
+      "path": "photos/haunt/haunt_26.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_26.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#27",
+      "runtime_key": "haunt:27",
+      "record_id": "P-HAUNT-027",
+      "content_ref": "content.py:HAUNT_DEFS#27",
+      "path": "photos/haunt/haunt_27.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_27.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#28",
+      "runtime_key": "haunt:28",
+      "record_id": "P-HAUNT-028",
+      "content_ref": "content.py:HAUNT_DEFS#28",
+      "path": "photos/haunt/haunt_28.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_28.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#29",
+      "runtime_key": "haunt:29",
+      "record_id": "P-HAUNT-029",
+      "content_ref": "content.py:HAUNT_DEFS#29",
+      "path": "photos/haunt/haunt_29.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_29.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#30",
+      "runtime_key": "haunt:30",
+      "record_id": "P-HAUNT-030",
+      "content_ref": "content.py:HAUNT_DEFS#30",
+      "path": "photos/haunt/haunt_30.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_30.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#31",
+      "runtime_key": "haunt:31",
+      "record_id": "P-HAUNT-031",
+      "content_ref": "content.py:HAUNT_DEFS#31",
+      "path": "photos/haunt/haunt_31.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_31.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#32",
+      "runtime_key": "haunt:32",
+      "record_id": "P-HAUNT-032",
+      "content_ref": "content.py:HAUNT_DEFS#32",
+      "path": "photos/haunt/haunt_32.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_32.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#33",
+      "runtime_key": "haunt:33",
+      "record_id": "P-HAUNT-033",
+      "content_ref": "content.py:HAUNT_DEFS#33",
+      "path": "photos/haunt/haunt_33.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_33.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#34",
+      "runtime_key": "haunt:34",
+      "record_id": "P-HAUNT-034",
+      "content_ref": "content.py:HAUNT_DEFS#34",
+      "path": "photos/haunt/haunt_34.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_34.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#35",
+      "runtime_key": "haunt:35",
+      "record_id": "P-HAUNT-035",
+      "content_ref": "content.py:HAUNT_DEFS#35",
+      "path": "photos/haunt/haunt_35.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_35.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#36",
+      "runtime_key": "haunt:36",
+      "record_id": "P-HAUNT-036",
+      "content_ref": "content.py:HAUNT_DEFS#36",
+      "path": "photos/haunt/haunt_36.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_36.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#37",
+      "runtime_key": "haunt:37",
+      "record_id": "P-HAUNT-037",
+      "content_ref": "content.py:HAUNT_DEFS#37",
+      "path": "photos/haunt/haunt_37.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_37.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#38",
+      "runtime_key": "haunt:38",
+      "record_id": "P-HAUNT-038",
+      "content_ref": "content.py:HAUNT_DEFS#38",
+      "path": "photos/haunt/haunt_38.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_38.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#39",
+      "runtime_key": "haunt:39",
+      "record_id": "P-HAUNT-039",
+      "content_ref": "content.py:HAUNT_DEFS#39",
+      "path": "photos/haunt/haunt_39.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_39.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#40",
+      "runtime_key": "haunt:40",
+      "record_id": "P-HAUNT-040",
+      "content_ref": "content.py:HAUNT_DEFS#40",
+      "path": "photos/haunt/haunt_40.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_40.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#41",
+      "runtime_key": "haunt:41",
+      "record_id": "P-HAUNT-041",
+      "content_ref": "content.py:HAUNT_DEFS#41",
+      "path": "photos/haunt/haunt_41.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_41.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#42",
+      "runtime_key": "haunt:42",
+      "record_id": "P-HAUNT-042",
+      "content_ref": "content.py:HAUNT_DEFS#42",
+      "path": "photos/haunt/haunt_42.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_42.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#43",
+      "runtime_key": "haunt:43",
+      "record_id": "P-HAUNT-043",
+      "content_ref": "content.py:HAUNT_DEFS#43",
+      "path": "photos/haunt/haunt_43.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_43.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#44",
+      "runtime_key": "haunt:44",
+      "record_id": "P-HAUNT-044",
+      "content_ref": "content.py:HAUNT_DEFS#44",
+      "path": "photos/haunt/haunt_44.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_44.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#45",
+      "runtime_key": "haunt:45",
+      "record_id": "P-HAUNT-045",
+      "content_ref": "content.py:HAUNT_DEFS#45",
+      "path": "photos/haunt/haunt_45.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_45.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#46",
+      "runtime_key": "haunt:46",
+      "record_id": "P-HAUNT-046",
+      "content_ref": "content.py:HAUNT_DEFS#46",
+      "path": "photos/haunt/haunt_46.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_46.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#47",
+      "runtime_key": "haunt:47",
+      "record_id": "P-HAUNT-047",
+      "content_ref": "content.py:HAUNT_DEFS#47",
+      "path": "photos/haunt/haunt_47.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_47.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#48",
+      "runtime_key": "haunt:48",
+      "record_id": "P-HAUNT-048",
+      "content_ref": "content.py:HAUNT_DEFS#48",
+      "path": "photos/haunt/haunt_48.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_48.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#49",
+      "runtime_key": "haunt:49",
+      "record_id": "P-HAUNT-049",
+      "content_ref": "content.py:HAUNT_DEFS#49",
+      "path": "photos/haunt/haunt_49.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_49.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#50",
+      "runtime_key": "haunt:50",
+      "record_id": "P-HAUNT-050",
+      "content_ref": "content.py:HAUNT_DEFS#50",
+      "path": "photos/haunt/haunt_50.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_50.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#51",
+      "runtime_key": "haunt:51",
+      "record_id": "P-HAUNT-051",
+      "content_ref": "content.py:HAUNT_DEFS#51",
+      "path": "photos/haunt/haunt_51.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_51.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#52",
+      "runtime_key": "haunt:52",
+      "record_id": "P-HAUNT-052",
+      "content_ref": "content.py:HAUNT_DEFS#52",
+      "path": "photos/haunt/haunt_52.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_52.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#53",
+      "runtime_key": "haunt:53",
+      "record_id": "P-HAUNT-053",
+      "content_ref": "content.py:HAUNT_DEFS#53",
+      "path": "photos/haunt/haunt_53.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_53.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#54",
+      "runtime_key": "haunt:54",
+      "record_id": "P-HAUNT-054",
+      "content_ref": "content.py:HAUNT_DEFS#54",
+      "path": "photos/haunt/haunt_54.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_54.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#55",
+      "runtime_key": "haunt:55",
+      "record_id": "P-HAUNT-055",
+      "content_ref": "content.py:HAUNT_DEFS#55",
+      "path": "photos/haunt/haunt_55.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_55.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#56",
+      "runtime_key": "haunt:56",
+      "record_id": "P-HAUNT-056",
+      "content_ref": "content.py:HAUNT_DEFS#56",
+      "path": "photos/haunt/haunt_56.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_56.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#57",
+      "runtime_key": "haunt:57",
+      "record_id": "P-HAUNT-057",
+      "content_ref": "content.py:HAUNT_DEFS#57",
+      "path": "photos/haunt/haunt_57.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_57.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#58",
+      "runtime_key": "haunt:58",
+      "record_id": "P-HAUNT-058",
+      "content_ref": "content.py:HAUNT_DEFS#58",
+      "path": "photos/haunt/haunt_58.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_58.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#59",
+      "runtime_key": "haunt:59",
+      "record_id": "P-HAUNT-059",
+      "content_ref": "content.py:HAUNT_DEFS#59",
+      "path": "photos/haunt/haunt_59.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_59.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#60",
+      "runtime_key": "haunt:60",
+      "record_id": "P-HAUNT-060",
+      "content_ref": "content.py:HAUNT_DEFS#60",
+      "path": "photos/haunt/haunt_60.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_60.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#61",
+      "runtime_key": "haunt:61",
+      "record_id": "P-HAUNT-061",
+      "content_ref": "content.py:HAUNT_DEFS#61",
+      "path": "photos/haunt/haunt_61.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_61.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#62",
+      "runtime_key": "haunt:62",
+      "record_id": "P-HAUNT-062",
+      "content_ref": "content.py:HAUNT_DEFS#62",
+      "path": "photos/haunt/haunt_62.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_62.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#63",
+      "runtime_key": "haunt:63",
+      "record_id": "P-HAUNT-063",
+      "content_ref": "content.py:HAUNT_DEFS#63",
+      "path": "photos/haunt/haunt_63.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_63.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#64",
+      "runtime_key": "haunt:64",
+      "record_id": "P-HAUNT-064",
+      "content_ref": "content.py:HAUNT_DEFS#64",
+      "path": "photos/haunt/haunt_64.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_64.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#65",
+      "runtime_key": "haunt:65",
+      "record_id": "P-HAUNT-065",
+      "content_ref": "content.py:HAUNT_DEFS#65",
+      "path": "photos/haunt/haunt_65.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_65.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#66",
+      "runtime_key": "haunt:66",
+      "record_id": "P-HAUNT-066",
+      "content_ref": "content.py:HAUNT_DEFS#66",
+      "path": "photos/haunt/haunt_66.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_66.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#67",
+      "runtime_key": "haunt:67",
+      "record_id": "P-HAUNT-067",
+      "content_ref": "content.py:HAUNT_DEFS#67",
+      "path": "photos/haunt/haunt_67.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_67.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#68",
+      "runtime_key": "haunt:68",
+      "record_id": "P-HAUNT-068",
+      "content_ref": "content.py:HAUNT_DEFS#68",
+      "path": "photos/haunt/haunt_68.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_68.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#69",
+      "runtime_key": "haunt:69",
+      "record_id": "P-HAUNT-069",
+      "content_ref": "content.py:HAUNT_DEFS#69",
+      "path": "photos/haunt/haunt_69.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_69.png"
+    },
+    {
+      "target_ref": "content.py:HAUNT_DEFS#70",
+      "runtime_key": "haunt:70",
+      "record_id": "P-HAUNT-070",
+      "content_ref": "content.py:HAUNT_DEFS#70",
+      "path": "photos/haunt/haunt_70.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/haunts/haunt_70.png"
+    },
+    {
+      "target_ref": "content.py:RENDER_SURFACE_SPECS#ending_heroes",
+      "runtime_key": "ending:heroes",
+      "record_id": "P-END-001",
+      "content_ref": "content.py:RENDER_SURFACE_SPECS#ending_heroes",
+      "path": "photos/ending/ending_heroes.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/endings/ending_heroes.png"
+    },
+    {
+      "target_ref": "content.py:RENDER_SURFACE_SPECS#ending_traitor",
+      "runtime_key": "ending:traitor",
+      "record_id": "P-END-002",
+      "content_ref": "content.py:RENDER_SURFACE_SPECS#ending_traitor",
+      "path": "photos/ending/ending_traitor.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/endings/ending_traitor.png"
+    },
+    {
+      "target_ref": "content.py:RENDER_SURFACE_SPECS#card_back_omen",
+      "runtime_key": "card_back:omen",
+      "record_id": "P-CBACK-001",
+      "content_ref": "content.py:RENDER_SURFACE_SPECS#card_back_omen",
+      "path": "photos/card_back/card_back_omen.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/card_backs/card_back_omen.png"
+    },
+    {
+      "target_ref": "content.py:RENDER_SURFACE_SPECS#card_back_item",
+      "runtime_key": "card_back:item",
+      "record_id": "P-CBACK-002",
+      "content_ref": "content.py:RENDER_SURFACE_SPECS#card_back_item",
+      "path": "photos/card_back/card_back_item.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/card_backs/card_back_item.png"
+    },
+    {
+      "target_ref": "content.py:RENDER_SURFACE_SPECS#card_back_event",
+      "runtime_key": "card_back:event",
+      "record_id": "P-CBACK-003",
+      "content_ref": "content.py:RENDER_SURFACE_SPECS#card_back_event",
+      "path": "photos/card_back/card_back_event.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/card_backs/card_back_event.png"
+    },
+    {
+      "target_ref": "content.py:RENDER_SURFACE_SPECS#room_back",
+      "runtime_key": "room_back:back",
+      "record_id": "P-RBACK-001",
+      "content_ref": "content.py:RENDER_SURFACE_SPECS#room_back",
+      "path": "photos/room_back/room_back.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/room_backs/room_back.png"
+    },
+    {
+      "target_ref": "content.py:RENDER_SURFACE_SPECS#room_ghost",
+      "runtime_key": "room_back:ghost",
+      "record_id": "P-RBACK-002",
+      "content_ref": "content.py:RENDER_SURFACE_SPECS#room_ghost",
+      "path": "photos/room_back/room_ghost.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/room_backs/room_ghost.png"
+    },
+    {
+      "target_ref": "content.py:RENDER_SURFACE_SPECS#dice_0",
+      "runtime_key": "dice:0",
+      "record_id": "P-DICE-001",
+      "content_ref": "content.py:RENDER_SURFACE_SPECS#dice_0",
+      "path": "photos/dice/dice_0.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/dice/dice_0.png"
+    },
+    {
+      "target_ref": "content.py:RENDER_SURFACE_SPECS#dice_1",
+      "runtime_key": "dice:1",
+      "record_id": "P-DICE-002",
+      "content_ref": "content.py:RENDER_SURFACE_SPECS#dice_1",
+      "path": "photos/dice/dice_1.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/dice/dice_1.png"
+    },
+    {
+      "target_ref": "content.py:RENDER_SURFACE_SPECS#dice_2",
+      "runtime_key": "dice:2",
+      "record_id": "P-DICE-003",
+      "content_ref": "content.py:RENDER_SURFACE_SPECS#dice_2",
+      "path": "photos/dice/dice_2.png",
+      "status": "matched",
+      "fallback": "",
+      "runtime_path": "source/desktop/game/assets/dice/dice_2.png"
     }
   ],
   "unresolved": []

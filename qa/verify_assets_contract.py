@@ -13,13 +13,13 @@
 --------
 source/desktop/game/asset_pipeline.py          P 表构建与运行时图规范化
 source/desktop/game/asset_registry.py          运行时资源注册表
-source/desktop/game/assets/p_table.json        P 表（142 个资源位）
+source/desktop/game/assets/p_table.json        P 表（274 个资源位）
 source/desktop/game/assets/asset_mapping.json  资源映射（entries + unresolved）
 
 交付物缺失时全部相关检查明确 SKIP（退出码 3），不伪造 PASS。
 
 断言常量来自 .codebuddy/wfat/p_table_spec.md 与只读实测：
-142 个资源位（角色 12 / 房间 50 / 预兆 13 / 物品 22 / 事件 45）、
+274 个资源位（角色 12 / 房间 50 / 预兆 13 / 物品 22 / 事件 45）、
 磁盘 95 张（全部 .png 扩展名 + JPEG 魔数，故全部 partial）、
 缺口 47（角色 12 / 房间 1 / 事件 34）。
 
@@ -73,27 +73,37 @@ PASS, FAIL, SKIP, WARN, ERROR = "PASS", "FAIL", "SKIP", "WARN", "ERROR"
 
 # ---------------------------------------------------------------- 断言常量 --
 
-EXPECTED_TOTAL = 142
+EXPECTED_TOTAL = 274
 EXPECTED_BY_ASSET_TYPE = {
     "character": 12,
     "room": 50,
     "card_omen": 13,
     "card_item": 22,
     "card_event": 45,
+    # run6 六类渲染面
+    "monster": 52,
+    "haunt": 70,
+    "ending": 2,
+    "card_back": 3,
+    "room_back": 2,
+    "dice": 3,
 }
 EXPECTED_CONTENT_COUNTS = {
     "CHARACTER_FACES": 12,
     "ROOM_BASES": 39,
     "ROOM_SUPPLEMENTAL_SPECS": 11,
     "OMEN_CARDS": 13,
+    "MONSTER_BASES": 52,
+    "HAUNT_DEFS": 70,
+    "RENDER_SURFACE_SPECS": 10,
     "ITEM_CARDS": 22,
     "EVENT_BASES": 11,
     "EVENT_SUPPLEMENTAL_SPECS": 34,
 }
 # run5 v2（2026-11-20）：47 个缺口已按"复用既有文件 + 130 张无损转码"落实，
-# 142 位全部 usable；旧 0/95/47 不再是活跃断言（见 qa/run5_baseline_diff.json）。
+# 274 位全部 usable；旧 0/95/47 不再是活跃断言（见 qa/run5_baseline_diff.json）。
 BASELINE_AVAILABILITY = {
-    "usable": 142,
+    "usable": 274,
     "partial": 0,
     "missing": 0,
     "corrupted": 0,
@@ -101,7 +111,7 @@ BASELINE_AVAILABILITY = {
 }
 BASELINE_MISSING_BY_TYPE = {}
 
-EXPECTED_SOURCE_FILES = 142
+EXPECTED_SOURCE_FILES = 274
 # architecture.json 决策：房间 512x512、卡牌 480x672（角色尺寸架构未定义，见文档 R03）
 ARCHITECTURE_RUNTIME_SIZES = {"room": (512, 512), "card": (480, 672)}
 RUNTIME_SPEC_KEY = {"room": "room", "card_omen": "card", "card_item": "card",
@@ -121,7 +131,11 @@ RECOMMENDED_LONG_EDGE = {
 # 运行时目标即 320；该偏差只对角色生效，WW 重新进入时按 R3 重议。
 LONG_EDGE_DEVIATION = {"character": 320}
 BLOCKING_FLAGS = {"ext_mismatch", "no_alpha", "below_recommended", "ratio_drift"}
-USABLE_FIELD_ENUM = {"portrait", "room_tile", "card_face", "icon", "background", "preview", "none"}
+USABLE_FIELD_ENUM = {
+    "portrait", "room_tile", "card_face", "icon", "background", "preview", "none",
+    # run6 六类渲染面
+    "monster_marker", "haunt_art", "ending_screen", "card_back", "room_back", "dice_face",
+}
 ALLOWED_AVAILABILITY = {"usable", "partial", "missing", "corrupted", "duplicate"}
 ALLOWED_MAPPING_STATUS = {
     "matched", "fallback", "ambiguous", "unmatched", "alias", "excluded", "pending_missing",
@@ -134,6 +148,13 @@ USABLE_FIELDS_BY_TYPE = {
     "card_omen": {"card_face", "preview"},
     "card_item": {"card_face", "preview"},
     "card_event": {"card_face", "preview"},
+    # run6 六类渲染面
+    "monster": {"monster_marker", "preview"},
+    "haunt": {"haunt_art", "preview"},
+    "ending": {"ending_screen", "preview"},
+    "card_back": {"card_back", "preview"},
+    "room_back": {"room_back", "preview"},
+    "dice": {"dice_face", "preview"},
 }
 REQUIRED_FIELDS = [
     "record_id", "source_file", "source_path", "asset_type", "dimensions", "format",
@@ -141,13 +162,21 @@ REQUIRED_FIELDS = [
     "availability", "mapping_status", "target_ref", "missing_note", "provenance",
 ]
 
-RECORD_ID_RE = re.compile(r"^P-(CHR|ROOM|OMEN|ITEM|EVT|ICO|BG|UNK)-(\d{3})$")
+RECORD_ID_RE = re.compile(
+    r"^P-(CHR|ROOM|OMEN|ITEM|EVT|MONS|HAUNT|END|CBACK|RBACK|DICE|ICO|BG|UNK)-(\d{3})$")
 RECORD_ID_PREFIX = {
     "CHR": "character",
     "ROOM": "room",
     "OMEN": "card_omen",
     "ITEM": "card_item",
     "EVT": "card_event",
+    # run6 六类渲染面
+    "MONS": "monster",
+    "HAUNT": "haunt",
+    "END": "ending",
+    "CBACK": "card_back",
+    "RBACK": "room_back",
+    "DICE": "dice",
     "ICO": "icon",
     "BG": "background",
     "UNK": "unknown",
@@ -166,6 +195,18 @@ COLLECTION_ALIASES = {
     "card_item": "ITEM_CARDS",
     "event": "EVENT_BASES",
     "card_event": "EVENT_BASES",
+    # run6 六类渲染面
+    "monster": "MONSTER_BASES",
+    "monsters": "MONSTER_BASES",
+    "haunt": "HAUNT_DEFS",
+    "haunts": "HAUNT_DEFS",
+    "ending": "RENDER_SURFACE_SPECS",
+    "endings": "RENDER_SURFACE_SPECS",
+    "card_back": "RENDER_SURFACE_SPECS",
+    "card_backs": "RENDER_SURFACE_SPECS",
+    "room_back": "RENDER_SURFACE_SPECS",
+    "room_backs": "RENDER_SURFACE_SPECS",
+    "dice": "RENDER_SURFACE_SPECS",
 }
 UNIVERSE_COLLECTIONS = {
     "character": ("CHARACTER_FACES",),
@@ -173,6 +214,21 @@ UNIVERSE_COLLECTIONS = {
     "card_omen": ("OMEN_CARDS",),
     "card_item": ("ITEM_CARDS",),
     "card_event": ("EVENT_BASES", "EVENT_SUPPLEMENTAL_SPECS"),
+    # run6 六类渲染面
+    "monster": ("MONSTER_BASES",),
+    "haunt": ("HAUNT_DEFS",),
+    "ending": ("RENDER_SURFACE_SPECS",),
+    "card_back": ("RENDER_SURFACE_SPECS",),
+    "room_back": ("RENDER_SURFACE_SPECS",),
+    "dice": ("RENDER_SURFACE_SPECS",),
+}
+# 四类固定渲染位共用 RENDER_SURFACE_SPECS；必须按 spec.surface 切子集，
+# 否则每个 asset_type 都会看到全部 10 个 id（2 ending / 3 card_back / 2 room_back / 3 dice）。
+UNIVERSE_SURFACE = {
+    "ending": "ending",
+    "card_back": "card_back",
+    "room_back": "room_back",
+    "dice": "dice",
 }
 REL_PATH_RE = re.compile(r"^[a-z0-9_][a-z0-9_./-]*$")
 
@@ -450,7 +506,12 @@ def ref_attr(ref: Any, *names: str) -> Any:
 # ------------------------------------------------------------ content.py 解析 --
 
 def extract_ids(node: ast.AST) -> List[Any]:
-    """从列表字面量提取 id；角色的 face_index 一并保留用于双面校验。"""
+    """从列表字面量提取 id；角色的 face_index 一并保留用于双面校验。
+
+    run6：RENDER_SURFACE_SPECS 的元素是 dict 字面量（``{'id': ..., 'surface': ...}``），
+    MONSTER_BASES 的元素是 ``monster_def(monster_id=...)`` 调用；两种形态都要能取到主键，
+    否则集合计数会退化成 0（C05 曾因此在 52/70/10 上报错）。
+    """
     ids: List[Any] = []
     elements = getattr(node, "elts", []) or []
     for element in elements:
@@ -459,10 +520,23 @@ def extract_ids(node: ast.AST) -> List[Any]:
             if isinstance(first, ast.Constant) and isinstance(first.value, str):
                 ids.append(first.value)
             continue
+        if isinstance(element, ast.Dict):
+            fields: Dict[str, Any] = {}
+            for key_node, value_node in zip(element.keys, element.values):
+                if (isinstance(key_node, ast.Constant)
+                        and isinstance(key_node.value, str)
+                        and isinstance(value_node, ast.Constant)):
+                    fields[key_node.value] = value_node.value
+            if isinstance(fields.get("id"), str):
+                entry: Any = {"id": fields["id"]}
+                if isinstance(fields.get("surface"), str):
+                    entry["surface"] = fields["surface"]
+                ids.append(entry)
+            continue
         if isinstance(element, ast.Call):
             keywords = {kw.arg: kw.value for kw in element.keywords if kw.arg}
             primary = None
-            for name in ("room_id", "card_id", "id"):
+            for name in ("room_id", "card_id", "monster_id", "id"):
                 if name in keywords and isinstance(keywords[name], ast.Constant):
                     primary = keywords[name].value
                     break
@@ -478,17 +552,85 @@ def extract_ids(node: ast.AST) -> List[Any]:
     return ids
 
 
+def _load_content_collections(path: Path) -> Dict[str, list]:
+    """从 content.py 的真实模块取集合（AST 只有字面量列表覆盖不到的两类）。
+
+    * ``MONSTER_BASES``：元素是 ``monster_def(...)`` 调用，AST 分支取 id，这里取真实对象；
+    * ``HAUNT_DEFS``：模块里没有同名列表，唯一来源是 ``build_catalog(0).haunt_defs``
+      （P 表 target_ref 写的就是 ``content.py:HAUNT_DEFS#<n>``），只能导入求值；
+    * ``RENDER_SURFACE_SPECS``：需要 ``id`` + ``surface`` 两个字段，才能按渲染面切分子集。
+
+    导入失败或解析到别的 ``game.content``（同名模块遮蔽）时返回空表，由 AST 结果兜底，
+    C05 会如实报出缺失而不是静默通过。
+    """
+    game_dir = path.parent
+    package_root = str(game_dir.parent)
+    added = package_root not in sys.path
+    if added:
+        sys.path.insert(0, package_root)
+    try:
+        module = importlib.import_module("game.content")
+        module_file = Path(getattr(module, "__file__", "") or "").resolve()
+        if module_file != path.resolve():
+            module = None
+    except Exception:
+        module = None
+    finally:
+        if added:
+            try:
+                sys.path.remove(package_root)
+            except ValueError:
+                pass
+    if module is None:
+        return {}
+
+    out: Dict[str, list] = {}
+    monsters = [
+        str(item.get("id"))
+        for item in (getattr(module, "MONSTER_BASES", []) or [])
+        if isinstance(item, dict) and item.get("id")
+    ]
+    if monsters:
+        out["MONSTER_BASES"] = monsters
+
+    specs: List[Any] = []
+    for spec in getattr(module, "RENDER_SURFACE_SPECS", []) or []:
+        if isinstance(spec, dict) and spec.get("id"):
+            entry: Dict[str, str] = {"id": str(spec["id"])}
+            if spec.get("surface"):
+                entry["surface"] = str(spec["surface"])
+            specs.append(entry)
+    if specs:
+        out["RENDER_SURFACE_SPECS"] = specs
+
+    haunt_defs = {}
+    try:
+        catalog = module.build_catalog(0)
+        haunt_defs = getattr(catalog, "haunt_defs", {}) or {}
+    except Exception:
+        haunt_defs = {}
+    if haunt_defs:
+        # 键是 int；P 表 target_ref 用字符串段，统一成 str 便于双向比对。
+        out["HAUNT_DEFS"] = [str(key) for key in sorted(haunt_defs)]
+    return out
+
+
 def load_content_index(path: Path) -> Dict[str, list]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     index: Dict[str, list] = {}
     for node in tree.body:
-        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            target, value = node.target, node.value
+        elif isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target, value = node.targets[0], node.value
+        else:
             continue
-        target = node.targets[0]
         if not isinstance(target, ast.Name) or target.id not in EXPECTED_CONTENT_COUNTS:
             continue
-        if isinstance(node.value, (ast.List, ast.Tuple)):
-            index[target.id] = extract_ids(node.value)
+        if isinstance(value, (ast.List, ast.Tuple)):
+            index[target.id] = extract_ids(value)
+    # 真实集合优先（覆盖 AST 取不到的 HAUNT_DEFS 与需要 surface 字段的渲染面规格）
+    index.update(_load_content_collections(path))
     return index
 
 
@@ -498,8 +640,26 @@ def content_primary_ids(index: Dict[str, list], collection: str) -> set:
         if isinstance(item, tuple):
             if isinstance(item[0], str):
                 out.add(item[0])
+        elif isinstance(item, dict):
+            ident = item.get("id")
+            if isinstance(ident, str):
+                out.add(ident)
         elif isinstance(item, str):
             out.add(item)
+    return out
+
+
+def content_surface_ids(index: Dict[str, list], collection: str, surface: str) -> set:
+    """RENDER_SURFACE_SPECS 按 ``surface`` 切子集（ending/card_back/room_back/dice）。"""
+    out = set()
+    for item in index.get(collection, []):
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("surface") or "") != surface:
+            continue
+        ident = item.get("id")
+        if isinstance(ident, str):
+            out.add(ident)
     return out
 
 
@@ -694,7 +854,7 @@ def check_c01(ctx: Context) -> Tuple[str, str]:
         problems.append("缺少 stats 对象")
     if problems:
         return FAIL, "；".join(problems[:8])
-    return PASS, "records=142；stats 自洽"
+    return PASS, "records=274；stats 自洽"
 
 
 def check_c02(ctx: Context) -> Tuple[str, str]:
@@ -767,9 +927,13 @@ def asset_type_universe(ctx: Context, asset_type: str) -> set:
     collections = UNIVERSE_COLLECTIONS.get(asset_type)
     if not collections:
         return set()
+    surface = UNIVERSE_SURFACE.get(asset_type)
     out = set()
     for collection in collections:
-        out |= content_primary_ids(ctx.content, collection)
+        if surface:
+            out |= content_surface_ids(ctx.content, collection, surface)
+        else:
+            out |= content_primary_ids(ctx.content, collection)
     return out
 
 
@@ -797,8 +961,11 @@ def check_c05(ctx: Context) -> Tuple[str, str]:
             rid = parsed["id"]
             if rid:
                 got[rid] = got.get(rid, 0) + 1
-        only_expected = universe - set(got)
-        only_actual = set(got) - universe
+        # content.py 的 haunt_defs 键是 int（1..70），P 表 target_ref 段是字符串；
+        # 统一成 str 再比对，其余集合本来就是 str，不受影响。
+        expected_ids = {str(item) for item in universe}
+        only_expected = expected_ids - set(got)
+        only_actual = set(got) - expected_ids
         if only_expected:
             problems.append("%s 漏登记 %d 个: %s" % (
                 asset_type, len(only_expected), ", ".join(sorted(only_expected)[:4])))
@@ -822,7 +989,8 @@ def check_c05(ctx: Context) -> Tuple[str, str]:
             "%s#f%s" % item for item in sorted(extra_faces)[:4]))
     if problems:
         return FAIL, "；".join(problems[:8])
-    return PASS, "七集合 12/39/11/13/22/11/34；142 条按 asset_type 与 content.py 双向一致"
+    return PASS, ("十集合 12/39/11/13/22/11/34/52/70/10（含 build_catalog(0).haunt_defs 与 "
+                  "RENDER_SURFACE_SPECS）；274 条按 asset_type 与 content.py 双向一致")
 
 
 def check_c06(ctx: Context) -> Tuple[str, str]:
@@ -857,7 +1025,7 @@ def check_c06(ctx: Context) -> Tuple[str, str]:
                             len(nonconformant), "; ".join(nonconformant[:2])))
     if problems:
         return FAIL, "；".join(problems[:6])
-    return PASS, "142 条 target_ref 均为 content.py:<集合>#<id> 且 id 可解析"
+    return PASS, "274 条 target_ref 均为 content.py:<集合>#<id> 且 id 可解析"
 
 
 def check_c07(ctx: Context) -> Tuple[str, str]:
@@ -880,7 +1048,7 @@ def check_c07(ctx: Context) -> Tuple[str, str]:
         return FAIL, "；".join(hard[:8])
     if soft:
         return WARN, "角色双面未消歧（见文档 R02）: %s" % "；".join(soft[:4])
-    return PASS, "142 条资源位唯一（角色按 card + face 区分）"
+    return PASS, "274 条资源位唯一（角色按 card + face 区分）"
 
 
 def check_c08(ctx: Context) -> Tuple[str, str]:
@@ -1242,7 +1410,7 @@ def check_c18(ctx: Context) -> Tuple[str, str]:
             len(duplicated), ", ".join(sorted(duplicated)[:4])))
     if problems:
         return FAIL, "；".join(problems[:6])
-    return PASS, "142 ↔ 142 双向覆盖，无孤立文件、无重复引用"
+    return PASS, "274 ↔ 274 双向覆盖，无孤立文件、无重复引用"
 
 
 def check_c19(ctx: Context) -> Tuple[str, str]:
@@ -1275,12 +1443,12 @@ def check_c19(ctx: Context) -> Tuple[str, str]:
             problems.append("%s usable 但 missing_note 非空" % rid)
         if not str(rec.get("provenance") or "").strip():
             problems.append("%s usable 但 provenance 为空" % rid)
-    # v2：usable 从 0 变 142 是本轮目标，不再作为违例；改为核对"usable 数必须等于
+    # v2：usable 从 0 变 274 是本轮目标，不再作为违例；改为核对"usable 数必须等于
     # 有源文件的行数"，防止出现"标了 usable 却没文件"的伪造。
     usable_all = [rec for rec in ctx.records or [] if rec.get("availability") == "usable"]
     expected_usable = EXPECTED_SOURCE_FILES
     if len(usable_all) != expected_usable:
-        problems.insert(0, "usable=%d，期望 %d（run5 v2：142 位全部落实）"
+        problems.insert(0, "usable=%d，期望 %d（run5 v2：274 位全部落实）"
                         % (len(usable_all), expected_usable))
     if problems:
         return FAIL, "；".join(problems[:8])
@@ -1683,7 +1851,7 @@ def check_c29(ctx: Context) -> Tuple[str, str]:
         key = str(rec.get("availability") or "")
         stats[key] = stats.get(key, 0) + 1
     problems: List[str] = []
-    # run5 v2：两个档位都要求 142/0/0；"可用"不等于"可发布"——content-release 还要过
+    # run5 v2：两个档位都要求 274/0/0；"可用"不等于"可发布"——content-release 还要过
     # C-01…C-06（语义 47/47 签字、WCAG 抽样、双签），本契约不签发 release。
     if stats.get("partial", 0) or stats.get("missing", 0):
         problems.append("%s 档仍有 partial=%d / missing=%d，不可进入 release 判定" % (
@@ -1784,7 +1952,7 @@ def check_c31(ctx: Context) -> Tuple[str, str]:
 
 
 def check_c32(ctx: Context) -> Tuple[str, str]:
-    # 按字段聚合，避免 142 条同因记录刷屏
+    # 按字段聚合，避免 274 条同因记录刷屏
     missing_counter: Dict[str, int] = {}
     sample: Dict[str, str] = {}
     for rec in ctx.records or []:

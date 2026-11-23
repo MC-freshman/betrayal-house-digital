@@ -1,8 +1,8 @@
-﻿{
+{
   "tool": "verify_p_table_execution.py",
   "readonly": true,
   "root": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill",
-  "snapshot_time": "2026-11-22T01:54:54",
+  "snapshot_time": "2026-11-23T19:21:20",
   "environment": {
     "python": "3.9.13",
     "platform": "Windows-10-10.0.26300-SP0",
@@ -12,9 +12,9 @@
   },
   "inputs": {
     "p_table": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\assets\\p_table.json",
-    "p_table_sha256": "e5a92967322f1b81f844dd189b17b93041caaf1abefe5989cb151ed4b3ea6898",
+    "p_table_sha256": "8db27f6d13a1e3f072511be5c435bcce4e98bd8921638e03613914d3650a36e1",
     "p_table_columns": 33,
-    "p_table_records": 142,
+    "p_table_records": 274,
     "contract_json": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\qa\\contract_result.json",
     "verify_report": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\assets\\validation_report.json"
   },
@@ -658,10 +658,10 @@
     {
       "id": "DATA-01",
       "tc": "TC-PT-01",
-      "title": "P 表可解析且 142 行",
+      "title": "P 表可解析且 274 行",
       "priority": "P0",
       "status": "PASS",
-      "detail": "records=142，schema=1.2.0，generated_at=2026-11-22",
+      "detail": "records=274，schema=1.2.0，generated_at=2026-11-23",
       "evidence": []
     },
     {
@@ -670,7 +670,7 @@
       "title": "stats 与逐行复算自洽",
       "priority": "P0",
       "status": "PASS",
-      "detail": "stats 与逐行复算逐项一致（records=142，0/95/47/0/0）",
+      "detail": "stats 与逐行复算逐项一致（records=274，0/95/47/0/0）",
       "evidence": []
     },
     {
@@ -697,7 +697,7 @@
       "title": "record_id 唯一/前缀/段号连续",
       "priority": "P0",
       "status": "PASS",
-      "detail": "142 个 record_id 唯一、前缀正确、段号连续；target_ref 唯一",
+      "detail": "274 个 record_id 唯一、前缀正确、段号连续；target_ref 唯一",
       "evidence": []
     },
     {
@@ -706,7 +706,7 @@
       "title": "content_refs 284 条双向一致",
       "priority": "P0",
       "status": "PASS",
-      "detail": "content_refs 284 条双向一致（runtime_key ↔ content_ref）；142 个 content_ref 唯一",
+      "detail": "content_refs 548 条双向一致（runtime_key ↔ content_ref）；274 个 content_ref 唯一",
       "evidence": []
     },
     {
@@ -778,7 +778,7 @@
       "title": "content.py sha256 与集合同步",
       "priority": "P0",
       "status": "PASS",
-      "detail": "content.py sha256 一致；7 集合 12/39/11/13/22/11/34=142；无损坏/孤立源文件",
+      "detail": "content.py sha256 一致；10 集合 12/39/11/13/22/11/34/52/70/10=274；无损坏/孤立源文件",
       "evidence": []
     },
     {
@@ -787,7 +787,7 @@
       "title": "95 源文件 sha256/bytes 三方一致",
       "priority": "P0",
       "status": "PASS",
-      "detail": "142 源文件与 photos_inventory/P 表 sha256/bytes 三方一致；AIGC 事实按原件（备份）核对；130 个备份在独立目录且不计入源文件；无孤立",
+      "detail": "274 源文件与 photos_inventory/P 表 sha256/bytes 三方一致；AIGC 事实按原件（备份）核对；130 个备份在独立目录且不计入源文件；无孤立",
       "evidence": []
     },
     {
@@ -796,7 +796,7 @@
       "title": "CSV BOM/行数/表头 = JSON 列",
       "priority": "P0",
       "status": "PASS",
-      "detail": "CSV BOM + 142 行；CSV 表头 = JSON schema.columns = 实现 33 列",
+      "detail": "CSV BOM + 274 行；CSV 表头 = JSON schema.columns = 实现 33 列",
       "evidence": []
     },
     {
@@ -805,7 +805,7 @@
       "title": "16 个必填字段齐全",
       "priority": "P0",
       "status": "PASS",
-      "detail": "16 个必填字段在 142 行全部存在",
+      "detail": "16 个必填字段在 274 行全部存在",
       "evidence": []
     },
     {
@@ -838,10 +838,10 @@
     {
       "id": "SCHEMA-06",
       "tc": "TC-PT-39",
-      "title": "CSV/JSON 142×33 逐字段等价",
+      "title": "CSV/JSON 274×33 逐字段等价",
       "priority": "P1",
       "status": "PASS",
-      "detail": "142 行 × 33 列逐字段等价",
+      "detail": "274 行 × 33 列逐字段等价",
       "evidence": []
     },
     {
@@ -850,7 +850,7 @@
       "title": "98 个运行时 PNG 清单",
       "priority": "P0",
       "status": "PASS",
-      "detail": "142 个去重运行时 PNG：rooms=50 / cards=80 / characters=12；另有 placeholders=3 张兜底图（无行指向）",
+      "detail": "274 个去重运行时 PNG：rooms=50 / cards=80 / characters=12；另有 placeholders=3 张兜底图（无行指向）",
       "evidence": []
     },
     {
@@ -859,7 +859,7 @@
       "title": "运行时 PNG 真实性与尺寸",
       "priority": "P0",
       "status": "PASS",
-      "detail": "98/98 真实 PNG；房间 512×512、卡牌 480×672、角色占位 320×320",
+      "detail": "274/274 真实 PNG；房间 512×512、卡牌 480×672、角色 320×320、怪物 512×512、剧本 1280×720、结算 1024×576、牌背 480×640、未翻地块 512×512、骰面 256×256；alpha 仅断言 character/monster/room_back/dice",
       "evidence": []
     },
     {
@@ -877,7 +877,7 @@
       "title": "runtime_path 不越界/大小写一致",
       "priority": "P0",
       "status": "PASS",
-      "detail": "142 条 runtime_path 均在 assets 内、无 ..、逐段大小写一致",
+      "detail": "274 条 runtime_path 均在 assets 内、无 ..、逐段大小写一致",
       "evidence": []
     },
     {
@@ -895,7 +895,7 @@
       "title": "registry 计数与 summary",
       "priority": "P0",
       "status": "PASS",
-      "detail": "len=142、missing=0、五类 by_type=12/50/13/22/45、summary 142/0/0",
+      "detail": "len=274、missing=0、五类 by_type=12/50/13/22/45、summary 274/0/0",
       "evidence": []
     },
     {
@@ -904,7 +904,7 @@
       "title": "全键空间解析",
       "priority": "P0",
       "status": "PASS",
-      "detail": "target_ref=142 / runtime_key=142 / record_id=142 / content_ref=142 / 裸 id=130 全部可解析",
+      "detail": "target_ref=274 / runtime_key=274 / record_id=274 / content_ref=274 / 裸 id=130 全部可解析",
       "evidence": []
     },
     {
@@ -940,7 +940,7 @@
       "title": "裸 id 不跨类别",
       "priority": "P1",
       "status": "PASS",
-      "detail": "真实数据无跨类别裸 id 冲突；合成 omen/event 同名 id 解析稳定（首命中，不串号）",
+      "detail": "真实跨类别裸 id 3 组均解析稳定；合成同名 omen/event 亦稳定",
       "evidence": []
     },
     {
@@ -967,7 +967,7 @@
       "title": "映射回退/缺清单/缺 records",
       "priority": "P1",
       "status": "PASS",
-      "detail": "映射回退加载 142；缺清单 FileNotFoundError 含路径；缺 records 且无同目录表 ValueError",
+      "detail": "映射回退加载 274；缺清单 FileNotFoundError 含路径；缺 records 且无同目录表 ValueError",
       "evidence": []
     },
     {
@@ -1080,7 +1080,7 @@
       "title": "内存重建 = 磁盘 P 表",
       "priority": "P0",
       "status": "PASS",
-      "detail": "内存重建 142 行 × 33 列与磁盘逐字段一致；stats 一致（耗时 0.18s）",
+      "detail": "内存重建 274 行 × 33 列与磁盘逐字段一致；stats 一致（耗时 0.31s）",
       "evidence": []
     },
     {
@@ -1089,7 +1089,7 @@
       "title": "二次 scan/build 指纹一致",
       "priority": "P1",
       "status": "PASS",
-      "detail": "95 文件二次扫描与 142 行二次构建指纹一致（首次 0.17s）",
+      "detail": "95 文件二次扫描与 274 行二次构建指纹一致（首次 0.27s）",
       "evidence": []
     },
     {
@@ -1098,9 +1098,9 @@
       "title": "排除 generated_at 的归一化哈希",
       "priority": "P2",
       "status": "PASS",
-      "detail": "排除 generated_at 后归一化 payload 哈希稳定：754a55f48b2f672b",
+      "detail": "排除 generated_at 后归一化 payload 哈希稳定：4431b9961893eebb",
       "evidence": [
-        "754a55f48b2f672b36db53a6c2e4b8da6e3218fe5ee7cca348719af63bec9f0c"
+        "4431b9961893eebb5a8aa94a856f0524c523583e21dfd32798f5f84ccf93de38"
       ]
     },
     {
@@ -1118,9 +1118,9 @@
       "title": "ui.py 接入绑定层",
       "priority": "P1",
       "status": "PASS",
-      "detail": "ui.py 已出现资源绑定引用：{'ui_asset_binding': 5, 'load_asset_photo': 5, 'AssetRegistry': 5, 'PhotoImage': 7, 'assets/': 3}",
+      "detail": "ui.py 已出现资源绑定引用：{'ui_asset_binding': 5, 'load_asset_photo': 5, 'AssetRegistry': 5, 'PhotoImage': 10, 'assets/': 3}",
       "evidence": [
-        "{'ui_asset_binding': 5, 'load_asset_photo': 5, 'AssetRegistry': 5, 'PhotoImage': 7, 'ImageTk': 0, 'assets/': 3}"
+        "{'ui_asset_binding': 5, 'load_asset_photo': 5, 'AssetRegistry': 5, 'PhotoImage': 10, 'ImageTk': 0, 'assets/': 3}"
       ]
     },
     {
@@ -1201,9 +1201,9 @@
       "title": "AssetRegistry.load 耗时",
       "priority": "P1",
       "status": "PASS",
-      "detail": "load ×10：median=6.06ms p95=7.38ms（预算 150ms）",
+      "detail": "load ×10：median=11.81ms p95=13.24ms（预算 150ms）",
       "evidence": [
-        "load ×10：median=6.06ms p95=7.38ms（预算 150ms）"
+        "load ×10：median=11.81ms p95=13.24ms（预算 150ms）"
       ]
     },
     {
@@ -1212,9 +1212,9 @@
       "title": "10k resolve 耗时",
       "priority": "P1",
       "status": "PASS",
-      "detail": "10k resolve ×10：round p95=7.7ms（预算 500ms）；单次 p95=2.10us（预算 50us）",
+      "detail": "10k resolve ×10：round p95=8.3ms（预算 500ms）；单次 p95=1.00us（预算 50us）",
       "evidence": [
-        "10k resolve ×10：round p95=7.7ms（预算 500ms）；单次 p95=2.10us（预算 50us）"
+        "10k resolve ×10：round p95=8.3ms（预算 500ms）；单次 p95=1.00us（预算 50us）"
       ]
     },
     {
@@ -1259,9 +1259,9 @@
       "title": "load 峰值增量 RSS",
       "priority": "P1",
       "status": "PASS",
-      "detail": "load ×10 RSS 增量 7.44MB（预算 80MB；before=46.9MB after=54.4MB）",
+      "detail": "load ×10 RSS 增量 12.54MB（预算 80MB；before=48.3MB after=60.8MB）",
       "evidence": [
-        "load ×10 RSS 增量 7.44MB（预算 80MB；before=46.9MB after=54.4MB）"
+        "load ×10 RSS 增量 12.54MB（预算 80MB；before=48.3MB after=60.8MB）"
       ]
     },
     {
@@ -1376,8 +1376,8 @@
       "status": "PASS",
       "detail": "旧结果均晚于当前输入：validation_report.json, contract_result.json",
       "evidence": [
-        "{'artifact': 'validation_report.json', 'mtime': 1795283665.5603418, 'newest_input': 1795283632.9342616, 'fresh': True}",
-        "{'artifact': 'contract_result.json', 'mtime': 1795283680.9606278, 'newest_input': 1795283632.8117151, 'fresh': True}"
+        "{'artifact': 'validation_report.json', 'mtime': 1795432766.5120866, 'newest_input': 1795432726.630779, 'fresh': True}",
+        "{'artifact': 'contract_result.json', 'mtime': 1795432796.427721, 'newest_input': 1795432726.3432398, 'fresh': True}"
       ]
     },
     {
@@ -1386,7 +1386,7 @@
       "title": "行覆盖 ≥85%",
       "priority": "P1",
       "status": "NOT_RUN",
-      "detail": "行覆盖未测：coverage=absent；qa/test_*.py=2 个（会写 assets/fixtures，只读验收禁止执行）。达标线 85%；写使能阶段命令：python -m coverage run --branch --source=asset_pipeline,asset_registry -m unittest discover -s qa -p \"test_*.py\" && python -m coverage report -m --fail-under=85",
+      "detail": "行覆盖未测：coverage=absent；qa/test_*.py=3 个（会写 assets/fixtures，只读验收禁止执行）。达标线 85%；写使能阶段命令：python -m coverage run --branch --source=asset_pipeline,asset_registry -m unittest discover -s qa -p \"test_*.py\" && python -m coverage report -m --fail-under=85",
       "evidence": []
     },
     {
@@ -1487,7 +1487,7 @@
     {
       "id": "COV-01",
       "priority": "P1",
-      "detail": "行覆盖未测：coverage=absent；qa/test_*.py=2 个（会写 assets/fixtures，只读验收禁止执行）。达标线 85%；写使能阶段命令：python -m coverage run --branch --source=asset_pipeline,asset_registry -m unittest discover -s qa -p \"test_*.py\" && python -m coverage report -m --fail-under=85"
+      "detail": "行覆盖未测：coverage=absent；qa/test_*.py=3 个（会写 assets/fixtures，只读验收禁止执行）。达标线 85%；写使能阶段命令：python -m coverage run --branch --source=asset_pipeline,asset_registry -m unittest discover -s qa -p \"test_*.py\" && python -m coverage report -m --fail-under=85"
     },
     {
       "id": "COV-02",

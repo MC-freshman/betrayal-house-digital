@@ -802,7 +802,9 @@ def verify_ui_buttons_have_responses() -> None:
         assert "item_revolver" in hero.items
 
         class _FakeTextDialog:
-            def __init__(self, root, title, text) -> None:
+            # run6：_TextDialog 增加可选图片参数（image/image_size），测试替身
+            # 必须容忍新增关键字参数，否则 btn_script 回调会静默失败。
+            def __init__(self, root, title, text, *args, **kwargs) -> None:
                 text_dialogs.append((title, text))
                 self.top = None
 
@@ -859,7 +861,8 @@ def verify_haunt_reveal_flow() -> None:
         assert payload is not None and payload[1].strip(), "人类视角必须有可读手册"
 
         class _FakeTextDialog:
-            def __init__(self, root, title, text) -> None:
+            # 同上：容忍 _TextDialog 新增的 image/image_size 关键字参数。
+            def __init__(self, root, title, text, *args, **kwargs) -> None:
                 text_dialogs.append((title, text))
                 self.top = None
 

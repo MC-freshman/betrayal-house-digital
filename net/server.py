@@ -18,13 +18,13 @@ from pathlib import Path
 
 try:
     from ..bot_ai import BotController
-    from ..engine import ActionCommand, GameEngine
+    from ..engine import ActionCommand, AutoDecisionProvider, GameEngine
     from ..models import Player
     from . import protocol as P
     from .serialize import state_to_view_dict
 except ImportError:  # pragma: no cover - direct script execution
     from bot_ai import BotController  # type: ignore
-    from engine import ActionCommand, GameEngine  # type: ignore
+    from engine import ActionCommand, AutoDecisionProvider, GameEngine  # type: ignore
     from models import Player  # type: ignore
     from net import protocol as P  # type: ignore
     from net.serialize import state_to_view_dict  # type: ignore
@@ -57,6 +57,16 @@ class DecisionRouter:
     def choose_from_list(self, title: str, message: str, options: list[str]) -> int | None:
         player = self._active_player()
         return self.host.request_decision(player, P.REQ_LIST, title, message, options)
+
+    def choose_traitor(self, candidates: list[dict], state) -> int | None:
+        """联机不做"人类自选叛徒"：一律回落引擎属性规则。
+
+        叛徒一确定就改回合顺序（``_prepare_haunt_turn_order``），若把选择权下发给
+        单个客户端再等回包，其余客户端会在这段时间里看到不同的叛徒/回合序；
+        为保证各端同步分叉为零，这里直接返回 default 候选（与改动前逐局一致）。
+        如果将来要开放，必须走"全体客户端投票 + 主机裁决"的新协议，而不是单端选择。
+        """
+        return AutoDecisionProvider().choose_traitor(candidates, state)
 
     def choose_rotation(
         self,

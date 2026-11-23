@@ -2,7 +2,7 @@
   "tool": "qa/game_art_probe.py",
   "mode": "real-tk",
   "seed": 20261122,
-  "generated_at": "2026-11-22T01:36:57",
+  "generated_at": "2026-11-23T15:27:21",
   "environment": {
     "python": "3.9.13",
     "tk": "8.6",
@@ -21,15 +21,15 @@
     ]
   },
   "inputs": {
-    "ui_py_sha256": "53f7b7d53cb1fcffac612dda10f502324332347ffdb915aee9502f536cd300a0",
+    "ui_py_sha256": "10c9c43a82d51880355a25d89b217d794eb95b8ecf98aaa9e06c389a6d62ada8",
     "ui_asset_binding_sha256": "70f5f9b6c2c927571e6380a95151353e50da969578723e598f69afcb3a13db60",
-    "p_table_sha256": "e5a92967322f1b81f844dd189b17b93041caaf1abefe5989cb151ed4b3ea6898",
-    "asset_mapping_sha256": "984c57d3759e38de8933c001df5d0301fa2457abd551b2fcd036bc3f0a381167"
+    "p_table_sha256": "8db27f6d13a1e3f072511be5c435bcce4e98bd8921638e03613914d3650a36e1",
+    "asset_mapping_sha256": "381a23f4a229c02d7355c3c3b77a665776ac07506c32788487820e87173d1b81"
   },
   "board": {
     "turns_played": 8,
     "rooms_placed": 12,
-    "canvas_image_items": 12,
+    "canvas_image_items": 13,
     "rooms_with_image": 12,
     "rounds": 9,
     "board_keys": 12,
@@ -230,10 +230,10 @@
     {
       "seq": 6,
       "surface": "board",
-      "key": "room:coal_chute",
+      "key": "room:dusty_hallway",
       "asset_type": "room",
-      "record_id": "P-ROOM-011",
-      "rel_path": "source/desktop/game/assets/rooms/coal_chute.png",
+      "record_id": "P-ROOM-045",
+      "rel_path": "source/desktop/game/assets/rooms/dusty_hallway.png",
       "placeholder": false,
       "requested": [
         102,
@@ -248,10 +248,10 @@
     {
       "seq": 7,
       "surface": "board",
-      "key": "room:game_room",
+      "key": "room:bathroom",
       "asset_type": "room",
-      "record_id": "P-ROOM-042",
-      "rel_path": "source/desktop/game/assets/rooms/game_room.png",
+      "record_id": "P-ROOM-041",
+      "rel_path": "source/desktop/game/assets/rooms/bathroom.png",
       "placeholder": false,
       "requested": [
         102,
@@ -284,10 +284,10 @@
     {
       "seq": 9,
       "surface": "board",
-      "key": "room:abandoned_room",
+      "key": "room:library",
       "asset_type": "room",
-      "record_id": "P-ROOM-012",
-      "rel_path": "source/desktop/game/assets/rooms/abandoned_room.png",
+      "record_id": "P-ROOM-023",
+      "rel_path": "source/desktop/game/assets/rooms/library.png",
       "placeholder": false,
       "requested": [
         102,
@@ -302,10 +302,10 @@
     {
       "seq": 10,
       "surface": "board",
-      "key": "room:statuary_corridor",
+      "key": "room:stairs_from_basement",
       "asset_type": "room",
-      "record_id": "P-ROOM-046",
-      "rel_path": "source/desktop/game/assets/rooms/statuary_corridor.png",
+      "record_id": "P-ROOM-009",
+      "rel_path": "source/desktop/game/assets/rooms/stairs_from_basement.png",
       "placeholder": false,
       "requested": [
         102,
@@ -320,10 +320,10 @@
     {
       "seq": 11,
       "surface": "board",
-      "key": "room:master_bedroom",
+      "key": "room:tower",
       "asset_type": "room",
-      "record_id": "P-ROOM-036",
-      "rel_path": "source/desktop/game/assets/rooms/master_bedroom.png",
+      "record_id": "P-ROOM-039",
+      "rel_path": "source/desktop/game/assets/rooms/tower.png",
       "placeholder": false,
       "requested": [
         102,
@@ -338,10 +338,10 @@
     {
       "seq": 12,
       "surface": "board",
-      "key": "room:library",
+      "key": "room:chapel",
       "asset_type": "room",
-      "record_id": "P-ROOM-023",
-      "rel_path": "source/desktop/game/assets/rooms/library.png",
+      "record_id": "P-ROOM-015",
+      "rel_path": "source/desktop/game/assets/rooms/chapel.png",
       "placeholder": false,
       "requested": [
         102,
@@ -517,6 +517,276 @@
     },
     {
       "seq": 22,
+      "surface": "room_back",
+      "key": "room_back:back",
+      "asset_type": "room_back",
+      "record_id": "P-RBACK-001",
+      "rel_path": "source/desktop/game/assets/room_backs/room_back.png",
+      "placeholder": false,
+      "requested": [
+        86,
+        86
+      ],
+      "actual": [
+        86,
+        86
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 23,
+      "surface": "room_back",
+      "key": "room_back:back",
+      "asset_type": "room_back",
+      "record_id": "P-RBACK-001",
+      "rel_path": "source/desktop/game/assets/room_backs/room_back.png",
+      "placeholder": false,
+      "requested": [
+        86,
+        86
+      ],
+      "actual": [
+        86,
+        86
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 24,
+      "surface": "board",
+      "key": "room:basement_landing",
+      "asset_type": "room",
+      "record_id": "P-ROOM-001",
+      "rel_path": "source/desktop/game/assets/rooms/basement_landing.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 25,
+      "surface": "board",
+      "key": "room:entrance_hall",
+      "asset_type": "room",
+      "record_id": "P-ROOM-002",
+      "rel_path": "source/desktop/game/assets/rooms/entrance_hall.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 26,
+      "surface": "board",
+      "key": "room:foyer",
+      "asset_type": "room",
+      "record_id": "P-ROOM-003",
+      "rel_path": "source/desktop/game/assets/rooms/foyer.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 27,
+      "surface": "board",
+      "key": "room:grand_staircase",
+      "asset_type": "room",
+      "record_id": "P-ROOM-004",
+      "rel_path": "source/desktop/game/assets/rooms/grand_staircase.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 28,
+      "surface": "board",
+      "key": "room:upper_landing",
+      "asset_type": "room",
+      "record_id": "P-ROOM-005",
+      "rel_path": "source/desktop/game/assets/rooms/upper_landing.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 29,
+      "surface": "board",
+      "key": "room:dusty_hallway",
+      "asset_type": "room",
+      "record_id": "P-ROOM-045",
+      "rel_path": "source/desktop/game/assets/rooms/dusty_hallway.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 30,
+      "surface": "board",
+      "key": "room:bathroom",
+      "asset_type": "room",
+      "record_id": "P-ROOM-041",
+      "rel_path": "source/desktop/game/assets/rooms/bathroom.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 31,
+      "surface": "board",
+      "key": "room:larder",
+      "asset_type": "room",
+      "record_id": "P-ROOM-024",
+      "rel_path": "source/desktop/game/assets/rooms/larder.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 32,
+      "surface": "board",
+      "key": "room:library",
+      "asset_type": "room",
+      "record_id": "P-ROOM-023",
+      "rel_path": "source/desktop/game/assets/rooms/library.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 33,
+      "surface": "board",
+      "key": "room:stairs_from_basement",
+      "asset_type": "room",
+      "record_id": "P-ROOM-009",
+      "rel_path": "source/desktop/game/assets/rooms/stairs_from_basement.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 34,
+      "surface": "board",
+      "key": "room:tower",
+      "asset_type": "room",
+      "record_id": "P-ROOM-039",
+      "rel_path": "source/desktop/game/assets/rooms/tower.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 35,
+      "surface": "board",
+      "key": "room:chapel",
+      "asset_type": "room",
+      "record_id": "P-ROOM-015",
+      "rel_path": "source/desktop/game/assets/rooms/chapel.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 36,
+      "surface": "room_back",
+      "key": "room_back:ghost",
+      "asset_type": "room_back",
+      "record_id": "P-RBACK-002",
+      "rel_path": "source/desktop/game/assets/room_backs/room_ghost.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 37,
       "surface": "card",
       "key": "card:omen:omen_medallion",
       "asset_type": "card_omen",
@@ -534,12 +804,30 @@
       "resolved": true
     },
     {
-      "seq": 23,
+      "seq": 38,
+      "surface": "card_back",
+      "key": "card_back:omen",
+      "asset_type": "card_back",
+      "record_id": "P-CBACK-001",
+      "rel_path": "source/desktop/game/assets/card_backs/card_back_omen.png",
+      "placeholder": false,
+      "requested": [
+        96,
+        128
+      ],
+      "actual": [
+        240,
+        336
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 39,
       "surface": "card",
-      "key": "card:item:item_angel_feather",
+      "key": "card:item:item_adrenaline_shot",
       "asset_type": "card_item",
-      "record_id": "P-ITEM-013",
-      "rel_path": "source/desktop/game/assets/cards/item/item_angel_feather.png",
+      "record_id": "P-ITEM-012",
+      "rel_path": "source/desktop/game/assets/cards/item/item_adrenaline_shot.png",
       "placeholder": false,
       "requested": [
         240,
@@ -552,12 +840,30 @@
       "resolved": true
     },
     {
-      "seq": 24,
+      "seq": 40,
+      "surface": "card_back",
+      "key": "card_back:item",
+      "asset_type": "card_back",
+      "record_id": "P-CBACK-002",
+      "rel_path": "source/desktop/game/assets/card_backs/card_back_item.png",
+      "placeholder": false,
+      "requested": [
+        96,
+        128
+      ],
+      "actual": [
+        240,
+        336
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 41,
       "surface": "card",
-      "key": "card:event:event_smoke",
+      "key": "card:event:event_creepy_puppet",
       "asset_type": "card_event",
-      "record_id": "P-EVT-013",
-      "rel_path": "source/desktop/game/assets/cards/event/event_smoke.png",
+      "record_id": "P-EVT-023",
+      "rel_path": "source/desktop/game/assets/cards/event/event_creepy_puppet.png",
       "placeholder": false,
       "requested": [
         240,
@@ -568,17 +874,629 @@
         336
       ],
       "resolved": true
+    },
+    {
+      "seq": 42,
+      "surface": "card_back",
+      "key": "card_back:event",
+      "asset_type": "card_back",
+      "record_id": "P-CBACK-003",
+      "rel_path": "source/desktop/game/assets/card_backs/card_back_event.png",
+      "placeholder": false,
+      "requested": [
+        96,
+        128
+      ],
+      "actual": [
+        240,
+        336
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 43,
+      "surface": "haunt",
+      "key": "haunt:69",
+      "asset_type": "haunt",
+      "record_id": "P-HAUNT-069",
+      "rel_path": "source/desktop/game/assets/haunts/haunt_69.png",
+      "placeholder": false,
+      "requested": [
+        720,
+        405
+      ],
+      "actual": [
+        720,
+        405
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 44,
+      "surface": "board",
+      "key": "room:basement_landing",
+      "asset_type": "room",
+      "record_id": "P-ROOM-001",
+      "rel_path": "source/desktop/game/assets/rooms/basement_landing.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 45,
+      "surface": "board",
+      "key": "room:entrance_hall",
+      "asset_type": "room",
+      "record_id": "P-ROOM-002",
+      "rel_path": "source/desktop/game/assets/rooms/entrance_hall.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 46,
+      "surface": "board",
+      "key": "room:foyer",
+      "asset_type": "room",
+      "record_id": "P-ROOM-003",
+      "rel_path": "source/desktop/game/assets/rooms/foyer.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 47,
+      "surface": "board",
+      "key": "room:grand_staircase",
+      "asset_type": "room",
+      "record_id": "P-ROOM-004",
+      "rel_path": "source/desktop/game/assets/rooms/grand_staircase.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 48,
+      "surface": "board",
+      "key": "room:upper_landing",
+      "asset_type": "room",
+      "record_id": "P-ROOM-005",
+      "rel_path": "source/desktop/game/assets/rooms/upper_landing.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 49,
+      "surface": "board",
+      "key": "room:dusty_hallway",
+      "asset_type": "room",
+      "record_id": "P-ROOM-045",
+      "rel_path": "source/desktop/game/assets/rooms/dusty_hallway.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 50,
+      "surface": "board",
+      "key": "room:bathroom",
+      "asset_type": "room",
+      "record_id": "P-ROOM-041",
+      "rel_path": "source/desktop/game/assets/rooms/bathroom.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 51,
+      "surface": "board",
+      "key": "room:larder",
+      "asset_type": "room",
+      "record_id": "P-ROOM-024",
+      "rel_path": "source/desktop/game/assets/rooms/larder.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 52,
+      "surface": "board",
+      "key": "room:library",
+      "asset_type": "room",
+      "record_id": "P-ROOM-023",
+      "rel_path": "source/desktop/game/assets/rooms/library.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 53,
+      "surface": "board",
+      "key": "room:stairs_from_basement",
+      "asset_type": "room",
+      "record_id": "P-ROOM-009",
+      "rel_path": "source/desktop/game/assets/rooms/stairs_from_basement.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 54,
+      "surface": "board",
+      "key": "room:tower",
+      "asset_type": "room",
+      "record_id": "P-ROOM-039",
+      "rel_path": "source/desktop/game/assets/rooms/tower.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 55,
+      "surface": "board",
+      "key": "room:chapel",
+      "asset_type": "room",
+      "record_id": "P-ROOM-015",
+      "rel_path": "source/desktop/game/assets/rooms/chapel.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 56,
+      "surface": "monster",
+      "key": "monster:wisp",
+      "asset_type": "monster",
+      "record_id": "P-MONS-052",
+      "rel_path": "source/desktop/game/assets/monsters/wisp.png",
+      "placeholder": false,
+      "requested": [
+        61,
+        61
+      ],
+      "actual": [
+        61,
+        61
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 57,
+      "surface": "dice",
+      "key": "dice:0",
+      "asset_type": "dice",
+      "record_id": "P-DICE-001",
+      "rel_path": "source/desktop/game/assets/dice/dice_0.png",
+      "placeholder": false,
+      "requested": [
+        64,
+        64
+      ],
+      "actual": null,
+      "resolved": true
+    },
+    {
+      "seq": 58,
+      "surface": "dice",
+      "key": "dice:0",
+      "asset_type": "dice",
+      "record_id": "P-DICE-001",
+      "rel_path": "source/desktop/game/assets/dice/dice_0.png",
+      "placeholder": false,
+      "requested": [
+        64,
+        64
+      ],
+      "actual": null,
+      "resolved": true
+    },
+    {
+      "seq": 59,
+      "surface": "dice",
+      "key": "dice:0",
+      "asset_type": "dice",
+      "record_id": "P-DICE-001",
+      "rel_path": "source/desktop/game/assets/dice/dice_0.png",
+      "placeholder": false,
+      "requested": [
+        64,
+        64
+      ],
+      "actual": null,
+      "resolved": true
+    },
+    {
+      "seq": 60,
+      "surface": "dice",
+      "key": "dice:1",
+      "asset_type": "dice",
+      "record_id": "P-DICE-002",
+      "rel_path": "source/desktop/game/assets/dice/dice_1.png",
+      "placeholder": false,
+      "requested": [
+        64,
+        64
+      ],
+      "actual": null,
+      "resolved": true
+    },
+    {
+      "seq": 61,
+      "surface": "dice",
+      "key": "dice:2",
+      "asset_type": "dice",
+      "record_id": "P-DICE-003",
+      "rel_path": "source/desktop/game/assets/dice/dice_2.png",
+      "placeholder": false,
+      "requested": [
+        64,
+        64
+      ],
+      "actual": null,
+      "resolved": true
+    },
+    {
+      "seq": 62,
+      "surface": "dice",
+      "key": "dice:0",
+      "asset_type": "dice",
+      "record_id": "P-DICE-001",
+      "rel_path": "source/desktop/game/assets/dice/dice_0.png",
+      "placeholder": false,
+      "requested": [
+        64,
+        64
+      ],
+      "actual": null,
+      "resolved": true
+    },
+    {
+      "seq": 63,
+      "surface": "board",
+      "key": "room:basement_landing",
+      "asset_type": "room",
+      "record_id": "P-ROOM-001",
+      "rel_path": "source/desktop/game/assets/rooms/basement_landing.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 64,
+      "surface": "board",
+      "key": "room:entrance_hall",
+      "asset_type": "room",
+      "record_id": "P-ROOM-002",
+      "rel_path": "source/desktop/game/assets/rooms/entrance_hall.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 65,
+      "surface": "board",
+      "key": "room:foyer",
+      "asset_type": "room",
+      "record_id": "P-ROOM-003",
+      "rel_path": "source/desktop/game/assets/rooms/foyer.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 66,
+      "surface": "board",
+      "key": "room:grand_staircase",
+      "asset_type": "room",
+      "record_id": "P-ROOM-004",
+      "rel_path": "source/desktop/game/assets/rooms/grand_staircase.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 67,
+      "surface": "board",
+      "key": "room:upper_landing",
+      "asset_type": "room",
+      "record_id": "P-ROOM-005",
+      "rel_path": "source/desktop/game/assets/rooms/upper_landing.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 68,
+      "surface": "board",
+      "key": "room:dusty_hallway",
+      "asset_type": "room",
+      "record_id": "P-ROOM-045",
+      "rel_path": "source/desktop/game/assets/rooms/dusty_hallway.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 69,
+      "surface": "board",
+      "key": "room:bathroom",
+      "asset_type": "room",
+      "record_id": "P-ROOM-041",
+      "rel_path": "source/desktop/game/assets/rooms/bathroom.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 70,
+      "surface": "board",
+      "key": "room:larder",
+      "asset_type": "room",
+      "record_id": "P-ROOM-024",
+      "rel_path": "source/desktop/game/assets/rooms/larder.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 71,
+      "surface": "board",
+      "key": "room:library",
+      "asset_type": "room",
+      "record_id": "P-ROOM-023",
+      "rel_path": "source/desktop/game/assets/rooms/library.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 72,
+      "surface": "board",
+      "key": "room:stairs_from_basement",
+      "asset_type": "room",
+      "record_id": "P-ROOM-009",
+      "rel_path": "source/desktop/game/assets/rooms/stairs_from_basement.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 73,
+      "surface": "board",
+      "key": "room:tower",
+      "asset_type": "room",
+      "record_id": "P-ROOM-039",
+      "rel_path": "source/desktop/game/assets/rooms/tower.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 74,
+      "surface": "board",
+      "key": "room:chapel",
+      "asset_type": "room",
+      "record_id": "P-ROOM-015",
+      "rel_path": "source/desktop/game/assets/rooms/chapel.png",
+      "placeholder": false,
+      "requested": [
+        102,
+        102
+      ],
+      "actual": [
+        102,
+        102
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 75,
+      "surface": "monster",
+      "key": "monster:wisp",
+      "asset_type": "monster",
+      "record_id": "P-MONS-052",
+      "rel_path": "source/desktop/game/assets/monsters/wisp.png",
+      "placeholder": false,
+      "requested": [
+        61,
+        61
+      ],
+      "actual": [
+        61,
+        61
+      ],
+      "resolved": true
+    },
+    {
+      "seq": 76,
+      "surface": "ending",
+      "key": "ending:heroes",
+      "asset_type": "ending",
+      "record_id": "P-END-001",
+      "rel_path": "source/desktop/game/assets/endings/ending_heroes.png",
+      "placeholder": false,
+      "requested": [
+        2201,
+        1088
+      ],
+      "actual": [
+        1024,
+        576
+      ],
+      "resolved": true
     }
   ],
   "counters": {
     "rooms_placed": 12,
-    "image_items": 12,
-    "ledger_entries": 24,
+    "image_items": 13,
+    "ledger_entries": 76,
     "placeholder_hits": 0,
     "resolve_failures": 0,
     "loader_errors": 0,
-    "requests": 24,
-    "misses": 8,
+    "requests": 110,
+    "misses": 19,
     "name_ambiguous": 0
   },
   "cards": [
@@ -595,21 +1513,26 @@
         240,
         336
       ],
+      "back_key": "card_back:omen",
+      "back_photo_size": [
+        96,
+        128
+      ],
       "ratio_ok": true,
       "placeholder": false,
       "popup_opened": true,
       "screenshot": "qa/screenshots/art_card_omen.png",
       "shot_size": [
         380,
-        566
+        700
       ],
       "trigger": "engine._draw_omen → prompter.notify（真实抽卡调用）"
     },
     {
       "kind": "item",
-      "card_id": "item_angel_feather",
-      "title": "获得物品：天使羽毛",
-      "record_id": "P-ITEM-013",
+      "card_id": "item_adrenaline_shot",
+      "title": "获得物品：肾上腺素针",
+      "record_id": "P-ITEM-012",
       "photo_size": [
         240,
         336
@@ -617,22 +1540,27 @@
       "expected_size": [
         240,
         336
+      ],
+      "back_key": "card_back:item",
+      "back_photo_size": [
+        96,
+        128
       ],
       "ratio_ok": true,
       "placeholder": false,
       "popup_opened": true,
       "screenshot": "qa/screenshots/art_card_item.png",
       "shot_size": [
-        359,
-        566
+        394,
+        700
       ],
       "trigger": "engine._draw_item → prompter.notify（真实抽卡调用）"
     },
     {
       "kind": "event",
-      "card_id": "event_smoke",
-      "title": "触发事件：烟雾",
-      "record_id": "P-EVT-013",
+      "card_id": "event_creepy_puppet",
+      "title": "触发事件：诡异木偶",
+      "record_id": "P-EVT-023",
       "photo_size": [
         240,
         336
@@ -641,13 +1569,18 @@
         240,
         336
       ],
+      "back_key": "card_back:event",
+      "back_photo_size": [
+        96,
+        128
+      ],
       "ratio_ok": true,
       "placeholder": false,
       "popup_opened": true,
       "screenshot": "qa/screenshots/art_card_event.png",
       "shot_size": [
-        428,
-        597
+        363,
+        700
       ],
       "trigger": "engine._draw_event → prompter.notify（真实抽卡调用）"
     }
@@ -657,19 +1590,126 @@
     "qa/screenshots/art_player_panel.png",
     "qa/screenshots/art_room_tooltip.png",
     "qa/screenshots/art_room_detail.png",
+    "qa/screenshots/art_room_back.png",
     "qa/screenshots/art_card_omen.png",
     "qa/screenshots/art_card_item.png",
-    "qa/screenshots/art_card_event.png"
+    "qa/screenshots/art_card_event.png",
+    "qa/screenshots/art_haunt_reveal.png",
+    "qa/screenshots/art_dice.png",
+    "qa/screenshots/art_board_100.png",
+    "qa/screenshots/art_ending.png"
   ],
   "unreachable": [
     "storeroom"
   ],
   "instrumentation": [
     "app._idle_poll 置空（停掉 300ms 轮询，回合由探针驱动）",
-    "ui._InfoDialog 换成跟踪子类（持 PhotoImage 引用 + 读实测尺寸）",
-    "engine.prompter 在抽卡期间包一层（notify 走真弹窗，规则问答自动作答）"
+    "ui._InfoDialog / _TextDialog / _EndingDialog 换成跟踪子类（持图 + 读实测尺寸）",
+    "engine.prompter 在抽卡期间包一层（notify 走真弹窗，规则问答自动作答）",
+    "未翻地块取证时临时把当前玩家 control 置 human（只为画探索预览格，规则不变）",
+    "作祟取证走 engine._trigger_haunt 真实揭示路径，prompter 换成 _SilentPrompter",
+    "若作祟未生成怪物，按 engine._spawn_single_haunt_monster 真实生成路径补一只",
+    "结算取证最后执行：engine._set_winner('heroes') + _refresh_ui 打开 _EndingDialog"
   ],
   "errors": [],
   "warnings": [],
-  "pass": true
+  "pass": true,
+  "surfaces": {
+    "monster": {
+      "image_items": 1,
+      "keys": [
+        "monster:wisp"
+      ],
+      "monsters_on_board": 1,
+      "monsters_total": 1,
+      "placeholder": 0
+    },
+    "haunt": {
+      "image_items": 1,
+      "keys": [
+        "haunt:69"
+      ],
+      "dialog_opened": true,
+      "photo_size": [
+        720,
+        405
+      ],
+      "screenshot": "qa/screenshots/art_haunt_reveal.png",
+      "placeholder": 0
+    },
+    "ending": {
+      "image_items": 1,
+      "keys": [
+        "ending:heroes"
+      ],
+      "dialog_opened": true,
+      "winner": "heroes",
+      "photo_size": [
+        1024,
+        576
+      ],
+      "screenshot": "qa/screenshots/art_ending.png",
+      "placeholder": 0
+    },
+    "card_back": {
+      "image_items": 3,
+      "keys": [
+        "card_back:event",
+        "card_back:item",
+        "card_back:omen"
+      ],
+      "kinds": [
+        "event",
+        "item",
+        "omen"
+      ],
+      "photo_sizes": {
+        "omen": [
+          96,
+          128
+        ],
+        "item": [
+          96,
+          128
+        ],
+        "event": [
+          96,
+          128
+        ]
+      },
+      "placeholder": 0
+    },
+    "room_back": {
+      "image_items": 3,
+      "keys": [
+        "room_back:back",
+        "room_back:ghost"
+      ],
+      "exploration_slots": 2,
+      "screenshot": "qa/screenshots/art_room_back.png",
+      "placeholder": 0
+    },
+    "dice": {
+      "image_items": 3,
+      "keys": [
+        "dice:0",
+        "dice:1",
+        "dice:2"
+      ],
+      "photo_size": [
+        64,
+        64
+      ],
+      "screenshot": "qa/screenshots/art_dice.png",
+      "placeholder": 0
+    }
+  },
+  "surfaces_complete": {
+    "monster": true,
+    "haunt": true,
+    "ending": true,
+    "card_back": true,
+    "room_back": true,
+    "dice": true
+  }
 }

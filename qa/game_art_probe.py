@@ -11,6 +11,10 @@
 4. **清账本后按面逐个取证**（一帧一账）：棋盘 ``_redraw_board`` / 头像条 ``_refresh_avatar_strip`` /
    房间 tooltip ``_show_room_tooltip`` / 房间详情 ``_show_room_info`` / 抽卡弹窗
    ``_draw_omen``/``_draw_item``/``_draw_event`` → ``prompter.notify``；
+   run6 追加六类渲染面：未翻地块（探索预览 ``room_back:*``）/ 作祟揭示
+   （``engine._trigger_haunt`` → 手册弹窗 ``haunt:*``）/ 怪物标记（棋盘 ``monster:*``）/
+   骰面（``ui._DiceDialog`` → ``dice:*``）/ 结算画面（``_set_winner`` → ``_EndingDialog``
+   的 ``ending:*``）/ 抽卡弹窗顶部卡背（``card_back:*``，随每次抽卡取证）；
 5. 每个渲染面都把 ``game_art`` 账本的新增行映射成验收 schema（``seq/surface/key/asset_type/
    record_id/rel_path/placeholder`` + 实测 ``actual``），并抓一张真 PNG 截图。
 
@@ -208,12 +212,19 @@ def _rel_game(path) -> str:
 # 渲染面判定（game_art 账本 → 验收 schema）
 # ---------------------------------------------------------------------------
 
+# run6 六类渲染面：kind 与 P 表 asset_type 同名，无需按尺寸二次推断。
+SURFACE_KINDS = ("monster", "haunt", "ending", "card_back", "room_back", "dice")
+
+
 def surface_for(kind: str, size) -> str:
     """按调用点的请求尺寸判定渲染面。
 
     尺寸来自 ui.py 的常量，互不重叠：棋盘 ts≤102（``tile_size - 8``，tile_size≤110）、
     tooltip 112、房间详情 160、面板头像 48、玩家详情头像 96、卡面 (240, 336)。
+    run6 六类渲染面的 kind 自带语义（monster/haunt/...），直接作为 surface。
     """
+    if kind in SURFACE_KINDS:
+        return kind
     try:
         width = int(size[0])
     except (TypeError, ValueError, IndexError):
@@ -266,6 +277,36 @@ def _count_image_items(canvas) -> int:
     return total
 
 
+def _canvas_art_keys(canvas) -> dict:
+    """按 ``art:<runtime_key>`` 标签数画布上**真实存在**的图元。
+
+    返回 ``{surface: [key, ...]}``；同一 surface 内保留重复（同房间两只同种怪物
+    就是两个图元），调用方需去重时自己 set。
+    """
+    out: dict = {}
+    try:
+        items = canvas.find_all()
+    except Exception:
+        return out
+    for item in items:
+        try:
+            tags = canvas.gettags(item)
+        except Exception:
+            continue
+        for tag in tags:
+            if not tag.startswith("art:"):
+                continue
+            key = tag[len("art:"):]
+            surface = key.split(":", 1)[0]
+            out.setdefault(surface, []).append(key)
+    return out
+
+
+def _surface_evidence(canvas, surface) -> dict:
+    keys = _canvas_art_keys(canvas).get(surface, [])
+    return {"image_items": len(keys), "keys": sorted(set(keys))}
+
+
 # ---------------------------------------------------------------------------
 # 取证器：截图 + 账本映射
 # ---------------------------------------------------------------------------
@@ -274,28 +315,31 @@ _DIALOGS = []   # 探针持有的 _InfoDialog 实例（保住 PhotoImage 引用�
 
 
 def _install_dialog_tracker(ui_module):
-    """让探针持有 ``_InfoDialog`` 实例。
+    """让探针持有弹窗实例（``_InfoDialog`` / ``_TextDialog`` / ``_EndingDialog``）。
 
     两个原因，都不改 ``ui.py``：
 
-    1. ``ui._show_room_info`` 不保留弹窗返回值，``PhotoImage`` 随局部变量出栈即被回收
-       （``PhotoImage.__del__`` 会向 Tcl 发 ``image delete``），图片区当场变空白；
-       探针持引用才能截到「详情缩略图真的画出来了」；
-    2. 卡面/详情要读 ``dialog.photo.width()/height()`` 才能给出**实测** ``actual``。
+    1. ``ui._show_room_info`` / ``_open_script_dialog`` 不保留弹窗返回值，
+       ``PhotoImage`` 随局部变量出栈即被回收（``PhotoImage.__del__`` 会向 Tcl 发
+       ``image delete``），图片区当场变空白；探针持引用才能截到真图；
+    2. 卡面/详情/作祟插画要读 ``dialog.photo.width()/height()`` 才能给出**实测** ``actual``。
     """
-    original = getattr(ui_module, "_InfoDialog", None)
-    if original is None or getattr(original, "_probe_tracked", False):
-        return original
+    for name in ("_InfoDialog", "_TextDialog", "_EndingDialog"):
+        original = getattr(ui_module, name, None)
+        if original is None or getattr(original, "_probe_tracked", False):
+            continue
 
-    class _TrackedInfoDialog(original):  # type: ignore[misc,valid-type]
-        _probe_tracked = True
+        def _make(original_cls):
+            class _TrackedDialog(original_cls):  # type: ignore[misc,valid-type]
+                _probe_tracked = True
 
-        def __init__(self, *args, **kwargs):
-            original.__init__(self, *args, **kwargs)
-            _DIALOGS.append(self)
+                def __init__(self, *args, **kwargs):
+                    original_cls.__init__(self, *args, **kwargs)
+                    _DIALOGS.append(self)
 
-    ui_module._InfoDialog = _TrackedInfoDialog
-    return _TrackedInfoDialog
+            return _TrackedDialog
+
+        setattr(ui_module, name, _make(original))
 
 
 class Capture(object):
@@ -395,7 +439,8 @@ class Capture(object):
         窗口映射要几帧，所以「未映射的弹窗」先等 ``grace`` 秒再关；一次抽卡可能连带弹出
         别的事件说明，扫尾阶段把剩余 Toplevel 一并关掉，避免探针被第二个模态框永久阻塞。
         """
-        info = {"title": "", "photo": None, "handled": False, "screenshot": "", "shot_size": None}
+        info = {"title": "", "photo": None, "back_photo": None, "handled": False,
+                "screenshot": "", "shot_size": None}
         started = time.time()
         deadline = started + timeout
         settle = 0.30                      # 等窗口淡入/排完版再抢拍，避免截到半透明中间帧
@@ -409,14 +454,18 @@ class Capture(object):
             now = time.time()
             handles = []
             for dialog in list(_DIALOGS):
-                handles.append((getattr(dialog, "top", None), getattr(dialog, "photo", None)))
+                handles.append((
+                    getattr(dialog, "top", None),
+                    getattr(dialog, "photo", None),
+                    getattr(dialog, "back_photo", None),
+                ))
             try:
                 for widget in self.app.winfo_children():
                     if isinstance(widget, self.tk.Toplevel):
-                        handles.append((widget, None))
+                        handles.append((widget, None, None))
             except Exception:
                 pass
-            for top, photo in handles:
+            for top, photo, back_photo in handles:
                 if top is None or not _alive(top):
                     continue
                 try:
@@ -438,6 +487,7 @@ class Capture(object):
                         except Exception:
                             info["title"] = ""
                         info["photo"] = photo
+                        info["back_photo"] = back_photo
                         info.update(self.shoot(top, shot_name))
                         try:
                             top.destroy()
@@ -513,6 +563,20 @@ class _ProbePrompter(object):
         return None
 
 
+class _SilentPrompter(_ProbePrompter):
+    """强制推进到作祟阶段时用：不弹任何窗口，避免模态框把探针卡死。
+
+    ``_trigger_haunt`` 会走 ``notify``（私密手册）与 ``choose_traitor``（叛徒选择），
+    两者都改成无界面返回；叛徒按引擎属性规则默认值决定（返回 None）。
+    """
+
+    def notify(self, title, message):
+        return None
+
+    def choose_traitor(self, candidates, state):
+        return None
+
+
 class _Event(object):
     """伪造悬停事件：``_show_room_tooltip`` 只读 x_root / y_root。"""
 
@@ -538,6 +602,9 @@ def _draw_cards(app, capture, catalog, art_scale) -> list:
             "photo_size": None,
             "expected_size": [int(round(CARD_BASE[0] * art_scale)),
                               int(round(CARD_BASE[1] * art_scale))],
+            # run6 card_back:<kind>：抽卡弹窗顶部卡背（未翻开时显示）
+            "back_key": "",
+            "back_photo_size": None,
             "ratio_ok": False,
             "placeholder": True,
             "popup_opened": False,
@@ -564,11 +631,13 @@ def _draw_cards(app, capture, catalog, art_scale) -> list:
         entries = app.art.ledger()[before:]
         for entry in entries:
             row = capture._row(entry, _photo_size(info.get("photo")) if info["handled"] else None)
-            if row["surface"] != "card":
+            if row["surface"] not in ("card", "card_back"):
                 capture.warnings.append(
-                    "抽 %s 卡时出现非卡面账本行：%s / %s" % (kind, row["surface"], row["key"]))
+                    "抽 %s 卡时出现非卡面/非卡背账本行：%s / %s"
+                    % (kind, row["surface"], row["key"]))
             capture.rows.append(row)
         card_row = next((r for r in entries if str(r.get("kind")) == "card"), None)
+        back_row = next((r for r in entries if str(r.get("kind")) == "card_back"), None)
         # 只认实测：拿不到 PhotoImage 就留 None，由验收侧落 NOT_RUN，不拿请求尺寸冒充实测值。
         record["photo_size"] = _photo_size(info.get("photo"))
         record["title"] = info.get("title") or ""
@@ -583,6 +652,10 @@ def _draw_cards(app, capture, catalog, art_scale) -> list:
             record["card_id"] = parts[2] if len(parts) >= 3 else ""
             record["record_id"] = str(card_row.get("record_id") or "")
             record["placeholder"] = bool(card_row.get("placeholder"))
+        if back_row is not None:
+            record["back_key"] = str(back_row.get("key") or "")
+        # 卡背是弹窗里的独立 Label 图元（不是卡面），单独记实测尺寸。
+        record["back_photo_size"] = _photo_size(info.get("back_photo"))
         size = record.get("photo_size")
         if size and size[1]:
             deviation = abs(size[0] / float(size[1]) - CARD_RATIO) / CARD_RATIO
@@ -657,8 +730,12 @@ def run(seed: int = PROBE_SEED, min_rooms: int = MIN_ROOMS, max_turns: int = MAX
         "unreachable": [],
         "instrumentation": [
             "app._idle_poll 置空（停掉 300ms 轮询，回合由探针驱动）",
-            "ui._InfoDialog 换成跟踪子类（持 PhotoImage 引用 + 读实测尺寸）",
+            "ui._InfoDialog / _TextDialog / _EndingDialog 换成跟踪子类（持图 + 读实测尺寸）",
             "engine.prompter 在抽卡期间包一层（notify 走真弹窗，规则问答自动作答）",
+            "未翻地块取证时临时把当前玩家 control 置 human（只为画探索预览格，规则不变）",
+            "作祟取证走 engine._trigger_haunt 真实揭示路径，prompter 换成 _SilentPrompter",
+            "若作祟未生成怪物，按 engine._spawn_single_haunt_monster 真实生成路径补一只",
+            "结算取证最后执行：engine._set_winner('heroes') + _refresh_ui 打开 _EndingDialog",
         ],
         "errors": [],
         "warnings": [],
@@ -726,16 +803,22 @@ def run(seed: int = PROBE_SEED, min_rooms: int = MIN_ROOMS, max_turns: int = MAX
                     "取证阶段 %s 失败：\n%s" % (name, traceback.format_exc(limit=6)))
                 return default
 
-        # 1) 棋盘：整帧贴图 + 画布图元数
+        # 1) 棋盘：整帧贴图 + 画布图元数（本帧也可能包含 monster/room_back 图元）
         def _board_phase():
-            capture.capture("board", app._redraw_board,
+            capture.capture("", app._redraw_board,
                             lambda: list(getattr(app, "_board_photos", [])))
             app.update_idletasks()
-            return (_count_image_items(app.board_canvas),
-                    capture.shoot(app.board_canvas, "art_board_100.png"))
+            keys = _canvas_art_keys(app.board_canvas)
+            return {
+                "items": _count_image_items(app.board_canvas),
+                "shot": capture.shoot(app.board_canvas, "art_board_100.png"),
+                "monster": _surface_evidence(app.board_canvas, "monster"),
+                "room_back": _surface_evidence(app.board_canvas, "room_back"),
+            }
 
-        board_phase = phase("棋盘", _board_phase)
-        board_items, board_shot = board_phase if board_phase else (0, {})
+        board_phase = phase("棋盘", _board_phase, {}) or {}
+        board_items = int(board_phase.get("items") or 0)
+        board_shot = board_phase.get("shot") or {}
 
         # 2) 玩家头像条（面板档）
         def _panel_phase():
@@ -804,10 +887,189 @@ def run(seed: int = PROBE_SEED, min_rooms: int = MIN_ROOMS, max_turns: int = MAX
         if detail_room is not None:
             detail_shot = phase("房间详情", _detail_phase, {}) or {}
 
-        # 5) 抽卡弹窗：omen/item/event 各一次
+        # 5) 未翻地块（room_back:<back|ghost>）：探索预览格 + 悬停虚影
+        #    必须放在抽卡之前：抽预兆会 stop_movement（steps_remaining=0），
+        #    之后 explore_options 为空，预览格就画不出来了。
+        room_back_evidence = {"image_items": 0, "keys": [], "screenshot": ""}
+
+        def _room_back_phase():
+            nonlocal room_back_evidence
+            player = engine.current_player
+            original_control = player.control
+            # 探索预览本身只在"人类回合"绘制；这里临时放开 control，
+            # 只影响是否画预览格，不改规则/不改引擎判定（探针 instrumentation 已登记）。
+            player.control = "human"
+            try:
+                capture.capture("", app._redraw_board,
+                                lambda: list(getattr(app, "_board_photos", [])))
+                app.update_idletasks()
+                evidence = _surface_evidence(app.board_canvas, "room_back")
+                shot = capture.shoot(app.board_canvas, "art_room_back.png")
+                tags = list(getattr(app, "_exploration_slots", {}))
+                if tags:
+                    tag = tags[0]
+                    before = len(app.art.ledger())
+                    app._on_exploration_slot_enter(tag)
+                    entries = app.art.ledger()[before:]
+                    for entry in entries:
+                        photo = (app._board_photos[-1]
+                                 if getattr(app, "_board_photos", None) else None)
+                        capture.rows.append(capture._row(entry, _photo_size(photo)))
+                    app.update_idletasks()
+                    hover = _surface_evidence(app.board_canvas, "room_back")
+                    evidence["image_items"] = max(
+                        evidence.get("image_items", 0), hover.get("image_items", 0))
+                    evidence["keys"] = sorted(set(evidence.get("keys", [])) | set(hover.get("keys", [])))
+                    app._on_exploration_slot_leave(tag)
+                evidence["exploration_slots"] = len(tags)
+                evidence["screenshot"] = shot.get("screenshot", "")
+                room_back_evidence = evidence
+            finally:
+                player.control = original_control
+
+        phase("未翻地块", _room_back_phase, {})
+
+        # 6) 抽卡弹窗：omen/item/event 各一次（同时取 card_back:<kind>）
         cards = phase("抽卡弹窗", lambda: _draw_cards(
             app, capture, engine.catalog,
             float(result["environment"].get("art_scale") or 1.0)), []) or []
+
+        # 7) 作祟揭示（haunt:<n>）+ 怪物标记（monster:<template_id>）
+        surface_monster = dict(board_phase.get("monster") or {"image_items": 0, "keys": []})
+        haunt_evidence = {"image_items": 0, "keys": [], "dialog_opened": False,
+                          "photo_size": None, "screenshot": ""}
+
+        def _haunt_phase():
+            nonlocal surface_monster, haunt_evidence
+            real_prompter = engine.prompter
+            viewer = engine.current_player
+            original_control = viewer.control
+            engine.prompter = _SilentPrompter(real_prompter)
+            try:
+                if not state.last_omen_id:
+                    # 真实抽牌路径（SilentPrompter.notify 不弹窗）
+                    engine._draw_omen(viewer)
+                engine._trigger_haunt(viewer)
+                # 单人热座语义：当前屏幕上就是这位玩家的手册
+                viewer.control = "human"
+                app._haunt_briefed_id = None
+                app._refresh_ui()
+                before = len(app.art.ledger())
+                info = capture.run_popup(
+                    lambda: app._maybe_show_haunt_briefing(), "art_haunt_reveal.png")
+                entries = app.art.ledger()[before:]
+                # 只收 haunt 行：_refresh_ui 同时会重画棋盘/头像，那些行另有取证帧，
+                # 混进来会让 J4 看到"无 actual 的面板行"而误判 NOT_RUN。
+                for entry in entries:
+                    if str(entry.get("kind")) != "haunt":
+                        continue
+                    capture.rows.append(capture._row(entry, _photo_size(info.get("photo"))))
+                keys = [str(entry.get("key") or "") for entry in entries
+                        if str(entry.get("kind")) == "haunt"]
+                if not keys:
+                    keys = [str(row.get("key") or "") for row in capture.rows
+                            if row.get("surface") == "haunt"]
+                haunt_evidence = {
+                    "image_items": 1 if info.get("photo") is not None else 0,
+                    "keys": sorted({key for key in keys if key}),
+                    "dialog_opened": bool(info.get("handled")),
+                    "photo_size": _photo_size(info.get("photo")),
+                    "screenshot": info.get("screenshot", ""),
+                }
+
+                def _redraw_and_count():
+                    capture.capture("", app._redraw_board,
+                                    lambda: list(getattr(app, "_board_photos", [])))
+                    app.update_idletasks()
+                    return _surface_evidence(app.board_canvas, "monster")
+
+                evidence = _redraw_and_count()
+                if not evidence.get("keys"):
+                    # 少数剧本不生成怪物：走引擎真实生成路径补一只，保证 J7 有样本
+                    templates = list(getattr(engine.catalog, "monsters", {}) or {})
+                    if templates:
+                        engine._spawn_single_haunt_monster(
+                            {"template_id": templates[0]}, viewer.room_key)
+                        evidence = _redraw_and_count()
+                        evidence["spawned_by_probe"] = True
+                surface_monster = evidence
+            finally:
+                viewer.control = original_control
+                engine.prompter = real_prompter
+
+        phase("作祟揭示", _haunt_phase, {})
+
+        # 8) 骰面结果区（dice:<0|1|2>）
+        dice_evidence = {"image_items": 0, "keys": [], "photo_size": None, "screenshot": ""}
+
+        def _dice_phase():
+            nonlocal dice_evidence
+            before = len(app.art.ledger())
+            dialog = ui._DiceDialog(app, [1, 2, 0], 3, "探针骰面", modal=False)
+            try:
+                # 真实流程由 _reveal 逐颗写入 _showing；探针直接落到"结果已出"的状态，
+                # 让结果区同时出现 1/2/0 三个面（否则只有投掷前的 0 面）。
+                dialog._showing = list(dialog.dice)
+                dialog._show_result()          # 结果区：定格 1/2/0 三面
+                app.update()                   # 让 Toplevel 真正映射后再截图
+                entries = app.art.ledger()[before:]
+                for entry in entries:
+                    # 同一次 _draw_dice 会重绘多轮，逐条对齐图片不可靠；
+                    # actual 留 null（J12 只断言图元存在且键合法），不拿请求尺寸冒充。
+                    capture.rows.append(capture._row(entry, None))
+                shot = capture.shoot(dialog.top, "art_dice.png")
+                evidence = _surface_evidence(dialog.canvas, "dice")
+                photos = list(getattr(dialog, "_dice_photos", []))
+                evidence["photo_size"] = _photo_size(photos[0]) if photos else None
+                evidence["screenshot"] = shot.get("screenshot", "")
+                dice_evidence = evidence
+            finally:
+                dialog._close()
+
+        phase("骰面", _dice_phase, {})
+
+        # 8b) 棋盘终检：作祟 setup 可能新增剧本房，J1 必须按**最终**棋盘数图元
+        def _final_board_phase():
+            capture.capture("", app._redraw_board,
+                            lambda: list(getattr(app, "_board_photos", [])))
+            app.update_idletasks()
+            return {
+                "items": _count_image_items(app.board_canvas),
+                "shot": capture.shoot(app.board_canvas, "art_board_100.png"),
+            }
+
+        final_board = phase("棋盘终检", _final_board_phase, {}) or {}
+        board_items = int(final_board.get("items") or board_items)
+        board_shot = final_board.get("shot") or board_shot
+
+        # 9) 结算画面（ending:<heroes|traitor>）：放在最后，避免 GAME_OVER 影响前面取证
+        ending_evidence = {"image_items": 0, "keys": [], "dialog_opened": False,
+                           "winner": "", "photo_size": None, "screenshot": ""}
+
+        def _ending_phase():
+            nonlocal ending_evidence
+            before = len(app.art.ledger())
+            engine._set_winner("heroes", "探针：结算画面取证")
+            app._refresh_ui()
+            app.update()                       # 让全屏 Toplevel 真正映射后再截图
+            dialog = getattr(app, "_ending_dialog", None)
+            if dialog is None:
+                return
+            entries = app.art.ledger()[before:]
+            # 同上：只收 ending 行，避免把 _refresh_ui 重画的面板/棋盘行带进账本。
+            for entry in entries:
+                if str(entry.get("kind")) != "ending":
+                    continue
+                capture.rows.append(capture._row(entry, _photo_size(dialog.photo)))
+            evidence = _surface_evidence(dialog.canvas, "ending")
+            evidence["dialog_opened"] = True
+            evidence["winner"] = "heroes"
+            evidence["photo_size"] = _photo_size(dialog.photo)
+            evidence["screenshot"] = capture.shoot(
+                dialog.top, "art_ending.png").get("screenshot", "")
+            ending_evidence = evidence
+
+        phase("结算画面", _ending_phase, {})
 
         # ---- 汇总 ----
         ledger = capture.rows
@@ -875,6 +1137,38 @@ def run(seed: int = PROBE_SEED, min_rooms: int = MIN_ROOMS, max_turns: int = MAX
             "screenshot": detail_shot.get("screenshot", ""),
             "shot_size": detail_shot.get("shot_size"),
         }
+        # ---- run6 六类渲染面证据（J7–J12 的唯一输入；缺证据只能落 NOT_RUN） ----
+        back_records = [c for c in cards
+                        if isinstance(c, dict) and c.get("back_key")]
+        card_back_evidence = {
+            "image_items": len([c for c in back_records if c.get("back_photo_size")]),
+            "keys": sorted({str(c.get("back_key")) for c in back_records}),
+            "kinds": sorted({str(c.get("kind")) for c in back_records}),
+            "photo_sizes": {str(c.get("kind")): c.get("back_photo_size")
+                            for c in back_records},
+        }
+        monster_evidence = dict(surface_monster)
+        # 「场上」= 所在房间已在棋盘上的怪物（ui 只画这些）；总数另记，便于对照。
+        monster_evidence["monsters_on_board"] = len([
+            monster for monster in state.monsters if monster.room_key in state.board])
+        monster_evidence["monsters_total"] = len(state.monsters)
+        surfaces = {
+            "monster": monster_evidence,
+            "haunt": dict(haunt_evidence),
+            "ending": dict(ending_evidence),
+            "card_back": card_back_evidence,
+            "room_back": dict(room_back_evidence),
+            "dice": dict(dice_evidence),
+        }
+        for name, evidence in surfaces.items():
+            evidence["placeholder"] = len([
+                row for row in ledger
+                if row.get("surface") == name and row.get("placeholder")])
+        result["surfaces"] = surfaces
+        result["surfaces_complete"] = {
+            name: bool(surfaces[name].get("keys")) for name in SURFACE_KINDS
+        }
+
         result["ledger"] = ledger
         result["counters"] = {
             "rooms_placed": room_count,

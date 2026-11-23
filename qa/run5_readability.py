@@ -1,6 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""M-13 原图可读性代理：142/142 逐张计算并落盘 qa/run5_readability.json。
+"""M-13 原图可读性代理：274/274 逐张计算并落盘 qa/run5_readability.json。
+
+覆盖口径
+--------
+run5 阶段只覆盖当时在册的 142 位；九类渲染面接入后 P 表为 274 位
+（+ monster 52 / haunt 70 / ending 2 / card_back 3 / room_back 2 / dice 3），
+本脚本改为对 **P 表全部行**逐张计算，不再按 promotion map 抽样。
+
+阈值口径
+--------
+三类指标（spread / mean / extreme_ratio）对全部 11 个类别**沿用同一套阈值**：
+实测 274 张里没有一张因类别差异需要豁免（haunt 70 张 16:9 大图的
+spread 最小 0.166、mean 最小 0.085，仍在 [0.05,0.92] 内），因此不设
+按类别的阈值分档，宁可如实报失败也不放宽。若将来某类确实不适用，
+应在 `method` 里写明分档理由并把失败项原样保留在 `failures` 里。
 
 为什么单独一个脚本
 ------------------
@@ -38,6 +52,10 @@ QA_DIR = Path(__file__).resolve().parent
 PTABLE_JSON = GAME_DIR / "assets" / "p_table.json"
 OUT_JSON = QA_DIR / "run5_readability.json"
 
+# P 表资源位总数：142 原有位 + 132 新增渲染面（monster 52 / haunt 70 /
+# ending 2 / card_back 3 / room_back 2 / dice 3）。
+EXPECTED_ROWS = 274
+
 sys.dont_write_bytecode = True
 
 
@@ -53,16 +71,19 @@ def main() -> int:
     verifier = _load_verifier()
     payload = json.loads(PTABLE_JSON.read_text(encoding="utf-8"))
     records = payload.get("records") or []
-    if len(records) != 142:
-        print("[FAIL] P 表行数=%d，期望 142" % len(records))
+    if len(records) != EXPECTED_ROWS:
+        print("[FAIL] P 表行数=%d，期望 %d" % (len(records), EXPECTED_ROWS))
         return 1
 
     items, failures = [], []
+    per_type = {}
     for rec in records:
         rid = rec.get("record_id")
+        asset_type = rec.get("asset_type")
         path = PROJECT_ROOT / str(rec.get("source_path") or "")
         if not path.is_file():
-            failures.append("%s 源文件缺失" % rid)
+            # 源文件缺失也计入 failures（不静默跳过，覆盖率缺口必须可见）
+            failures.append("%s 源文件缺失：%s" % (rid, rec.get("source_path")))
             continue
         try:
             item = verifier.readability_metrics(path)
@@ -70,15 +91,22 @@ def main() -> int:
             failures.append("%s 解码失败：%s" % (rid, type(exc).__name__))
             continue
         item["record_id"] = rid
-        item["asset_type"] = rec.get("asset_type")
+        item["asset_type"] = asset_type
         item["source_path"] = rec.get("source_path")
         items.append(item)
+        per_type[asset_type] = per_type.get(asset_type, 0) + 1
         failures.extend(verifier.readability_failures(rid, item))
 
+    method = (
+        verifier.READABILITY_METHOD
+        + " 阈值对 11 个类别统一（spread>=0.10 / mean∈[0.05,0.92] / "
+          "过曝+死黑<=0.25）：实测 274 张无一需要按类别豁免，故不设分档；"
+          "分类计数=%s。" % json.dumps(per_type, ensure_ascii=False, sort_keys=True)
+    )
     document = {
         "schema": "run5_readability/v1",
         "generated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-        "method": verifier.READABILITY_METHOD,
+        "method": method,
         "count": len(items),
         "failures": failures,
         "items": items,
@@ -86,6 +114,8 @@ def main() -> int:
     OUT_JSON.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n",
                         encoding="utf-8")
     print("[readability] %d 张 -> %s" % (len(items), OUT_JSON))
+    print("[readability] 分类计数：%s"
+          % json.dumps(per_type, ensure_ascii=False, sort_keys=True))
     print("[readability] 失败 %d 项" % len(failures))
     for item in failures[:5]:
         print("  - %s" % item)

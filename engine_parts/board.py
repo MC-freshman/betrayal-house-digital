@@ -172,6 +172,8 @@ class BoardRules:
         room.rotation = rotation
         room.doors = rotated.doors
         room.links = {**rotated.links, **dynamic}
+        # K2：门朝向变了，障碍的门->侧映射要按新 rotation 重算（未登记则不动）。
+        self.configure_disclosed_barrier(room)
         return True
 
     def _relocate_room(self, room_key: str, x: int, y: int, floor: int | None = None) -> str | None:

@@ -17,7 +17,7 @@
 
 覆盖
 ----
-142 行 / 33 列（含 runtime_key）/ 0 usable / 95 partial / 47 missing / 16 fallback / 31 pending、
+274 行 / 33 列（含 runtime_key）/ 0 usable / 95 partial / 47 missing / 16 fallback / 31 pending、
 95 个源文件事实、98 个运行时 PNG、三张占位图、registry 全键空间、
 11 组异常负样本、重复读取与内存重建一致性、UI 绑定静态与缓存契约、
 15 项性能预算（只读可测项实测，写文件项显式 NOT_RUN）、
@@ -78,18 +78,25 @@ GAME_DIR = SCRIPT_PATH.parents[1]
 DEFAULT_ROOT = GAME_DIR.parents[2]
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
-EXPECTED_TOTAL = 142
+EXPECTED_TOTAL = 274
 EXPECTED_BY_TYPE = {
     "character": 12,
     "room": 50,
     "card_omen": 13,
     "card_item": 22,
     "card_event": 45,
+    # run6 六类渲染面
+    "monster": 52,
+    "haunt": 70,
+    "ending": 2,
+    "card_back": 3,
+    "room_back": 2,
+    "dice": 3,
 }
-# run5 v2（2026-11-20）：47 位登记 + 130 张无损转码后 142 位全部 usable。
+# run5 v2（2026-11-20）：47 位登记 + 130 张无损转码后 274 位全部 usable。
 # 旧 0/95/47 已退役，见 qa/run5_baseline_diff.json。
 EXPECTED_AVAILABILITY = {
-    "usable": 142,
+    "usable": 274,
     "partial": 0,
     "missing": 0,
     "corrupted": 0,
@@ -98,7 +105,7 @@ EXPECTED_AVAILABILITY = {
 EXPECTED_MISSING_BY_TYPE = {}
 EXPECTED_MISSING_FALLBACK = 0
 EXPECTED_MISSING_PENDING = 0
-EXPECTED_SOURCE_FILES = 142
+EXPECTED_SOURCE_FILES = 274
 EXPECTED_BACKUP_FILES = 130
 EXPECTED_RUNTIME_ROOMS = 50
 EXPECTED_RUNTIME_CARDS = 80
@@ -150,7 +157,18 @@ RUNTIME_SIZE_BY_TYPE = {
     "card_omen": (480, 672),
     "card_item": (480, 672),
     "card_event": (480, 672),
+    # run6 六类渲染面（P 表 runtime_specs 同源，见 asset_pipeline.RUNTIME_SPECS）
+    "monster": (512, 512),
+    "haunt": (1280, 720),
+    "ending": (1024, 576),
+    "card_back": (480, 640),
+    "room_back": (512, 512),
+    "dice": (256, 256),
 }
+
+# 只断言「必需 alpha」的类别必须带 alpha 通道（叠图用途）；剧本插画/结算/牌背
+# 是整幅图或卡面替身，源图自带透明留白属正常，不做反向断言。
+RUNTIME_ALPHA_REQUIRED_TYPES = ("character", "monster", "room_back", "dice")
 
 CATEGORY_DIR_BY_TYPE = {
     "character": "char",
@@ -168,8 +186,21 @@ USABLE_FIELDS_BY_TYPE = {
     "card_event": {"card_face", "preview"},
 }
 
-RECORD_ID_RE = re.compile(r"^P-(CHR|ROOM|OMEN|ITEM|EVT)-(\d{3})$")
-FALLBACK_ID_RE = re.compile(r"^P-EVT-\d{3}$")
+# run6：九类渲染面扩到十一类，前缀与 asset_type 一一对应（见下面的 PREFIX_BY_ASSET_TYPE）。
+RECORD_ID_RE = re.compile(
+    r"^P-(CHR|ROOM|OMEN|ITEM|EVT|MONS|HAUNT|END|CBACK|RBACK|DICE)-(\d{3})$")
+FALLBACK_ID_RE = re.compile(r"^P-(EVT|DICE)-\d{3}$")
+PREFIX_BY_ASSET_TYPE = {
+    "character": "CHR", "room": "ROOM", "card_omen": "OMEN",
+    "card_item": "ITEM", "card_event": "EVT",
+    "monster": "MONS", "haunt": "HAUNT", "ending": "END",
+    "card_back": "CBACK", "room_back": "RBACK", "dice": "DICE",
+}
+# run6：runtime_key 命名空间（room:/card:/character: + 六类渲染面）
+RUNTIME_KEY_PREFIXES = (
+    "room:", "card:", "character:",
+    "monster:", "haunt:", "ending:", "card_back:", "room_back:", "dice:",
+)
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -257,6 +288,22 @@ def png_size_local(path):
     except struct.error:
         return None
     return int(width), int(height)
+
+
+def png_has_alpha_channel(path):
+    """只读 IHDR color type 判断 PNG 是否带 alpha（4=灰度+alpha，6=RGBA）。
+
+    调色板（3）+ tRNS 也算带透明，但工程侧规范化输出统一是 RGBA/RGB，
+    这里按 color type 直判，避免额外解析 chunk 产生歧义。
+    """
+    try:
+        with open(str(path), "rb") as handle:
+            head = handle.read(26)
+    except OSError:
+        return None
+    if not head.startswith(PNG_SIGNATURE) or len(head) < 26 or head[12:16] != b"IHDR":
+        return None
+    return head[25] in (4, 6)
 
 
 def sniff_magic(path):
@@ -744,7 +791,7 @@ def check_data_stats(ctx):
             problems.append("%s: stats=%r 实测=%r" % (key, actual, expected))
     if problems:
         return FAIL, "stats 与逐行复算不一致 %d 项" % len(problems), problems
-    return PASS, "stats 与逐行复算逐项一致（records=142，0/95/47/0/0）", []
+    return PASS, "stats 与逐行复算逐项一致（records=274，0/95/47/0/0）", []
 
 
 def check_data_type_counts(ctx):
@@ -807,10 +854,7 @@ def check_data_ids(ctx):
             problems.append("record_id 格式非法：%r" % record_id)
             continue
         prefix = match.group(1)
-        expected_prefix = {
-            "character": "CHR", "room": "ROOM", "card_omen": "OMEN",
-            "card_item": "ITEM", "card_event": "EVT",
-        }.get(row.get("asset_type"))
+        expected_prefix = PREFIX_BY_ASSET_TYPE.get(row.get("asset_type"))
         if prefix != expected_prefix:
             problems.append("%s 前缀与 %s 不一致" % (record_id, row.get("asset_type")))
         per_prefix.setdefault(prefix, []).append(int(match.group(2)))
@@ -820,10 +864,10 @@ def check_data_ids(ctx):
             problems.append("%s 段号不连续：%r" % (prefix, sorted(numbers)))
     target_refs = [row.get("target_ref") for row in ctx.rows]
     if len(set(target_refs)) != EXPECTED_TOTAL:
-        problems.append("target_ref 唯一数 %d != 142" % len(set(target_refs)))
+        problems.append("target_ref 唯一数 %d != 274" % len(set(target_refs)))
     if problems:
         return FAIL, "；".join(problems[:8]), problems
-    return PASS, "142 个 record_id 唯一、前缀正确、段号连续；target_ref 唯一", []
+    return PASS, "274 个 record_id 唯一、前缀正确、段号连续；target_ref 唯一", []
 
 
 def check_data_content_refs(ctx):
@@ -838,7 +882,7 @@ def check_data_content_refs(ctx):
         # content_refs 的运行时侧固定是 runtime_key（target_ref 已是 content.py 溯源键）
         runtime_key = row.get("runtime_key") or ""
         content_ref = row.get("content_ref") or ""
-        if not runtime_key.startswith(("room:", "card:", "character:")):
+        if not runtime_key.startswith(RUNTIME_KEY_PREFIXES):
             problems.append("%s runtime_key 格式非法：%r" % (row.get("record_id"), runtime_key))
             continue
         if not content_ref.startswith("content.py:"):
@@ -854,10 +898,11 @@ def check_data_content_refs(ctx):
         if content_refs.get(content_ref) != runtime_key:
             problems.append("反向映射缺失：%s" % content_ref)
     if len(forward) != EXPECTED_TOTAL or len(reverse) != EXPECTED_TOTAL:
-        problems.append("content_ref 唯一数 %d/%d != 142" % (len(forward), len(reverse)))
+        problems.append("content_ref 唯一数 %d/%d != 274" % (len(forward), len(reverse)))
     if problems:
         return FAIL, "；".join(problems[:8]), problems
-    return PASS, "content_refs 284 条双向一致（runtime_key ↔ content_ref）；142 个 content_ref 唯一", []
+    return PASS, "content_refs %d 条双向一致（runtime_key ↔ content_ref）；274 个 content_ref 唯一" % (
+        len(content_refs)), []
 
 
 def check_data_mapping(ctx):
@@ -1147,9 +1192,16 @@ def check_data_content_sync(ctx):
         "ITEM_CARDS": 22,
         "EVENT_BASES": 11,
         "EVENT_SUPPLEMENTAL_SPECS": 34,
+        # run6 六类渲染面（142 -> 274）：怪物标记 52 / 剧本插画 70 / 固定渲染位 10
+        "MONSTER_BASES": 52,
+        "HAUNT_DEFS": 70,
+        "RENDER_SURFACE_SPECS": 10,
     }
     try:
         module = ctx.load_content_module()
+        # HAUNT_DEFS 不是模块级列表，唯一来源是 build_catalog(0).haunt_defs
+        # （与 qa/verify_assets_contract.py 的 _load_content_collections 同源）。
+        catalog = module.build_catalog(0)
         actual_counts = {
             "CHARACTER_FACES": len(module.CHARACTER_FACES),
             "ROOM_BASES": len(module.ROOM_BASES),
@@ -1158,9 +1210,12 @@ def check_data_content_sync(ctx):
             "ITEM_CARDS": len(module.ITEM_CARDS),
             "EVENT_BASES": len(module.EVENT_BASES),
             "EVENT_SUPPLEMENTAL_SPECS": len(module.EVENT_SUPPLEMENTAL_SPECS),
+            "MONSTER_BASES": len(getattr(module, "MONSTER_BASES", []) or []),
+            "HAUNT_DEFS": len(getattr(catalog, "haunt_defs", {}) or {}),
+            "RENDER_SURFACE_SPECS": len(getattr(module, "RENDER_SURFACE_SPECS", []) or []),
         }
         if sum(actual_counts.values()) != EXPECTED_TOTAL:
-            problems.append("集合展开 %d != 142" % sum(actual_counts.values()))
+            problems.append("集合展开 %d != 274" % sum(actual_counts.values()))
         if actual_counts != expected_collections:
             problems.append("集合计数与基线不一致：%r" % actual_counts)
     except Exception as exc:
@@ -1176,7 +1231,8 @@ def check_data_content_sync(ctx):
         problems.append("source_inventory.orphans 非空")
     if problems:
         return FAIL, "content.py 同步失败 %d 项" % len(problems), problems[:8]
-    return PASS, "content.py sha256 一致；7 集合 12/39/11/13/22/11/34=142；无损坏/孤立源文件", []
+    return PASS, ("content.py sha256 一致；10 集合 "
+                  "12/39/11/13/22/11/34/52/70/10=274；无损坏/孤立源文件"), []
 
 
 def check_data_photos(ctx):
@@ -1249,7 +1305,7 @@ def check_data_photos(ctx):
                             % (row.get("record_id"), marker, backup_marker, provenance_aigc))
     if problems:
         return FAIL, "源文件回归失败 %d 项" % len(problems), problems[:8]
-    return PASS, ("142 源文件与 photos_inventory/P 表 sha256/bytes 三方一致；"
+    return PASS, ("274 源文件与 photos_inventory/P 表 sha256/bytes 三方一致；"
                   "AIGC 事实按原件（备份）核对；130 个备份在独立目录且不计入源文件；"
                   "无孤立"), []
 
@@ -1283,7 +1339,7 @@ def check_schema_csv_json(ctx):
     if not raw.startswith(b"\xef\xbb\xbf"):
         problems.append("CSV 缺 UTF-8 BOM")
     if len(csv_rows) != EXPECTED_TOTAL:
-        problems.append("CSV 行数 %d != 142" % len(csv_rows))
+        problems.append("CSV 行数 %d != 274" % len(csv_rows))
     columns = list(ctx.payload.get("schema", {}).get("columns") or [])
     if header != columns:
         problems.append("CSV 表头与 P 表 schema.columns 不一致")
@@ -1296,7 +1352,7 @@ def check_schema_csv_json(ctx):
             break
     if problems:
         return FAIL, "CSV/JSON 结构不一致 %d 项" % len(problems), problems[:8]
-    return PASS, "CSV BOM + 142 行；CSV 表头 = JSON schema.columns = 实现 %d 列" % len(columns), []
+    return PASS, "CSV BOM + 274 行；CSV 表头 = JSON schema.columns = 实现 %d 列" % len(columns), []
 
 
 def check_schema_required_fields(ctx):
@@ -1309,10 +1365,10 @@ def check_schema_required_fields(ctx):
                 counts[field] += 1
     for field, count in counts.items():
         if count:
-            problems.append("缺必填字段 %s（%d/142）" % (field, count))
+            problems.append("缺必填字段 %s（%d/274）" % (field, count))
     if problems:
         return FAIL, "；".join(problems), problems
-    return PASS, "16 个必填字段在 142 行全部存在", []
+    return PASS, "16 个必填字段在 274 行全部存在", []
 
 
 def check_schema_columns(ctx):
@@ -1407,7 +1463,7 @@ def check_schema_csv_json_equiv(ctx):
                     index, column, csv_row.get(column), json_row.get(column)))
     if problems:
         return FAIL, "CSV/JSON 字段不一致 %d 项" % len(problems), problems[:8]
-    return PASS, "142 行 × %d 列逐字段等价" % len(columns), []
+    return PASS, "274 行 × %d 列逐字段等价" % len(columns), []
 
 
 # ---------------------------------------------------------------------------
@@ -1430,7 +1486,7 @@ def check_runtime_inventory(ctx):
     characters = [rel for rel in paths if "/assets/characters/" in rel]
     placeholders_in_rows = [rel for rel in paths if "/assets/placeholders/" in rel]
     problems = []
-    # run5 v2：142 位各有一张自有运行时图（145 张 = 142 + 3 张占位图另计）
+    # run5 v2：274 位各有一张自有运行时图（277 张 = 274 + 3 张占位图另计）
     if len(paths) != EXPECTED_TOTAL:
         problems.append("去重运行时文件 %d != %d" % (len(paths), EXPECTED_TOTAL))
     for label, actual, expected in (
@@ -1452,7 +1508,7 @@ def check_runtime_inventory(ctx):
         problems.append("运行时文件缺失 %d 个：%s" % (len(missing), missing[:4]))
     if problems:
         return FAIL, "；".join(problems), problems
-    return PASS, ("142 个去重运行时 PNG：rooms=50 / cards=80 / characters=12；"
+    return PASS, ("274 个去重运行时 PNG：rooms=50 / cards=80 / characters=12；"
                   "另有 placeholders=3 张兜底图（无行指向）"), []
 
 
@@ -1478,9 +1534,21 @@ def check_runtime_png_sizes(ctx):
             problems.append("%s 实测 %dx%d，期望 %dx%d" % (rel, actual[0], actual[1], expected[0], expected[1]))
         if sniff_magic(absolute) != "png":
             problems.append("%s 魔数不是 PNG" % rel)
+        # alpha 只对「必需 alpha」的类别断言（叠图用途）；其余类别不反向断言。
+        alpha_types = {row.get("asset_type") for row in rows} & set(RUNTIME_ALPHA_REQUIRED_TYPES)
+        if alpha_types:
+            has_alpha = png_has_alpha_channel(absolute)
+            if has_alpha is None:
+                problems.append("%s 无法读取 IHDR color type" % rel)
+            elif not has_alpha:
+                problems.append("%s 缺少 alpha 通道（%s 必需）"
+                                % (rel, "/".join(sorted(alpha_types))))
     if problems:
         return FAIL, "运行时 PNG 真实性/尺寸不一致 %d 项" % len(problems), problems[:8]
-    return PASS, "98/98 真实 PNG；房间 512×512、卡牌 480×672、角色占位 320×320", []
+    return PASS, ("274/274 真实 PNG；房间 512×512、卡牌 480×672、角色 320×320、"
+                  "怪物 512×512、剧本 1280×720、结算 1024×576、牌背 480×640、"
+                  "未翻地块 512×512、骰面 256×256；alpha 仅断言 character/monster/"
+                  "room_back/dice"), []
 
 
 def check_runtime_placeholders(ctx):
@@ -1528,7 +1596,7 @@ def check_runtime_paths_inside_assets(ctx):
             problems.append("%s runtime_path 大小写不一致" % record_id)
     if problems:
         return FAIL, "运行时路径越界/口径非法 %d 项" % len(problems), problems[:8]
-    return PASS, "142 条 runtime_path 均在 assets 内、无 ..、逐段大小写一致", []
+    return PASS, "274 条 runtime_path 均在 assets 内、无 ..、逐段大小写一致", []
 
 
 # ---------------------------------------------------------------------------
@@ -1568,7 +1636,7 @@ def check_registry_load_no_decode(ctx):
     if called["value"]:
         problems.append("load 期间调用了 png_size")
     if len(registry) != EXPECTED_TOTAL:
-        problems.append("load 后 len=%d != 142" % len(registry))
+        problems.append("load 后 len=%d != 274" % len(registry))
     if problems:
         return FAIL, "；".join(problems), problems
     return PASS, "load 仅读 JSON/建索引，未调用 png_size；顶层无 PIL/tkinter", []
@@ -1578,7 +1646,7 @@ def check_registry_counts(ctx):
     registry = require_registry(ctx)
     problems = []
     if len(registry) != EXPECTED_TOTAL:
-        problems.append("len(registry)=%d != 142" % len(registry))
+        problems.append("len(registry)=%d != 274" % len(registry))
     if len(registry.missing()) != EXPECTED_AVAILABILITY["missing"]:
         problems.append("missing()=%d != 47" % len(registry.missing()))
     for asset_type, expected in EXPECTED_BY_TYPE.items():
@@ -1595,8 +1663,8 @@ def check_registry_counts(ctx):
         problems.append("summary.availability=%r" % maybes)
     if problems:
         return FAIL, "；".join(problems), problems
-    return PASS, ("len=142、missing=0、五类 by_type=12/50/13/22/45、"
-                  "summary 142/0/0"), []
+    return PASS, ("len=274、missing=0、五类 by_type=12/50/13/22/45、"
+                  "summary 274/0/0"), []
 
 
 def check_registry_resolve_all(ctx):
@@ -1636,14 +1704,14 @@ def check_registry_resolve_all(ctx):
             problems.append("裸 id 返回未知 target_ref：%s" % ref.target_ref)
     if problems:
         return FAIL, "全键空间解析失败 %d 项" % len(problems), problems[:8]
-    return PASS, "target_ref=142 / runtime_key=142 / record_id=142 / content_ref=142 / 裸 id=130 全部可解析", []
+    return PASS, "target_ref=274 / runtime_key=274 / record_id=274 / content_ref=274 / 裸 id=130 全部可解析", []
 
 
 def check_registry_dirty_keys(ctx):
     registry = require_registry(ctx)
     problems = []
     cases = [
-        None, "", "   ", "no:such:key", "no_such_room", 142, 3.14, ["x"], {"a": 1},
+        None, "", "   ", "no:such:key", "no_such_room", 274, 3.14, ["x"], {"a": 1},
         "../etc/passwd", "room:../entrance_hall", "source/desktop/game/assets/rooms/entrance_hall.png",
         "C:\\Windows\\win.ini", "card:omen:omen_bite/../../x",
     ]
@@ -1834,7 +1902,7 @@ def check_registry_load_variants(ctx):
     try:
         from_mapping = module.AssetRegistry.load(str(ctx.mapping_path))
         if len(from_mapping) != EXPECTED_TOTAL:
-            problems.append("从 asset_mapping.json 回退加载 len=%d != 142" % len(from_mapping))
+            problems.append("从 asset_mapping.json 回退加载 len=%d != 274" % len(from_mapping))
     except Exception as exc:
         problems.append("映射回退加载失败：%s" % type(exc).__name__)
     missing_path = ctx.assets / "__no_such_manifest__.json"
@@ -1861,7 +1929,7 @@ def check_registry_load_variants(ctx):
         problems.append("缺少用于缺 records 负样本的只读 JSON")
     if problems:
         return FAIL, "；".join(problems), problems
-    return PASS, "映射回退加载 142；缺清单 FileNotFoundError 含路径；缺 records 且无同目录表 ValueError", []
+    return PASS, "映射回退加载 274；缺清单 FileNotFoundError 含路径；缺 records 且无同目录表 ValueError", []
 
 
 def check_registry_duplicate_keys(ctx):
@@ -2133,7 +2201,7 @@ def check_neg_count_boundary(ctx):
     """计数边界：删 1 条后 len / missing() / by_type() 必须同步减 1。
 
     run5 v2：真实表 0 missing，改为先**合成**一条 pending 事件，再用"删前/删后
-    实测差"做断言（比硬编码 142→141、47→46 更强，且不依赖旧基线数字）。
+    实测差"做断言（比硬编码 274→141、47→46 更强，且不依赖旧基线数字）。
     """
     problems = []
     payload = _mutated_payload(ctx)
@@ -2228,7 +2296,7 @@ def check_repeat_rebuild(ctx):
     problems = []
     columns = _expected_columns(ctx)
     if len(rows) != EXPECTED_TOTAL:
-        problems.append("重建行数 %d != 142" % len(rows))
+        problems.append("重建行数 %d != 274" % len(rows))
     for index, (rebuilt, disk) in enumerate(zip(rows, ctx.rows)):
         if rebuilt.get("target_ref") != disk.get("target_ref"):
             problems.append("第 %d 行 target_ref 顺序漂移" % index)
@@ -2245,7 +2313,7 @@ def check_repeat_rebuild(ctx):
         problems.append("重建 stats 与磁盘 stats 不一致")
     if problems:
         return FAIL, "内存重建与磁盘 P 表不一致 %d 项（耗时 %.2fs）" % (len(problems), elapsed), problems[:8]
-    return PASS, "内存重建 142 行 × %d 列与磁盘逐字段一致；stats 一致（耗时 %.2fs）" % (
+    return PASS, "内存重建 274 行 × %d 列与磁盘逐字段一致；stats 一致（耗时 %.2fs）" % (
         len(columns), elapsed), []
 
 
@@ -2279,7 +2347,7 @@ def check_repeat_second_build(ctx):
         problems.append("两次 build 的键/回退/发布档指纹不一致")
     if problems:
         return FAIL, "二次运行不一致 %d 项" % len(problems), problems[:8]
-    return PASS, "95 文件二次扫描与 142 行二次构建指纹一致（首次 %.2fs）" % first_elapsed, []
+    return PASS, "95 文件二次扫描与 274 行二次构建指纹一致（首次 %.2fs）" % first_elapsed, []
 
 
 def check_repeat_canonical_hash(ctx):
@@ -2948,7 +3016,7 @@ def run_all(ctx):
     runner.execute("ENV-01", "TC-PT-00a", "环境与工具链", "P2", lambda: check_env(ctx))
     runner.execute("ENV-02", "TC-PT-00b", "关键产物齐全", "P0", lambda: check_required_artifacts(ctx))
 
-    runner.execute("DATA-01", "TC-PT-01", "P 表可解析且 142 行", "P0", lambda: check_data_rows(ctx))
+    runner.execute("DATA-01", "TC-PT-01", "P 表可解析且 274 行", "P0", lambda: check_data_rows(ctx))
     runner.execute("DATA-02", "TC-PT-01", "stats 与逐行复算自洽", "P0", lambda: check_data_stats(ctx))
     runner.execute("DATA-03", "TC-PT-02", "五类计数 12/50/45/22/13", "P0", lambda: check_data_type_counts(ctx))
     runner.execute("DATA-04", "TC-PT-03", "availability 0/95/47/0/0 且 partial 不冒充 usable", "P0", lambda: check_data_availability(ctx))
@@ -2969,7 +3037,7 @@ def run_all(ctx):
     runner.execute("SCHEMA-03", "TC-PT-23", "33 列 = 26 业务（含 runtime_key）+ 7 发布；规范 28 列全含", "P0", lambda: check_schema_columns(ctx))
     runner.execute("SCHEMA-04", "TC-PT-52", "列序与规范 §6.1 的差异", "P2", lambda: check_schema_column_order(ctx))
     runner.execute("SCHEMA-05", "TC-PT-53", "契约脚本定义 32 项 C01-C32", "P2", lambda: check_schema_contract_32(ctx))
-    runner.execute("SCHEMA-06", "TC-PT-39", "CSV/JSON 142×33 逐字段等价", "P1", lambda: check_schema_csv_json_equiv(ctx))
+    runner.execute("SCHEMA-06", "TC-PT-39", "CSV/JSON 274×33 逐字段等价", "P1", lambda: check_schema_csv_json_equiv(ctx))
 
     runner.execute("RUNTIME-01", "TC-PT-06", "98 个运行时 PNG 清单", "P0", lambda: check_runtime_inventory(ctx))
     runner.execute("RUNTIME-02", "TC-PT-06", "运行时 PNG 真实性与尺寸", "P0", lambda: check_runtime_png_sizes(ctx))

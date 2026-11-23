@@ -52,25 +52,39 @@ if str(GAME_DIR) not in sys.path:
 import asset_pipeline  # noqa: E402  复用列序/魔数/尺寸规格，避免两处定义漂移
 from asset_registry import AssetRegistry, png_size  # noqa: E402
 
-EXPECTED_TOTAL = 142
+# run6：九类渲染面接入，142 -> 274（新增 monster 52 / haunt 70 / ending 2 /
+# card_back 3 / room_back 2 / dice 3）。
+EXPECTED_TOTAL = 274
 EXPECTED_BY_TYPE = {
     "character": 12,
     "room": 50,
     "card_event": 45,
     "card_item": 22,
     "card_omen": 13,
+    "monster": 52,
+    "haunt": 70,
+    "ending": 2,
+    "card_back": 3,
+    "room_back": 2,
+    "dice": 3,
 }
 # run5 v2：47 个缺口已按"复用既有文件 + 转码"落实，缺口期望为 0。
 EXPECTED_MISSING_BY_TYPE = {}
 EXPECTED_MISSING = 0
 EXPECTED_MISSING_FALLBACK = 0
 EXPECTED_MISSING_PENDING = 0
-EXPECTED_PRESENT = 142            # 有源文件的资源位（= 全部 142）
-EXPECTED_USABLE = 142
+EXPECTED_PRESENT = 274            # 有源文件的资源位（= 全部 274）
+EXPECTED_USABLE = 274
 EXPECTED_PARTIAL = 0
 EXPECTED_BACKUPS = 130            # photos/_source_jpeg/ 的转码原件
-EXPECTED_RUNTIME = {"rooms": 50, "cards": 80, "characters": 12, "placeholders": 3}
-EXPECTED_RUNTIME_TOTAL = 145
+# 运行时产物：原有 145（50 房间 + 80 卡面 + 12 角色 + 3 占位）
+# + run6 新增 132（monster 52 / haunt 70 / ending 2 / card_back 3 / room_back 2 / dice 3）
+EXPECTED_RUNTIME = {
+    "rooms": 50, "cards": 80, "characters": 12, "placeholders": 3,
+    "monsters": 52, "haunts": 70, "endings": 2,
+    "card_backs": 3, "room_backs": 2, "dice": 3,
+}
+EXPECTED_RUNTIME_TOTAL = 277
 BACKUP_DIRNAME = "_source_jpeg"
 TRANSCODE_MANIFEST = GAME_DIR / "qa" / "run5_transcode_manifest.json"
 ASSETS_WW_DIR = GAME_DIR / "assets_ww"
@@ -84,6 +98,13 @@ CONTENT_COLLECTIONS_BY_TYPE = {
     "card_omen": ("OMEN_CARDS",),
     "card_item": ("ITEM_CARDS",),
     "card_event": ("EVENT_BASES", "EVENT_SUPPLEMENTAL_SPECS"),
+    # run6 六类渲染面
+    "monster": ("MONSTER_BASES",),
+    "haunt": ("HAUNT_DEFS",),
+    "ending": ("RENDER_SURFACE_SPECS",),
+    "card_back": ("RENDER_SURFACE_SPECS",),
+    "room_back": ("RENDER_SURFACE_SPECS",),
+    "dice": ("RENDER_SURFACE_SPECS",),
 }
 TARGET_SIZE = {
     "character": asset_pipeline.CHARACTER_SIZE,
@@ -91,9 +112,35 @@ TARGET_SIZE = {
     "card_omen": asset_pipeline.CARD_SIZE,
     "card_item": asset_pipeline.CARD_SIZE,
     "card_event": asset_pipeline.CARD_SIZE,
+    # run6 六类渲染面（尺寸为工程自定，见 asset_pipeline.RUNTIME_SPECS）
+    "monster": asset_pipeline.MONSTER_SIZE,
+    "haunt": asset_pipeline.HAUNT_SIZE,
+    "ending": asset_pipeline.ENDING_SIZE,
+    "card_back": asset_pipeline.CARD_BACK_SIZE,
+    "room_back": asset_pipeline.ROOM_BACK_SIZE,
+    "dice": asset_pipeline.DICE_SIZE,
 }
 CATEGORY_PREFIX = {"character": "CHR", "room": "ROOM", "card_omen": "OMEN",
-                   "card_item": "ITEM", "card_event": "EVT"}
+                   "card_item": "ITEM", "card_event": "EVT",
+                   "monster": "MONS", "haunt": "HAUNT", "ending": "END",
+                   "card_back": "CBACK", "room_back": "RBACK", "dice": "DICE"}
+
+# 按 asset_type 判定**运行时是否必须带 alpha**，与 asset_pipeline.ALPHA_REQUIRED
+# 同义（run6：怪物标记 / 未翻地块 / 骰面需要透明通道，可叠在地块上）。
+# 注意：结算图与牌背的源母版虽然是 RGBA，但运行时不需要 alpha，因此这里是 False。
+ALPHA_EXPECTED_BY_TYPE = {
+    "character": True,
+    "room": False,
+    "card_omen": False,
+    "card_item": False,
+    "card_event": False,
+    "monster": True,
+    "haunt": False,
+    "ending": False,
+    "card_back": False,
+    "room_back": True,
+    "dice": True,
+}
 
 
 # ----------------------------------------------------------------------
@@ -172,6 +219,10 @@ def _content_sets():
         "ITEM_CARDS": [card["id"] for card in module.ITEM_CARDS],
         "EVENT_BASES": [card["id"] for card in module.EVENT_BASES],
         "EVENT_SUPPLEMENTAL_SPECS": [spec[0] for spec in module.EVENT_SUPPLEMENTAL_SPECS],
+        # run6 六类渲染面：怪物与剧本来自既有集合，其余 10 位来自渲染面声明
+        "MONSTER_BASES": [monster["id"] for monster in module.MONSTER_BASES],
+        "HAUNT_DEFS": [str(key) for key in module.build_catalog(0).haunt_defs],
+        "RENDER_SURFACE_SPECS": [spec["id"] for spec in module.RENDER_SURFACE_SPECS],
     }
 
 
@@ -398,8 +449,10 @@ def main() -> int:
         if row["availability"] == "usable" and row["quality_flags"]:
             failures.append({"issue": "usable_with_flags", "record_id": row["record_id"],
                              "value": row["quality_flags"]})
-        expected_alpha = "true" if row["asset_type"] == "character" else "false"
-        if row["has_alpha"] != expected_alpha:
+        expected_alpha = "true" if ALPHA_EXPECTED_BY_TYPE.get(row["asset_type"], False) else "false"
+        # V06 只断言「需要 alpha 的类别必须带 alpha」；不需要 alpha 的类别
+        # 允许源图自带透明留白（如结算图、牌背母版是 RGBA），不作反向断言。
+        if expected_alpha == "true" and row["has_alpha"] != "true":
             failures.append({"issue": "alpha_mismatch", "record_id": row["record_id"],
                              "expected": expected_alpha, "actual": row["has_alpha"]})
         if row["decodable"] != "ok":
@@ -516,6 +569,13 @@ def main() -> int:
         "cards": ASSETS_DIR / "cards",
         "characters": ASSETS_DIR / "characters",
         "placeholders": ASSETS_DIR / "placeholders",
+        # run6 六类渲染面运行时目录
+        "monsters": ASSETS_DIR / "monsters",
+        "haunts": ASSETS_DIR / "haunts",
+        "endings": ASSETS_DIR / "endings",
+        "card_backs": ASSETS_DIR / "card_backs",
+        "room_backs": ASSETS_DIR / "room_backs",
+        "dice": ASSETS_DIR / "dice",
     }
     runtime_counts = {}
     for key, base in runtime_dirs.items():
@@ -528,9 +588,10 @@ def main() -> int:
     if total_runtime != EXPECTED_RUNTIME_TOTAL:
         failures.append({"issue": "runtime_total", "expected": EXPECTED_RUNTIME_TOTAL,
                          "actual": total_runtime})
-    checker.add("V08", "142 个 runtime_path 存在、真实 PNG、尺寸符合规格"
-                       "（145 张运行时 PNG：50/80/12/3）", failures,
-                "ok=142 / fallback=0 / placeholder=0；rooms=50 cards=80 characters=12 placeholders=3")
+    checker.add("V08", "274 个 runtime_path 存在、真实 PNG、尺寸符合规格"
+                       "（277 张运行时 PNG：50/80/12/3 + 52/70/2/3/2/3）", failures,
+                "ok=274 / fallback=0 / placeholder=0；" + " ".join(
+                    "%s=%d" % (k, v) for k, v in runtime_counts.items()))
 
     # V09 回退语义 -----------------------------------------------------
     failures = []
@@ -892,7 +953,7 @@ def main() -> int:
         if expected_category and row["category_dir"] != expected_category:
             failures.append({"issue": "release_category_dir", "record_id": record_id,
                              "expected": expected_category, "actual": row["category_dir"]})
-        expected_alpha = "true" if row["asset_type"] == "character" else "false"
+        expected_alpha = "true" if ALPHA_EXPECTED_BY_TYPE.get(row["asset_type"], False) else "false"
         if row["alpha_required"] != expected_alpha:
             failures.append({"issue": "release_alpha_required", "record_id": record_id,
                              "expected": expected_alpha, "actual": row["alpha_required"]})

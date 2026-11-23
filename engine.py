@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import random
 from copy import deepcopy
@@ -28,6 +27,7 @@ try:
         Token,
     )
     from .haunt_modes import get_mode_handler
+    from .haunt_table import select_haunt
     from .rules.barriers import BarrierRules
     from .rules.omens import OmenRules
     from .engine_parts.damage import DamageRules
@@ -66,6 +66,7 @@ except ImportError:  # pragma: no cover - direct script execution
         Token,
     )  # type: ignore
     from haunt_modes import get_mode_handler  # type: ignore
+    from haunt_table import select_haunt  # type: ignore
     from rules.barriers import BarrierRules  # type: ignore
     from rules.omens import OmenRules  # type: ignore
     from engine_parts.damage import DamageRules  # type: ignore
@@ -110,6 +111,8 @@ class DecisionProvider(Protocol):
         second_label: str,
     ) -> int | None: ...
 
+    def choose_traitor(self, candidates: list[dict], state: GameState) -> int | None: ...
+
     def show_dice_roll(self, dice: list[int], total: int, label: str) -> None: ...
 
 
@@ -141,6 +144,17 @@ class AutoDecisionProvider:
         second_label: str,
     ) -> int | None:
         return amount
+
+    def choose_traitor(self, candidates: list[dict], state: GameState) -> int | None:
+        """默认：原样返回引擎属性规则的结果（candidates 里 default=True 的那位）。
+
+        这样 bot、热座、联机与所有既有 prompter 在"新增叛徒自选"后行为完全不变，
+        只有真正想弹窗的人类实现（ui.TkDecisionProvider）才会给出别的下标。
+        """
+        for index, candidate in enumerate(candidates):
+            if candidate.get("default"):
+                return index
+        return None
 
     def show_dice_roll(self, dice: list[int], total: int, label: str) -> None:
         return
@@ -184,6 +198,9 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
         # 两件事（检定失败同样消耗行动），handler 包装 super().perform_action
         # 时要靠它判断该不该发奖励，见 last_haunt_action_succeeded()。
         self._last_haunt_action_success = False
+        # 最近一次剧本选择的来源："table"（官方触发表命中）/ "fallback"（SHA1 兜底）。
+        # 空串 = 尚未触发作祟。供诊断与回退覆盖率统计读取，不进存档。
+        self.haunt_selection_source = ""
 
     def save_to_file(self, path: str | Path) -> Path:
         try:
@@ -1274,6 +1291,9 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
         )
         self.state.board[key] = room
         self.state.pos_index[(template.floor, x, y)] = key
+        # K2 接线点：只有 content.BARRIER_SPECS 明确登记过的房间才拿到两侧配置，
+        # 未登记（当前 = 全部）一律不猜，继续走 room_effects 的既有近似。
+        self.configure_disclosed_barrier(room)
         return room
 
     STOP_RISK_EFFECTS = frozenset({
@@ -1646,20 +1666,60 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
         self._show_private_haunt_briefings()
 
     def _select_haunt_id(self, room_id: str, omen_id: str) -> int:
-        payload = f"{room_id}|{omen_id}".encode("utf-8")
-        value = int(hashlib.sha1(payload).hexdigest(), 16)
-        # Widow's Walk 屋顶层条件剧本：揭示者站在屋顶层房间（Roof Landing 或
-        # 任意 ROOF_ROOMS 板块）触发作祟时，从 50 本 WW 剧本（槽位 71-120，
-        # 官方编号 51-100）中选择；屋顶房 × WW 预兆的组合是官方触发表里
-        # WW 剧本的主要入口。基础层房间的哈希分布保持 % 70 + 1 不变，旧对局
-        # （未走上屋顶）的剧本选择序列零漂移。
-        template = self.catalog.room_templates.get(room_id)
-        if template is not None and template.floor == "roof":
-            return 71 + (value % 50)
-        # 新版合并了原版 1-50 与扩展 51-70；70 个剧本都必须有机会被抽到。
-        return (value % 70) + 1
+        """剧本选择：查官方触发表优先，未命中回退原 SHA1 取模。
+
+        留在这里的只是"调用点"：真正的选择与回退都在 ``haunt_table.select_haunt``
+        里（第 3 项），这样表数据、回退公式、覆盖计数只有一处实现。
+        签名 ``(room_id, omen_id) -> int`` 必须保持——6 处测试用
+        ``lambda room_id, omen_id, _h=forced: _h`` 把它钉成强制剧本号。
+        """
+        haunt_id, source = select_haunt(
+            self.state, room_id, omen_id, catalog=self.catalog
+        )
+        # 可观测：最近一次选择来自表还是回退（模块级计数见 haunt_table.selection_counts）
+        self.haunt_selection_source = source
+        return haunt_id
 
     def _select_traitor(self, haunt: Haunt, revealer: Player) -> Player:
+        """确定叛徒：属性规则算出默认值，再允许人类决策覆盖。
+
+        新增决策点 ``choose_traitor``（T16/T17）。默认实现
+        （``AutoDecisionProvider.choose_traitor``）原样返回 default 候选，因此
+        bot/热座/联机旧路径与改动前逐局一致；只有人类界面会真的弹窗。任何异常、
+        越界或 None 返回都回落到属性规则——叛徒一旦确定就会改回合顺序
+        （``_prepare_haunt_turn_order``），不允许出现"没有叛徒"的分叉。
+        """
+        default = self._select_traitor_by_rule(haunt, revealer)
+        candidates = [player for player in self.state.players if not player.dead]
+        if default not in candidates:
+            # 极端情况（属性规则选了死者/revealer 不在候选里）仍让默认值可选。
+            candidates.append(default)
+        payload = [
+            {
+                "id": player.id,
+                "name": player.name,
+                "character": player.character_name,
+                "label": self._player_label(player),
+                "default": player.id == default.id,
+            }
+            for player in candidates
+        ]
+        chooser = getattr(self.prompter, "choose_traitor", None)
+        if chooser is None:  # 旧实现（duck-typed，无该方法）直接走规则
+            return default
+        try:
+            index = chooser(payload, self.state)
+        except Exception:  # noqa: BLE001 - 人类界面异常不得改变规则结果
+            self._log("叛徒自选不可用，回落到属性规则。")
+            return default
+        if isinstance(index, int) and not isinstance(index, bool) and 0 <= index < len(candidates):
+            chosen = candidates[index]
+            if chosen.id != default.id:
+                self._log(f"叛徒由玩家选择：{chosen.name}（属性规则默认 {default.name}）。")
+            return chosen
+        return default
+
+    def _select_traitor_by_rule(self, haunt: Haunt, revealer: Player) -> Player:
         players = self.state.players[:]
         if haunt.traitor_rule == "highest_might_except_revealer":
             eligible = [p for p in players if p.id != revealer.id and not p.dead]

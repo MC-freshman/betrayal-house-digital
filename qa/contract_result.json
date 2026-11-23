@@ -11,7 +11,7 @@
       "title": "资源位总数与 stats 自洽",
       "priority": "P0",
       "status": "PASS",
-      "detail": "records=142；stats 自洽"
+      "detail": "records=274；stats 自洽"
     },
     {
       "id": "C02",
@@ -25,7 +25,7 @@
       "title": "availability 分布（baseline 95 partial + 47 missing）",
       "priority": "P0",
       "status": "PASS",
-      "detail": "[baseline(v2)] usable=142, partial=0, missing=0, corrupted=0, duplicate=0"
+      "detail": "[baseline(v2)] usable=274, partial=0, missing=0, corrupted=0, duplicate=0"
     },
     {
       "id": "C04",
@@ -39,28 +39,28 @@
       "title": "target_ref 与 content.py 全集双向一致",
       "priority": "P1",
       "status": "PASS",
-      "detail": "七集合 12/39/11/13/22/11/34；142 条按 asset_type 与 content.py 双向一致"
+      "detail": "十集合 12/39/11/13/22/11/34/52/70/10（含 build_catalog(0).haunt_defs 与 RENDER_SURFACE_SPECS）；274 条按 asset_type 与 content.py 双向一致"
     },
     {
       "id": "C06",
       "title": "target_ref 规范格式与 id 可解析",
       "priority": "P0",
       "status": "PASS",
-      "detail": "142 条 target_ref 均为 content.py:<集合>#<id> 且 id 可解析"
+      "detail": "274 条 target_ref 均为 content.py:<集合>#<id> 且 id 可解析"
     },
     {
       "id": "C07",
       "title": "资源位唯一性（角色按 card+face）",
       "priority": "P1",
       "status": "PASS",
-      "detail": "142 条资源位唯一（角色按 card + face 区分）"
+      "detail": "274 条资源位唯一（角色按 card + face 区分）"
     },
     {
       "id": "C08",
       "title": "record_id 唯一、格式与类别前缀",
       "priority": "P1",
       "status": "PASS",
-      "detail": "record_id 唯一且前缀与 asset_type 一致（142 条）"
+      "detail": "record_id 唯一且前缀与 asset_type 一致（274 条）"
     },
     {
       "id": "C09",
@@ -95,49 +95,49 @@
       "title": "魔数与扩展名/format 一致",
       "priority": "P0",
       "status": "PASS",
-      "detail": "实测 142 张：0 张扩展名与魔数不一致，均已标 ext_mismatch 且非 usable（基线已知）"
+      "detail": "实测 274 张：0 张扩展名与魔数不一致，均已标 ext_mismatch 且非 usable（基线已知）"
     },
     {
       "id": "C14",
       "title": "尺寸字段与实测自洽",
       "priority": "P0",
       "status": "PASS",
-      "detail": "实测 142 张尺寸与 width/height/aspect_ratio 自洽（dimensions 字段缺失见 C32）"
+      "detail": "实测 274 张尺寸与 width/height/aspect_ratio 自洽（dimensions 字段缺失见 C32）"
     },
     {
       "id": "C15",
       "title": "has_alpha 与实测一致",
       "priority": "P1",
       "status": "PASS",
-      "detail": "Pillow 11.3.0：142 张 alpha 与实测一致（基线均 false）"
+      "detail": "Pillow 11.3.0：274 张 alpha 与实测一致（基线均 false）"
     },
     {
       "id": "C16",
       "title": "逐图 verify+load 可解码",
       "priority": "P1",
       "status": "PASS",
-      "detail": "Pillow 11.3.0：142 张 verify+load 通过且与 decodable 一致"
+      "detail": "Pillow 11.3.0：274 张 verify+load 通过且与 decodable 一致"
     },
     {
       "id": "C17",
       "title": "sha256/bytes/尺寸与清单三方一致",
       "priority": "P1",
       "status": "PASS",
-      "detail": "142 张 sha256/bytes/尺寸与清单及磁盘三方一致"
+      "detail": "274 张 sha256/bytes/尺寸与清单及磁盘三方一致"
     },
     {
       "id": "C18",
       "title": "95 文件全覆盖、无孤立",
       "priority": "P1",
       "status": "PASS",
-      "detail": "142 ↔ 142 双向覆盖，无孤立文件、无重复引用"
+      "detail": "274 ↔ 274 双向覆盖，无孤立文件、无重复引用"
     },
     {
       "id": "C19",
       "title": "不得伪造 usable",
       "priority": "P0",
       "status": "PASS",
-      "detail": "usable=142；逐行核对真 PNG/无阻断标记/尺寸达标/alpha 与用途一致"
+      "detail": "usable=274；逐行核对真 PNG/无阻断标记/尺寸达标/alpha 与用途一致"
     },
     {
       "id": "C20",
@@ -172,7 +172,7 @@
       "title": "映射 entries 双向覆盖",
       "priority": "P0",
       "status": "PASS",
-      "detail": "entries 142 条与 matched 记录双向覆盖"
+      "detail": "entries 274 条与 matched 记录双向覆盖"
     },
     {
       "id": "C25",
@@ -186,14 +186,14 @@
       "title": "运行时 PNG 真实性与尺寸",
       "priority": "P0",
       "status": "PASS",
-      "detail": "142 个运行时 PNG 真实性与尺寸通过（房间 512×512、卡牌 480×672）"
+      "detail": "142 个运行时 PNG 真实性与尺寸通过（房间 512×512、卡牌 480×672）；132 个类别无尺寸口径跳过（R03）"
     },
     {
       "id": "C27",
       "title": "Registry resolve/validate 契约",
       "priority": "P0",
       "status": "PASS",
-      "detail": "resolve 142 条均可 stat；未知 id 返回 None；validate 返回列表"
+      "detail": "resolve 274 条均可 stat；未知 id 返回 None；validate 返回列表"
     },
     {
       "id": "C28",
@@ -207,21 +207,21 @@
       "title": "分档门禁（release 不可宣称）",
       "priority": "P1",
       "status": "PASS",
-      "detail": "baseline 档门禁：usable=142 / partial=0 / missing=0；release 仍需 C-01…C-06 通过，本契约不签发"
+      "detail": "baseline 档门禁：usable=274 / partial=0 / missing=0；release 仍需 C-01…C-06 通过，本契约不签发"
     },
     {
       "id": "C30",
       "title": "content.py 同步摘要",
       "priority": "P2",
       "status": "PASS",
-      "detail": "content.py sha256 与 P 表记录一致（461f8aeb95e3…），集合计数一致"
+      "detail": "content.py sha256 与 P 表记录一致（02da4d250483…），集合计数一致"
     },
     {
       "id": "C31",
       "title": "p_table.csv 与 JSON 一致",
       "priority": "P2",
       "status": "PASS",
-      "detail": "CSV 含 BOM、142 行、33 列，record_id 与 JSON 双向一致"
+      "detail": "CSV 含 BOM、274 行、33 列，record_id 与 JSON 双向一致"
     },
     {
       "id": "C32",

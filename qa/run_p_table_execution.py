@@ -171,7 +171,7 @@ STATIC_ISSUES = [
         "stage": "S3",
         "severity": "S4",
         "status": "resolved",
-        "evidence": "P 表 stats：usable=142 / partial=0 / missing=0；"
+        "evidence": "P 表 stats：usable=274 / partial=0 / missing=0；"
                     "qa/run5_promotion_map.json 47 行；qa/run5_transcode_manifest.json "
                     "130 条像素等价（max diff 0）；qa/run5_gap_closure.jsonl 47 行",
         "fixHint": "语义评审（47/47 人工签字）与渲染层 WCAG 抽样仍待执行，见 A-30/A-32",
@@ -1296,8 +1296,8 @@ def write_report(report):
     table = report["p_table"]
     lines.append("| 项 | 实测 | 期望 | 判定 |")
     lines.append("| --- | --- | --- | --- |")
-    lines.append("| records | %s | 142 | %s |" % (
-        table["records"], "OK" if table["records"] == 142 else "MISMATCH"))
+    lines.append("| records | %s | 274 | %s |" % (
+        table["records"], "OK" if table["records"] == 274 else "MISMATCH"))
     expected_availability = {"usable": 0, "partial": 95, "missing": 47,
                              "corrupted": 0, "duplicate": 0}
     availability_ok = all(table["availability"].get(key, 0) == value
@@ -1447,7 +1447,7 @@ def write_report(report):
     lines.append("## 9 声明")
     lines.append("")
     lines.append("本轮未执行项不构成通过；`usable` 不等于可发布；"
-                 "47 个缺口已落实为 0 missing / 142 usable；分支覆盖未执行，不宣称达标。")
+                 "47 个缺口已落实为 0 missing / 274 usable；分支覆盖未执行，不宣称达标。")
     lines.append("")
     REPORT_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return {"json": _rel(REPORT_JSON), "md": _rel(REPORT_MD)}
@@ -1483,7 +1483,7 @@ A_TITLES = {
     "A-24": "报告一致性", "A-25": "缺陷", "A-26": "可复现", "A-27": "内容台账 v2",
     "A-28": "声明与签发",
     "A-29": "WW 隔离完整", "A-30": "47 位 0 missing",
-    "A-31": "130 张真 PNG", "A-32": "142 张规格",
+    "A-31": "130 张真 PNG", "A-32": "274 张规格",
     "A-33": "对局美术渲染",
 }
 GATE_TITLES = {
@@ -1815,14 +1815,14 @@ def check_a_table(report, probes, not_run_list):
 
     # A-04…A-09 / A-27 数据直读
     snapshot = report["p_table"]
-    # run5 v2：142 usable / 0 partial / 0 missing
-    availability_ok = (snapshot["availability"].get("usable", 0) == 142
+    # run5 v2：274 usable / 0 partial / 0 missing
+    availability_ok = (snapshot["availability"].get("usable", 0) == 274
                        and snapshot["availability"].get("partial", 0) == 0
                        and snapshot["availability"].get("missing", 0) == 0
                        and snapshot["availability"].get("corrupted", 0) == 0
                        and snapshot["availability"].get("duplicate", 0) == 0)
     put("A-04",
-        "PASS" if (snapshot["records"] == 142 and snapshot["columns"] == 33) else "FAIL",
+        "PASS" if (snapshot["records"] == 274 and snapshot["columns"] == 33) else "FAIL",
         "records=%s columns=%s" % (snapshot["records"], snapshot["columns"]),
         ["assets/p_table.json", "assets/p_table.csv"])
     put("A-05", "PASS" if availability_ok else "FAIL",
@@ -1830,18 +1830,22 @@ def check_a_table(report, probes, not_run_list):
             str(snapshot["availability"].get(k, 0))
             for k in ("usable", "partial", "missing", "corrupted", "duplicate")),
         ["assets/p_table.json"])
-    by_type_ok = snapshot["by_type"] == {"character": 12, "room": 50,
-                                         "card_event": 45, "card_item": 22, "card_omen": 13}
+    by_type_ok = snapshot["by_type"] == {
+        "character": 12, "room": 50, "card_event": 45, "card_item": 22, "card_omen": 13,
+        # run6 六类渲染面
+        "monster": 52, "haunt": 70, "ending": 2, "card_back": 3, "room_back": 2, "dice": 3,
+    }
     put("A-06", "PASS" if by_type_ok else "FAIL",
-        "character/room/card_event/card_item/card_omen=%s" % "/".join(
+        "character/room/event/item/omen/monster/haunt/ending/card_back/room_back/dice=%s" % "/".join(
             str(snapshot["by_type"].get(k, 0))
-            for k in ("character", "room", "card_event", "card_item", "card_omen")),
+            for k in ("character", "room", "card_event", "card_item", "card_omen",
+                      "monster", "haunt", "ending", "card_back", "room_back", "dice")),
         ["assets/p_table.json"])
     mapping = _load_json_file(ASSETS / "asset_mapping.json") or {}
     entries = mapping.get("entries") or []
     unresolved = mapping.get("unresolved") or []
     put("A-07",
-        "PASS" if (len(entries) == 142 and len(unresolved) == 0) else "FAIL",
+        "PASS" if (len(entries) == 274 and len(unresolved) == 0) else "FAIL",
         "mapping entries=%d unresolved=%d" % (len(entries), len(unresolved)),
         ["assets/asset_mapping.json"])
     runtime_png = s0["runtime_png"]
@@ -1872,7 +1876,7 @@ def check_a_table(report, probes, not_run_list):
         "缺口语义由 A-30 / V07 接手" % (len(missing_rows), len(pending), len(fallback)),
         ["qa/run5_baseline_diff.json"])
 
-    # A-27 v2：142/142 全覆盖台账（source + provenance + release 7 列 + 47 行台账）
+    # A-27 v2：274/274 全覆盖台账（source + provenance + release 7 列 + 47 行台账）
     promotion_path = QA_DIR / "run5_promotion_map.json"
     closure_path = QA_DIR / "run5_gap_closure.jsonl"
     promotion = _load_json_file(promotion_path) or {}
@@ -1892,10 +1896,10 @@ def check_a_table(report, probes, not_run_list):
                 "canonical_record_id", "reviewer", "verified_at")):
             release_ok = False
             break
-    led_ok = (len(records) == 142 and not missing_rows and release_ok
+    led_ok = (len(records) == 274 and not missing_rows and release_ok
               and len(promoted) == 47 and closure_lines == 47)
     put("A-27", "PASS" if led_ok else "FAIL",
-        "142/142 全覆盖（source+provenance+release 7 列齐全）；缺口 %d；"
+        "274/274 全覆盖（source+provenance+release 7 列齐全）；缺口 %d；"
         "promotion map %d 行 / gap closure %d 行" % (
             len(missing_rows), len(promoted), closure_lines),
         ["assets/p_table.json", "qa/run5_promotion_map.json", "qa/run5_gap_closure.jsonl"])
@@ -1938,7 +1942,7 @@ def check_a_table(report, probes, not_run_list):
                            semantic_review.read_text(encoding="utf-8").splitlines()
                            if line.strip()])
     a30_machine_ok = (not missing_rows and len(promoted) == 47
-                      and snapshot["availability"].get("usable", 0) == 142)
+                      and snapshot["availability"].get("usable", 0) == 274)
     if not a30_machine_ok:
         put("A-30", "FAIL",
             "机读条件不满足：missing=%d promotion=%d usable=%d" % (
@@ -1947,7 +1951,7 @@ def check_a_table(report, probes, not_run_list):
             ["assets/p_table.json", "qa/run5_promotion_map.json"])
     elif review_rows != 47:
         put("A-30", "NOT_RUN",
-            "机读部分全过（0 missing / 47 行台账 / 142 usable），"
+            "机读部分全过（0 missing / 47 行台账 / 274 usable），"
             "但 47/47 语义评审未执行（run5_semantic_review.jsonl 行数=%d）" % review_rows,
             ["qa/run5_semantic_review.jsonl"])
     else:
@@ -1971,23 +1975,43 @@ def check_a_table(report, probes, not_run_list):
             len(ext_mismatch_rows), (s0["photos"] or {}).get("backup_count", 0)),
         ["qa/run5_transcode_manifest.json", ".codebuddy/wfat/photos_inventory.json"])
 
-    # A-32 142 张规格（尺寸/格式/alpha + M-13 可读性；渲染层 WCAG 需截图）
+    # A-32 274 张规格（尺寸/格式/alpha + M-13 可读性；渲染层 WCAG 需截图）
     readability = _load_json_file(QA_DIR / "run5_readability.json") or {}
     runtime_sizes_ok = True
+    # run6：十一类运行时尺寸（六类为工程自定，见 asset_pipeline.RUNTIME_SPECS）
+    expected_sizes = {
+        "room": (512, 512),
+        "card_omen": (480, 672), "card_item": (480, 672), "card_event": (480, 672),
+        "character": (320, 320),
+        "monster": (512, 512), "haunt": (1280, 720), "ending": (1024, 576),
+        "card_back": (480, 640), "room_back": (512, 512), "dice": (256, 256),
+    }
     for row in records:
-        expected = {"room": (512, 512), "card_omen": (480, 672), "card_item": (480, 672),
-                    "card_event": (480, 672), "character": (320, 320)}.get(
-                        row.get("asset_type"))
+        expected = expected_sizes.get(row.get("asset_type"))
         actual = _png_size(PROJECT_ROOT / str(row.get("runtime_path") or ""))
         if expected is None or actual != expected:
             runtime_sizes_ok = False
             break
-    alpha_ok = all(bool(row.get("has_alpha")) == (row.get("asset_type") == "character")
-                   for row in records)
-    readability_ok = (readability.get("count") == 142 and not readability.get("failures"))
+    # 必需 alpha 的类别：角色 + 怪物标记 + 未翻地块 + 骰面（与 asset_pipeline.ALPHA_REQUIRED 同义）
+    alpha_required_types = {"character", "monster", "room_back", "dice"}
+    # 只断言「必需 alpha 的类别必须带 alpha」；其余类别的源图允许自带透明留白
+    # （结算图与牌背母版是 RGBA），不做反向断言。
+    alpha_ok = all(
+        bool(row.get("has_alpha"))
+        for row in records
+        if row.get("asset_type") in alpha_required_types
+    )
+    readability_count = int(readability.get("count") or 0)
+    readability_ok = (readability_count >= 274 and not readability.get("failures"))
     if runtime_sizes_ok and alpha_ok and readability_ok:
         put("A-32", "PASS",
-            "142/142 运行时 IHDR 精确；真 PNG；alpha 规则一致；M-13 可读性 142/142 通过",
+            "274/274 运行时 IHDR 精确；真 PNG；alpha 规则一致；M-13 可读性 274/274 通过",
+            ["qa/run5_readability.json", "assets/p_table.json"])
+    elif runtime_sizes_ok and alpha_ok:
+        # 尺寸与 alpha 已达标，但可读性抽样尚未覆盖新增 132 位：如实记 NOT_RUN，
+        # 不折算 PASS（补齐 run5_readability 后可转 PASS）。
+        put("A-32", "NOT_RUN",
+            "尺寸/alpha 达标；M-13 可读性仅覆盖 %d/274，新增 132 位未抽样" % readability_count,
             ["qa/run5_readability.json", "assets/p_table.json"])
     else:
         put("A-32", "FAIL",
@@ -2335,9 +2359,9 @@ def check_a_table(report, probes, not_run_list):
         if vf_verdict == "PASS" and gate_claim != "attested":
             problems.append("独立验收 verdict=PASS 与 claim=%s 不一致" % gate_claim)
     stats = report["p_table"].get("stats") or {}
-    # run5 v2：报告 usable 必须等于 142（旧版要求 0，v2 要求全覆盖）
-    if stats.get("usable") != 142:
-        problems.append("报告 usable=%r，期望 142" % stats.get("usable"))
+    # run5 v2：报告 usable 必须等于 274（旧版要求 0，v2 要求全覆盖）
+    if stats.get("usable") != 274:
+        problems.append("报告 usable=%r，期望 274" % stats.get("usable"))
     put("A-24",
         "PASS" if not problems else "FAIL",
         "四口径一致（报告 claim/verdict、门禁计算、独立验收 achieved）"
@@ -2388,8 +2412,8 @@ VERDICT_BY_CLAIM = {"attested": "PASS", "partial": "INCOMPLETE", "not-attested":
 
 # claim_text 模板（run3 §6.4）：三态文案与 claim 一一对应（C-4：claim_text 纳入四口径核对）
 CLAIM_TEXTS = {
-    "attested": "P 表执行完成（attested）。范围：桌面端 142 行 × 33 列的资源位登记、"
-                "142/142 usable 的真实标注、145 个运行时 PNG 与 UI 取图链路。"
+    "attested": "P 表执行完成（attested）。范围：桌面端 274 行 × 33 列的资源位登记、"
+                "274/274 usable 的真实标注、277 个运行时 PNG 与 UI 取图链路。"
                 "47 个美术缺口已在 run5 落实（复用 47 文件 + 130 张无损转码）；usable 不等于可发布。",
     "partial": "P 表执行（数据/功能/测试）通过（partial）。已完成项见报告 §7/§8/§10/§11；"
                "未完成证据门禁逐项列于 blockers 与 §15 未执行清单。"
@@ -2410,9 +2434,9 @@ def build_final_report(report, probes, claim_state, claim_scope="execution"):
         for aid, item in sorted(a_table.items())
         if item["status"] in ("FAIL", "NOT_RUN")
     ]
-    # 治理声明恒在（R-06）：run5 v2 起 47 缺口已落实为 0 missing / 142 usable，
+    # 治理声明恒在（R-06）：run5 v2 起 47 缺口已落实为 0 missing / 274 usable，
     # 台账不再作为阻断项，改为声明"已闭环 + content-release 仍待人工项"。
-    blockers.append("run5 v2：47 个缺口已全部落实（0 missing / 0 partial / 142 usable），"
+    blockers.append("run5 v2：47 个缺口已全部落实（0 missing / 0 partial / 274 usable），"
                     "execution 侧无缺口阻断；content-release 仍待语义评审与 WCAG 抽样"
                     "（见 A-30/A-32）")
     if claim == "attested":
@@ -2689,7 +2713,7 @@ def refresh_claim():
         for aid, item in sorted(a_table.items())
         if item["status"] in ("FAIL", "NOT_RUN")
     ]
-    blockers.append("run5 v2：47 个缺口已全部落实（0 missing / 0 partial / 142 usable），"
+    blockers.append("run5 v2：47 个缺口已全部落实（0 missing / 0 partial / 274 usable），"
                     "execution 侧无缺口阻断；content-release 仍待语义评审与 WCAG 抽样"
                     "（见 A-30/A-32）")
     if claim == "attested":

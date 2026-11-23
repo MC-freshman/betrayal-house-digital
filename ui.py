@@ -65,6 +65,27 @@ ROOM_DETAIL_SIZE = 160      # 房间详情弹窗缩略图
 # 卡面 5:7，与 _HelpDialog.ART_CARD_BASE 同源（240×336 @96dpi）。
 CARD_FACE_SIZE = (240, 336)
 
+# run6 六类渲染面（逻辑 px @96dpi）。缺图时一律退回原有纯色/文字绘制。
+MONSTER_MARKER_RATIO = 0.6          # 怪物标记边长 = tile 的 60%
+HAUNT_ART_SIZE = (720, 405)         # 剧本揭示插画（16:9，等比缩到窗口内）
+ENDING_ART_SIZE = (960, 540)        # 结算画面插画
+CARD_BACK_THUMB_SIZE = (96, 128)    # 抽卡弹窗顶部卡背（3:4）
+ROOM_BACK_TILE_RATIO = 0.84         # 未翻地块在落点格内的占比
+DICE_FACE_SIZE = 56                 # 骰面结果图的边长
+
+# 画布图元上的渲染键标签：探针靠 "art:<runtime_key>" 数真实图元（不是数请求）。
+ART_TAG_PREFIX = "art:"
+
+
+def _tag_art(canvas, item, key) -> None:
+    """给 canvas 图元打 ``art:<key>`` 标签；key 为空或 Tk 拒绝时不抛异常。"""
+    if not key or item is None:
+        return
+    try:
+        canvas.addtag_withtag(ART_TAG_PREFIX + str(key), item)
+    except tk.TclError:
+        pass
+
 # 抽卡提示标题前缀 -> 卡牌类别（engine_parts/room_effects.py:200/231/241 的既有契约）。
 # DecisionProvider 只传字符串，这里按标题前缀 + catalog 中文名反查 Card，
 # 不扩协议、不改引擎调用点。
@@ -191,8 +212,28 @@ class TkDecisionProvider(DecisionProvider):
     def notify(self, title: str, message: str) -> None:
         # 自定义静音弹窗，替代系统 messagebox（去掉 Windows 提示音/系统样式）
         image, image_size = self._card_face(title)
-        dialog = _InfoDialog(self.root, title, message, image=image, image_size=image_size)
+        # run6：抽卡弹窗顶部显示该牌堆的卡背（card_back:<omen|item|event>）。
+        back_image = self._card_back(title)
+        dialog = _InfoDialog(self.root, title, message, image=image,
+                             image_size=image_size, back_image=back_image)
         self.root.wait_window(dialog.top)
+
+    def _card_back(self, title: str):
+        """抽卡提示命中时返回卡背 PhotoImage；否则 None。"""
+        app = self.root
+        art = getattr(app, "art", None)
+        engine = getattr(app, "engine", None)
+        if art is None or engine is None:
+            return None
+        card = _card_from_notice(getattr(engine, "catalog", None), title)
+        if card is None:
+            return None
+        return art.photo(
+            game_art.CARD_BACK_KIND,
+            art.card_back_key(card.kind),
+            app,
+            CARD_BACK_THUMB_SIZE,
+        )
 
     def _card_face(self, title: str):
         """抽卡提示命中时返回 (卡面 PhotoImage, 尺寸)；否则 (None, None)。"""
@@ -240,6 +281,25 @@ class TkDecisionProvider(DecisionProvider):
         value = simpledialog.askinteger(title, prompt, parent=self.root, minvalue=0, maxvalue=amount)
         return value
 
+    def choose_traitor(self, candidates: list[dict], state) -> int | None:
+        """作祟揭示时让人类选叛徒；取消/关窗 = 回落引擎属性规则（返回 None）。
+
+        候选人由引擎组装：label 形如「名字（角色名）」。属性规则默认那位会标注
+        出来，方便玩家"跟规则走"时一眼看出该选谁。
+        """
+        if not candidates:
+            return None
+        options = []
+        for candidate in candidates:
+            label = candidate.get("label") or f"{candidate.get('name', '')}（{candidate.get('character', '')}）"
+            if candidate.get("default"):
+                label += "    ← 属性规则默认"
+            options.append(label)
+        message = "作祟已揭示，请选择一名探险者成为叛徒。\n取消则按属性规则自动决定。"
+        dialog = _ChoiceDialog(self.root, "谁来当叛徒？", message, options)
+        self.root.wait_window(dialog.top)
+        return dialog.result
+
     def show_dice_roll(self, dice: list[int], total: int, label: str) -> None:
         dialog = _DiceDialog(self.root, dice, total, label)
         self.root.wait_window(dialog.top)
@@ -270,6 +330,10 @@ class _DiceDialog:
         self._phase = "idle"
         self._frame = 0
         self._roll_after = None
+        # run6 骰面：dice:<0|1|2>；master 用 root（与棋盘/面板同一 Tk 图片记忆域）。
+        self.root = root
+        self.art = game_art.get_shared()
+        self._dice_photos = []
 
         n = len(self.dice)
         width = self.PAD * 2 + n * self.DIE_SIZE + (n - 1) * self.DIE_GAP
@@ -357,6 +421,8 @@ class _DiceDialog:
 
     def _draw_dice(self) -> None:
         self.canvas.delete("all")
+        # 图元已全删，本帧的骰面 PhotoImage 重新积累（帧内保活）。
+        self._dice_photos = []
         for i, value in enumerate(self._showing):
             x = self.PAD + i * (self.DIE_SIZE + self.DIE_GAP)
             y = self.PAD
@@ -378,6 +444,16 @@ class _DiceDialog:
         )
         if shrink < 0.35:
             return  # 翻到侧边时不画点
+        # run6 骰面：优先贴 dice:<0|1|2> 真图；缺图时退回下面的点阵绘制。
+        key = self.art.dice_key(value)
+        face = self.art.photo(
+            game_art.DICE_KIND, key, self.root, (max(3, int(round(w))), int(size))
+        )
+        if face is not None:
+            item = self.canvas.create_image(cx, y + size / 2, image=face, tags=("diceimg",))
+            _tag_art(self.canvas, item, key)
+            self._dice_photos.append(face)
+            return
         r = max(4, size * 0.09)
         ox = w / size  # 横向压缩时点也跟着收拢
         if value == 1:
@@ -454,11 +530,86 @@ class _DiceDialog:
         self.btn_roll.config(state="normal", text="确认", command=self._close)
 
 
+class _EndingDialog:
+    """结算画面（run6 ``ending:<heroes|traitor>``）：全屏 modal 画布。
+
+    刻意**不阻塞**（不调 ``wait_window``）：``_refresh_ui`` 每轮都会走到这里，
+    阻塞会锁死机器人推进与探针；玩家点「关闭」或窗口按钮即收场。
+    缺图时退回纯色底 + 大字标题，仍然是一块完整的结算画面。
+    """
+
+    TITLES = {"heroes": "英雄获胜", "traitor": "叛徒获胜"}
+
+    def __init__(self, root: tk.Tk, winner: str, art, reason: str = "") -> None:
+        self.root = root
+        self.art = art
+        self.winner = winner
+        self.key = art.ending_key(winner)
+        self.photo = None
+        self.width = max(960, int(root.winfo_screenwidth()))
+        self.height = max(640, int(root.winfo_screenheight()))
+
+        self.top = tk.Toplevel(root)
+        self.top.title("结算 · %s" % self.TITLES.get(winner, winner))
+        self.top.configure(bg=PALETTE["bg"])
+        self.top.transient(root)
+        self.top.attributes("-topmost", True)
+        self.top.geometry("%dx%d+0+0" % (self.width, self.height))
+        self.canvas = tk.Canvas(
+            self.top, bg=PALETTE["bg"], highlightthickness=0,
+            width=self.width, height=self.height,
+        )
+        self.canvas.pack(fill="both", expand=True)
+        self.top.protocol("WM_DELETE_WINDOW", self.top.destroy)
+        self._draw(reason)
+
+    def _draw(self, reason: str = "") -> None:
+        canvas = self.canvas
+        canvas.delete("all")
+        w, h = self.width, self.height
+        canvas.create_rectangle(0, 0, w, h, fill=PALETTE["bg"], outline="")
+        if self.key:
+            self.photo = self.art.photo(
+                game_art.ENDING_KIND, self.key, self.root,
+                (int(w * 0.86), int(h * 0.68)),
+            )
+        if self.photo is not None:
+            item = canvas.create_image(w / 2, h * 0.42, image=self.photo)
+            _tag_art(canvas, item, self.key)
+        else:
+            # 缺图兜底：保留整屏结构，不抛异常。
+            canvas.create_rectangle(
+                w * 0.12, h * 0.16, w * 0.88, h * 0.62,
+                fill=PALETTE["panel3"], outline=PALETTE["outline"], width=2,
+            )
+            canvas.create_text(
+                w / 2, h * 0.39, text="结算插画暂不可用",
+                fill=PALETTE["muted"], font=FONT_SUBTITLE,
+            )
+        canvas.create_text(
+            w / 2, h * 0.74, text=self.TITLES.get(self.winner, self.winner),
+            fill=PALETTE["accent"], font=FONT_TITLE,
+        )
+        if reason:
+            canvas.create_text(
+                w / 2, h * 0.82, text=reason,
+                fill=PALETTE["text"], font=FONT_SUBTITLE, width=int(w * 0.7),
+            )
+        button = tk.Button(
+            self.top, text="关闭", command=self.top.destroy,
+            bg=PALETTE["panel2"], fg=PALETTE["text"], relief="flat",
+            font=FONT_UI_BOLD, padx=28, pady=6, cursor="hand2",
+            activebackground=PALETTE["accent"], activeforeground="#111",
+        )
+        canvas.create_window(w / 2, h * 0.9, window=button)
+
+
 class _InfoDialog:
     """静音的自定义信息弹窗（替代系统 messagebox，去掉 Windows 提示音）。
 
     ``image`` / ``image_size`` 为可选参数：有图时在标题下方插一条固定尺寸的图片区，
     正文整体下移；无图时布局与改造前完全一致（20+ 处纯文字调用不受影响）。
+    ``back_image`` 为可选的牌堆卡背（``card_back:<kind>``），显示在标题下方右侧。
     """
 
     def __init__(
@@ -469,6 +620,7 @@ class _InfoDialog:
         error: bool = False,
         image=None,
         image_size=None,
+        back_image=None,
     ) -> None:
         self.top = tk.Toplevel(root)
         self.top.title(title)
@@ -487,6 +639,27 @@ class _InfoDialog:
             padx=20,
             pady=4,
         ).pack(fill="x", pady=(16, 0))
+        # 牌堆卡背（run6 card_back:<kind>）：抽卡弹窗未翻开时显示在标题下方，
+        # 与「已翻开的卡面」区分；无卡背时该条不占高度。
+        self.back_photo = back_image
+        if back_image is not None:
+            back_bar = tk.Frame(self.top, bg=PALETTE["panel"])
+            back_bar.pack(fill="x", padx=20, pady=(6, 0))
+            tk.Label(
+                back_bar,
+                text="牌堆卡背",
+                bg=PALETTE["panel"],
+                fg=PALETTE["muted"],
+                font=FONT_PANEL,
+                anchor="w",
+            ).pack(side="left")
+            tk.Label(
+                back_bar,
+                image=back_image,
+                bg=PALETTE["panel"],
+                bd=0,
+                highlightthickness=0,
+            ).pack(side="right")
         # 卡面/缩略图（可选）：Label 持有 Tk 图片名，PhotoImage 对象必须挂在 self 上，
         # 否则被 GC 回收后 Tcl 会删图、标签随即变空白。
         self.photo = image
@@ -533,9 +706,13 @@ class _InfoDialog:
 
 
 class _TextDialog:
-    """可滚动长文本窗口，用于剧本和较长说明。"""
+    """可滚动长文本窗口，用于剧本和较长说明。
 
-    def __init__(self, root: tk.Tk, title: str, message: str) -> None:
+    ``image`` 为可选的作祟插画（run6 haunt:<n>）：有图时插在标题下方，
+    无图时布局与改造前完全一致（所有既有调用点不受影响）。
+    """
+
+    def __init__(self, root: tk.Tk, title: str, message: str, image=None) -> None:
         self.top = tk.Toplevel(root)
         self.top.title(title)
         self.top.configure(bg=PALETTE["panel"])
@@ -554,6 +731,17 @@ class _TextDialog:
             padx=18,
             pady=8,
         ).pack(fill="x", pady=(10, 0))
+
+        # 插画：Label 只持有 Tk 图片名，PhotoImage 必须挂在 self 上保活。
+        self.photo = image
+        if image is not None:
+            tk.Label(
+                self.top,
+                image=image,
+                bg=PALETTE["panel"],
+                bd=0,
+                highlightthickness=0,
+            ).pack(pady=(2, 6))
 
         frame = tk.Frame(self.top, bg=PALETTE["panel"])
         frame.pack(fill="both", expand=True, padx=18, pady=(6, 12))
@@ -1239,6 +1427,9 @@ class GameApp(tk.Tk):
         self._room_tooltip_photo = None
         # 已主动展示过手册的作祟号（换局/读档时随"无作祟"状态自动清空）。
         self._haunt_briefed_id: int | None = None
+        # 已展示过结算画面的胜方（None = 本局还没结算）；避免每帧重复弹窗。
+        self._ending_shown: str | None = None
+        self._ending_dialog = None
         # 弹出阅读窗期间暂停机器人推进，避免"边读边被机器人跳过"。
         self._reading_paused = False
 
@@ -2088,7 +2279,25 @@ class GameApp(tk.Tk):
                 width=1,
                 tags=(tag, "explore_slot"),
             )
-            self._exploration_slots[tag] = {"rect": rect, "option": option, "pos": target_pos}
+            # run6 room_back:<back>：未翻地块的牌背，贴在同一落点格里；
+            # 缺图时保留上面的深色虚线格（原有外观），不抛异常。
+            slot_side = tile_size - 8
+            back_side = max(8, int(round(slot_side * ROOM_BACK_TILE_RATIO)))
+            back_key = self.art.room_back_key("back")
+            back_photo = self.art.photo(
+                game_art.ROOM_BACK_KIND, back_key, self, (back_side, back_side)
+            )
+            if back_photo is not None:
+                inset = (slot_side - back_side) // 2
+                back_item = canvas.create_image(
+                    px + inset, py + inset, anchor="nw", image=back_photo,
+                    tags=(tag, "roomback"),
+                )
+                _tag_art(canvas, back_item, back_key)
+                self._board_photos.append(back_photo)
+            self._exploration_slots[tag] = {
+                "rect": rect, "option": option, "pos": target_pos, "ghost": None,
+            }
             canvas.tag_bind(tag, "<Button-1>", lambda _e, slot=tag: self._on_exploration_slot_click(slot))
             canvas.tag_bind(tag, "<Enter>", lambda _e, slot=tag: self._on_exploration_slot_enter(slot))
             canvas.tag_bind(tag, "<Leave>", lambda _e, slot=tag: self._on_exploration_slot_leave(slot))
@@ -2252,12 +2461,30 @@ class GameApp(tk.Tk):
             canvas.tag_bind(tag, "<Leave>", lambda _e: self._hide_player_tooltip())
             self._player_token_ids[player.id] = token
 
-        # 怪物
+        # 怪物：run6 monster:<template_id> 标记，边长随 tile（60%）。
         for monster in state.monsters:
             if monster.room_key not in state.board:
                 continue
             room = state.board[monster.room_key]
             px, py = room_px(room)
+            ts = tile_size - 8
+            marker = max(18, int(round(ts * MONSTER_MARKER_RATIO)))
+            key = self.art.monster_key(monster)
+            photo = self.art.photo(
+                game_art.MONSTER_KIND, key, self, (marker, marker)
+            )
+            if photo is not None:
+                item = canvas.create_image(
+                    px + ts - marker - 2,
+                    py + ts - marker - 2,
+                    anchor="nw",
+                    image=photo,
+                    tags=("monsterimg",),
+                )
+                _tag_art(canvas, item, key)
+                self._board_photos.append(photo)
+                continue
+            # 缺图兜底：保留原有 16×16 纯色块。
             canvas.create_rectangle(
                 px + tile_size - 34,
                 py + tile_size - 34,
@@ -2361,6 +2588,26 @@ class GameApp(tk.Tk):
         self.board_canvas.itemconfigure(
             slot["rect"], fill="#566575", outline="#ffffff", width=3
         )
+        # run6 room_back:<ghost>：悬停时在落点格上叠一层「落点虚影」，
+        # 表示这里即将翻出的板块尚未揭示；缺图时只保留高亮边框。
+        if slot.get("ghost") is None:
+            try:
+                x0, y0, x1, y1 = self.board_canvas.coords(slot["rect"])
+            except (KeyError, ValueError):
+                x0 = y0 = x1 = y1 = 0
+            side = max(8, int(round(x1 - x0)))
+            key = self.art.room_back_key("ghost")
+            photo = self.art.photo(
+                game_art.ROOM_BACK_KIND, key, self, (side, side)
+            )
+            if photo is not None:
+                item = self.board_canvas.create_image(
+                    x0 + 6, y0 + 6, anchor="nw", image=photo, tags=("roomghost",)
+                )
+                _tag_art(self.board_canvas, item, key)
+                slot["ghost"] = item
+                # 悬停期间的 ghost 也要保活：下一帧 _redraw_board 会整体换掉。
+                self._board_photos.append(photo)
         self.board_canvas.configure(cursor="hand2")
 
     def _on_exploration_slot_leave(self, slot_tag: str) -> None:
@@ -2369,6 +2616,12 @@ class GameApp(tk.Tk):
             self.board_canvas.itemconfigure(
                 slot["rect"], fill="#252b33", outline="#b9c4d1", width=1
             )
+            if slot.get("ghost") is not None:
+                try:
+                    self.board_canvas.delete(slot["ghost"])
+                except tk.TclError:
+                    pass
+                slot["ghost"] = None
         if self._exploration_hover_tag == slot_tag:
             self._exploration_hover_tag = None
             self.board_canvas.configure(cursor="")
@@ -2671,15 +2924,26 @@ class GameApp(tk.Tk):
             ok = self.engine.prompter.confirm("查看剧本", f"请确认现在屏幕前是 {viewer.name}。")
             if not ok:
                 return
-        self._open_script_dialog(title, text)
+        photo = None
+        if self.engine.state.haunt is not None:
+            photo = self.art.photo(
+                game_art.HAUNT_KIND,
+                self.art.haunt_key(self.engine.state.haunt),
+                self,
+                HAUNT_ART_SIZE,
+            )
+        self._open_script_dialog(title, text, image=photo)
 
-    def _open_script_dialog(self, title: str, text: str) -> None:
+    def _open_script_dialog(self, title: str, text: str, image=None) -> None:
         """弹出手册。阅读期间暂停机器人推进：旧行为里弹窗不挡机器人，
-        玩家还在读的时候机器人已经把回合走完了。"""
+        玩家还在读的时候机器人已经把回合走完了。
+
+        ``image`` 为可选的作祟插画（``haunt:<n>``），无图时布局不变。
+        """
         was_paused = self._reading_paused
         self._reading_paused = True
         try:
-            dialog = _TextDialog(self, title, text)
+            dialog = _TextDialog(self, title, text, image=image)
             self.wait_window(dialog.top)
         finally:
             self._reading_paused = was_paused
@@ -2839,6 +3103,7 @@ class GameApp(tk.Tk):
         # 每步单独容错：任何一步异常都不影响后续（尤其保证按钮一定刷新）
         steps = [
             ("status", self._refresh_status),
+            ("ending", self._maybe_show_ending),
             ("player_panel", self._refresh_player_panel),
             ("deck", self._refresh_deck_panel),
             ("log", self._refresh_log),
@@ -3227,7 +3492,32 @@ class GameApp(tk.Tk):
             f"（这是只有你能看到的内容，读完点「确定」后继续）\n\n"
         )
         self.engine._log(f"已为 {viewer.name} 打开手册：#{state.haunt.id} {state.haunt.name}。")
-        self._open_script_dialog(title, header + text)
+        # run6 haunt:<n>：作祟揭示画面 = 手册弹窗顶部的剧本插画（缺图时纯文字）。
+        photo = self.art.photo(
+            game_art.HAUNT_KIND, self.art.haunt_key(state.haunt), self, HAUNT_ART_SIZE
+        )
+        self._open_script_dialog(title, header + text, image=photo)
+
+    def _maybe_show_ending(self) -> None:
+        """GAME_OVER 后展示一次结算画面（run6 ``ending:<heroes|traitor>``）。
+
+        非阻塞（见 ``_EndingDialog``）：``_refresh_ui`` 每轮都会调用，阻塞会锁死
+        机器人推进与探针；``_ending_shown`` 保证一局只弹一次。
+        """
+        state = self.engine.state
+        winner = str(state.winner or "")
+        if not winner:
+            self._ending_shown = None
+            return
+        if self._ending_shown == winner:
+            return
+        self._ending_shown = winner
+        try:
+            self._ending_dialog = _EndingDialog(
+                self, winner, self.art, state.winner_reason or ""
+            )
+        except Exception as exc:  # 绘制失败不得影响其它面板刷新
+            print(f"[本地] 结算画面绘制异常: {exc!r}")
 
     def _maybe_run_bot_turn(self) -> None:
         state = self.engine.state

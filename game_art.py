@@ -5,7 +5,9 @@
 --------
 * **键换算集中**：调用方只给模型对象（``PlacedRoom`` / ``Card`` / ``CharacterFace``），
   由本模块换算成 P 表 ``runtime_key``：``room:<template_id>``、
-  ``card:<kind>:<card_id>``、``character:<face.card_id>:f<face.face_index>``。
+  ``card:<kind>:<card_id>``、``character:<face.card_id>:f<face.face_index>``；
+  run6 六类渲染面：``monster:<monster_id>``、``haunt:<n>``、``ending:<heroes|traitor>``、
+  ``card_back:<omen|item|event>``、``room_back:<back|ghost>``、``dice:<0|1|2>``。
   注意 ``Player.character_id`` 是 **face id**（如 ``card_1_0``），不能直接拼键。
 * **按尺寸记忆化**：``load_asset_photo`` 的缓存键含 ``max_size``，棋盘 tile 尺寸随窗口与
   zoom 连续变化，若每次都问绑定层就会反复解码。这里按 ``(kind, key, size)`` 再记一层，
@@ -52,6 +54,13 @@ PHOTO_MEMO_CAPACITY = 256
 ROOM_KIND = "room"
 CARD_KIND = "card"
 CHARACTER_KIND = "character"
+# run6 六类渲染面：kind 与 P 表 asset_type 同名，账本/探针可直接按 kind 归属渲染面。
+MONSTER_KIND = "monster"
+HAUNT_KIND = "haunt"
+ENDING_KIND = "ending"
+CARD_BACK_KIND = "card_back"
+ROOM_BACK_KIND = "room_back"
+DICE_KIND = "dice"
 
 
 def _normalize_size(size):
@@ -141,6 +150,72 @@ class GameArt:
             return ""
         return "character:%s:f%d" % (str(card_id), index)
 
+    # ---- run6 六类渲染面：键换算与 room/card/character 同一约定（集中在此） ----
+    @staticmethod
+    def monster_key(monster) -> str:
+        """``Monster`` / ``MonsterTemplate`` / id 字符串 -> ``monster:<monster_id>``。
+
+        ``Monster.id`` 是实例序号（运行时唯一），P 表键用的是 ``template_id``
+        （如 ``mummy``）；两者不能混用。
+        """
+        ident = getattr(monster, "template_id", None)
+        if not ident and isinstance(monster, dict):
+            ident = monster.get("template_id") or monster.get("id")
+        if not ident and isinstance(monster, str):
+            ident = monster
+        return "monster:%s" % str(ident) if ident else ""
+
+    @staticmethod
+    def haunt_key(haunt) -> str:
+        """``Haunt`` / dict / 编号 -> ``haunt:<n>``；编号必须是整数。"""
+        ident = getattr(haunt, "id", None)
+        if ident is None and isinstance(haunt, dict):
+            ident = haunt.get("id")
+        if ident is None:
+            ident = haunt
+        try:
+            ident = int(ident)
+        except (TypeError, ValueError):
+            return ""
+        return "haunt:%d" % ident
+
+    @staticmethod
+    def ending_key(winner) -> str:
+        """``GameState.winner`` -> ``ending:heroes|traitor``；其余值返回空串。"""
+        text = str(winner or "").strip().lower()
+        if text in ("heroes", "hero"):
+            return "ending:heroes"
+        if text in ("traitor", "betrayer"):
+            return "ending:traitor"
+        return ""
+
+    @staticmethod
+    def card_back_key(kind) -> str:
+        """牌堆类别 -> ``card_back:<omen|item|event>``（卡背只在未翻开时显示）。"""
+        text = str(kind or "").strip().lower()
+        if text not in ("omen", "item", "event"):
+            return ""
+        return "card_back:%s" % text
+
+    @staticmethod
+    def room_back_key(variant="back") -> str:
+        """未翻地块 -> ``room_back:<back|ghost>``（ghost = 探索预览的落点虚影）。"""
+        text = str(variant or "back").strip().lower()
+        if text not in ("back", "ghost"):
+            return ""
+        return "room_back:%s" % text
+
+    @staticmethod
+    def dice_key(value) -> str:
+        """骰面点数 -> ``dice:<0|1|2>``；特制骰只有 0/1/2 三面。"""
+        try:
+            index = int(value)
+        except (TypeError, ValueError):
+            return ""
+        if index not in (0, 1, 2):
+            return ""
+        return "dice:%d" % index
+
     # ------------------------------------------------------------------
     # 依赖（都是懒加载）
     # ------------------------------------------------------------------
@@ -168,8 +243,10 @@ class GameArt:
     def photo(self, kind, key, master, size):
         """取一张 PhotoImage；缺图/未解析/占位一律返回 None（调用方退回纯色块）。
 
-        kind: "room" | "card" | "character"（仅用于账本与调用点标记）
-        key: 本模块 room_key/card_key/character_key 的产物
+        kind: "room" | "card" | "character" | 六类渲染面 kind
+              （"monster" / "haunt" / "ending" / "card_back" / "room_back" / "dice"）；
+              仅用于账本与调用点标记
+        key: 本模块 *_key 的产物
         master: 建议固定传同一个根窗口，保证绑定层缓存键里的 id(master) 稳定
         size: int 或 (w, h)，等比缩到该包围盒内（只缩不放）
         """

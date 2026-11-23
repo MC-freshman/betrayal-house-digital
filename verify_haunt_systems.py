@@ -1865,7 +1865,10 @@ def verify_haunt12_fleshwalkers() -> None:
 
 def verify_haunt13_perchance_to_dream() -> None:
     """剧本 13：沉睡叛徒、梦魇补位、逃脱路线与秘密总数、圣徽唤醒（p24/p95）。"""
-    engine = _run_until_haunt(seed=113, players=3, haunt_id=13)
+    # 种子 2026-11-23 由 113 重钉到 109：H3 咬牌改为抽到即结算一次 might 对抗后，
+    # 作祟前的掷骰序列整体前移，旧种子跑出的板块不再满足本用例的前置
+    # （requires 至少玩家数个逃脱房间）。断言与阈值未改。
+    engine = _run_until_haunt(seed=109, players=3, haunt_id=13)
     handler = engine._mode_handler()
     assert isinstance(handler, NightmareDreamMode)
     flags = engine._haunt_flags()
@@ -3648,7 +3651,10 @@ def verify_haunt26_rat_ritual() -> None:
 
 def verify_haunt26_pentagram_block() -> None:
     """剧本 26：英雄的移动选项过滤五芒星室；探索抽到五芒星室直接弃掉换一张（p37/p108）。"""
-    engine = _run_until_haunt(seed=157, players=4, haunt_id=26)
+    # 种子 2026-11-23 由 157 重钉到 139：H3 咬牌改为抽到即结算一次 might 对抗后，
+    # 作祟前的掷骰序列整体前移，旧种子跑完地面层已无探索前沿（本用例需要一格）。
+    # 断言与阈值未改。
+    engine = _run_until_haunt(seed=139, players=4, haunt_id=26)
     handler = engine._mode_handler()
     hero = next(p for p in engine.state.players if p.role == "hero" and not p.dead)
     penta = handler._pentagram_key(engine)
@@ -7855,7 +7861,10 @@ def verify_haunt4_setup_and_trapped() -> None:
 
 def verify_haunt4_web_and_eggs_flow() -> None:
     """剧本 4：打网推进轨道、满值解困；销毁卵两条路径；开门前置（p15）。"""
-    engine = _run_until_haunt(seed=113, players=3, haunt_id=4)
+    # 种子 2026-11-23 由 113 重钉到 109：H3 咬牌改为抽到即结算一次 might 对抗后，
+    # 作祟前的掷骰序列整体前移，旧种子下蛛网房间/被困者与本用例的假设不一致。
+    # 断言与阈值未改。
+    engine = _run_until_haunt(seed=109, players=3, haunt_id=4)
     handler = engine._mode_handler()
     flags = engine._haunt_flags()
     haunt_room = engine.state.meta["haunt_rule"]["haunt_room"]
@@ -11835,6 +11844,8 @@ def _checks():
     yield verify_static_guards_detect_regressions
     yield verify_bot_objective_chains
     yield verify_bot_retreat_and_focus
+    # 第 4 项 K5：怪物专属上行通道单向开放
+    yield verify_monster_only_climb_passage
 
 
 def verify_bot_objective_chains():
@@ -11954,6 +11965,38 @@ def verify_bot_retreat_and_focus():
         engine._haunt_rule_state()["bot_focus"] = {"hero": "monster:" + str(monster.id)}
         profile = bot._side_profile(engine, hero)
         assert bot._target_score(engine, hero, monster, profile) == bot._target_score(engine, hero, second, profile) + 25
+
+
+def verify_monster_only_climb_passage() -> None:
+    """K5：怪物专属上行通道只对怪物开放（官方 2nd Ed. p2）。
+
+    原文："Monsters, but not traitors, are able to climb up the Coal Chute,
+    Collapsed Room, and Gallery without making a roll."
+
+    本仓库有数据支撑的落点只有煤导槽：
+    ``room_effects._apply_coal_chute`` 把进入者送到 ``basement_landing``，
+    反方向「平台 -> 导槽」就是"爬上去"，只允许怪物走。
+
+    断言三件事：
+    1) 英雄图（``_build_graph``）不含该边 —— 探险者爬不上去；
+    2) 怪物图（``_monster_graph``）含该边 —— 怪物能爬；
+    3) 该边是单向的，不反向打通（否则怪物等于凭空多一条下楼捷径）。
+    """
+    engine = _new_engine(seed=11, players=3)
+    landing = next(
+        key for key, room in engine.state.board.items()
+        if room.template_id == "basement_landing"
+    )
+    chute = engine._place_room(engine.catalog.room_templates["coal_chute"], 5, 0, 0)
+    assert chute.floor == -1 and chute.key != landing, "煤导槽应作为独立的地下室板块落位"
+
+    hero_graph = engine._build_graph()
+    monster_graph = engine._monster_graph()
+    assert chute.key not in hero_graph.get(landing, []), "英雄路径不应包含怪物专属上行通道"
+    assert chute.key in monster_graph.get(landing, []), "怪物路径应包含怪物专属上行通道"
+    assert landing not in monster_graph.get(chute.key, []), "怪物专属通道是单向边，不得反向打通"
+    assert engine._path_length(landing, chute.key) == 9999, "英雄侧没有门/链接可走到导槽"
+    assert engine._monster_path_length(landing, chute.key) == 1, "怪物侧应一步爬上去"
 
 
 def main():

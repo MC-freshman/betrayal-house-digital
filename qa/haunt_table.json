@@ -1,0 +1,132 @@
+{
+ "schema": "haunt-table/v1",
+ "cells": 13,
+ "rooms": 7,
+ "entries": {
+  "omen_bite": {
+   "catacombs": 49,
+   "chapel": 4,
+   "crypt": 35,
+   "graveyard": 13,
+   "master_bedroom": 29,
+   "organ_room": 68,
+   "pentagram_chamber": 57
+  },
+  "omen_book": {
+   "catacombs": 15,
+   "chapel": 24,
+   "crypt": 56,
+   "graveyard": 10,
+   "master_bedroom": 38,
+   "organ_room": 32,
+   "pentagram_chamber": 18
+  },
+  "omen_crystal_ball": {
+   "catacombs": 64,
+   "chapel": 49,
+   "crypt": 27,
+   "graveyard": 56,
+   "master_bedroom": 43,
+   "organ_room": 31,
+   "pentagram_chamber": 61
+  },
+  "omen_dog": {
+   "catacombs": 28,
+   "chapel": 5,
+   "crypt": 3,
+   "graveyard": 10,
+   "master_bedroom": 27,
+   "organ_room": 66,
+   "pentagram_chamber": 14
+  },
+  "omen_girl": {
+   "catacombs": 33,
+   "chapel": 35,
+   "crypt": 11,
+   "graveyard": 53,
+   "master_bedroom": 43,
+   "organ_room": 17,
+   "pentagram_chamber": 47
+  },
+  "omen_holy_symbol": {
+   "catacombs": 5,
+   "chapel": 24,
+   "crypt": 4,
+   "graveyard": 68,
+   "master_bedroom": 21,
+   "organ_room": 20,
+   "pentagram_chamber": 2
+  },
+  "omen_madman": {
+   "catacombs": 8,
+   "chapel": 58,
+   "crypt": 33,
+   "graveyard": 17,
+   "master_bedroom": 44,
+   "organ_room": 3,
+   "pentagram_chamber": 3
+  },
+  "omen_mask": {
+   "catacombs": 66,
+   "chapel": 34,
+   "crypt": 62,
+   "graveyard": 61,
+   "master_bedroom": 33,
+   "organ_room": 24,
+   "pentagram_chamber": 29
+  },
+  "omen_medallion": {
+   "catacombs": 37,
+   "chapel": 69,
+   "crypt": 58,
+   "graveyard": 24,
+   "master_bedroom": 23,
+   "organ_room": 4,
+   "pentagram_chamber": 51
+  },
+  "omen_ring": {
+   "catacombs": 42,
+   "chapel": 36,
+   "crypt": 37,
+   "graveyard": 28,
+   "master_bedroom": 56,
+   "organ_room": 69,
+   "pentagram_chamber": 39
+  },
+  "omen_skull": {
+   "catacombs": 25,
+   "chapel": 53,
+   "crypt": 24,
+   "graveyard": 1,
+   "master_bedroom": 18,
+   "organ_room": 11,
+   "pentagram_chamber": 41
+  },
+  "omen_spear": {
+   "catacombs": 1,
+   "chapel": 57,
+   "crypt": 65,
+   "graveyard": 44,
+   "master_bedroom": 62,
+   "organ_room": 69,
+   "pentagram_chamber": 50
+  },
+  "omen_spirit_board": {
+   "catacombs": 3,
+   "chapel": 49,
+   "crypt": 43,
+   "graveyard": 41,
+   "master_bedroom": 43,
+   "organ_room": 5,
+   "pentagram_chamber": 22
+  }
+ },
+ "source": "derived-sha1-materialization",
+ "note": "表值由现有 SHA1(room|omen) 判定物化而来，不是官方触发表；物化前后行为逐格等价（91/91 相同），仅用于打通查表通路与覆盖率统计。取得官方 13x7 表值后整体替换 entries 即可，无需改代码。",
+ "provenance": {
+  "generator": "qa/haunt_table.json（由 scripts 物化，见提交说明）",
+  "formula": "sha1('{room_id}|{omen_id}') % 70 + 1；roof 层为 71 + value % 50",
+  "verified_equal_to_legacy": true,
+  "cells_checked": 91
+ }
+}

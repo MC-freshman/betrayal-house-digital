@@ -1,29 +1,35 @@
 {
-  "generated_at": "2026-11-22T01:54:25",
+  "generated_at": "2026-11-23T19:28:35",
   "tool": "verify_assets.py",
   "ok": true,
   "totals": {
-    "records": 142,
+    "records": 274,
     "checked": 17,
     "failed": 0
   },
   "summary": {
     "p_table": {
-      "records": 142,
-      "present": 142,
+      "records": 274,
+      "present": 274,
       "missing": 0,
       "by_asset_type": {
         "character": 12,
         "room": 50,
         "card_omen": 13,
         "card_item": 22,
-        "card_event": 45
+        "card_event": 45,
+        "monster": 52,
+        "haunt": 70,
+        "ending": 2,
+        "card_back": 3,
+        "room_back": 2,
+        "dice": 3
       },
       "by_runtime_status": {
-        "ok": 142
+        "ok": 274
       },
       "by_mapping_status": {
-        "matched": 142
+        "matched": 274
       }
     },
     "artifacts": {
@@ -56,19 +62,19 @@
       "id": "V02",
       "name": "P 表 142 行",
       "status": "pass",
-      "detail": "csv=142 / json=142"
+      "detail": "csv=274 / json=274"
     },
     {
       "id": "V03",
       "name": "分类计数 角色12/房间50/事件45/物品22/预兆13",
       "status": "pass",
-      "detail": "character=12 / room=50 / card_event=45 / card_item=22 / card_omen=13"
+      "detail": "character=12 / room=50 / card_event=45 / card_item=22 / card_omen=13 / monster=52 / haunt=70 / ending=2 / card_back=3 / room_back=2 / dice=3"
     },
     {
       "id": "V04",
       "name": "record_id 唯一、前缀与类型一致、段号连续",
       "status": "pass",
-      "detail": "142 个唯一 id"
+      "detail": "274 个唯一 id"
     },
     {
       "id": "V05",
@@ -90,9 +96,9 @@
     },
     {
       "id": "V08",
-      "name": "142 个 runtime_path 存在、真实 PNG、尺寸符合规格（145 张运行时 PNG：50/80/12/3）",
+      "name": "274 个 runtime_path 存在、真实 PNG、尺寸符合规格（277 张运行时 PNG：50/80/12/3 + 52/70/2/3/2/3）",
       "status": "pass",
-      "detail": "ok=142 / fallback=0 / placeholder=0；rooms=50 cards=80 characters=12 placeholders=3"
+      "detail": "ok=274 / fallback=0 / placeholder=0；rooms=50 cards=80 characters=12 placeholders=3 monsters=52 haunts=70 endings=2 card_backs=3 room_backs=2 dice=3"
     },
     {
       "id": "V09",
@@ -146,7 +152,7 @@
       "id": "V17",
       "name": "发布档 7 列齐全，bytes/sha256 取源文件、missing 留空、canonical 自指",
       "status": "pass",
-      "detail": "33 列；142 行源文件哈希复核；verified_at=2026-11-19"
+      "detail": "33 列；274 行源文件哈希复核；verified_at=2026-11-19"
     }
   ]
 }

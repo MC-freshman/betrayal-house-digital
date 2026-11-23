@@ -22,12 +22,12 @@
  "contrast_method": "wcag-relative-luminance(ui.PALETTE design values)",
  "screenshot_full": "source/desktop/game/qa/screenshots/ui_150.png",
  "screenshot_crop": "source/desktop/game/qa/screenshots/ui_150_crop.png",
- "sha256_full": "5c970dc631dad4d81ca32bece1be2cbc6ab6b21a12fef20a8c6ef0a90cc9e9dc",
- "sha256_crop": "ce721d971c0640be1134999b7dff0d4fa00e985c688fd175912c7b4b9b49469d",
- "captured_at": "2026-11-20T17:48:50",
+ "sha256_full": "11704cbf0126232cf9b1c70caf87eb4d44cf07b6588a114edb9a0fbff324d500",
+ "sha256_crop": "eca229d8201cb75440d00ee7ff05be84309d8142106562c557a1a4183e16e937",
+ "captured_at": "2026-11-22T11:59:25",
  "reviewer": "qa/ui_capture.py 自动采集；人工复核待办",
- "app_source_sha256": "59b61f883544f3158455c4563fc211d727b25699abd578fabc95b87dc68ea151",
- "assets_sha256": "c233a1f040cc857dcc8a75ce1d33da7cfbc181b2a7589e25b62c99b19f67a66c",
+ "app_source_sha256": "53f7b7d53cb1fcffac612dda10f502324332347ffdb915aee9502f536cd300a0",
+ "assets_sha256": "e5a92967322f1b81f844dd189b17b93041caaf1abefe5989cb151ed4b3ea6898",
  "size_assertions": {
   "room_ok": true,
   "card_ok": true

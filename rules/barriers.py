@@ -1,7 +1,40 @@
 """K2 两侧模型。只有提供明确版次/卡面配置的房间才启用，不猜门的分组。"""
 
+try:
+    from ..content import BARRIER_SPECS
+    from ..engine_parts.geometry import _rotate_direction
+except ImportError:  # pragma: no cover - direct script execution
+    from content import BARRIER_SPECS  # type: ignore
+    from engine_parts.geometry import _rotate_direction  # type: ignore
+
 
 class BarrierRules:
+    def configure_disclosed_barrier(self, room):
+        """按 ``content.BARRIER_SPECS`` 的显式卡面数据给落位板块配置两侧模型。
+
+        生产环境唯一的接线点（`_place_room` 与 `_set_room_orientation` 各调一次），
+        规则是"没登记 = 不配置"：宁可让 room_effects 里的既有近似继续生效，也不猜
+        门的分组/属性/阈值。登记表当前为空，原因见 ``content.BARRIER_SPECS`` 注释。
+
+        返回 True = 该板块现在真的带 barrier 配置。
+        """
+        spec = BARRIER_SPECS.get(room.template_id)
+        if not spec:
+            return False
+        # 登记表按模板的基准朝向写（rotation=0），落位/旋转后要跟着转。
+        doors = {
+            _rotate_direction(direction, room.rotation): side
+            for direction, side in (spec.get("doors") or {}).items()
+            if direction in ("north", "east", "south", "west")
+        }
+        try:
+            self.configure_barrier(room, doors, spec.get("stat"), spec.get("target"), spec.get("source"))
+        except ValueError:
+            # 登记表写错时 fail-closed：不配置（而不是配一半），并留下可搜索的日志。
+            self._log(f"[规则缺口] {room.name} 的障碍登记无效，已跳过；不给该房间加障碍。")
+            return False
+        return True
+
     def configure_barrier(self, room, doors, stat, target, source):
         if (not source or stat not in ("speed", "might", "sanity", "knowledge")
                 or not isinstance(target, int) or target < 0

@@ -12,7 +12,7 @@ from tkinter import simpledialog
 
 try:
     from game.content import build_catalog
-    from game.engine import GameEngine
+    from game.engine import AutoDecisionProvider, GameEngine
     from game.models import GameState
     from game.ui import (
         PALETTE,
@@ -31,7 +31,7 @@ try:
     from game.net.protocol import BufferedLineReader
 except ImportError:  # pragma: no cover - direct script execution
     from content import build_catalog  # type: ignore
-    from engine import GameEngine  # type: ignore
+    from engine import AutoDecisionProvider, GameEngine  # type: ignore
     from models import GameState  # type: ignore
     from ui import (  # type: ignore
         PALETTE,
@@ -212,6 +212,14 @@ class LocalPrompter:
 
     def choose_split_damage(self, title, message, amount, first_label, second_label) -> int | None:
         return simpledialog.askinteger(title, message, parent=self.app, minvalue=0, maxvalue=amount)
+
+    def choose_traitor(self, candidates, state) -> int | None:
+        """联机客户端不弹叛徒自选：回落主机下发的属性规则结果。
+
+        叛徒由主机侧的 ``net.server.DecisionRouter`` 统一裁决（当前策略 = 属性规则），
+        客户端弹窗只会在本端制造一个与其它端不同的叛徒，故这里直接返回 default。
+        """
+        return AutoDecisionProvider().choose_traitor(candidates, state)
 
 
 class ClientApp(GameApp):

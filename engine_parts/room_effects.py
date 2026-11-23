@@ -198,6 +198,9 @@ class RoomEffects:
         else:
             self._log(f"{player.name} 抽到预兆：{card.name}。")
         self.prompter.notify(f"抽到预兆：{card.name}", card.text or "（无说明）")
+        # H3：咬伤卡面数值由规则层补入（卡图无印字），再走统一的预兆结算，
+        # 这样"抽到咬牌 = 立即结算一次咬伤攻击"，而不是只留一条缺口日志。
+        self._ensure_bite_attack(card)
         self._resolve_omen_effect(player, card)
 
     def _draw_item(self, player: Player, stop_movement: bool = True) -> None:

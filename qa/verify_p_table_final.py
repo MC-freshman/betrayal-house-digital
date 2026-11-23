@@ -85,18 +85,41 @@ ENUM_CLAIMS = ("attested", "partial", "not-attested")
 BRANCH_METHOD = "condition-jump-arc"
 RSS_BUDGET_MIB = 1536
 RSS_BUDGET_BYTES = 1536 * 1024 * 1024
-EXPECTED_TOTAL = 142
+# run6：九类渲染面接入后 P 表 274 位（142 原有位 + 132 新增渲染面）
+EXPECTED_TOTAL = 274
 EXPECTED_COLUMNS = 33
+# asset_type -> assets/ 下的运行时目录（A-07 判据）
+RUNTIME_DIR_BY_TYPE = {
+    "character": "characters",
+    "room": "rooms",
+    "card_omen": "cards",
+    "card_item": "cards",
+    "card_event": "cards",
+    "monster": "monsters",
+    "haunt": "haunts",
+    "ending": "endings",
+    "card_back": "card_backs",
+    "room_back": "room_backs",
+    "dice": "dice",
+}
 EXPECTED_TYPES = {
     "character": 12,
     "room": 50,
     "card_event": 45,
     "card_item": 22,
     "card_omen": 13,
+    # 六类渲染面：monster 52 / haunt 70 / ending 2 / card_back 3 / room_back 2 / dice 3
+    "monster": 52,
+    "haunt": 70,
+    "ending": 2,
+    "card_back": 3,
+    "room_back": 2,
+    "dice": 3,
 }
 # run5 v2（2026-11-20）：47 位登记 + 130 张无损转码后 142 位全部 usable。
+# run6：新增 132 位渲染面同为 usable（六类均有 photos/ 源图），全表 274 位 0 缺口。
 EXPECTED_AVAILABILITY = {
-    "usable": 142,
+    "usable": 274,
     "partial": 0,
     "missing": 0,
     "corrupted": 0,
@@ -124,6 +147,14 @@ CONTENT_BASELINE_COUNTS = {
     "ITEM_CARDS": 22,
     "EVENT_BASES": 11,
     "EVENT_SUPPLEMENTAL_SPECS": 34,
+}
+# 上面 7 个集合是 S0 归档可 AST 追溯的部分（合计 142）；run6 新增的 3 个集合
+# 只能导入 content.py 求值（HAUNT_DEFS 来自 build_catalog(0).haunt_defs）。
+CONTENT_BASELINE_TOTAL = 142
+CONTENT_EXTRA_COUNTS = {
+    "MONSTER_BASES": 52,
+    "HAUNT_DEFS": 70,
+    "RENDER_SURFACE_SPECS": 10,
 }
 HAUNT_SLOTS = 70
 
@@ -561,7 +592,7 @@ def check_a04(ctx):
                     problems.append("CSV/JSON 关键字段不等价共 %d 处" % mismatched)
     if problems:
         return FAIL, "；".join(problems[:8]), problems
-    return PASS, "142 行 × 33 列；CSV 带 BOM、表头一致、record_id 双向差集为空", []
+    return PASS, "274 行 × 33 列；CSV 带 BOM、表头一致、record_id 双向差集为空", []
 
 
 def check_a05(ctx):
@@ -581,8 +612,8 @@ def check_a05(ctx):
         if stats.get(key) != expected:
             problems.append("stats.%s=%r" % (key, stats.get(key)))
     runtime = Counter(r.get("runtime_status") for r in records)
-    # run5 v2：142 位全部 ok；0 placeholder / 0 fallback
-    expected_runtime = {"ok": 142, "placeholder": 0, "fallback": 0}
+    # run6：274 位全部 ok（142 原有位 + 132 渲染面）；0 placeholder / 0 fallback
+    expected_runtime = {"ok": EXPECTED_TOTAL, "placeholder": 0, "fallback": 0}
     for key, expected in expected_runtime.items():
         if runtime.get(key, 0) != expected:
             problems.append("runtime_status.%s=%d，期望 %d" % (key, runtime.get(key, 0), expected))
@@ -592,8 +623,8 @@ def check_a05(ctx):
                         % (mapping.get("matched", 0), EXPECTED_TOTAL))
     if problems:
         return FAIL, "；".join(problems), problems
-    return PASS, ("142 usable / 0 partial / 0 missing / 0 corrupted / 0 duplicate；"
-                  "runtime ok=142；mapping matched=142"), []
+    return PASS, ("274 usable / 0 partial / 0 missing / 0 corrupted / 0 duplicate；"
+                  "runtime ok=274；mapping matched=274"), []
 
 
 def check_a06(ctx):
@@ -616,7 +647,8 @@ def check_a06(ctx):
         problems.append("缺口合计=%d，期望 0（run5 v2）" % sum(missing.values()))
     if problems:
         return FAIL, "；".join(problems), problems
-    return PASS, "分类 12/50/45/22/13；缺口 0（47 位已按 promotion map 落实）", []
+    return PASS, ("分类 12/50/45/22/13 + monster52/haunt70/ending2/card_back3/"
+                  "room_back2/dice3；缺口 0（47 位已按 promotion map 落实）"), []
 
 
 def check_a07(ctx):
@@ -660,15 +692,16 @@ def check_a07(ctx):
             problems.append("%s 不是真 PNG 魔数" % rec.get("record_id"))
         asset_type = rec.get("asset_type")
         runtime = str(rec.get("runtime_path") or "").replace("\\", "/")
-        if asset_type == "room" and "/assets/rooms/" not in runtime:
-            problems.append("%s 房间图未落在 assets/rooms/" % rec.get("record_id"))
-        if str(asset_type).startswith("card_") and "/assets/cards/" not in runtime:
-            problems.append("%s 卡牌图未落在 assets/cards/" % rec.get("record_id"))
-        if asset_type == "character" and "/assets/characters/" not in runtime:
-            problems.append("%s 角色图未落在 assets/characters/" % rec.get("record_id"))
+        runtime_dir = RUNTIME_DIR_BY_TYPE.get(asset_type)
+        if runtime_dir is None:
+            problems.append("%s 未知 asset_type：%r" % (rec.get("record_id"), asset_type))
+        elif "/assets/%s/" % runtime_dir not in runtime:
+            problems.append("%s 运行时图未落在 assets/%s/"
+                            % (rec.get("record_id"), runtime_dir))
     if problems:
         return FAIL, "；".join(problems[:8]), problems
-    return PASS, "entries=142 / unresolved=0；path==source_path；142 源文件为真 PNG；无跨类别", []
+    return PASS, ("entries=274 / unresolved=0；path==source_path；274 源文件为真 PNG；"
+                  "运行时路径均落在该类别目录"), []
 
 
 def check_a08(ctx):
@@ -2118,8 +2151,35 @@ def check_a29(ctx):
         if len(set(ids)) != expected:
             problems.append("content.py %s=%d，期望 %d" % (collection, len(set(ids)), expected))
     total_ids = sum(len(ids) for ids in content_ids.values())
-    if total_ids != EXPECTED_TOTAL:
-        problems.append("content.py 集合合计=%d，期望 %d" % (total_ids, EXPECTED_TOTAL))
+    if total_ids != CONTENT_BASELINE_TOTAL:
+        problems.append("content.py 7 集合合计=%d，期望 %d"
+                        % (total_ids, CONTENT_BASELINE_TOTAL))
+
+    # 1b) run6 六类渲染面的内容集合。
+    #     RENDER_SURFACE_SPECS / MONSTER_BASES 是字面量列表，可继续 AST 取 id；
+    #     HAUNT_DEFS 由 build_catalog() 生成（调用时才 import models），本脚本承诺
+    #     不导入被测模块，改以 content.py 的 HAUNT_NAMES（每条名字生成 1 个剧本）
+    #     计数，并由第 8 条子进程断言「注册表剧本=70」交叉印证。
+    extra_modes = {
+        "MONSTER_BASES": "kw:monster_id",
+        "HAUNT_DEFS": "tuple",
+        "RENDER_SURFACE_SPECS": "dict_id",
+    }
+    extra_source = {"HAUNT_DEFS": "HAUNT_NAMES"}
+    extra_count = {}
+    for name, expected in CONTENT_EXTRA_COUNTS.items():
+        source_name = extra_source.get(name, name)
+        ids = _ast_list_ids(content_text, source_name, extra_modes[name], "content.py")
+        if ids is None:
+            problems.append("content.py 找不到集合 %s（源：%s）" % (name, source_name))
+            continue
+        extra_count[name] = len(set(ids))
+        if len(set(ids)) != expected:
+            problems.append("content.py %s=%d，期望 %d"
+                            % (name, len(set(ids)), expected))
+    if total_ids + sum(extra_count.values()) != EXPECTED_TOTAL:
+        problems.append("content.py 10 集合合计=%d，期望 %d"
+                        % (total_ids + sum(extra_count.values()), EXPECTED_TOTAL))
 
     # 2) 无 WW 残留（标识符 + 字符串字面量）
     for token in WW_TOKENS:
@@ -2541,14 +2601,17 @@ def check_a31(ctx):
                 problems.append("inventory %s sha256 漂移" % item["file"])
 
     # 7) provenance 保留原件 sha256 与备份路径
+    #    只有经历过转码的行才需要 transcode 溯源；run6 六类渲染面是原生 PNG，
+    #    不在 130 条转码清单里，不能按类别一刀切要求 transcode=png。
+    transcoded = {str(row.get("path")) for row in rows}
     for rec in records:
         provenance = str(rec.get("provenance") or "")
         if "transcode=png" in provenance:
             if "src_sha256:" not in provenance or "backup=photos/_source_jpeg/" not in provenance:
                 problems.append("%s provenance 缺 src_sha256/backup" % rec.get("record_id"))
-        elif rec.get("asset_type") != "character":
-            # 除 12 张原生 PNG 角色外，其余 130 张都应有 transcode 溯源
-            problems.append("%s 缺 transcode 溯源" % rec.get("record_id"))
+        elif str(rec.get("source_path")) in transcoded:
+            problems.append("%s 在转码清单内但 provenance 缺 transcode 溯源"
+                            % rec.get("record_id"))
 
     if problems:
         return FAIL, "；".join(problems[:8]), problems
@@ -2677,7 +2740,7 @@ def check_a33(ctx):
 
 
 def check_a32(ctx):
-    """A-32 142 张图片技术规格（尺寸/格式/对比度，run5 §4.5）。"""
+    """A-32 274 张图片技术规格（尺寸/格式/对比度，run5 §4.5 + run6 六类渲染面）。"""
     records = _records(ctx)
     if not records:
         return FAIL, "P 表为空或不可读", []
@@ -2689,10 +2752,22 @@ def check_a32(ctx):
         "card_item": {"ratio": (3, 4), "min_long": 1600},
         "card_event": {"ratio": (3, 4), "min_long": 1600},
         "character": {"ratio": (1, 1), "min_long": 320},   # D-01 书面偏差
+        # run6 六类渲染面：母版比例/长边按各自画幅给定（官方无规定，按实测画幅设下限）
+        "monster": {"ratio": (1, 1), "min_long": 512},
+        "haunt": {"ratio": (16, 9), "min_long": 1280},
+        "ending": {"ratio": (16, 9), "min_long": 1024},
+        "card_back": {"ratio": (3, 4), "min_long": 640},
+        "room_back": {"ratio": (1, 1), "min_long": 512},
+        "dice": {"ratio": (1, 1), "min_long": 256},
     }
     runtime_rules = {"room": (512, 512), "card_omen": (480, 672),
                      "card_item": (480, 672), "card_event": (480, 672),
-                     "character": (320, 320)}
+                     "character": (320, 320),
+                     "monster": (512, 512), "haunt": (1280, 720),
+                     "ending": (1024, 576), "card_back": (480, 640),
+                     "room_back": (512, 512), "dice": (256, 256)}
+    # 必需 alpha 的类别（叠图用途）；其余类别允许源图自带透明留白，不反向断言
+    alpha_required_types = {"character", "monster", "room_back", "dice"}
 
     # 1) 母版尺寸与比例；2) 运行时尺寸；3) 真 PNG
     for rec in records:
@@ -2721,15 +2796,17 @@ def check_a32(ctx):
         if png_ihdr(source) is None:
             problems.append("%s 母版不是真 PNG" % rid)
 
-    # 4) has_alpha 与 alpha_required 一致；角色 alpha 非全不透明
+    # 4) alpha_required 按用途判定；必需 alpha 的类别必须真有 alpha 通道。
+    #    非必需类别（剧本插画/结算/牌背）允许源图自带透明留白，不做反向断言。
     for rec in records:
         rid = rec.get("record_id")
-        expected_alpha = rec.get("asset_type") == "character"
-        if bool(rec.get("has_alpha")) != expected_alpha:
-            problems.append("%s has_alpha 与用途不符" % rid)
-        if bool(rec.get("alpha_required")) != expected_alpha:
+        asset_type = rec.get("asset_type")
+        requires_alpha = asset_type in alpha_required_types
+        if bool(rec.get("alpha_required")) != requires_alpha:
             problems.append("%s alpha_required 与用途不符" % rid)
-        if expected_alpha:
+        if requires_alpha and not bool(rec.get("has_alpha")):
+            problems.append("%s has_alpha=false，但该类别必需 alpha" % rid)
+        if asset_type == "character":
             path = ctx.root / str(rec.get("source_path") or "")
             try:
                 from PIL import Image
@@ -2743,7 +2820,7 @@ def check_a32(ctx):
             except Exception as exc:  # noqa: BLE001
                 problems.append("%s 读 alpha 失败：%s" % (rid, type(exc).__name__))
 
-    # 6) M-13 原图可读性代理（142/142 脚本计算）
+    # 6) M-13 原图可读性代理（274/274：qa/run5_readability.json 全表覆盖）
     readability = _readability_scan(ctx, records)
     if readability["failures"]:
         problems.extend(readability["failures"][:6])
@@ -2776,9 +2853,9 @@ def check_a32(ctx):
 
     if problems:
         return FAIL, "；".join(problems[:8]), problems
-    detail = ("142/142 母版尺寸/比例达标、运行时 IHDR 精确；真 PNG；"
-              "alpha 规则一致（角色 12 张非全不透明）；M-13 可读性 142/142 通过；"
-              "sha256 重复 0；" + wcag_note)
+    detail = ("274/274 母版尺寸/比例达标、运行时 IHDR 精确；真 PNG；"
+              "alpha 规则一致（character/monster/room_back/dice 必需且存在）；"
+              "M-13 可读性 274/274 通过；sha256 重复 0；" + wcag_note)
     if not wcag_ok:
         return NOT_RUN, detail, evidence
     return PASS, detail, evidence

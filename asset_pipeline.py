@@ -1,17 +1,19 @@
 #!/usr/bin/env python
-"""桌面端图片资源管线：构建 142 个资源位的 P 表，并输出运行时 PNG。
+"""桌面端图片资源管线：构建 274 个资源位的 P 表，并输出运行时 PNG。
 
-run5 版（2026-11-20，WW 隔离）：资源位回到 **142**——角色 12、房间 50
-（ROOM_BASES 39 + ROOM_SUPPLEMENTAL_SPECS 11）、事件 45（EVENT_BASES 11 +
-EVENT_SUPPLEMENTAL_SPECS 34）、物品 22、预兆 13。Widow's Walk 的 20 屋顶房 /
-15 事件 / 10 物品 / 5 预兆 / 50 剧本（71-120）已隔离到 ``content_ww.py``、
-``haunts/_ww_deferred/``、``assets_ww/``，本管线不读取它们。
+run6 版（九类渲染面）：资源位 = 原有 **142**（角色 12、房间 50 = ROOM_BASES 39 +
+ROOM_SUPPLEMENTAL_SPECS 11、事件 45 = EVENT_BASES 11 + EVENT_SUPPLEMENTAL_SPECS 34、
+物品 22、预兆 13）+ **132**（monster 52、haunt 70、ending 2、card_back 3、
+room_back 2、dice 3）= **274**。六类渲染面的 id 分别来自 content.py 的
+``MONSTER_BASES``、``build_catalog(0).haunt_defs`` 与 ``RENDER_SURFACE_SPECS``。
+Widow's Walk 的 20 屋顶房 / 15 事件 / 10 物品 / 5 预兆 / 50 剧本（71-120）仍隔离在
+``content_ww.py``、``haunts/_ww_deferred/``、``assets_ww/``，本管线不读取它们。
 
 设计约束
 --------
 * 只读 ``photos/``：不改名、不移动、不覆盖；运行时副本写到 ``source/desktop/game/assets/``。
   （美术管线的转码是独立的一次性步骤：``qa/run5_transcode.py``。）
-* 资源位（142）为主键，文件为附属；无文件的资源位仍登记 ``missing`` 而不是省略。
+* 资源位（274）为主键，文件为附属；无文件的资源位仍登记 ``missing`` 而不是省略。
 * 收口状态：photos/ 142 张全部为真 PNG；可用性一律 ``usable``；角色 12 位接通
   photos/role/ 真源图（RGBA 320x320）。
 * 尺寸：房间 512x512、卡牌 480x672、角色 320x320。卡牌按 3:4 源图等比缩放后
@@ -145,6 +147,13 @@ CATEGORY_DIR = {
     "omen": "omen",
     "item": "item",
     "event": "event",
+    # run6 六类渲染面：photos/ 下同名子目录
+    "monster": "monster",
+    "haunt": "haunt",
+    "ending": "ending",
+    "card_back": "card_back",
+    "room_back": "room_back",
+    "dice": "dice",
 }
 
 # alpha 需求按用途判定：角色立绘必须带 alpha；房间整图与卡面不需要。
@@ -154,6 +163,14 @@ ALPHA_REQUIRED = {
     "omen": False,
     "item": False,
     "event": False,
+    # run6：怪物标记 / 未翻地块 / 骰面需要透明通道（叠在地块上）；
+    # 剧本插画与结算画面是整幅图，牌背是卡面替身，均不需要 alpha。
+    "monster": True,
+    "haunt": False,
+    "ending": False,
+    "card_back": False,
+    "room_back": True,
+    "dice": True,
 }
 
 # schema/说明：写入 p_table.json 的 schema 段，解释列语义与两种键的关系。
@@ -218,21 +235,42 @@ CARD_SIZE = (480, 672)
 ROOM_SIZE = (512, 512)
 CHARACTER_SIZE = (320, 320)
 
+# 资源位总数（独立期望值，不用 len(collect_slots()) 自证）：
+# 142 原有位 + monster 52 + haunt 70 + ending 2 + card_back 3 + room_back 2 + dice 3。
+EXPECTED_SLOT_TOTAL = 274
+
 PLACEHOLDER_FILES = {
     "character": "character_missing.png",
     "room": "room_missing.png",
     "event": "event_missing.png",
 }
 
+# run6 九类渲染面：六类新资源的运行时尺寸（工程自定，官方未规定；
+# 在 P 表 runtime_specs 与报告中均标注为自定义规格，不冒充官方）。
+MONSTER_SIZE = (512, 512)
+HAUNT_SIZE = (1280, 720)
+ENDING_SIZE = (1024, 576)
+CARD_BACK_SIZE = (480, 640)   # 3:4，与母版 1330x1773 同比例；不复用卡面 5:7
+ROOM_BACK_SIZE = (512, 512)
+DICE_SIZE = (256, 256)
+
 # 运行时尺寸档位：registry 用它给出 width/height，不必解码图片。
 RUNTIME_SPECS = {
     "character": {"width": CHARACTER_SIZE[0], "height": CHARACTER_SIZE[1], "format": "png"},
     "room": {"width": ROOM_SIZE[0], "height": ROOM_SIZE[1], "format": "png"},
     "card": {"width": CARD_SIZE[0], "height": CARD_SIZE[1], "format": "png"},
+    "monster": {"width": MONSTER_SIZE[0], "height": MONSTER_SIZE[1], "format": "png"},
+    "haunt": {"width": HAUNT_SIZE[0], "height": HAUNT_SIZE[1], "format": "png"},
+    "ending": {"width": ENDING_SIZE[0], "height": ENDING_SIZE[1], "format": "png"},
+    "card_back": {"width": CARD_BACK_SIZE[0], "height": CARD_BACK_SIZE[1], "format": "png"},
+    "room_back": {"width": ROOM_BACK_SIZE[0], "height": ROOM_BACK_SIZE[1], "format": "png"},
+    "dice": {"width": DICE_SIZE[0], "height": DICE_SIZE[1], "format": "png"},
 }
 
 # 类别优先级：CHR -> ROOM -> OMEN -> ITEM -> EVT（也决定 record_id 段号顺序）。
-CATEGORY_ORDER = ("CHR", "ROOM", "OMEN", "ITEM", "EVT")
+# run6 追加六类渲染面，**排在 EVT 之后**，保证既有 142 位的 record_id 段号不变。
+CATEGORY_ORDER = ("CHR", "ROOM", "OMEN", "ITEM", "EVT",
+                  "MONS", "HAUNT", "END", "CBACK", "RBACK", "DICE")
 
 FAMILIES = {
     "character": {
@@ -277,12 +315,81 @@ FAMILIES = {
         "runtime_spec": "card",
         "usable_fields": ("card_face", "preview"),
     },
+    # ---- run6 九类渲染面：六类新资源（142 -> 274） ----
+    "monster": {
+        "cat": "MONS",
+        "asset_type": "monster",
+        "photo_dir": "monster",
+        "size": MONSTER_SIZE,
+        "runtime_spec": "monster",
+        "usable_fields": ("monster_marker", "preview"),
+    },
+    "haunt": {
+        "cat": "HAUNT",
+        "asset_type": "haunt",
+        "photo_dir": "haunt",
+        "size": HAUNT_SIZE,
+        "runtime_spec": "haunt",
+        "usable_fields": ("haunt_art", "preview"),
+    },
+    "ending": {
+        "cat": "END",
+        "asset_type": "ending",
+        "photo_dir": "ending",
+        "size": ENDING_SIZE,
+        "runtime_spec": "ending",
+        "usable_fields": ("ending_screen", "preview"),
+    },
+    "card_back": {
+        "cat": "CBACK",
+        "asset_type": "card_back",
+        "photo_dir": "card_back",
+        "size": CARD_BACK_SIZE,
+        "runtime_spec": "card_back",
+        "usable_fields": ("card_back", "preview"),
+    },
+    "room_back": {
+        "cat": "RBACK",
+        "asset_type": "room_back",
+        "photo_dir": "room_back",
+        "size": ROOM_BACK_SIZE,
+        "runtime_spec": "room_back",
+        "usable_fields": ("room_back", "preview"),
+    },
+    "dice": {
+        "cat": "DICE",
+        "asset_type": "dice",
+        "photo_dir": "dice",
+        "size": DICE_SIZE,
+        "runtime_spec": "dice",
+        "usable_fields": ("dice_face", "preview"),
+    },
 }
 
 RUNTIME_CARD_DIRS = {
     "omen": ASSETS_DIR / "cards" / "omen",
     "item": ASSETS_DIR / "cards" / "item",
     "event": ASSETS_DIR / "cards" / "event",
+}
+
+# run6：六类新资源的运行时目录。目录名用复数以区别于 photos/ 下的源目录。
+RUNTIME_EXTRA_DIRS = {
+    "monster": ASSETS_DIR / "monsters",
+    "haunt": ASSETS_DIR / "haunts",
+    "ending": ASSETS_DIR / "endings",
+    "card_back": ASSETS_DIR / "card_backs",
+    "room_back": ASSETS_DIR / "room_backs",
+    "dice": ASSETS_DIR / "dice",
+}
+
+# photos/ 下这六类源目录名（scan_photos 的 known 白名单与归属判定共用）
+EXTRA_PHOTO_DIRS = {
+    "monster": "monster",
+    "haunt": "haunt",
+    "ending": "ending",
+    "card_back": "card_back",
+    "room_back": "room_back",
+    "dice": "dice",
 }
 
 # 占位图配色，取 ui.py 的 PALETTE，保证与界面深色主题一致。
@@ -621,6 +728,8 @@ def scan_photos() -> dict:
         by_dir.setdefault(facts["dir"], []).append(facts)
 
     known = {"event", "item", "omen", "room", "role"}
+    # run6：六类渲染面源目录加入白名单（否则会被判成 orphans）
+    known.update(EXTRA_PHOTO_DIRS.values())
     orphans = [facts["rel"] for facts in files if facts["dir"] not in known]
     return {
         "dir": PHOTOS_DIR,
@@ -672,7 +781,7 @@ def match_photo(slot: dict, index: dict):
 # content.py 资源位
 # ----------------------------------------------------------------------
 def load_content():
-    """导入 content.py 取 142 个资源位；不改动源码。"""
+    """导入 content.py 取 274 个资源位；不改动源码。"""
     path = GAME_DIR / "content.py"
     if not path.is_file():
         raise SystemExit("找不到 content.py：%s" % path)
@@ -699,7 +808,7 @@ def character_face_id(card_id: str, face_index: int) -> str:
 
 
 def collect_slots(content_module) -> list:
-    """把 content.py 的 7 个集合展开为 142 个资源位（run5：WW 已隔离）。
+    """把 content.py 的 10 个集合展开为 274 个资源位（run6：WW 仍隔离）。
 
     每个资源位同时给出：
     * ``target_ref``：规范溯源键 ``content.py:<集合>#<id>``；
@@ -855,6 +964,81 @@ def collect_slots(content_module) -> list:
             }
         )
 
+    # ---- run6：monster 52（来自 content.MONSTER_BASES） ----
+    for monster in getattr(content_module, "MONSTER_BASES", []) or []:
+        monster_id = monster["id"]
+        slots.append(
+            {
+                "family": "monster",
+                "collection": "MONSTER_BASES",
+                "slot_id": monster_id,
+                "match_stem": monster_id,
+                "target_ref": content_target_ref("MONSTER_BASES", monster_id),
+                "runtime_key": "monster:%s" % monster_id,
+                "content_ref": content_target_ref("MONSTER_BASES", monster_id),
+                "semantic_hint": "怪物标记：%s（%s）"
+                % (monster.get("name", ""), monster.get("source_name", "")),
+                "match_candidate": monster_id,
+                "name": monster.get("name", ""),
+                "source_name": monster.get("source_name", ""),
+                "effect_id": "",
+                "runtime_name": monster_id,
+            }
+        )
+
+    # ---- run6：haunt 70（来自 catalog.haunt_defs，文件名为 haunt_<n>.png） ----
+    catalog = content_module.build_catalog(0)
+    for haunt_id, haunt in sorted(catalog.haunt_defs.items()):
+        stem = "haunt_%d" % int(haunt_id)
+        slots.append(
+            {
+                "family": "haunt",
+                "collection": "HAUNT_DEFS",
+                "slot_id": str(haunt_id),
+                "match_stem": stem,
+                "target_ref": content_target_ref("HAUNT_DEFS", str(haunt_id)),
+                "runtime_key": "haunt:%d" % int(haunt_id),
+                "content_ref": content_target_ref("HAUNT_DEFS", str(haunt_id)),
+                "semantic_hint": "剧本插画：%s" % getattr(haunt, "name", ""),
+                "match_candidate": stem,
+                "name": getattr(haunt, "name", ""),
+                "source_name": "",
+                "effect_id": "",
+                "runtime_name": stem,
+            }
+        )
+
+    # ---- run6：10 个固定渲染位（结算/牌背/未翻地块/骰面） ----
+    for spec in getattr(content_module, "RENDER_SURFACE_SPECS", []) or []:
+        surface_id = spec["id"]
+        family = spec["surface"]
+        suffix = surface_id
+        for prefix in ("card_back_", "ending_", "dice_"):
+            if surface_id.startswith(prefix):
+                suffix = surface_id[len(prefix):]
+                break
+        if surface_id == "room_back":
+            suffix = "back"
+        elif surface_id == "room_ghost":
+            suffix = "ghost"
+        slots.append(
+            {
+                "family": family,
+                "collection": "RENDER_SURFACE_SPECS",
+                "slot_id": surface_id,
+                "match_stem": surface_id,
+                "target_ref": content_target_ref("RENDER_SURFACE_SPECS", surface_id),
+                "runtime_key": "%s:%s" % (family, suffix),
+                "content_ref": content_target_ref("RENDER_SURFACE_SPECS", surface_id),
+                "semantic_hint": "%s渲染位：%s" % (family, spec.get("name", "")),
+                "match_candidate": surface_id,
+                "name": spec.get("name", ""),
+                "source_name": "",
+                "effect_id": "",
+                "runtime_name": surface_id,
+            }
+        )
+
     # 按类别优先级重排，类别内保持声明顺序（chunk 拼接已满足，这里显式排序防漂移）。
     order = {name: idx for idx, name in enumerate(CATEGORY_ORDER)}
     family_cat = {name: cfg["cat"] for name, cfg in FAMILIES.items()}
@@ -876,6 +1060,8 @@ def runtime_rel_path(slot: dict) -> Path:
         # WW 版：角色 12 位有 photos/role/ 真源图，运行时规范化到
         # assets/characters/<face_id>.png（此前角色一律走占位图）。
         return ASSETS_DIR / "characters" / ("%s.png" % slot["runtime_name"])
+    if family in RUNTIME_EXTRA_DIRS:  # run6 六类渲染面
+        return RUNTIME_EXTRA_DIRS[family] / ("%s.png" % slot["runtime_name"])
     raise ValueError("未知资源类别：%s" % family)
 
 
@@ -1055,7 +1241,7 @@ def make_missing_record(slot: dict, art_event_ids, verified_at: str = None) -> d
 
 
 def build_records(content_module, photos: dict) -> tuple:
-    """构建 142 行 P 表记录（未分配 record_id）。"""
+    """构建 274 行 P 表记录（未分配 record_id）。"""
     slots = collect_slots(content_module)
     index = build_photo_index(photos)
     art_event_ids = {facts["stem"] for facts in photos["by_dir"].get("event", [])}
@@ -1196,7 +1382,7 @@ def write_p_table(records: list, photos: dict, content_module) -> dict:
         "base_dir": PROJECT_ROOT.name,
         "schema": {
             "format_version": "1.2.0",
-            "description": "142 个资源位的 P 表；CSV 与 JSON 的 records 逐字段等价，"
+            "description": "274 个资源位的 P 表；CSV 与 JSON 的 records 逐字段等价，"
                            "列序以 columns 为准（33 列 = 业务 26 列 + 发布档 7 列）。",
             "columns": list(CSV_COLUMNS),
             "release_columns": list(RELEASE_COLUMNS),
@@ -1244,6 +1430,11 @@ def write_p_table(records: list, photos: dict, content_module) -> dict:
                 "ITEM_CARDS": len(content_module.ITEM_CARDS),
                 "EVENT_BASES": len(content_module.EVENT_BASES),
                 "EVENT_SUPPLEMENTAL_SPECS": len(content_module.EVENT_SUPPLEMENTAL_SPECS),
+                # run6 六类渲染面
+                "MONSTER_BASES": len(getattr(content_module, "MONSTER_BASES", []) or []),
+                "HAUNT_DEFS": len(content_module.build_catalog(0).haunt_defs),
+                "RENDER_SURFACE_SPECS": len(
+                    getattr(content_module, "RENDER_SURFACE_SPECS", []) or []),
             },
         },
         "source_inventory": {
@@ -1398,6 +1589,44 @@ def normalize_character(source: Path, target: Path) -> tuple:
     return CHARACTER_SIZE
 
 
+def normalize_extra(source: Path, target: Path, size, keep_alpha: bool) -> tuple:
+    """run6 六类渲染面：等比缩放到目标尺寸内并居中。
+
+    keep_alpha=True（怪物标记 / 未翻地块 / 骰面）保留透明通道，避免叠在地块上
+    出现白色方块；其余（剧本插画 / 结算 / 牌背）按不透明处理，补边色取四角均值。
+    """
+    from PIL import Image
+
+    width_target, height_target = size
+    with Image.open(source) as image:
+        if keep_alpha:
+            converted = image.convert("RGBA")
+        else:
+            converted = image.convert("RGB")
+        width, height = converted.size
+        scale = min(width_target / float(width), height_target / float(height))
+        new_size = (max(1, int(round(width * scale))), max(1, int(round(height * scale))))
+        resized = converted.resize(new_size, _resample())
+        if keep_alpha:
+            canvas = Image.new("RGBA", size, (0, 0, 0, 0))
+            canvas.paste(resized, ((width_target - new_size[0]) // 2,
+                                   (height_target - new_size[1]) // 2), resized)
+        else:
+            corners = [
+                resized.getpixel((0, 0)),
+                resized.getpixel((new_size[0] - 1, 0)),
+                resized.getpixel((0, new_size[1] - 1)),
+                resized.getpixel((new_size[0] - 1, new_size[1] - 1)),
+            ]
+            pad = tuple(sum(channel) // len(corners) for channel in zip(*corners))
+            canvas = Image.new("RGB", size, pad)
+            canvas.paste(resized, ((width_target - new_size[0]) // 2,
+                                   (height_target - new_size[1]) // 2))
+        target.parent.mkdir(parents=True, exist_ok=True)
+        canvas.save(target, format="PNG", optimize=True)
+    return size
+
+
 def normalize_assets(records: list) -> dict:
     """只处理 availability in {usable, partial} 且有源文件的行；不触碰 photos。"""
     from PIL import Image
@@ -1424,6 +1653,11 @@ def normalize_assets(records: list) -> dict:
                 size = normalize_room(source, target)
             elif row["_family"] == "character":
                 size = normalize_character(source, target)
+            elif row["_family"] in RUNTIME_EXTRA_DIRS:
+                size = normalize_extra(
+                    source, target,
+                    FAMILIES[row["_family"]]["size"],
+                    bool(ALPHA_REQUIRED[row["_family"]]))
             else:
                 size = normalize_card(source, target)
 
@@ -1628,8 +1862,9 @@ def main(argv=None) -> int:
                 print("  %s" % item)
             return 1
 
-    if slots and len(records) != 142:
-        print("[warn] 资源位数量 %d != 142，请检查 content.py" % len(records))
+    if slots and len(records) != EXPECTED_SLOT_TOTAL:
+        print("[warn] 资源位数量 %d != %d，请检查 content.py"
+              % (len(records), EXPECTED_SLOT_TOTAL))
         return 1
     return 0
 

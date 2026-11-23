@@ -212,7 +212,17 @@ def collect_conditional_edges(path) -> dict:
             continue
         arc_use.setdefault((edge["line"], edge["landing_offset"]), []).append(edge)
     shared = {key for key, items in arc_use.items() if len(items) > 1}
+    # 精确落点证据的唯一性：(code_id, 行, 目标指令偏移) 只对应一条出边时，
+    # 该出边可由「同一行的 line 事件落在该精确偏移」唯一证明。这是行首落点
+    # （landing_offset）判据的加细：相邻两行共享行首时行首判据会失效，
+    # 但两条出边的目标指令偏移不同，仍可区分。共用同一目标偏移的出边不采信。
+    exact_use = {}
     for edge in edges:
+        exact_use.setdefault(
+            (edge["code_id"], edge["line"], edge["target_offset"]), []).append(edge)
+    for edge in edges:
+        edge["exact_landing_unique"] = len(exact_use[
+            (edge["code_id"], edge["line"], edge["target_offset"])]) == 1
         if edge["landing_offset"] is None:
             edge["line_arc_reason"] = "no_line_start_after_target"
         elif (edge["line"], edge["landing_offset"]) in shared:
@@ -351,7 +361,7 @@ def trace_run(target_files, runner):
 def score_static(static, trace_result):
     """把一次执行的轨迹折算成逐边覆盖。
 
-    两条匹配路径，任一命中即算覆盖：
+    三条匹配路径，任一命中即算覆盖：
 
     1. **opcode 精确弧**：``(file, 跳转指令偏移, 落点偏移)`` —— CPython 3.11+ 与
        3.9 中跳转指令恰好发 opcode 事件时的精确证据；
@@ -361,9 +371,16 @@ def score_static(static, trace_result):
        因此当 ``(file, 跳转指令所在行, 落点行首)`` 出现在 line 弧中时，
        由于字节码线性流保证「跳转指令行执行后必经两条出边之一离开」，
        且该出边的落点行首唯一（``shared_line_arc`` 已剔除共享行首），
-       可无歧义判定该方向出边已执行。同行汇合（三元/短路同行收口）的出边
-       落在 ``shared_line_arc``/``no_line_start_after_target`` 中，
-       3.9 下保守记为未覆盖，不虚报。
+       可无歧义判定该方向出边已执行。
+    3. **精确落点弧**：line 事件记录的是 ``f_lasti``（精确落点指令偏移），
+       当 ``(file, 跳转指令所在行, 该出边的 target_offset)`` 命中，且该
+       ``(code_id, 行, target_offset)`` 在静态分母中只对应一条出边时，
+       同样无歧义——相邻行共享行首（``shared_line_arc``）只是行首判据失效，
+       两条出边的目标指令偏移仍然不同，可以精确区分。
+
+    仍然无法证明的出边（同行且同目标偏移、目标之后无行起始指令）落在
+    ``shared_line_arc`` / ``no_line_start_after_target`` 中，3.9 下保守记为
+    未覆盖，不虚报。
     """
     file_key = static["file_key"]
     opcode_arcs = trace_result["opcode_arcs"]
@@ -377,6 +394,11 @@ def score_static(static, trace_result):
             covered.append(edge)
         elif (edge["landing_offset"] is not None and not edge["line_arc_reason"]
               and (file_key, edge["line"], edge["landing_offset"]) in line_observed):
+            covered.append(edge)
+        elif (edge.get("exact_landing_unique", False)
+              and (file_key, edge["line"], edge["target_offset"]) in line_observed):
+            # 精确落点证据：line 事件的 f_lasti 恰好等于该出边的目标指令偏移，
+            # 且该 (code_id, 行, 目标偏移) 只对应这一条出边 -> 方向无歧义。
             covered.append(edge)
         else:
             uncovered.append(edge)
@@ -686,10 +708,32 @@ def run_selftest() -> dict:
 # ----------------------------------------------------------------------
 # 主测量
 # ----------------------------------------------------------------------
+def _reset_target_modules(target_files):
+    """每轮测量前丢弃目标模块，强制以新的 code object 重新导入。
+
+    为什么必须重置
+    --------------
+    CPython 3.9 只在 **code object 的首次执行** 时为条件跳转指令发 opcode 事件；
+    同一个进程里对同一份 code object 再跑一次，opcode 弧会静默少掉几百条
+    （实测 asset_pipeline.py 首次 1346 条、次轮 938 条），行弧又因同行汇合
+    无法补证。这是**测量伪影**，不是被测代码的不确定性；重置后每轮等价于
+    「在新进程里单独跑一遍测试」，两轮一致才说明结果可复现。
+    """
+    for name in target_files:
+        sys.modules.pop(Path(name).stem, None)
+    # content.py 被 pipeline 以独立模块名反复执行；一并丢弃，避免残留旧 code object
+    sys.modules.pop("content", None)
+    importlib.invalidate_caches()
+
+
 def measure_branch_coverage(target_files, runner, repeat=2):
     """在同一 runner 上采 repeat 次，返回逐文件分支覆盖与一致性判定。"""
     statics = [collect_conditional_edges(GAME_DIR / name) for name in target_files]
-    runs = [trace_run(target_files, runner) for _ in range(max(1, repeat))]
+    runs = []
+    for index in range(max(1, repeat)):
+        if index:
+            _reset_target_modules(target_files)
+        runs.append(trace_run(target_files, runner))
 
     per_file = [_file_report(static["file"], score_static(static, runs[0]))
                 for static in statics]
@@ -745,7 +789,9 @@ def measure_branch_coverage(target_files, runner, repeat=2):
             "覆盖判定：opcode 精确弧优先；Python 3.9 跳转指令不发 opcode 事件，"
             "改用 line-landing 弧（跳转指令所在行 -> 落点行首）无歧义判定，"
             "同行汇合（shared_line_arc）保守记未覆盖，不虚报。"
-            "分支覆盖与 qa/test_p_table_execution.py 的 48 项测试在同一次 trace 运行内采集。"
+            "分支覆盖与 qa/test_p_table_execution.py 的 %s 项测试在同一次 trace 运行内采集；"
+            "多轮测量每轮重置目标模块，排除 3.9 仅首执行发 opcode 事件的测量伪影。"
+            % (runs[0]["runner"] or {}).get("tests", "?")
         ),
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "python": sys.version.split()[0],
