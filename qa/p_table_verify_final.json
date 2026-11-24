@@ -1,8 +1,8 @@
-{
+﻿{
   "tool": "verify_p_table_execution.py",
   "readonly": true,
   "root": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill",
-  "snapshot_time": "2026-11-23T19:21:20",
+  "snapshot_time": "2026-11-24T17:00:30",
   "environment": {
     "python": "3.9.13",
     "platform": "Windows-10-10.0.26300-SP0",
@@ -12,7 +12,7 @@
   },
   "inputs": {
     "p_table": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\assets\\p_table.json",
-    "p_table_sha256": "8db27f6d13a1e3f072511be5c435bcce4e98bd8921638e03613914d3650a36e1",
+    "p_table_sha256": "5ade009623a7f7be30f86b4a92f1341d3f06ba8c532d8f77a0ef994cb2e6b2c0",
     "p_table_columns": 33,
     "p_table_records": 274,
     "contract_json": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\qa\\contract_result.json",
@@ -661,7 +661,7 @@
       "title": "P 表可解析且 274 行",
       "priority": "P0",
       "status": "PASS",
-      "detail": "records=274，schema=1.2.0，generated_at=2026-11-23",
+      "detail": "records=274，schema=1.2.0，generated_at=2026-11-24",
       "evidence": []
     },
     {
@@ -1080,7 +1080,7 @@
       "title": "内存重建 = 磁盘 P 表",
       "priority": "P0",
       "status": "PASS",
-      "detail": "内存重建 274 行 × 33 列与磁盘逐字段一致；stats 一致（耗时 0.31s）",
+      "detail": "内存重建 274 行 × 33 列与磁盘逐字段一致；stats 一致（耗时 0.28s）",
       "evidence": []
     },
     {
@@ -1201,9 +1201,9 @@
       "title": "AssetRegistry.load 耗时",
       "priority": "P1",
       "status": "PASS",
-      "detail": "load ×10：median=11.81ms p95=13.24ms（预算 150ms）",
+      "detail": "load ×10：median=12.32ms p95=14.40ms（预算 150ms）",
       "evidence": [
-        "load ×10：median=11.81ms p95=13.24ms（预算 150ms）"
+        "load ×10：median=12.32ms p95=14.40ms（预算 150ms）"
       ]
     },
     {
@@ -1212,9 +1212,9 @@
       "title": "10k resolve 耗时",
       "priority": "P1",
       "status": "PASS",
-      "detail": "10k resolve ×10：round p95=8.3ms（预算 500ms）；单次 p95=1.00us（预算 50us）",
+      "detail": "10k resolve ×10：round p95=7.4ms（预算 500ms）；单次 p95=1.00us（预算 50us）",
       "evidence": [
-        "10k resolve ×10：round p95=8.3ms（预算 500ms）；单次 p95=1.00us（预算 50us）"
+        "10k resolve ×10：round p95=7.4ms（预算 500ms）；单次 p95=1.00us（预算 50us）"
       ]
     },
     {
@@ -1259,9 +1259,9 @@
       "title": "load 峰值增量 RSS",
       "priority": "P1",
       "status": "PASS",
-      "detail": "load ×10 RSS 增量 12.54MB（预算 80MB；before=48.3MB after=60.8MB）",
+      "detail": "load ×10 RSS 增量 11.71MB（预算 80MB；before=49.7MB after=61.4MB）",
       "evidence": [
-        "load ×10 RSS 增量 12.54MB（预算 80MB；before=48.3MB after=60.8MB）"
+        "load ×10 RSS 增量 11.71MB（预算 80MB；before=49.7MB after=61.4MB）"
       ]
     },
     {
@@ -1376,8 +1376,8 @@
       "status": "PASS",
       "detail": "旧结果均晚于当前输入：validation_report.json, contract_result.json",
       "evidence": [
-        "{'artifact': 'validation_report.json', 'mtime': 1795432766.5120866, 'newest_input': 1795432726.630779, 'fresh': True}",
-        "{'artifact': 'contract_result.json', 'mtime': 1795432796.427721, 'newest_input': 1795432726.3432398, 'fresh': True}"
+        "{'artifact': 'validation_report.json', 'mtime': 1795510790.5655422, 'newest_input': 1795510682.7904737, 'fresh': True}",
+        "{'artifact': 'contract_result.json', 'mtime': 1795510818.673735, 'newest_input': 1795510682.5642626, 'fresh': True}"
       ]
     },
     {

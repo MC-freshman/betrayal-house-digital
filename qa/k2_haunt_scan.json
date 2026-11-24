@@ -1,0 +1,1722 @@
+{
+  "generated_by": "qa/k2_haunt_scan.py（只读扫描 haunt_rules + haunts/*.py）",
+  "rooms": [
+    "vault",
+    "tower",
+    "chasm",
+    "catacombs"
+  ],
+  "criteria": {
+    "necessary": "房间出现在 win_conditions，或出现在结束对局的行动 rooms 里，或 handler 写死为胜利前置",
+    "indirect": "只出现在 key_rooms / 前置搜寻与生成 / 非终局 actions.rooms / tracks 标签 / handler 常量",
+    "haunt_level": "一本剧本命中多间房时取最强判定（是 > 间接 > 无关）"
+  },
+  "manual_inputs": {
+    "terminal_actions": {
+      "43": [
+        "ritual_roll"
+      ]
+    },
+    "handler_required": {
+      "34": [
+        "vault",
+        "lock_up 仅在保险库可用且要求 room.data['opened']（haunt_34 L250/L271）"
+      ]
+    }
+  },
+  "totals": {
+    "haunts_total": 70,
+    "haunts_hit": 32,
+    "necessary_pairs": 2,
+    "indirect_pairs": 38,
+    "per_room": {
+      "vault": 6,
+      "tower": 18,
+      "chasm": 9,
+      "catacombs": 7
+    },
+    "per_room_necessary": {
+      "vault": 1,
+      "tower": 1,
+      "chasm": 0,
+      "catacombs": 0
+    },
+    "verdict_haunts": {
+      "是": 2,
+      "间接": 30,
+      "无关": 38
+    }
+  },
+  "verdicts": {
+    "是": [
+      34,
+      43
+    ],
+    "间接": [
+      1,
+      5,
+      7,
+      9,
+      13,
+      15,
+      16,
+      17,
+      18,
+      19,
+      23,
+      24,
+      25,
+      27,
+      29,
+      30,
+      31,
+      32,
+      35,
+      36,
+      37,
+      44,
+      48,
+      51,
+      55,
+      58,
+      59,
+      67,
+      68,
+      70
+    ],
+    "无关": [
+      2,
+      3,
+      4,
+      6,
+      8,
+      10,
+      11,
+      12,
+      14,
+      20,
+      21,
+      22,
+      26,
+      28,
+      33,
+      38,
+      39,
+      40,
+      41,
+      42,
+      45,
+      46,
+      47,
+      49,
+      50,
+      52,
+      53,
+      54,
+      56,
+      57,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      69
+    ]
+  },
+  "haunts": [
+    {
+      "haunt_id": 1,
+      "name": "木乃伊苏醒",
+      "mode": "banishment_escort",
+      "handler": "haunt_01_banishment_escort.py",
+      "win_conditions": [
+        {
+          "winner": "traitor",
+          "type": "all_heroes_dead",
+          "reason": "让木乃伊带着女孩和戒指或圣徽回到石棺房，或杀光英雄。"
+        }
+      ],
+      "tracks": [
+        "banishment_steps"
+      ],
+      "actions": [
+        {
+          "id": "h1_learn_true_name",
+          "progress": "",
+          "rooms": [
+            "catacombs",
+            "research_laboratory",
+            "library"
+          ]
+        },
+        {
+          "id": "h1_learn_spell",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "h1_banish_mummy",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "catacombs": {
+          "uses": [
+            "actions.rooms:h1_learn_true_name",
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              36,
+              "SEARCH_ROOMS = {\"catacombs\", \"research_laboratory\", \"library\"}"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 5,
+      "name": "我曾是少年狼人",
+      "mode": "werewolf_hunt",
+      "handler": "haunt_05_werewolf_hunt.py",
+      "win_conditions": [
+        {
+          "winner": "heroes",
+          "type": "traitor_dead",
+          "reason": "所有狼人都倒下了——诅咒终止在这一代。"
+        },
+        {
+          "winner": "traitor",
+          "type": "all_heroes_dead",
+          "reason": "所有英雄或死或变，小屋外再没人记得他们。"
+        }
+      ],
+      "tracks": [
+        "silver_bullets"
+      ],
+      "actions": [
+        {
+          "id": "h5_find_revolver",
+          "progress": "",
+          "rooms": [
+            "attic",
+            "game_room",
+            "junk_room",
+            "master_bedroom",
+            "vault"
+          ]
+        },
+        {
+          "id": "h5_make_silver_bullets",
+          "progress": "",
+          "rooms": [
+            "research_laboratory",
+            "furnace_room"
+          ]
+        },
+        {
+          "id": "shoot_werewolf",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "vault": {
+          "uses": [
+            "actions.rooms:h5_find_revolver",
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              34,
+              "SEARCH_ROOMS = {\"attic\", \"game_room\", \"junk_room\", \"master_bedroom\", \"vault\"}"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 7,
+      "name": "食人常春藤",
+      "mode": "carnivorous_ivy",
+      "handler": "haunt_07_carnivorous_ivy.py",
+      "win_conditions": [
+        {
+          "winner": "traitor",
+          "type": "all_heroes_dead",
+          "reason": "所有英雄都被藤蔓吞噬了。"
+        }
+      ],
+      "tracks": [
+        "creepers_killed"
+      ],
+      "actions": [
+        {
+          "id": "make_plant_spray",
+          "progress": "",
+          "rooms": [
+            "research_laboratory",
+            "kitchen"
+          ]
+        },
+        {
+          "id": "spray_creeper",
+          "progress": "creepers_killed",
+          "rooms": []
+        },
+        {
+          "id": "destroy_spray",
+          "progress": "",
+          "rooms": [
+            "chasm",
+            "furnace_room",
+            "underground_lake"
+          ]
+        }
+      ],
+      "rooms": {
+        "chasm": {
+          "uses": [
+            "actions.rooms:destroy_spray",
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": []
+        },
+        "tower": {
+          "uses": [
+            "other:monsters[0].room_ids[11]"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              64,
+              "\"master_bedroom\", \"patio\", \"tower\","
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 9,
+      "name": "死亡之舞",
+      "mode": "delayed_traitor_relic",
+      "handler": "haunt_09_delayed_traitor_relic.py",
+      "win_conditions": [
+        {
+          "winner": "traitor",
+          "type": "all_heroes_dead",
+          "reason": "夺取并毁掉圣徽，让死亡之舞继续。"
+        }
+      ],
+      "tracks": [
+        "fiddler_banishment"
+      ],
+      "actions": [
+        {
+          "id": "banish_fiddler",
+          "progress": "fiddler_banishment",
+          "rooms": [
+            "pentagram_chamber"
+          ]
+        },
+        {
+          "id": "destroy_holy_symbol",
+          "progress": "",
+          "rooms": [
+            "chasm",
+            "furnace_room",
+            "underground_lake"
+          ]
+        }
+      ],
+      "rooms": {
+        "chasm": {
+          "uses": [
+            "actions.rooms:destroy_holy_symbol",
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": []
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 13,
+      "name": "但愿入梦",
+      "mode": "nightmare_escape",
+      "handler": "haunt_13_nightmare_escape.py",
+      "win_conditions": [],
+      "tracks": [
+        "waking_progress"
+      ],
+      "actions": [
+        {
+          "id": "wake_attempt",
+          "progress": "waking_progress",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              50,
+              "EXTRA_ESCAPE_ROOMS = [\"conservatory\", \"entrance_hall\", \"garden\", \"graveyard\", \"patio\", \"tower\", \"balcony\"]"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 15,
+      "name": "此处有龙",
+      "mode": "dragon_siege",
+      "handler": "haunt_15_dragon_siege.py",
+      "win_conditions": [],
+      "tracks": [
+        "dragon_damage"
+      ],
+      "actions": [
+        {
+          "id": "don_armor",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "take_shield",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "catacombs": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              43,
+              "BASEMENT_ROOMS = [\"catacombs\", \"underground_lake\", \"chasm\", \"crypt\"]"
+            ],
+            [
+              71,
+              "armor_room = place([\"catacombs\", \"underground_lake\"])"
+            ]
+          ]
+        },
+        "chasm": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              43,
+              "BASEMENT_ROOMS = [\"catacombs\", \"underground_lake\", \"chasm\", \"crypt\"]"
+            ],
+            [
+              72,
+              "shield_room = place([\"chasm\", \"crypt\"])"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 16,
+      "name": "幻影拥抱",
+      "mode": "phantom_bomb",
+      "handler": "haunt_16_phantom_bomb.py",
+      "win_conditions": [],
+      "tracks": [
+        "bomb_timer"
+      ],
+      "actions": [
+        {
+          "id": "defuse_bomb",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "open_front_door",
+          "progress": "",
+          "rooms": [
+            "entrance_hall"
+          ]
+        }
+      ],
+      "rooms": {
+        "catacombs": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": []
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 17,
+      "name": "虫群",
+      "mode": "bug_spray",
+      "handler": "haunt_17_bug_spray.py",
+      "win_conditions": [],
+      "tracks": [
+        "bugs_killed",
+        "ingredients_destroyed"
+      ],
+      "actions": [
+        {
+          "id": "take_ingredient",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "make_spray",
+          "progress": "",
+          "rooms": [
+            "research_laboratory",
+            "kitchen"
+          ]
+        },
+        {
+          "id": "destroy_ingredient",
+          "progress": "",
+          "rooms": [
+            "chasm",
+            "furnace_room",
+            "underground_lake"
+          ]
+        },
+        {
+          "id": "break_webs",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "chasm": {
+          "uses": [
+            "actions.rooms:destroy_ingredient",
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": []
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 18,
+      "name": "后代",
+      "mode": "poisonous_plant",
+      "handler": "haunt_18_poisonous_plant.py",
+      "win_conditions": [],
+      "tracks": [
+        "weaken_count"
+      ],
+      "actions": [
+        {
+          "id": "find_flower",
+          "progress": "",
+          "rooms": [
+            "conservatory",
+            "garden",
+            "graveyard"
+          ]
+        },
+        {
+          "id": "weaken_plant",
+          "progress": "weaken_count",
+          "rooms": []
+        },
+        {
+          "id": "hold_breath",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "chasm": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": []
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 19,
+      "name": "驭兽者",
+      "mode": "beastmaster",
+      "handler": "haunt_19_beastmaster.py",
+      "win_conditions": [],
+      "tracks": [
+        "minions_slain"
+      ],
+      "actions": [],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              106,
+              "if r.template_id in (\"balcony\", \"tower\", *self.WINDOW_ROOMS)"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 23,
+      "name": "触手恐怖",
+      "mode": "tentacled_horror",
+      "handler": "haunt_23_tentacled_horror.py",
+      "win_conditions": [],
+      "tracks": [
+        "tentacle_turn"
+      ],
+      "actions": [
+        {
+          "id": "gaze_crystal_ball",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "destroy_head",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "chasm": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              54,
+              "ROOM_IDS = [\"furnace_room\", \"conservatory\", \"organ_room\", \"underground_lake\", \"garden\", \"chasm\"]"
+            ],
+            [
+              57,
+              "\"larder\", \"kitchen\", \"organ_room\", \"chasm\","
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 24,
+      "name": "展翅归巢",
+      "mode": "bat_exodus",
+      "handler": "haunt_24_bat_exodus.py",
+      "win_conditions": [],
+      "tracks": [
+        "bats_released"
+      ],
+      "actions": [
+        {
+          "id": "start_organ",
+          "progress": "",
+          "rooms": [
+            "organ_room"
+          ]
+        },
+        {
+          "id": "drive_away_bats",
+          "progress": "",
+          "rooms": [
+            "organ_room"
+          ]
+        }
+      ],
+      "rooms": {
+        "catacombs": {
+          "uses": [
+            "handler:haunt_24_bat_exodus.py:56"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              56,
+              "START_SPOTS = ((\"tower\", \"attic\"), (\"chasm\", \"catacombs\"))"
+            ]
+          ]
+        },
+        "chasm": {
+          "uses": [
+            "handler:haunt_24_bat_exodus.py:55"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              55,
+              "ENTRY_ROOMS = (\"tower\", \"chasm\", \"conservatory\", \"entrance_hall\", \"garden\", \"graveyard\", \"patio\", \"balcony\")"
+            ],
+            [
+              56,
+              "START_SPOTS = ((\"tower\", \"attic\"), (\"chasm\", \"catacombs\"))"
+            ]
+          ]
+        },
+        "tower": {
+          "uses": [
+            "handler:haunt_24_bat_exodus.py:55"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              55,
+              "ENTRY_ROOMS = (\"tower\", \"chasm\", \"conservatory\", \"entrance_hall\", \"garden\", \"graveyard\", \"patio\", \"balcony\")"
+            ],
+            [
+              56,
+              "START_SPOTS = ((\"tower\", \"attic\"), (\"chasm\", \"catacombs\"))"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 25,
+      "name": "巫毒",
+      "mode": "voodoo_dolls",
+      "handler": "haunt_25_voodoo_dolls.py",
+      "win_conditions": [],
+      "tracks": [
+        "turn_damage"
+      ],
+      "actions": [
+        {
+          "id": "search_doll",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "handler:haunt_25_voodoo_dolls.py:77"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              77,
+              "\"china\": (\"balcony\", \"tower\"),"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 27,
+      "name": "狂乱血肉",
+      "mode": "blob_weakness",
+      "handler": "haunt_27_blob_weakness.py",
+      "win_conditions": [],
+      "tracks": [
+        "knowledge_rolls",
+        "blob_ingredients"
+      ],
+      "actions": [
+        {
+          "id": "examine_blob",
+          "progress": "knowledge_rolls",
+          "rooms": []
+        },
+        {
+          "id": "search_ingredient",
+          "progress": "",
+          "rooms": [
+            "attic",
+            "conservatory",
+            "furnace_room",
+            "garden",
+            "library",
+            "research_laboratory",
+            "junk_room",
+            "kitchen",
+            "larder",
+            "vault",
+            "wine_cellar"
+          ]
+        },
+        {
+          "id": "throw_ingredient",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "vault": {
+          "uses": [
+            "actions.rooms:search_ingredient"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              70,
+              "\"research_laboratory\", \"junk_room\", \"kitchen\", \"larder\", \"vault\","
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 29,
+      "name": "弗兰肯斯坦的遗产",
+      "mode": "frankenstein_fire",
+      "handler": "haunt_29_frankenstein_fire.py",
+      "win_conditions": [],
+      "tracks": [
+        "torch_hits"
+      ],
+      "actions": [
+        {
+          "id": "light_torch",
+          "progress": "",
+          "rooms": [
+            "charred_room",
+            "furnace_room",
+            "pentagram_chamber",
+            "kitchen"
+          ]
+        },
+        {
+          "id": "throw_torch",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "push_monster",
+          "progress": "",
+          "rooms": [
+            "tower",
+            "chasm"
+          ]
+        }
+      ],
+      "rooms": {
+        "chasm": {
+          "uses": [
+            "actions.rooms:push_monster"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              63,
+              "PUSH_ROOMS = (\"tower\", \"chasm\")"
+            ]
+          ]
+        },
+        "tower": {
+          "uses": [
+            "actions.rooms:push_monster"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              63,
+              "PUSH_ROOMS = (\"tower\", \"chasm\")"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 30,
+      "name": "德古拉之墓",
+      "mode": "dracula_rising",
+      "handler": "haunt_30_dracula_rising.py",
+      "win_conditions": [],
+      "tracks": [
+        "sun_track"
+      ],
+      "actions": [
+        {
+          "id": "stake_unconscious",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "handler:haunt_30_dracula_rising.py:77"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              77,
+              "SUNLIT_ROOMS = (\"balcony\", \"conservatory\", \"garden\", \"graveyard\", \"patio\", \"tower\")"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 31,
+      "name": "它活了！",
+      "mode": "living_house",
+      "handler": "haunt_31_living_house.py",
+      "win_conditions": [],
+      "tracks": [
+        "house_slain"
+      ],
+      "actions": [
+        {
+          "id": "throw_spear",
+          "progress": "",
+          "rooms": [
+            "chasm",
+            "furnace_room",
+            "underground_lake"
+          ]
+        }
+      ],
+      "rooms": {
+        "chasm": {
+          "uses": [
+            "actions.rooms:throw_spear",
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": []
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 32,
+      "name": "迷失",
+      "mode": "lost_dimension",
+      "handler": "haunt_32_lost_dimension.py",
+      "win_conditions": [],
+      "tracks": [
+        "clues_found",
+        "sabotage"
+      ],
+      "actions": [
+        {
+          "id": "play_organ",
+          "progress": "",
+          "rooms": [
+            "organ_room"
+          ]
+        },
+        {
+          "id": "search_books",
+          "progress": "clues_found",
+          "rooms": [
+            "library"
+          ]
+        },
+        {
+          "id": "search_trophy",
+          "progress": "clues_found",
+          "rooms": [
+            "game_room"
+          ]
+        },
+        {
+          "id": "search_stars",
+          "progress": "clues_found",
+          "rooms": [
+            "tower"
+          ]
+        },
+        {
+          "id": "sabotage_transporter",
+          "progress": "",
+          "rooms": [
+            "chapel",
+            "game_room",
+            "research_laboratory",
+            "operating_laboratory",
+            "pentagram_chamber"
+          ]
+        }
+      ],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "actions.rooms:search_stars"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              331,
+              "(\"clue_stars\", \"tower\"),"
+            ],
+            [
+              357,
+              "(\"clue_stars\", \"tower\"),"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 34,
+      "name": "疯狂世界",
+      "mode": "mad_world",
+      "handler": "haunt_34_mad_world.py",
+      "win_conditions": [],
+      "tracks": [
+        "captives_locked"
+      ],
+      "actions": [
+        {
+          "id": "lock_up",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "pass_captive",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "vault": {
+          "uses": [
+            "handler:required",
+            "key_rooms",
+            "other:tokens[1]"
+          ],
+          "necessary": "是",
+          "evidence": "lock_up 仅在保险库可用且要求 room.data['opened']（haunt_34 L250/L271）",
+          "handler_lines": [
+            [
+              59,
+              "vault = engine._ensure_room_in_play(\"vault\", room_key)"
+            ]
+          ]
+        }
+      },
+      "verdict": "是"
+    },
+    {
+      "haunt_id": 35,
+      "name": "小小变化",
+      "mode": "small_change_escape",
+      "handler": "haunt_35_small_change_escape.py",
+      "win_conditions": [],
+      "tracks": [
+        "heroes_escaped"
+      ],
+      "actions": [
+        {
+          "id": "search_plane",
+          "progress": "",
+          "rooms": [
+            "bedroom",
+            "master_bedroom",
+            "larder",
+            "attic",
+            "game_room"
+          ]
+        },
+        {
+          "id": "start_plane",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "escape_plane",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              39,
+              "\"dining_room\", \"balcony\", \"garden\", \"graveyard\", \"patio\", \"tower\"}"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 36,
+      "name": "朋友越多越好",
+      "mode": "swamp_escape",
+      "handler": "haunt_36_swamp_escape.py",
+      "win_conditions": [],
+      "tracks": [
+        "flood_timer",
+        "boat_damage"
+      ],
+      "actions": [
+        {
+          "id": "take_rowboat",
+          "progress": "",
+          "rooms": [
+            "attic"
+          ]
+        },
+        {
+          "id": "drop_medallion",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "escape_boat",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              35,
+              "ESCAPE_ROOMS = {\"balcony\", \"tower\"}"
+            ],
+            [
+              51,
+              "\"tower\", attic or room_key"
+            ],
+            [
+              245,
+              "return escape_keys or [\"balcony\", \"tower\"]"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 37,
+      "name": "将军",
+      "mode": "death_checkmate",
+      "handler": "haunt_37_death_checkmate.py",
+      "win_conditions": [],
+      "tracks": [
+        "seals_broken"
+      ],
+      "actions": [
+        {
+          "id": "break_seal",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "vault": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              59,
+              "seal_rooms = [\"vault\", \"crypt\", \"research_laboratory\", \"operating_laboratory\", \"game_room\"]"
+            ],
+            [
+              70,
+              "seal_rooms = [\"vault\", \"crypt\", \"research_laboratory\", \"operating_laboratory\", \"game_room\"]"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 43,
+      "name": "阴影聚集",
+      "mode": "shadow_exorcism",
+      "handler": "haunt_43_shadow_exorcism.py",
+      "win_conditions": [],
+      "tracks": [
+        "ritual_progress"
+      ],
+      "actions": [
+        {
+          "id": "find_ritual",
+          "progress": "",
+          "rooms": [
+            "catacombs",
+            "chapel",
+            "library",
+            "research_laboratory"
+          ]
+        },
+        {
+          "id": "ritual_roll",
+          "progress": "ritual_progress",
+          "rooms": [
+            "balcony",
+            "garden",
+            "graveyard",
+            "patio",
+            "tower"
+          ]
+        }
+      ],
+      "rooms": {
+        "catacombs": {
+          "uses": [
+            "actions.rooms:find_ritual",
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              205,
+              "rooms = [\"catacombs\", \"chapel\", \"library\", \"research_laboratory\"]"
+            ]
+          ]
+        },
+        "tower": {
+          "uses": [
+            "actions.rooms:ritual_roll",
+            "key_rooms"
+          ],
+          "necessary": "是",
+          "evidence": "终局动作 ritual_roll 的 rooms 含该房（handler check_victory 以它判胜）",
+          "handler_lines": [
+            [
+              44,
+              "RITUAL_ROOMS = [\"balcony\", \"garden\", \"graveyard\", \"patio\", \"tower\"]"
+            ]
+          ]
+        }
+      },
+      "verdict": "是"
+    },
+    {
+      "haunt_id": 44,
+      "name": "死亡终将寻来",
+      "mode": "supernatural_aging",
+      "handler": "haunt_44_supernatural_aging.py",
+      "win_conditions": [
+        {
+          "winner": "traitor",
+          "type": "all_heroes_dead",
+          "reason": "所有英雄都死了。"
+        }
+      ],
+      "tracks": [
+        "ritual_progress"
+      ],
+      "actions": [
+        {
+          "id": "ritual_roll",
+          "progress": "ritual_progress",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "catacombs": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              39,
+              "RITUAL_ROOMS = [\"catacombs\", \"charred_room\", \"crypt\", \"gallery\", \"kitchen\", \"pentagram_chamber\", \"tower\"]"
+            ]
+          ]
+        },
+        "tower": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              39,
+              "RITUAL_ROOMS = [\"catacombs\", \"charred_room\", \"crypt\", \"gallery\", \"kitchen\", \"pentagram_chamber\", \"tower\"]"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 48,
+      "name": "像柴薪一样堆叠",
+      "mode": "cursed_weapon",
+      "handler": "haunt_48_cursed_weapon.py",
+      "win_conditions": [],
+      "tracks": [
+        "study_tokens"
+      ],
+      "actions": [
+        {
+          "id": "search_cursed_weapon",
+          "progress": "",
+          "rooms": [
+            "library",
+            "chapel",
+            "vault",
+            "attic"
+          ]
+        },
+        {
+          "id": "study_cursed_weapon",
+          "progress": "study_tokens",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "vault": {
+          "uses": [
+            "actions.rooms:search_cursed_weapon",
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              49,
+              "SEARCH_ROOMS = (\"library\", \"chapel\", \"vault\", \"attic\")"
+            ],
+            [
+              215,
+              "if room is None or room.template_id != \"vault\":"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 51,
+      "name": "比夜更黑",
+      "mode": "darker_than_night",
+      "handler": "haunt_51_darker_than_night.py",
+      "win_conditions": [
+        {
+          "winner": "traitor",
+          "type": "all_heroes_dead",
+          "reason": "黑暗吞噬了最后的英雄。"
+        }
+      ],
+      "tracks": [
+        "hero_progress"
+      ],
+      "actions": [
+        {
+          "id": "create_seal",
+          "progress": "hero_progress",
+          "rooms": [
+            "bedroom",
+            "chapel",
+            "conservatory",
+            "dining_room",
+            "grand_staircase",
+            "master_bedroom"
+          ]
+        }
+      ],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              32,
+              "if r.template_id in (\"balcony\", \"garden\", \"graveyard\", \"patio\", \"tower\")"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 55,
+      "name": "国王之路",
+      "mode": "kings_roads",
+      "handler": "haunt_55_kings_roads.py",
+      "win_conditions": [],
+      "tracks": [
+        "disenchant_progress"
+      ],
+      "actions": [
+        {
+          "id": "disenchant_room",
+          "progress": "disenchant_progress",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              41,
+              "ENTRANCE_ROOMS = (\"garden\", \"graveyard\", \"patio\", \"tower\", \"balcony\", \"underground_lake\")"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 58,
+      "name": "夜幕降临",
+      "mode": "nightfall_twilight",
+      "handler": "haunt_58_nightfall_twilight.py",
+      "win_conditions": [],
+      "tracks": [
+        "banished_floors"
+      ],
+      "actions": [
+        {
+          "id": "create_torch",
+          "progress": "",
+          "rooms": [
+            "furnace_room"
+          ]
+        },
+        {
+          "id": "banish_twilight",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "handler:haunt_58_nightfall_twilight.py:63"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              63,
+              "TWILIGHT_FREE = (\"furnace_room\", \"garden\", \"graveyard\", \"patio\", \"balcony\", \"tower\")"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 59,
+      "name": "千年长咒",
+      "mode": "badge_curse",
+      "handler": "haunt_59_badge_curse.py",
+      "win_conditions": [],
+      "tracks": [
+        "medallion"
+      ],
+      "actions": [
+        {
+          "id": "place_medallion",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              63,
+              "DOOM_ROOMS = (\"tower\", \"underground_lake\")"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 67,
+      "name": "从前有一次",
+      "mode": "storybook_twists",
+      "handler": "haunt_67_storybook_twists.py",
+      "win_conditions": [],
+      "tracks": [
+        "quests",
+        "story"
+      ],
+      "actions": [
+        {
+          "id": "complete_quest",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "obtain_quest",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "steal_from_traitor",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "plot_twist",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "handler:haunt_67_storybook_twists.py:56"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              56,
+              "SPIDER_ROOMS = (\"entrance_hall\", \"balcony\", \"tower\", \"patio\", \"garden\", \"graveyard\")"
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 68,
+      "name": "迷宫",
+      "mode": "labyrinth_escape",
+      "handler": "haunt_68_labyrinth_escape.py",
+      "win_conditions": [],
+      "tracks": [
+        "labyrinth_turn"
+      ],
+      "actions": [
+        {
+          "id": "flee_labyrinth",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "unlock_door",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "grab_key",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "pass_key",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "drop_key",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "catacombs": {
+          "uses": [
+            "handler:haunt_68_labyrinth_escape.py:72"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              72,
+              "CATACOMBS = \"catacombs\""
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    },
+    {
+      "haunt_id": 70,
+      "name": "一声非人尖啸",
+      "mode": "inhuman_transformation",
+      "handler": "haunt_70_inhuman_transformation.py",
+      "win_conditions": [],
+      "tracks": [
+        "form_visits"
+      ],
+      "actions": [
+        {
+          "id": "create_holy_water",
+          "progress": "",
+          "rooms": [
+            "chapel",
+            "wine_cellar",
+            "underground_lake"
+          ]
+        },
+        {
+          "id": "dip_weapon",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "create_silver_bullets",
+          "progress": "",
+          "rooms": [
+            "furnace_room",
+            "research_laboratory",
+            "operating_laboratory"
+          ]
+        },
+        {
+          "id": "search_revolver",
+          "progress": "",
+          "rooms": [
+            "vault"
+          ]
+        },
+        {
+          "id": "search_ingredient",
+          "progress": "",
+          "rooms": [
+            "kitchen",
+            "larder",
+            "garden",
+            "patio",
+            "attic",
+            "junk_room"
+          ]
+        },
+        {
+          "id": "assemble_bug_spray",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "spray_traitor",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "token_hypnotize",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "token_infect",
+          "progress": "",
+          "rooms": []
+        },
+        {
+          "id": "token_trap",
+          "progress": "",
+          "rooms": []
+        }
+      ],
+      "rooms": {
+        "tower": {
+          "uses": [
+            "key_rooms"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              96,
+              "\"rooms\": (\"balcony\", \"tower\", \"patio\", \"garden\", \"graveyard\"),"
+            ]
+          ]
+        },
+        "vault": {
+          "uses": [
+            "actions.rooms:search_revolver"
+          ],
+          "necessary": "间接",
+          "evidence": "",
+          "handler_lines": [
+            [
+              78,
+              "VAULT = \"vault\""
+            ]
+          ]
+        }
+      },
+      "verdict": "间接"
+    }
+  ]
+}

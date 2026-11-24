@@ -1,0 +1,1727 @@
+{
+  "schema": "winrate-diagnosis/v1",
+  "generated_at": "2026-11-24T16:17:08",
+  "baseline": {
+    "path": "winrate_baseline.json",
+    "generated_at": "2026-11-24T15:22:52",
+    "games": 2310,
+    "heroes_win": 675,
+    "traitor_win": 1633,
+    "heroes_win_rate": 0.2925,
+    "avg_turns": 56.58
+  },
+  "coverage": {
+    "haunts_total": 70,
+    "dedicated_profiles": 70,
+    "default_profiles": 0,
+    "default_profile_haunts": []
+  },
+  "scope": {
+    "plan_zero_win_haunts": [
+      10,
+      13,
+      20,
+      21,
+      26,
+      31,
+      32,
+      33,
+      40,
+      50,
+      67
+    ],
+    "baseline_zero_win_haunts": [
+      10,
+      19,
+      20,
+      26,
+      29,
+      32,
+      33,
+      40,
+      50,
+      67
+    ],
+    "diagnosed_haunts": [
+      10,
+      13,
+      19,
+      20,
+      21,
+      26,
+      29,
+      31,
+      32,
+      33,
+      40,
+      50,
+      67
+    ],
+    "note": "计划点名的 11 本与基线实测清单不一致（21 号实际 1 胜/33；19、29 号实测 0 胜）。本文件按并集归因，不做取舍。",
+    "by_haunt": {
+      "10": {
+        "games": 33,
+        "heroes_win": 0,
+        "traitor_win": 33,
+        "heroes_win_rate": 0.0,
+        "avg_turns": 48.79
+      },
+      "13": {
+        "games": 33,
+        "heroes_win": 5,
+        "traitor_win": 28,
+        "heroes_win_rate": 0.1515,
+        "avg_turns": 59.24
+      },
+      "19": {
+        "games": 33,
+        "heroes_win": 0,
+        "traitor_win": 33,
+        "heroes_win_rate": 0.0,
+        "avg_turns": 48.52
+      },
+      "20": {
+        "games": 33,
+        "heroes_win": 0,
+        "traitor_win": 33,
+        "heroes_win_rate": 0.0,
+        "avg_turns": 73.48
+      },
+      "21": {
+        "games": 33,
+        "heroes_win": 1,
+        "traitor_win": 32,
+        "heroes_win_rate": 0.0303,
+        "avg_turns": 46.76
+      },
+      "26": {
+        "games": 33,
+        "heroes_win": 0,
+        "traitor_win": 33,
+        "heroes_win_rate": 0.0,
+        "avg_turns": 51.52
+      },
+      "29": {
+        "games": 33,
+        "heroes_win": 0,
+        "traitor_win": 33,
+        "heroes_win_rate": 0.0,
+        "avg_turns": 58.45
+      },
+      "31": {
+        "games": 33,
+        "heroes_win": 1,
+        "traitor_win": 32,
+        "heroes_win_rate": 0.0303,
+        "avg_turns": 49.15
+      },
+      "32": {
+        "games": 33,
+        "heroes_win": 0,
+        "traitor_win": 33,
+        "heroes_win_rate": 0.0,
+        "avg_turns": 57.03
+      },
+      "33": {
+        "games": 33,
+        "heroes_win": 0,
+        "traitor_win": 33,
+        "heroes_win_rate": 0.0,
+        "avg_turns": 63.82
+      },
+      "40": {
+        "games": 33,
+        "heroes_win": 0,
+        "traitor_win": 33,
+        "heroes_win_rate": 0.0,
+        "avg_turns": 56.67
+      },
+      "50": {
+        "games": 33,
+        "heroes_win": 0,
+        "traitor_win": 33,
+        "heroes_win_rate": 0.0,
+        "avg_turns": 56.24
+      },
+      "67": {
+        "games": 33,
+        "heroes_win": 0,
+        "traitor_win": 33,
+        "heroes_win_rate": 0.0,
+        "avg_turns": 53.48
+      }
+    }
+  },
+  "haunts": [
+    {
+      "haunt_id": 10,
+      "name": "家族聚会",
+      "mode": "trap_zombies",
+      "mode_handler": "ZombieTrapMode",
+      "mode_handler_module": "haunts.haunt_10_trap_zombies",
+      "mode_handler_source_lines": 114,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "lure_and_trap",
+        "needed_items": [],
+        "target_rooms": [
+          "master_bedroom",
+          "chapel",
+          "conservatory",
+          "game_room",
+          "library",
+          "attic"
+        ],
+        "target_rooms_note": null,
+        "attack_monsters": false,
+        "attack_traitor_players": false,
+        "victory_focus": "站进尚未用过的陷阱房把僵尸引进来；别和它们对拼，击晕不算赢"
+      },
+      "traitor": {
+        "objective_type": "hunt_with_zombies",
+        "needed_items": [],
+        "target_rooms": [
+          "master_bedroom",
+          "chapel",
+          "conservatory",
+          "game_room",
+          "library",
+          "attic"
+        ],
+        "victory_focus": "控制僵尸封路，阻止英雄把它们带进陷阱房"
+      },
+      "rule_goal": {
+        "hero": "把所有僵尸引到特殊房间并困住它们。",
+        "traitor": "操控僵尸和疯子杀死所有英雄。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [
+          "master_bedroom",
+          "chapel",
+          "conservatory",
+          "game_room",
+          "library",
+          "attic"
+        ],
+        "required_cards": [
+          "omen_madman"
+        ],
+        "tokens": [
+          "zombie",
+          "madman",
+          "damage_track"
+        ],
+        "tracks": {
+          "zombies_trapped": {
+            "label": "已困住僵尸",
+            "target": "player_count",
+            "side": "heroes"
+          },
+          "madman_damage": {
+            "label": "疯子受到的物理伤害",
+            "target": 5,
+            "side": "heroes"
+          }
+        },
+        "actions": []
+      },
+      "avg_turns": 48.79,
+      "traitor_win_method": {
+        "summary": "win_conditions 声明：操控僵尸和疯子杀死所有英雄。（all_heroes_dead）",
+        "source": "win_conditions",
+        "declared": [
+          {
+            "type": "all_heroes_dead",
+            "reason": "操控僵尸和疯子杀死所有英雄。"
+          }
+        ],
+        "traitor_track_targets": {},
+        "observed_reasons": [
+          "疯子和他的家人们收割了整栋房子。"
+        ]
+      },
+      "hypothesis": "英雄只有「把每只僵尸分别引进 6 间陷阱房、让它知识检定失败」这一条胜利线，规则也不允许靠击晕取胜；抽样 4 局单局最多困住 2（目标 3-5），僵尸力量 6、疯子力量 5、英雄平均力量 3，4/4 局英雄全灭。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 0,
+        "traitor_wins": 4,
+        "wipes": 4,
+        "avg_turns": 60.75,
+        "reasons": {
+          "疯子和他的家人们收割了整栋房子。": 4
+        },
+        "track_max": {
+          "madman_damage": 5,
+          "zombies_trapped": 2
+        },
+        "track_target": {
+          "madman_damage": 5,
+          "zombies_trapped": 5
+        },
+        "used": {},
+        "succeeded": {},
+        "errors": []
+      }
+    },
+    {
+      "haunt_id": 13,
+      "name": "但愿入梦",
+      "mode": "nightmare_escape",
+      "mode_handler": "NightmareDreamMode",
+      "mode_handler_module": "haunts.haunt_13_nightmare_escape",
+      "mode_handler_source_lines": 328,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "collect_and_ritual",
+        "needed_items": [
+          "圣徽"
+        ],
+        "target_rooms": [],
+        "target_rooms_note": "静态表为空；目标由 NightmareDreamMode.bot_goal_rooms 按局面动态给出",
+        "attack_monsters": false,
+        "attack_traitor_players": false,
+        "victory_focus": "把圣徽送进沉睡者房间，凑满人数次 5+ 唤醒；别追梦魇——打死会立刻补一只"
+      },
+      "traitor": {
+        "objective_type": "ritual_race",
+        "needed_items": [],
+        "target_rooms": [],
+        "victory_focus": "梦魇逃满作祟时记下的逃脱房间数即胜；每逃走一只就从沉睡房间补一只"
+      },
+      "rule_goal": {
+        "hero": "把圣徽带进沉睡者的房间，在足够多梦魇逃出屋子前唤醒他。",
+        "traitor": "让梦魇按秘密数量逃出房子（逃出数 = 作祟时的逃脱房间数）。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [
+          "entrance_hall",
+          "grand_staircase",
+          "master_bedroom",
+          "bedroom",
+          "chapel",
+          "dining_room",
+          "conservatory",
+          "garden",
+          "graveyard",
+          "patio",
+          "tower",
+          "balcony"
+        ],
+        "required_cards": [
+          "omen_holy_symbol"
+        ],
+        "tokens": [
+          "nightmare",
+          "wake_token",
+          "escape"
+        ],
+        "tracks": {
+          "waking_progress": {
+            "label": "唤醒沉睡者",
+            "target": "player_count",
+            "side": "heroes"
+          }
+        },
+        "actions": [
+          {
+            "id": "wake_attempt",
+            "side": "heroes",
+            "rooms": [],
+            "stat": [
+              "sanity",
+              "might"
+            ],
+            "target": 5,
+            "requires": []
+          }
+        ]
+      },
+      "avg_turns": 59.24,
+      "traitor_win_method": {
+        "summary": "剧本目标：让梦魇按秘密数量逃出房子（逃出数 = 作祟时的逃脱房间数）。；handler NightmareDreamMode 按内部条件判定，抽样终局原文：沉睡者猛然惊醒——梦魇失去了凝聚力，四散消融。",
+        "source": "handler_observed",
+        "declared": [],
+        "traitor_track_targets": {},
+        "observed_reasons": [
+          "沉睡者猛然惊醒——梦魇失去了凝聚力，四散消融。",
+          "英雄们在梦魇的尖啸中一个接一个倒下。"
+        ]
+      },
+      "hypothesis": "（计划清单 0/33，本轮后 5/33）根因是圣徽被沉睡者本人捡走并锁死（setup 掉落 → 下一回合又被拾起），英雄永远凑不齐唤醒条件；本轮在 NightmareDreamMode 加 item_pickup_blocked 修掉；本轮抽样 3/4 局英雄胜。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 3,
+        "traitor_wins": 1,
+        "wipes": 1,
+        "avg_turns": 66.75,
+        "reasons": {
+          "沉睡者猛然惊醒——梦魇失去了凝聚力，四散消融。": 3,
+          "英雄们在梦魇的尖啸中一个接一个倒下。": 1
+        },
+        "track_max": {
+          "waking_progress": 5
+        },
+        "track_target": {
+          "waking_progress": 5
+        },
+        "used": {
+          "wake_attempt": 13
+        },
+        "succeeded": {
+          "wake_attempt": 13
+        },
+        "errors": []
+      }
+    },
+    {
+      "haunt_id": 19,
+      "name": "驭兽者",
+      "mode": "beastmaster",
+      "mode_handler": "BeastmasterMode",
+      "mode_handler_module": "haunts.haunt_19_beastmaster",
+      "mode_handler_source_lines": 163,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "disarm_traitor",
+        "needed_items": [
+          "戒指"
+        ],
+        "target_rooms": [],
+        "target_rooms_note": "静态表为空；目标回落到 rule_data.key_rooms（8 间）",
+        "attack_monsters": true,
+        "attack_traitor_players": true,
+        "victory_focus": "追着驯兽师打，赢出 3 点以上夺下长矛（别打死他）"
+      },
+      "traitor": {
+        "objective_type": "hunt_heroes",
+        "needed_items": [],
+        "target_rooms": [],
+        "victory_focus": "靠动物随从围杀英雄，别让任何人近身夺矛"
+      },
+      "rule_goal": {
+        "hero": "击败驯兽师并偷走长矛让他恢复神智——记住，杀了他你就输了。",
+        "traitor": "让动物随从吃掉所有英雄。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [
+          "entrance_hall",
+          "underground_lake",
+          "basement_landing",
+          "garden",
+          "graveyard",
+          "patio",
+          "balcony",
+          "tower"
+        ],
+        "required_cards": [
+          "omen_ring"
+        ],
+        "tokens": [
+          "bear",
+          "wolf",
+          "crocodile",
+          "weasel",
+          "hawk"
+        ],
+        "tracks": {
+          "minions_slain": {
+            "label": "已斩杀的随从",
+            "target": "player_count",
+            "side": "heroes"
+          }
+        },
+        "actions": []
+      },
+      "avg_turns": 48.52,
+      "traitor_win_method": {
+        "summary": "剧本目标：让动物随从吃掉所有英雄。；handler BeastmasterMode 按内部条件判定，抽样终局原文：野兽们的嚎叫吞没了最后的探险者。",
+        "source": "handler_observed",
+        "declared": [],
+        "traitor_track_targets": {},
+        "observed_reasons": [
+          "野兽们的嚎叫吞没了最后的探险者。"
+        ]
+      },
+      "hypothesis": "英雄胜要求对驯兽师打出 >2 点伤害触发 special_steal 夺矛（杀了他反而判负），抽样 4 局随从最多被击毙 3（目标 3-5）、4/4 局英雄全灭；bot 只能攻击同房间目标，没有任何「追驯兽师本人」的寻路目标。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 0,
+        "traitor_wins": 4,
+        "wipes": 4,
+        "avg_turns": 58.25,
+        "reasons": {
+          "野兽们的嚎叫吞没了最后的探险者。": 4
+        },
+        "track_max": {
+          "minions_slain": 3
+        },
+        "track_target": {
+          "minions_slain": 5
+        },
+        "used": {},
+        "succeeded": {},
+        "errors": []
+      }
+    },
+    {
+      "haunt_id": 20,
+      "name": "幽灵新娘",
+      "mode": "ghost_bride",
+      "mode_handler": "GhostBrideMode",
+      "mode_handler_module": "haunts.haunt_20_ghost_bride",
+      "mode_handler_source_lines": 290,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "collect_and_ritual",
+        "needed_items": [
+          "戒指",
+          "新郎的尸体"
+        ],
+        "target_rooms": [],
+        "target_rooms_note": "静态表为空；目标由 GhostBrideMode.bot_goal_rooms 按局面动态给出",
+        "attack_monsters": false,
+        "attack_traitor_players": false,
+        "victory_focus": "依次问名（卧室/餐厅/图书馆）→地窖定位→力量 4+ 掘尸→把尸体与戒指送进教堂"
+      },
+      "traitor": {
+        "objective_type": "protect_countdown",
+        "needed_items": [],
+        "target_rooms": [
+          "chapel"
+        ],
+        "victory_focus": "让新娘吸干新郎的力量、把婚礼推进到第 3 回合；自己负责拦住送葬的人"
+      },
+      "rule_goal": {
+        "hero": "查明新郎姓名，从地窖起出尸体，把尸体和戒指带进教堂让新娘安息。",
+        "traitor": "让幽灵新娘杀死选定的新郎并把婚礼办完。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [
+          "chapel",
+          "crypt",
+          "bedroom",
+          "dining_room",
+          "library"
+        ],
+        "required_cards": [
+          "omen_ring"
+        ],
+        "tokens": [
+          "bride",
+          "corpse"
+        ],
+        "tracks": {
+          "wedding_timer": {
+            "label": "婚礼计时",
+            "target": 3,
+            "side": "traitor"
+          }
+        },
+        "actions": [
+          {
+            "id": "learn_name",
+            "side": "heroes",
+            "rooms": [
+              "bedroom",
+              "dining_room",
+              "library"
+            ],
+            "stat": "knowledge",
+            "target": 5,
+            "requires": []
+          },
+          {
+            "id": "learn_name_book",
+            "side": "heroes",
+            "rooms": [],
+            "stat": "knowledge",
+            "target": 5,
+            "requires": [
+              "omen_book"
+            ]
+          },
+          {
+            "id": "locate_body",
+            "side": "heroes",
+            "rooms": [
+              "crypt"
+            ],
+            "stat": "knowledge",
+            "target": 4,
+            "requires": []
+          },
+          {
+            "id": "disinter_body",
+            "side": "heroes",
+            "rooms": [
+              "crypt"
+            ],
+            "stat": "might",
+            "target": 4,
+            "requires": []
+          }
+        ]
+      },
+      "avg_turns": 73.48,
+      "traitor_win_method": {
+        "summary": "handler GhostBrideMode 按轨道判定：wedding_timer→3",
+        "source": "handler_track",
+        "declared": [],
+        "traitor_track_targets": {
+          "wedding_timer": 3
+        },
+        "observed_reasons": [
+          "誓言已成——幽灵新娘与她的新郎永远结合了。",
+          "再没有人能打断这场婚礼了。"
+        ]
+      },
+      "hypothesis": "四步链（问名→定位→掘尸→送葬）由 requires_flags 串行，新娘又是 invulnerable；抽样 4 局婚礼计时最高 3（目标 3）、4/4 局新郎被新娘抽干力量，4 局合计只掘尸 8 次，赶不上 3 回合婚礼。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 0,
+        "traitor_wins": 4,
+        "wipes": 1,
+        "avg_turns": 74.75,
+        "reasons": {
+          "誓言已成——幽灵新娘与她的新郎永远结合了。": 3,
+          "再没有人能打断这场婚礼了。": 1
+        },
+        "track_max": {
+          "wedding_timer": 3
+        },
+        "track_target": {
+          "wedding_timer": 3
+        },
+        "used": {
+          "disinter_body": 8,
+          "learn_name": 7,
+          "locate_body": 3
+        },
+        "succeeded": {
+          "disinter_body": 8,
+          "learn_name": 7,
+          "locate_body": 3
+        },
+        "errors": []
+      }
+    },
+    {
+      "haunt_id": 21,
+      "name": "活死人之屋",
+      "mode": "zombie_lord",
+      "mode_handler": "ZombieLordMode",
+      "mode_handler_module": "haunts.haunt_21_zombie_lord",
+      "mode_handler_source_lines": 226,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "hunt_with_required_item",
+        "needed_items": [
+          "徽章"
+        ],
+        "target_rooms": [],
+        "target_rooms_note": "静态表为空；目标由 ZombieLordMode.bot_goal_rooms 按局面动态给出",
+        "attack_monsters": true,
+        "attack_traitor_players": false,
+        "victory_focus": "护送持徽章者去打僵尸领主（只有他能造成伤害），或清光所有僵尸"
+      },
+      "traitor": {
+        "objective_type": "raise_zombies",
+        "needed_items": [],
+        "target_rooms": [],
+        "victory_focus": "靠 6-10 只僵尸的围杀把英雄清场；叛徒开局已死，由领主代打"
+      },
+      "rule_goal": {
+        "hero": "摧毁僵尸领主，或把所有僵尸（包括被转化的同伴）全部消灭。",
+        "traitor": "僵尸群杀死所有英雄。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [],
+        "required_cards": [
+          "omen_medallion",
+          "omen_holy_symbol"
+        ],
+        "tokens": [],
+        "tracks": {
+          "lord_damage": {
+            "label": "僵尸领主受到的伤害",
+            "target": 7,
+            "side": "heroes"
+          }
+        },
+        "actions": []
+      },
+      "avg_turns": 46.76,
+      "traitor_win_method": {
+        "summary": "剧本目标：僵尸群杀死所有英雄。；handler ZombieLordMode 按内部条件判定，抽样终局原文：屋子里只剩下拖着的脚步声和咀嚼声。",
+        "source": "handler_observed",
+        "declared": [],
+        "traitor_track_targets": {},
+        "observed_reasons": [
+          "屋子里只剩下拖着的脚步声和咀嚼声。"
+        ]
+      },
+      "hypothesis": "（计划清单按 0 胜记，实测基线前后都是 1/33）本轮补的档案只是把 handler 已有的徽章路由写成声明（hunt_with_required_item + 徽章），生效字段与默认档案等价，胜场没有变化：领主伤害全程 0/7、作祟后数回合被清场；本轮抽样仍 0/4 局，剩余瓶颈是战斗消耗而不是目标链。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 0,
+        "traitor_wins": 4,
+        "wipes": 4,
+        "avg_turns": 56.0,
+        "reasons": {
+          "屋子里只剩下拖着的脚步声和咀嚼声。": 4
+        },
+        "track_max": {
+          "lord_damage": 0
+        },
+        "track_target": {
+          "lord_damage": 7
+        },
+        "used": {},
+        "succeeded": {},
+        "errors": []
+      }
+    },
+    {
+      "haunt_id": 26,
+      "name": "吹笛人的代价",
+      "mode": "rat_ritual",
+      "mode_handler": "RatRitualMode",
+      "mode_handler_module": "haunts.haunt_26_rat_ritual",
+      "mode_handler_source_lines": 298,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "kill_monsters",
+        "needed_items": [],
+        "target_rooms": [
+          "pentagram_chamber"
+        ],
+        "target_rooms_note": null,
+        "attack_monsters": true,
+        "attack_traitor_players": true,
+        "victory_focus": "守到五芒星室：叛徒一进门就围攻；他若不来就清老鼠阻断仪式"
+      },
+      "traitor": {
+        "objective_type": "ritual_race",
+        "needed_items": [],
+        "target_rooms": [],
+        "victory_focus": "尽快赶到五芒星室完成 5 次仪式理智 3+，途中顺手杀人"
+      },
+      "rule_goal": {
+        "hero": "在鼠群的围攻下杀光屋里的每只老鼠；若叛徒还没进五芒星室，也可以直接杀了他。",
+        "traitor": "在五芒星室里完成邪恶的鼠类仪式，或杀光所有英雄。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [],
+        "required_cards": [],
+        "tokens": [],
+        "tracks": {
+          "ritual_rolls": {
+            "label": "仪式理智检定",
+            "target": 5,
+            "side": "traitor"
+          }
+        },
+        "actions": [
+          {
+            "id": "perform_ritual",
+            "side": "traitor",
+            "rooms": [
+              "pentagram_chamber"
+            ],
+            "stat": "sanity",
+            "target": 3,
+            "requires": []
+          }
+        ]
+      },
+      "avg_turns": 51.52,
+      "traitor_win_method": {
+        "summary": "handler RatRitualMode 按轨道判定：ritual_rolls→5",
+        "source": "handler_track",
+        "declared": [],
+        "traitor_track_targets": {
+          "ritual_rolls": 5
+        },
+        "observed_reasons": [
+          "所有英雄都倒下了，老鼠们涌了出来。"
+        ]
+      },
+      "hypothesis": "叛徒在五芒星室 5 次理智 3+ 即完成仪式（约 5 回合），英雄要么清光 10 只老鼠、要么抢在他进五芒星室前杀了他；抽样 4 局仪式先完成 0 局，而英雄侧没有任何自带 rooms 的行动，bot 在作祟阶段拿不到「去五芒星室」这个目标。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 0,
+        "traitor_wins": 4,
+        "wipes": 4,
+        "avg_turns": 60.75,
+        "reasons": {
+          "所有英雄都倒下了，老鼠们涌了出来。": 4
+        },
+        "track_max": {
+          "ritual_rolls": 3
+        },
+        "track_target": {
+          "ritual_rolls": 5
+        },
+        "used": {
+          "perform_ritual": 10
+        },
+        "succeeded": {
+          "perform_ritual": 10
+        },
+        "errors": []
+      }
+    },
+    {
+      "haunt_id": 29,
+      "name": "弗兰肯斯坦的遗产",
+      "mode": "frankenstein_fire",
+      "mode_handler": "FrankensteinMode",
+      "mode_handler_module": "haunts.haunt_29_frankenstein_fire",
+      "mode_handler_source_lines": 403,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "craft_and_destroy",
+        "needed_items": [
+          "火把"
+        ],
+        "target_rooms": [],
+        "target_rooms_note": "静态表为空；目标由 FrankensteinMode.bot_goal_rooms 按局面动态给出",
+        "attack_monsters": false,
+        "attack_traitor_players": true,
+        "victory_focus": "先去点火房拿火把，再投掷烧死怪物，或引到塔楼/深渊推落"
+      },
+      "traitor": {
+        "objective_type": "generic",
+        "needed_items": [],
+        "target_rooms": [],
+        "victory_focus": "与怪物夹击英雄，别让他们靠近火源"
+      },
+      "rule_goal": {
+        "hero": "点燃火把投进怪物（命中玩家数次），或把它引到塔楼/深渊推下去。",
+        "traitor": "让力大无穷的怪物把所有英雄撕碎。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [],
+        "required_cards": [],
+        "tokens": [
+          "torch"
+        ],
+        "tracks": {
+          "torch_hits": {
+            "label": "火把命中",
+            "target": "player_count",
+            "side": "heroes"
+          }
+        },
+        "actions": [
+          {
+            "id": "light_torch",
+            "side": "heroes",
+            "rooms": [
+              "charred_room",
+              "furnace_room",
+              "pentagram_chamber",
+              "kitchen"
+            ],
+            "stat": "knowledge",
+            "target": 0,
+            "requires": []
+          },
+          {
+            "id": "throw_torch",
+            "side": "heroes",
+            "rooms": [],
+            "stat": "knowledge",
+            "target": 0,
+            "requires": []
+          },
+          {
+            "id": "push_monster",
+            "side": "heroes",
+            "rooms": [
+              "tower",
+              "chasm"
+            ],
+            "stat": "knowledge",
+            "target": 0,
+            "requires": []
+          }
+        ]
+      },
+      "avg_turns": 58.45,
+      "traitor_win_method": {
+        "summary": "剧本目标：让力大无穷的怪物把所有英雄撕碎。；handler FrankensteinMode 按内部条件判定，抽样终局原文：缝合的怪物踩着英雄们的尸体，等待下一个命令。",
+        "source": "handler_observed",
+        "declared": [],
+        "traitor_track_targets": {},
+        "observed_reasons": [
+          "缝合的怪物踩着英雄们的尸体，等待下一个命令。"
+        ]
+      },
+      "hypothesis": "火把要在烧焦房/熔炉房/五芒星室/厨房点燃，再贴到怪物邻房投掷；抽样 4 局合计投掷 8 次、命中最多 3（目标 3-5）。怪物力量 8，英雄空手对拼直接被打穿。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 0,
+        "traitor_wins": 4,
+        "wipes": 4,
+        "avg_turns": 67.0,
+        "reasons": {
+          "缝合的怪物踩着英雄们的尸体，等待下一个命令。": 4
+        },
+        "track_max": {
+          "torch_hits": 3
+        },
+        "track_target": {
+          "torch_hits": 5
+        },
+        "used": {
+          "light_torch": 18,
+          "throw_torch": 8
+        },
+        "succeeded": {
+          "light_torch": 18,
+          "throw_torch": 8
+        },
+        "errors": []
+      }
+    },
+    {
+      "haunt_id": 31,
+      "name": "它活了！",
+      "mode": "living_house",
+      "mode_handler": "LivingHouseMode",
+      "mode_handler_module": "haunts.haunt_31_living_house",
+      "mode_handler_source_lines": 454,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "hunt_with_required_item",
+        "needed_items": [
+          "长矛"
+        ],
+        "target_rooms": [
+          "organ_room",
+          "attic"
+        ],
+        "target_rooms_note": null,
+        "attack_monsters": true,
+        "attack_traitor_players": false,
+        "victory_focus": "长矛持有者直奔管风琴室（心脏，防御力量 7）或阁楼（大脑，力量 6），赢一次攻击即杀死房子"
+      },
+      "traitor": {
+        "objective_type": "destroy_key_item",
+        "needed_items": [
+          "长矛"
+        ],
+        "target_rooms": [
+          "chasm",
+          "furnace_room",
+          "underground_lake"
+        ],
+        "victory_focus": "偷走长矛，带到深渊/熔炉房/地下湖花一整回合销毁"
+      },
+      "rule_goal": {
+        "hero": "用长矛击败房屋的心脏（管风琴室）或大脑（阁楼），杀死这座活房子。",
+        "traitor": "让活房子消化杀死所有英雄，或夺走长矛并把它投入深渊/熔炉房/地下湖销毁。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [
+          "organ_room",
+          "attic",
+          "dining_room",
+          "kitchen",
+          "larder",
+          "wine_cellar",
+          "conservatory",
+          "balcony",
+          "entrance_hall",
+          "research_laboratory",
+          "operating_laboratory",
+          "furnace_room",
+          "underground_lake",
+          "library",
+          "chasm"
+        ],
+        "required_cards": [
+          "omen_spear"
+        ],
+        "tokens": [
+          "heart",
+          "brain",
+          "stomach",
+          "lungs",
+          "teeth",
+          "glands",
+          "antibody"
+        ],
+        "tracks": {
+          "house_slain": {
+            "label": "杀死活房子",
+            "target": 1,
+            "side": "heroes"
+          }
+        },
+        "actions": [
+          {
+            "id": "throw_spear",
+            "side": "traitor",
+            "rooms": [
+              "chasm",
+              "furnace_room",
+              "underground_lake"
+            ],
+            "stat": null,
+            "target": null,
+            "requires": [
+              "omen_spear"
+            ]
+          }
+        ]
+      },
+      "avg_turns": 49.15,
+      "traitor_win_method": {
+        "summary": "剧本目标：让活房子消化杀死所有英雄，或夺走长矛并把它投入深渊/熔炉房/地下湖销毁。；handler LivingHouseMode 按内部条件判定，抽样终局原文：所有英雄都被活房子消化了。",
+        "source": "handler_observed",
+        "declared": [],
+        "traitor_track_targets": {},
+        "observed_reasons": [
+          "所有英雄都被活房子消化了。"
+        ]
+      },
+      "hypothesis": "（计划清单 0/33，本轮后 1/33）原来目标回落到 15 间 key_rooms，真正的两间器官房被稀释；本轮把 target_rooms 收紧到管风琴室/阁楼；本轮抽样仍 0/4 局，剩余瓶颈是战斗消耗而不是目标链。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 0,
+        "traitor_wins": 4,
+        "wipes": 4,
+        "avg_turns": 60.5,
+        "reasons": {
+          "所有英雄都被活房子消化了。": 4
+        },
+        "track_max": {
+          "house_slain": 0
+        },
+        "track_target": {
+          "house_slain": 1
+        },
+        "used": {},
+        "succeeded": {},
+        "errors": []
+      }
+    },
+    {
+      "haunt_id": 32,
+      "name": "迷失",
+      "mode": "lost_dimension",
+      "mode_handler": "LostDimensionMode",
+      "mode_handler_module": "haunts.haunt_32_lost_dimension",
+      "mode_handler_source_lines": 377,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "collect_and_ritual",
+        "needed_items": [
+          "乐谱",
+          "标本",
+          "星象"
+        ],
+        "target_rooms": [],
+        "target_rooms_note": "静态表为空；目标由 LostDimensionMode.bot_goal_rooms 按局面动态给出",
+        "attack_monsters": false,
+        "attack_traitor_players": false,
+        "victory_focus": "先在图书馆/游戏室/塔楼集齐 3 条线索（各 +2），再进风琴房把知识检定凑到 15-20"
+      },
+      "traitor": {
+        "objective_type": "ritual_denial",
+        "needed_items": [],
+        "target_rooms": [
+          "chapel",
+          "game_room",
+          "research_laboratory",
+          "operating_laboratory",
+          "pentagram_chamber"
+        ],
+        "victory_focus": "在五间房各放一枚干扰令牌（每枚让弹奏 -3），用毒大气拖死英雄"
+      },
+      "rule_goal": {
+        "hero": "在风琴房弹对那首曲子，把整栋房子送回自己的维度。",
+        "traitor": "破坏传送器，或让异维度的大气杀死所有英雄。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [
+          "organ_room"
+        ],
+        "required_cards": [],
+        "tokens": [],
+        "tracks": {
+          "clues_found": {
+            "label": "已找到的线索",
+            "target": 3,
+            "side": "heroes"
+          },
+          "sabotage": {
+            "label": "传送器干扰",
+            "target": 4,
+            "side": "traitor"
+          }
+        },
+        "actions": [
+          {
+            "id": "play_organ",
+            "side": "heroes",
+            "rooms": [
+              "organ_room"
+            ],
+            "stat": "knowledge",
+            "target": 0,
+            "requires": []
+          },
+          {
+            "id": "search_books",
+            "side": "heroes",
+            "rooms": [
+              "library"
+            ],
+            "stat": "knowledge",
+            "target": 5,
+            "requires": []
+          },
+          {
+            "id": "search_trophy",
+            "side": "heroes",
+            "rooms": [
+              "game_room"
+            ],
+            "stat": "sanity",
+            "target": 5,
+            "requires": []
+          },
+          {
+            "id": "search_stars",
+            "side": "heroes",
+            "rooms": [
+              "tower"
+            ],
+            "stat": "knowledge",
+            "target": 5,
+            "requires": []
+          },
+          {
+            "id": "sabotage_transporter",
+            "side": "traitor",
+            "rooms": [
+              "chapel",
+              "game_room",
+              "research_laboratory",
+              "operating_laboratory",
+              "pentagram_chamber"
+            ],
+            "stat": "knowledge",
+            "target": 4,
+            "requires": []
+          }
+        ]
+      },
+      "avg_turns": 57.03,
+      "traitor_win_method": {
+        "summary": "handler LostDimensionMode 按轨道判定：sabotage→4",
+        "source": "handler_track",
+        "declared": [],
+        "traitor_track_targets": {
+          "sabotage": 4
+        },
+        "observed_reasons": [
+          "绿色的空气终于安静下来——标本们不再挣扎了。"
+        ]
+      },
+      "hypothesis": "弹奏门槛 15-20 点且每枚干扰令牌 -3，英雄必须先集齐 3 条线索；抽样 4 局线索最多 1（目标 3）、合计弹奏 1 次，毒大气持续掉属性，4/4 局全灭。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 0,
+        "traitor_wins": 4,
+        "wipes": 4,
+        "avg_turns": 67.75,
+        "reasons": {
+          "绿色的空气终于安静下来——标本们不再挣扎了。": 4
+        },
+        "track_max": {
+          "clues_found": 1,
+          "sabotage": 3
+        },
+        "track_target": {
+          "clues_found": 3,
+          "sabotage": 4
+        },
+        "used": {
+          "play_organ": 1,
+          "sabotage_transporter": 10,
+          "search_stars": 5,
+          "search_trophy": 2
+        },
+        "succeeded": {
+          "play_organ": 1,
+          "sabotage_transporter": 10,
+          "search_stars": 5,
+          "search_trophy": 2
+        },
+        "errors": []
+      }
+    },
+    {
+      "haunt_id": 33,
+      "name": "湖中怪物",
+      "mode": "lake_rescue",
+      "mode_handler": "LakeRescueMode",
+      "mode_handler_module": "haunts.haunt_33_lake_rescue",
+      "mode_handler_source_lines": 537,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "rescue_then_escape",
+        "needed_items": [],
+        "target_rooms": [],
+        "target_rooms_note": "静态表为空；目标由 LakeRescueMode.bot_goal_rooms 按局面动态给出",
+        "attack_monsters": false,
+        "attack_traitor_players": true,
+        "victory_focus": "全员下到地下湖、站上湖面砖搜救：4 骰 + 距离加值 + 水晶球凑 19+ 把女孩捞上来"
+      },
+      "traitor": {
+        "objective_type": "protect_countdown",
+        "needed_items": [],
+        "target_rooms": [
+          "underground_lake"
+        ],
+        "victory_focus": "让溺水计时掷到 9/10 使女孩溺亡，或让湖怪吃掉所有英雄"
+      },
+      "rule_goal": {
+        "hero": "在女孩溺亡前划入湖面，顶住湖怪与幻象把她救上岸。",
+        "traitor": "让女孩溺亡，或让湖怪吃掉所有英雄。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [],
+        "required_cards": [],
+        "tokens": [
+          "lake_tile"
+        ],
+        "tracks": {
+          "drown_timer": {
+            "label": "溺水计时",
+            "target": 20,
+            "side": "traitor"
+          }
+        },
+        "actions": []
+      },
+      "avg_turns": 63.82,
+      "traitor_win_method": {
+        "summary": "handler LakeRescueMode 按轨道判定：drown_timer→20",
+        "source": "handler_track",
+        "declared": [],
+        "traitor_track_targets": {
+          "drown_timer": 20
+        },
+        "observed_reasons": [
+          "湖面重归平静——女孩再也没有浮上来。"
+        ]
+      },
+      "hypothesis": "救人是「站上湖面砖 → 4 骰+距离+水晶球凑 19+」，女孩按溺水线 9/10 计时；抽样 4 局溺水计时最高 12（目标 20）、4 局女孩先溺亡、0 局英雄全灭——rule_data 没有 key_rooms、档案也没有 target_rooms；本轮补了 LakeRescueMode.bot_goal_rooms 指路地下湖，但搜索表本身需要累计距离加值，短计时内凑不到 19+。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 0,
+        "traitor_wins": 4,
+        "wipes": 0,
+        "avg_turns": 70.5,
+        "reasons": {
+          "湖面重归平静——女孩再也没有浮上来。": 4
+        },
+        "track_max": {
+          "drown_timer": 12
+        },
+        "track_target": {
+          "drown_timer": 20
+        },
+        "used": {},
+        "succeeded": {},
+        "errors": []
+      }
+    },
+    {
+      "haunt_id": 40,
+      "name": "活埋",
+      "mode": "buried_alive",
+      "mode_handler": "BuriedAliveMode",
+      "mode_handler_module": "haunts.haunt_40_buried_alive",
+      "mode_handler_source_lines": 243,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "collect_and_ritual",
+        "needed_items": [],
+        "target_rooms": [],
+        "target_rooms_note": "静态表为空；目标由 BuriedAliveMode.bot_goal_rooms 按局面动态给出",
+        "attack_monsters": false,
+        "attack_traitor_players": true,
+        "victory_focus": "逐间搜查地下室找到埋葬室，再轮流力量 4+ 挖掘；被叛徒缠上时先还手自保——杀死叛徒不算赢"
+      },
+      "traitor": {
+        "objective_type": "generic",
+        "needed_items": [],
+        "target_rooms": [],
+        "victory_focus": "拖时间：每回合结束被埋者都会多挨一次伤害，别让英雄安心挖土"
+      },
+      "rule_goal": {
+        "hero": "在地下室找到埋葬室，挖出被活埋的朋友。",
+        "traitor": "让被埋的人在泥土下死去。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [],
+        "required_cards": [],
+        "tokens": [],
+        "tracks": {
+          "burial_damage": {
+            "label": "被埋朋友的伤害（12 点死亡）",
+            "target": 12,
+            "side": "traitor"
+          },
+          "dig_progress": {
+            "label": "挖出朋友",
+            "target": "player_count",
+            "side": "heroes"
+          }
+        },
+        "actions": []
+      },
+      "avg_turns": 56.67,
+      "traitor_win_method": {
+        "summary": "win_conditions 声明：所有英雄都被活埋了。（all_heroes_dead）",
+        "source": "win_conditions",
+        "declared": [
+          {
+            "type": "all_heroes_dead",
+            "reason": "所有英雄都被活埋了。"
+          }
+        ],
+        "traitor_track_targets": {
+          "burial_damage": 12
+        },
+        "observed_reasons": [
+          "最后一铲泥土落下——房子又多了一个沉默的住户。"
+        ]
+      },
+      "hypothesis": "搜查靠知识 3+ 逐间排除地下室，挖掘要力量 4+ 且进度 = 玩家人数；抽样 4 局挖掘进度最多 4（目标 3-5），而伤害轨先以 12/12 打满 —— 4-5 轮里凑不出 3-5 次力量 4+。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 0,
+        "traitor_wins": 4,
+        "wipes": 0,
+        "avg_turns": 64.75,
+        "reasons": {
+          "最后一铲泥土落下——房子又多了一个沉默的住户。": 4
+        },
+        "track_max": {
+          "burial_damage": 12,
+          "dig_progress": 4
+        },
+        "track_target": {
+          "burial_damage": 12,
+          "dig_progress": 5
+        },
+        "used": {
+          "h40_dig": 10,
+          "h40_search": 21
+        },
+        "succeeded": {
+          "h40_dig": 10,
+          "h40_search": 21
+        },
+        "errors": []
+      }
+    },
+    {
+      "haunt_id": 50,
+      "name": "夜间小谋杀",
+      "mode": "night_survival",
+      "mode_handler": "NightMurderMode",
+      "mode_handler_module": "haunts.haunt_50_night_survival",
+      "mode_handler_source_lines": 171,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "generic",
+        "needed_items": [],
+        "target_rooms": [],
+        "target_rooms_note": "静态表为空，且 rule_data 没有 key_rooms / 英雄侧带 rooms 的行动：bot 在作祟阶段没有地点目标",
+        "attack_monsters": false,
+        "attack_traitor_players": false,
+        "victory_focus": "撑到日出（夜晚进度 10）就能分遗产；仆人打只晕一回合，别去追"
+      },
+      "traitor": {
+        "objective_type": "hunt_heroes",
+        "needed_items": [],
+        "target_rooms": [],
+        "victory_focus": "让仆人在第 10 回合之前杀光所有英雄；叛徒死了也不影响胜利"
+      },
+      "rule_goal": {
+        "hero": "在房子里撑到天亮（夜晚进度 10），活着的继承人平分遗产。",
+        "traitor": "让仆人在黎明前杀光所有英雄——叛徒就算死了也一样赢。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [],
+        "required_cards": [],
+        "tokens": [],
+        "tracks": {
+          "night_timer": {
+            "label": "夜晚进度（日出）",
+            "target": 10,
+            "side": "heroes"
+          }
+        },
+        "actions": []
+      },
+      "avg_turns": 56.24,
+      "traitor_win_method": {
+        "summary": "剧本目标：让仆人在黎明前杀光所有英雄——叛徒就算死了也一样赢。；handler NightMurderMode 按内部条件判定，抽样终局原文：最后一个继承人也倒下了——仆人们举起了香槟。",
+        "source": "handler_observed",
+        "declared": [],
+        "traitor_track_targets": {},
+        "observed_reasons": [
+          "最后一个继承人也倒下了——仆人们举起了香槟。"
+        ]
+      },
+      "hypothesis": "撑满 10 个夜晚格即胜，但仆人属性 3/3/3→4/4/4→5/5/5→6/6/6 递增且每回合追最近英雄；抽样 4 局夜晚进度最多 9（目标 10）、4/4 局英雄全灭——档案里没有任何「远离仆人」的可执行目标。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 0,
+        "traitor_wins": 4,
+        "wipes": 4,
+        "avg_turns": 70.5,
+        "reasons": {
+          "最后一个继承人也倒下了——仆人们举起了香槟。": 4
+        },
+        "track_max": {
+          "night_timer": 9
+        },
+        "track_target": {
+          "night_timer": 10
+        },
+        "used": {},
+        "succeeded": {},
+        "errors": []
+      }
+    },
+    {
+      "haunt_id": 67,
+      "name": "从前有一次",
+      "mode": "storybook_twists",
+      "mode_handler": "StorybookTwistsMode",
+      "mode_handler_module": "haunts.haunt_67_storybook_twists",
+      "mode_handler_source_lines": 942,
+      "mode_handler_declares_check_victory": true,
+      "profile_source": "dedicated",
+      "hero": {
+        "mode": "survive_and_help",
+        "objective_type": "collect_and_ritual",
+        "needed_items": [],
+        "target_rooms": [],
+        "target_rooms_note": "静态表为空；目标由 StorybookTwistsMode.bot_goal_rooms 按局面动态给出",
+        "attack_monsters": false,
+        "attack_traitor_players": false,
+        "victory_focus": "与入定叛徒同房抽任务，按任务条件完成；够数后活到故事结束"
+      },
+      "traitor": {
+        "objective_type": "generic",
+        "needed_items": [],
+        "target_rooms": [],
+        "victory_focus": "入定读故事，用尸体令牌推悲伤结局或让怪物杀光英雄"
+      },
+      "rule_goal": {
+        "hero": "完成与开局英雄人数相等的任务，并活到故事结束。",
+        "traitor": "让故事走到悲伤结局，或杀死所有英雄。",
+        "traitor_rule": "revealer",
+        "fidelity": "refined"
+      },
+      "rule_targets": {
+        "key_rooms": [],
+        "required_cards": [],
+        "tokens": [
+          "story",
+          "body",
+          "twist",
+          "witch",
+          "dragon"
+        ],
+        "tracks": {
+          "quests": {
+            "label": "已完成的故事任务",
+            "target": "hero_count",
+            "side": "heroes",
+            "value": 0
+          },
+          "story": {
+            "label": "故事进度",
+            "target": 7,
+            "side": "traitor",
+            "value": 0
+          }
+        },
+        "actions": [
+          {
+            "id": "complete_quest",
+            "side": "heroes",
+            "rooms": [],
+            "stat": null,
+            "target": null,
+            "requires": []
+          },
+          {
+            "id": "obtain_quest",
+            "side": "heroes",
+            "rooms": [],
+            "stat": null,
+            "target": null,
+            "requires": []
+          },
+          {
+            "id": "steal_from_traitor",
+            "side": "heroes",
+            "rooms": [],
+            "stat": null,
+            "target": null,
+            "requires": []
+          },
+          {
+            "id": "plot_twist",
+            "side": "traitor",
+            "rooms": [],
+            "stat": null,
+            "target": null,
+            "requires": []
+          }
+        ]
+      },
+      "avg_turns": 53.48,
+      "traitor_win_method": {
+        "summary": "handler StorybookTwistsMode 按轨道判定：story→7",
+        "source": "handler_track",
+        "declared": [],
+        "traitor_track_targets": {
+          "story": 7
+        },
+        "observed_reasons": [
+          "最后一名英雄倒下了。故事以悲剧收场。",
+          "任务未完，故事却已结束——悲伤的结局。"
+        ]
+      },
+      "hypothesis": "故事轨道每回合推进、7 格即悲伤结局，英雄要先与入定叛徒同房抽任务再凑物件；抽样 4 局任务完成最多 1（目标 2-4）、故事轨道到 7/7。",
+      "evidence": {
+        "seeds": [
+          3,
+          101
+        ],
+        "players": [
+          3,
+          5
+        ],
+        "games": 4,
+        "ok": 4,
+        "hero_wins": 0,
+        "traitor_wins": 4,
+        "wipes": 3,
+        "avg_turns": 62.75,
+        "reasons": {
+          "任务未完，故事却已结束——悲伤的结局。": 1,
+          "最后一名英雄倒下了。故事以悲剧收场。": 3
+        },
+        "track_max": {
+          "quests": 1,
+          "story": 7
+        },
+        "track_target": {
+          "quests": 4,
+          "story": 7
+        },
+        "used": {
+          "complete_quest": 1,
+          "obtain_quest": 8,
+          "plot_twist": 6
+        },
+        "succeeded": {
+          "complete_quest": 1,
+          "obtain_quest": 8,
+          "plot_twist": 6
+        },
+        "errors": []
+      }
+    }
+  ],
+  "method": {
+    "sample_seeds": [
+      3,
+      101
+    ],
+    "sample_players": [
+      3,
+      5
+    ],
+    "sample_max_turns": 400,
+    "bot": "control=bot / bot_difficulty=hard / bot_style=balanced（与 2310 局基线一致）",
+    "sources": [
+      "qa/winrate_baseline.json",
+      "content.build_catalog(0).haunt_defs[i].rule_data（= haunt_rules.py）",
+      "haunts.get_mode_handler(rule_data['mode']) 的处理器类",
+      "haunt_ai_profiles.HAUNT_AI_PROFILE_OVERRIDES + DEFAULT_HAUNT_AI_PROFILE",
+      "haunt_playtest.run_case 实跑抽样（winner_reason / tracks / offered-used-succeeded）"
+    ]
+  }
+}

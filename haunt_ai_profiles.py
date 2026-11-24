@@ -251,12 +251,20 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
     10: {
         "hero": {
+            # 目标链：陷阱房是**唯一**推进点（zombies_trapped 满人数即胜），
+            # 已由 target_rooms 钉住 6 间。僵尸力量 6、疯子力量 5，英雄打不动，
+            # 只能靠站进陷阱房把追人的僵尸引进来（on_monster_move 落位即判）。
+            # 抽样（seed3/101 × 3/5p）单局最多困住 2 只、4/4 局英雄全灭：
+            # 缺的是"顶着威胁留在陷阱房当饵"的行为，档案层没有对应开关，
+            # 已在 T-03 清单里登记为需要新增 bot 能力。
             "objective_type": "lure_and_trap",
             "needed_items": [],
             "target_rooms": ["master_bedroom", "chapel", "conservatory", "game_room", "library", "attic"],
             "attack_monsters": False,
+            # 叛徒开局即被疯子杀死（p92，setup 里 traitor.dead=True）。
+            "attack_traitor_players": False,
             "protect_humans": True,
-            "victory_focus": "把僵尸引进尚未用过的陷阱房间",
+            "victory_focus": "站进尚未用过的陷阱房把僵尸引进来；别和它们对拼，击晕不算赢",
         },
         "traitor": {
             "objective_type": "hunt_with_zombies",
@@ -297,6 +305,11 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
             "attack_traitor_players": True,
             "protect_humans": True,
             "needed_items": ["戒指"],
+            # 目标链断点：胜线要求**主动贴到驯兽师身上**并赢出 3 点以上，
+            # 但档案只能表达"同房间时允许攻击"，没有任何"追叛徒玩家"的寻路目标
+            # （bot 的常驻目标只有怪物房与剧本房）。抽样 4 局随从最多被击毙 3 只、
+            # 英雄 4/4 全灭，长矛一次都没易手——已在 T-03 清单登记所需能力。
+            "target_rooms": [],
             "victory_focus": "追着驯兽师打，赢出 3 点以上夺下长矛（别打死他）",
         },
         "traitor": {
@@ -343,14 +356,25 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
     26: {
         "hero": {
-            # p37：英雄胜利路径之一是"在叛徒进五芒星室前杀死他"；
-            # 且老鼠会主动围攻，英雄必须反击。
+            # p37：英雄两条胜线——清光老鼠，或在叛徒进五芒星室前杀死他。
+            # 规则里叛徒只有一条推进点：五芒星室（perform_ritual 带 rooms）。
+            # 原来 target_rooms 为空、rule_data.key_rooms 也为空，英雄侧又没有
+            # 带 rooms 的行动，bot 在作祟阶段**没有任何地点目标**（抽样 4 局
+            # 仪式先完成 2 局）；把五芒星室钉成目标，等于"守在他必经之处"。
+            "objective_type": "kill_monsters",
+            "needed_items": [],
+            "target_rooms": ["pentagram_chamber"],
+            "attack_monsters": True,
             "attack_traitor_players": True,
-            "victory_focus": "优先杀老鼠阻断仪式，遇到未进五芒星室的叛徒就围攻",
+            "victory_focus": "守到五芒星室：叛徒一进门就围攻；他若不来就清老鼠阻断仪式",
         },
         "traitor": {
+            "objective_type": "ritual_race",
+            "needed_items": [],
+            # 不动叛徒的目标表：perform_ritual 自带 rooms，已经有 +125 的目标分。
+            "target_rooms": [],
             "attack_heroes": True,
-            "victory_focus": "尽快赶到五芒星室完成仪式，途中顺手杀人",
+            "victory_focus": "尽快赶到五芒星室完成 5 次仪式理智 3+，途中顺手杀人",
         },
         "scenario": {"special_rules": ["rat_swarm", "ritual"]},
     },
@@ -381,6 +405,11 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
     29: {
         "hero": {
             # p40：怪物力 8 近身必死，英雄 bot 得先去点火房拿火把。
+            # 目标链：light_torch 四间火房（自有 rooms）+ push_monster 的塔楼/深渊，
+            # 由 _haunt_goal_targets 换算；静态表再有 key_rooms 会重复计分，留空。
+            "objective_type": "craft_and_destroy",
+            "needed_items": ["火把"],
+            "target_rooms": [],
             "attack_monsters": False,
             # 叛徒本人（力 2-4 的普通角色）拿着刀追人时，不还手就是白送。
             # 实测（seed149/4p）：叛徒一个人用特质攻击 9–12 点把三名英雄逐个
@@ -583,12 +612,25 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
     },
     50: {
         "hero": {
-            # p61：没有别的胜利条件——活到日出即可。仆人夜越深越强，
-            # 前期能打就打，后期（8 回合后）以躲为主。
-            "victory_focus": "撑到日出（夜晚进度 10）就能分遗产；后期仆人变强时优先自保",
+            # p61：没有别的胜利条件——活到日出即可（night_timer 10）。
+            # rule_data 既无 key_rooms 也无英雄侧行动，档案也拿不到地点目标；
+            # 唯一能表达的是"不追仆人"（打只晕一回合，白送反击伤害）。
+            # 抽样 4 局夜晚进度最多 7/10、4/4 局英雄全灭：真正缺的是
+            # "远离仆人/被追时拉开距离"的走位能力，已在 T-03 清单登记。
+            "objective_type": "generic",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "protect_humans": True,
+            "victory_focus": "撑到日出（夜晚进度 10）就能分遗产；仆人打只晕一回合，别去追",
         },
         "traitor": {
+            "objective_type": "hunt_heroes",
+            "needed_items": [],
+            "target_rooms": [],
             "attack_heroes": True,
+            "prefer_weak_targets": True,
             "victory_focus": "让仆人在第 10 回合之前杀光所有英雄；叛徒死了也不影响胜利",
         },
         "scenario": {"special_rules": ["survive_until_dawn", "growing_monsters"]},
@@ -730,6 +772,11 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
     67: {
         "hero": {
             # p78：目标随已抽取任务变化，不能写进静态 target_rooms。
+            # 目标链由 StorybookTwistsMode.bot_goal_rooms 按"已抽未完成任务"
+            # 给出（先凑物件、再进目标房），档案层只保留"别追怪"。
+            "objective_type": "collect_and_ritual",
+            # 任务物件按任务不同（QUEST_ITEM_CHOICES 多选一），无法列成静态清单。
+            "needed_items": [],
             "target_rooms": [],
             # p78：英雄胜线是"抽任务 → 按任务条件完成 → 活到故事结束"。
             # 打怪毫无收益，反而把自己耗死——猎蛛 Might 5 / 恶龙 Might 7，
@@ -970,6 +1017,10 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
             # p51：埋葬室在地下室、逐间排除，目标随"找到没有 / 挖到几格"变化——
             # 静态 target_rooms 会把人钉死，全交给 BuriedAliveMode.bot_goal_rooms
             # 动态给出（见 handoff §6 第 6 条）。
+            # 目标链本身可执行（h40_search → h40_dig）；抽样 3 人局出现
+            # "挖掘 0/3、伤害 12/12 先满"，瓶颈是力量 4+ 的成功率而不是寻路。
+            "objective_type": "collect_and_ritual",
+            "needed_items": [],
             "target_rooms": [],
             "attack_monsters": False,
             # 杀叛徒不算赢（p51 只认"挖出朋友"），但**必须能还手**：叛徒会
@@ -984,6 +1035,472 @@ HAUNT_AI_PROFILE_OVERRIDES: dict[int, dict[str, Any]] = {
         },
         "monster": {"mode": "nearest_hero"},
         "scenario": {"tokens": ["活埋伤害", "挖出朋友"], "special_rules": ["hidden_room", "dig_timer"]},
+    },
+    # ---------------------------------------------------------------- 补齐轮
+    # 下面 19 本原先走 DEFAULT_HAUNT_AI_PROFILE（覆盖 51/70）。每条的
+    # objective_type / needed_items / target_rooms 都从 haunt_rules.py 里该剧本
+    # 的 actions、setup.tracks、key_rooms、required_cards 推导，victory_focus
+    # 直接用 hero_goal / traitor_goal 与轨道目标改写，不套别的剧本模板。
+    # 生效字段仍只有 target_rooms / avoid_rooms / attack_monsters /
+    # attack_traitor_players / chase_heroes / prefer_weak_targets /
+    # protect_humans——其余字段是给人和测试读的声明。
+    11: {
+        "hero": {
+            # 英雄侧 9 条行动各自带 rooms（教堂/地窖/五芒星室/图书馆/实验室）
+            # 或 requires（圣徽/戒指/古书/水晶球），目标由 _haunt_goal_targets 换算，
+            # 再塞静态 target_rooms 只会重复计分，故留空。
+            "objective_type": "multi_source_ritual",
+            "needed_items": ["圣徽", "戒指", "古书", "水晶球"],
+            "target_rooms": [],
+            # 雾中人影 immune_to ["might","speed"]：只有理智攻击（持戒）能放逐，
+            # 追怪前先过 attack_would_be_allowed 的可伤害闸门，所以放开不会白跑。
+            "attack_monsters": True,
+            "attack_traitor_players": False,
+            "victory_focus": "用教堂/地窖/五芒星室/图书馆/实验室各一次驱魔，或借四件预兆各一次，凑满人数次放逐",
+        },
+        "traitor": {
+            "objective_type": "summon_demon",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "让疯子开窗把雾中人影放进屋，靠数量优势杀光英雄",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["雾中人影", "疯子"], "special_rules": ["exorcism_sources", "window_invasion"]},
+    },
+    13: {
+        "hero": {
+            "objective_type": "collect_and_ritual",
+            "needed_items": ["圣徽"],
+            # 唤醒房间是"沉睡者所在房间"，由 NightmareDreamMode.bot_goal_rooms 动态给。
+            "target_rooms": [],
+            # p95：梦魇被击败会立刻在沉睡房间补一只（on_monster_defeated），
+            # 追打零收益，还会把英雄从唤醒链上拖走。
+            "attack_monsters": False,
+            # 沉睡者不能被打（attack_allowed 直接拒），打了只会浪费回合。
+            "attack_traitor_players": False,
+            "victory_focus": "把圣徽送进沉睡者房间，凑满人数次 5+ 唤醒；别追梦魇——打死会立刻补一只",
+        },
+        "traitor": {
+            # 叛徒开局沉睡，胜负是"逃出数 vs 逃脱房间数"的竞速（flags.escapes /
+            # escape_total），没有对应枚举，用 ritual_race 表示这条计数竞速。
+            "objective_type": "ritual_race",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_heroes": False,
+            "chase_heroes": False,
+            "victory_focus": "梦魇逃满作祟时记下的逃脱房间数即胜；每逃走一只就从沉睡房间补一只",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["梦魇", "唤醒令牌"], "special_rules": ["escape_race", "sleeping_traitor"]},
+    },
+    14: {
+        "hero": {
+            "objective_type": "collect_and_ritual",
+            "needed_items": ["油漆罐"],
+            # take_paint / throw_paint 没有 rooms 字段，目标回落到 key_rooms
+            # （五芒星室 + 五个油漆房）。静态表会与 key_rooms 重复计分，留空。
+            "target_rooms": [],
+            # 杀狂信徒不推进 desecration，英雄赢线只有扔罐子。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "抢一罐油漆送到五芒星室丢进法阵，凑满人数罐；别把回合花在打狂信徒上",
+        },
+        "traitor": {
+            "objective_type": "summon_demon",
+            "needed_items": ["尸体"],
+            "target_rooms": ["pentagram_chamber"],
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "背尸体在五芒星室献祭凑 13 分召唤邪神；凑不满就杀光英雄",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["油漆罐", "狂信徒", "尸体"], "special_rules": ["paint_desecration", "sacrifice_points"]},
+    },
+    15: {
+        "hero": {
+            "objective_type": "hunt_with_required_item",
+            "needed_items": ["古董护甲", "盾", "长矛"],
+            # don_armor / take_shield 没有 rooms，目标回落到 key_rooms（地下室五间）。
+            "target_rooms": [],
+            # 巨龙是唯一赢线（dragon_damage 攒满人数），必须允许追它。
+            "attack_monsters": True,
+            # 杀叛徒不判胜，追人只会离开地下室。
+            "attack_traitor_players": False,
+            "victory_focus": "在地下室集齐护甲/盾/矛，把巨龙的伤害攒满人数再斩杀",
+        },
+        "traitor": {
+            "objective_type": "burn_heroes",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_heroes": True,
+            "chase_heroes": False,
+            "victory_focus": "驱使巨龙烧死咬死所有英雄；自己别离开巨龙太远",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["巨龙", "古董护甲", "盾"], "special_rules": ["dragon_damage", "fire_immunity"]},
+    },
+    16: {
+        "hero": {
+            "objective_type": "rescue_then_escape",
+            "needed_items": ["女孩"],
+            # defuse_bomb 没有 rooms（在击败幻影的房间拆），open_front_door 是门厅；
+            # 具体房间由 key_rooms + 行动换算给出。
+            "target_rooms": [],
+            "attack_monsters": True,
+            "attack_traitor_players": False,
+            "victory_focus": "在地下室击败幻影救出女孩，再拆弹（知识 7+）或开前门带她逃出",
+        },
+        "traitor": {
+            "objective_type": "protect_countdown",
+            "needed_items": [],
+            "target_rooms": ["catacombs", "crypt", "furnace_room"],
+            "attack_heroes": True,
+            "chase_heroes": False,
+            "victory_focus": "护住炸弹拖到 20 格，或让幻影与梦魇耗死英雄",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["幻影", "女孩", "幻影印记"], "special_rules": ["bomb_timer", "rescue_escape"]},
+    },
+    17: {
+        "hero": {
+            "objective_type": "craft_and_destroy",
+            "needed_items": ["配料", "杀虫剂"],
+            # make_spray 自带 rooms（实验室/厨房），配料散落各房，静态表无从下手。
+            "target_rooms": [],
+            "attack_monsters": True,
+            "attack_traitor_players": False,
+            "victory_focus": "集齐三枚配料在实验室/厨房调出杀虫剂，再用速度攻击毒杀 3 只巨虫",
+        },
+        "traitor": {
+            "objective_type": "destroy_key_item",
+            "needed_items": ["配料"],
+            "target_rooms": ["chasm", "furnace_room", "underground_lake"],
+            "attack_heroes": True,
+            "chase_heroes": False,
+            "victory_focus": "抢配料去深坑/熔炉房/地下湖销毁，毁满 4 枚即胜；毁不掉就靠虫群吃人",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["配料", "杀虫剂", "巨虫"], "special_rules": ["ingredient_race", "webbed"]},
+    },
+    18: {
+        "hero": {
+            "objective_type": "collect_cast_kill",
+            "needed_items": ["花朵"],
+            # find_flower 自带 rooms（温室/花园/墓地），weaken_plant 的房是毒藤所在地。
+            "target_rooms": [],
+            # rule_data.monsters 为空：毒藤不是怪物实体，追怪只会离开花房。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "去温室/花园/墓地找到花，带进毒藤房间做 3 次知识 5+ 削弱；孢子房要屏息",
+        },
+        "traitor": {
+            "objective_type": "spread_poison",
+            "needed_items": [],
+            "target_rooms": ["conservatory", "garden", "graveyard", "chasm", "furnace_room", "underground_lake"],
+            "attack_heroes": True,
+            "chase_heroes": False,
+            "victory_focus": "让孢子铺满房子，把英雄毒死；别让他们把花带进毒藤房",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["毒藤", "孢子", "花朵"], "special_rules": ["spore_breath", "weaken_plant"]},
+    },
+    20: {
+        "hero": {
+            "objective_type": "collect_and_ritual",
+            "needed_items": ["戒指", "新郎的尸体"],
+            # 四步链的落脚点随 groom_name_known / body_disintered 变化，由
+            # GhostBrideMode.bot_goal_rooms 动态给；静态表会让人停在半路。
+            "target_rooms": [],
+            # 新娘 invulnerable（"cannot be damaged or stunned by any means"）：
+            # 默认档案追着打是纯亏，还会把新郎（持戒者）送到她嘴边。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "依次问名（卧室/餐厅/图书馆）→地窖定位→力量 4+ 掘尸→把尸体与戒指送进教堂",
+        },
+        "traitor": {
+            "objective_type": "protect_countdown",
+            "needed_items": [],
+            "target_rooms": ["chapel"],
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "让新娘吸干新郎的力量、把婚礼推进到第 3 回合；自己负责拦住送葬的人",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["幽灵新娘", "新郎的尸体"], "special_rules": ["wedding_timer", "groom_drain"]},
+    },
+    21: {
+        "hero": {
+            "objective_type": "hunt_with_required_item",
+            "needed_items": ["徽章"],
+            # 领主/徽章的位置由 ZombieLordMode.bot_goal_rooms 按"谁持徽"动态给。
+            "target_rooms": [],
+            # 只有持徽者能伤到领主（attack_allowed），但也必须允许清僵尸——
+            # 另一条赢线是"消灭所有僵尸"。
+            "attack_monsters": True,
+            # 叛徒开局已死（p103），打不到任何人。
+            "attack_traitor_players": False,
+            "victory_focus": "护送持徽章者去打僵尸领主（只有他能造成伤害），或清光所有僵尸",
+        },
+        "traitor": {
+            "objective_type": "raise_zombies",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "靠 6-10 只僵尸的围杀把英雄清场；叛徒开局已死，由领主代打",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["僵尸", "僵尸领主", "徽章"], "special_rules": ["medallion_required", "hero_conversion"]},
+    },
+    22: {
+        "hero": {
+            "objective_type": "multi_source_ritual",
+            "needed_items": ["圣徽", "戒指", "古书", "水晶球"],
+            # 英雄侧行动自带 rooms（教堂/地窖/五芒星室/图书馆/实验室），留空。
+            "target_rooms": [],
+            # rule_data.monsters 为空；唯一敌人是每回合塌房子的深渊。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "在五间驱魔房或借四件预兆各做一次驱魔，凑满人数次；房子每回合塌一块",
+        },
+        "traitor": {
+            "objective_type": "sink_the_house",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_heroes": True,
+            "chase_heroes": False,
+            "victory_focus": "让深渊每回合吞掉一块房子，把英雄连同屋子一起埋掉",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["深渊", "驱魔令牌"], "special_rules": ["collapse_clock", "exorcism_sources"]},
+    },
+    23: {
+        "hero": {
+            "objective_type": "hunt_with_required_item",
+            "needed_items": ["水晶球", "炸药", "长矛"],
+            # gaze_crystal_ball / destroy_head 都没有 rooms；头颅位置由
+            # handler 按 4 骰定位，静态表只会把人钉在六间 key_rooms 里。
+            "target_rooms": [],
+            "attack_monsters": True,
+            "attack_traitor_players": False,
+            "victory_focus": "持水晶球做知识 4+ 定位头颅，再带炸药或长矛进房一击摧毁",
+        },
+        "traitor": {
+            "objective_type": "hunt_heroes",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "把英雄拖回根部，或用触手与怪物杀光他们（触手每回合成长）",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["根部", "触手尖端"], "special_rules": ["tentacle_growth", "head_hunt"]},
+    },
+    31: {
+        "hero": {
+            "objective_type": "hunt_with_required_item",
+            "needed_items": ["长矛"],
+            # key_rooms 有 15 间（六器官房 + 保底宝地），保底目标被稀释成
+            # 15 选 1；赢线只有管风琴室（心脏）与阁楼（大脑），静态表钉死这两间。
+            "target_rooms": ["organ_room", "attic"],
+            # 只有长矛持有者能伤到心脏/大脑（attack_allowed），其余人追怪无效。
+            "attack_monsters": True,
+            # 杀叛徒不等于杀死房子（check_victory 只认 house_killed）。
+            "attack_traitor_players": False,
+            "victory_focus": "长矛持有者直奔管风琴室（心脏，防御力量 7）或阁楼（大脑，力量 6），赢一次攻击即杀死房子",
+        },
+        "traitor": {
+            "objective_type": "destroy_key_item",
+            "needed_items": ["长矛"],
+            "target_rooms": ["chasm", "furnace_room", "underground_lake"],
+            "attack_heroes": True,
+            "chase_heroes": False,
+            "victory_focus": "偷走长矛，带到深渊/熔炉房/地下湖花一整回合销毁",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["心脏", "大脑", "抗体"], "special_rules": ["spear_only", "organ_rooms"]},
+    },
+    32: {
+        "hero": {
+            "objective_type": "collect_and_ritual",
+            "needed_items": ["乐谱", "标本", "星象"],
+            # 三条线索房与风琴房由 LostDimensionMode.bot_goal_rooms 按进度给。
+            "target_rooms": [],
+            # rule_data.monsters 为空；要对付的是毒大气与叛徒的干扰令牌。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "先在图书馆/游戏室/塔楼集齐 3 条线索（各 +2），再进风琴房把知识检定凑到 15-20",
+        },
+        "traitor": {
+            "objective_type": "ritual_denial",
+            "needed_items": [],
+            "target_rooms": ["chapel", "game_room", "research_laboratory", "operating_laboratory", "pentagram_chamber"],
+            "attack_heroes": True,
+            "chase_heroes": False,
+            "victory_focus": "在五间房各放一枚干扰令牌（每枚让弹奏 -3），用毒大气拖死英雄",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["线索", "干扰令牌"], "special_rules": ["poison_atmosphere", "clue_gathering"]},
+    },
+    33: {
+        "hero": {
+            "objective_type": "rescue_then_escape",
+            "needed_items": [],
+            # rule_data 没有 key_rooms、没有英雄侧行动；本轮给 LakeRescueMode
+            # 补了 bot_goal_rooms（返回地下湖），目标由 handler 动态给。
+            "target_rooms": [],
+            # 湖怪不是常驻怪物实体（handler 用 _creature_duel 结算对拼），
+            # 追怪只会离开湖面。
+            "attack_monsters": False,
+            # 叛徒会来抢人，允许还手。
+            "attack_traitor_players": True,
+            "victory_focus": "全员下到地下湖、站上湖面砖搜救：4 骰 + 距离加值 + 水晶球凑 19+ 把女孩捞上来",
+        },
+        "traitor": {
+            "objective_type": "protect_countdown",
+            "needed_items": [],
+            "target_rooms": ["underground_lake"],
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "让溺水计时掷到 9/10 使女孩溺亡，或让湖怪吃掉所有英雄",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["湖面砖"], "special_rules": ["drown_timer", "lake_swim"]},
+    },
+    35: {
+        "hero": {
+            "objective_type": "escape_with_boat",
+            "needed_items": ["玩具飞机"],
+            # search_plane 自带 rooms（卧室类），escape_plane 要求站在外缘房间。
+            "target_rooms": [],
+            # 猫只是追兵，赢线是"半数英雄飞走"，打它不推进进度。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "在卧室类房间搜出玩具飞机、知识 4+ 发动，再从外缘房间带半数以上英雄飞走",
+        },
+        "traitor": {
+            "objective_type": "hunt_heroes",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "让猫吃掉超过半数英雄；抓到一个就少一个能上飞机的",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["玩具飞机", "猫"], "special_rules": ["capture", "plane_escape"]},
+    },
+    37: {
+        "hero": {
+            "objective_type": "exorcise_seal",
+            "needed_items": [],
+            # break_seal 没有 rooms，目标回落到 key_rooms（宝库/地窖/两间实验室/游戏室）。
+            "target_rooms": [],
+            # 死神 invulnerable（might/sanity 全 0 且不可伤害），打它没有收益。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "在宝库/地窖/研究实验室/手术室/游戏室各破解一枚圣印（理智 4+），再在对弈中将军死神",
+        },
+        "traitor": {
+            "objective_type": "ritual_denial",
+            "needed_items": [],
+            "target_rooms": ["vault", "crypt", "research_laboratory", "operating_laboratory", "game_room"],
+            "attack_heroes": True,
+            "chase_heroes": False,
+            "victory_focus": "让死神把英雄耗死或逼他们弃赛；守住五枚圣印不被破解",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["死神", "圣印"], "special_rules": ["seal_break", "death_chess"]},
+    },
+    43: {
+        "hero": {
+            "objective_type": "collect_and_ritual",
+            "needed_items": [],
+            # find_ritual / ritual_roll 自带 rooms（四间室内 + 五个外缘），留空。
+            "target_rooms": [],
+            # 赢线是 ritual_progress，不是杀影子；但影子会贴身打断仪式，
+            # 实测把 attack_monsters 关掉反而少 1 胜（33 局 4→3），
+            # 没有证据支持这条改动，保留默认 True（只在同房时出手）。
+            "attack_monsters": True,
+            "attack_traitor_players": False,
+            "victory_focus": "先在地窖/教堂/图书馆/实验室找出光明仪式，再到外缘房间做 5+ 仪式检定，凑满人数次",
+        },
+        "traitor": {
+            "objective_type": "hunt_heroes",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "让影子分身把英雄一个个吃掉；别让他们把仪式做完",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["影子", "仪式令牌"], "special_rules": ["ritual_find", "shadow_spawn"]},
+    },
+    44: {
+        "hero": {
+            "objective_type": "multi_source_ritual",
+            "needed_items": [],
+            # ritual_roll 没有 rooms，目标回落到 key_rooms（七间仪式房）。
+            "target_rooms": [],
+            # rule_data.monsters 为空；死亡来自每回合的衰老掷骰。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "在七间仪式房逐个做理智/知识 5+，凑满人数次复活仪式；每回合都在衰老",
+        },
+        "traitor": {
+            "objective_type": "protect_countdown",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_heroes": True,
+            "chase_heroes": False,
+            "victory_focus": "靠每回合的衰老掷骰耗死英雄；别让他们把复活仪式做完",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["衰老标记", "仪式令牌"], "special_rules": ["aging_roll", "resurrection_ritual"]},
+    },
+    45: {
+        "hero": {
+            "objective_type": "disable_object",
+            "needed_items": [],
+            # 炸弹在玩家身上（flags.has_bomb），没有任何地点目标。
+            "target_rooms": [],
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "每回合知识 7+ 拆掉自己身上的炸弹；掷出 ≤2 会引爆同房炸弹，别和队友挤在一起",
+        },
+        "traitor": {
+            "objective_type": "protect_countdown",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_heroes": True,
+            "chase_heroes": False,
+            "victory_focus": "等大炸弹倒计时走完 12 格，或让英雄拆弹失手引爆",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["炸弹"], "special_rules": ["bomb_defuse", "big_bomb"]},
+    },
+    51: {
+        "hero": {
+            "objective_type": "exorcise_seal",
+            "needed_items": [],
+            # create_seal 自带 rooms（六间镜面房），留空避免与行动重复计分。
+            "target_rooms": [],
+            # rule_data.monsters 为空；要防的是叛徒种的 3 枚黑暗 Hex。
+            "attack_monsters": False,
+            "attack_traitor_players": False,
+            "victory_focus": "在六间镜面房间各做一次理智 4+ 造圣印，凑满人数枚把黑暗赶出去",
+        },
+        "traitor": {
+            "objective_type": "hunt_heroes",
+            "needed_items": [],
+            "target_rooms": [],
+            "attack_heroes": True,
+            "prefer_weak_targets": True,
+            "victory_focus": "在房子里种下 3 枚黑暗 Hex，或让分身吃光英雄",
+        },
+        "monster": {"mode": "nearest_hero"},
+        "scenario": {"tokens": ["圣印", "黑暗 Hex"], "special_rules": ["mirror_rooms", "dark_hex"]},
     },
 }
 

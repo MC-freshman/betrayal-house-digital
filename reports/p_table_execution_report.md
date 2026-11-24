@@ -1,11 +1,11 @@
 # P 表最终收口报告（final）
 
-- report_id：p-table-final-20261123T190036
+- report_id：p-table-final-20261124T164110
 - claim_scope：execution
 - 总判定：**PASS**
 - completion_claim：**attested**
 - 自检（实现方，非签发口径）：见 JSON self_check 子字段
-- 生成时间：2026-11-23T19:19:56；profile=final
+- 生成时间：2026-11-24T17:00:18；profile=final
 
 ## 结论
 
@@ -48,7 +48,7 @@ P 表执行完成（attested）。范围：桌面端 274 行 × 33 列的资源�
 | A-15 | G2 | SAFE-01 | PASS | SAFE-01=PASS |
 | A-16 | G3 | 行覆盖 | PASS | 行覆盖 96.09% / 95.13%（阈值 85%） |
 | A-17 | G3 | 分支覆盖 | PASS | method=condition-jump-arc；asset_pipeline.py 362/410=88.29%; asset_registry.py 222/256=86.72% |
-| A-18 | G4 | 峰值 RSS | PASS | 5/5 次 --stage all；最大峰值 85.78 MiB ≤1536 MiB（verdict_basis=max） |
+| A-18 | G4 | 峰值 RSS | PASS | 5/5 次 --stage all；最大峰值 85.66 MiB ≤1536 MiB（verdict_basis=max） |
 | A-19 | G5 | UI 100% | PASS | 100% 真实截图：room=128x128 card=240x336 window=1000x760 |
 | A-20 | G5 | UI 125% | PASS | 125% 真实截图：room=160x160 card=300x420 window=1250x950；tk_scaling=1.3330 偏离参考 1.667（Tk 启动缓存，以物理尺寸断言为准） |
 | A-21 | G5 | UI 150% | PASS | 150% 真实截图：room=192x192 card=360x504 window=1500x1140；tk_scaling=1.6681 偏离参考 2.000（Tk 启动缓存，以物理尺寸断言为准） |
@@ -56,7 +56,7 @@ P 表执行完成（attested）。范围：桌面端 274 行 × 33 列的资源�
 | A-23 | G4 | 性能 15 项 | PASS | 15/15 性能有实测且达标（PT-PERF-02/03/07/08/10/13/14/15 为 run4 补测；PT-PERF-09 按 C-1 归并 qa/rss_probe.json 5 次峰值，verdict_basis=max，不重复采集） |
 | A-24 | G6 | 报告一致性 | PASS | 四口径一致（报告 claim/verdict、门禁计算、独立验收 achieved） |
 | A-25 | G7 | 缺陷 | PASS | 无 open 的 S1/S2；S3/S4 已全部关闭 |
-| A-26 | G6 | 可复现 | PASS | 第二次干净复跑一致（对比基线 p-table-final-20261123T183339；数据哈希/测试/覆盖率/RSS 与性能判定一致；性能数值抖动 16 项，允许） |
+| A-26 | G6 | 可复现 | PASS | 第二次干净复跑一致（对比基线 p-table-final-20261124T161753；数据哈希/测试/覆盖率/RSS 与性能判定一致；性能数值抖动 16 项，允许） |
 | A-27 | G7 | 内容台账 v2 | PASS | 274/274 全覆盖（source+provenance+release 7 列齐全）；缺口 0；promotion map 47 行 / gap closure 47 行 |
 | A-28 | G7 | 声明与签发 | PASS | 产品负责人已签发（2026-11-20）：scope=47 个美术缺口为内容积压，不阻断 completion_claim@execution；小程序端不在本轮范围；独立验收人由 verify_p_table_final.py 承担 |
 | A-29 | G1 | WW 隔离完整 | PASS | WW 残留=0；content_ww.py=存在；导入命中=0；_ww_deferred=50；placeholders=3；assets_ww=100 |
@@ -81,7 +81,7 @@ P 表执行完成（attested）。范围：桌面端 274 行 × 33 列的资源�
 | qa/coverage_probe.py | 9949 | `41a0664df4efd67bb39fbcc6c92c0154112ba423d61ab3f94ed4958b7f7d95fd` |
 | qa/run_p_table_execution.py | 154913 | `39ed1cc43283ab1b8cee4803165b114ec846e340670bd69e5555d6deed2c292e` |
 | qa/make_fixtures.py | 6078 | `fbc85301d693513783d7b6a7e1f8ebdbc229afb016f8d9fcab7a98c3357a4ee1` |
-| assets/p_table.json | 445470 | `8db27f6d13a1e3f072511be5c435bcce4e98bd8921638e03613914d3650a36e1` |
+| assets/p_table.json | 445470 | `5ade009623a7f7be30f86b4a92f1341d3f06ba8c532d8f77a0ef994cb2e6b2c0` |
 | assets/p_table.csv | 177389 | `5ded30ac02b0ff9a998309f8514ba659ffa0a632e061353c29380daf2580e289` |
 | assets/asset_mapping.json | 105229 | `381a23f4a229c02d7355c3c3b77a665776ac07506c32788487820e87173d1b81` |
 
@@ -89,22 +89,22 @@ P 表执行完成（attested）。范围：桌面端 274 行 × 33 列的资源�
 
 - 分支覆盖 asset_pipeline.py：362/410=88.29%（method=condition-jump-arc）
 - 分支覆盖 asset_registry.py：222/256=86.72%（method=condition-jump-arc）
-- 性能 PT-PERF-01 ptable 构建：median=332.522 ms / p95=407.637 / max=407.637（预算 5000.0 ms）→ 达标
-- 性能 PT-PERF-04 registry load：median=11.742 ms / p95=21.343 / max=21.343（预算 150.0 ms）→ 达标
-- 性能 PT-PERF-05 10k resolve：median=6.263 ms / p95=6.953 / max=6.953（预算 500.0 ms）→ 达标
-- 性能 PT-PERF-06 verify_assets.py：median=11898.9 ms / p95=12505.8 / max=12505.8（预算 90000.0 ms）→ 达标
-- 性能 PT-PERF-11 UI 房间首帧(512->128)：median=9.463 ms / p95=10.902 / max=84.518（预算 120.0 ms）→ 达标
-- 性能 PT-PERF-12 UI 卡牌首帧(480x672->240x336)：median=14.082 ms / p95=16.258 / max=16.684（预算 150.0 ms）→ 达标
-- 性能 PT-PERF-13 UI 缓存命中(同图重复绑定)：median=0.661 ms / p95=1.494 / max=2.314（预算 16.0 ms）→ 达标
-- 性能 PT-PERF-14 一屏 12 图块批量绑定：median=128.855 ms / p95=133.355 / max=133.355（预算 400.0 ms）→ 达标
-- 性能 PT-PERF-02 placeholders 构建：median=87.269 ms / p95=112.466 / max=112.466（预算 3000.0 ms）→ 达标
-- 性能 PT-PERF-03 --stage all 全量构建：median=89001.356 ms / p95=90108.853 / max=90108.853（预算 240000.0 ms）→ 达标
-- 性能 PT-PERF-07 契约脚本全量(含解码)：median=29427.2 ms / p95=29606.5 / max=29606.5（预算 150000.0 ms）→ 达标
-- 性能 PT-PERF-08 契约脚本 --no-decode：median=6076.4 ms / p95=6098.3 / max=6098.3（预算 25000.0 ms）→ 达标
-- 性能 PT-PERF-10 registry load 峰值增量 RSS：median=2.092 MiB / p95=2.133 / max=2.133（预算 80.0 MiB）→ 达标
-- 性能 PT-PERF-15 冷启动到主界面：median=1243.15 ms / p95=1581.1 / max=1581.1（预算 2500.0 ms）→ 达标
-- 性能 PT-PERF-09 构建峰值 RSS(--stage all)：median=85.47 MiB / p95=85.78 / max=85.78（预算 1536.0 MiB）→ 达标
-- RSS：5 次 --stage all 峰值=[85.46, 85.47, 85.37, 85.78, 85.51]；max=85.78 MiB ≤1536；verdict_basis=max；pass=True
+- 性能 PT-PERF-01 ptable 构建：median=283.322 ms / p95=337.622 / max=337.622（预算 5000.0 ms）→ 达标
+- 性能 PT-PERF-04 registry load：median=11.165 ms / p95=26.84 / max=26.84（预算 150.0 ms）→ 达标
+- 性能 PT-PERF-05 10k resolve：median=5.708 ms / p95=6.161 / max=6.161（预算 500.0 ms）→ 达标
+- 性能 PT-PERF-06 verify_assets.py：median=10478.5 ms / p95=10691.4 / max=10691.4（预算 90000.0 ms）→ 达标
+- 性能 PT-PERF-11 UI 房间首帧(512->128)：median=10.203 ms / p95=11.651 / max=58.792（预算 120.0 ms）→ 达标
+- 性能 PT-PERF-12 UI 卡牌首帧(480x672->240x336)：median=13.438 ms / p95=16.578 / max=17.319（预算 150.0 ms）→ 达标
+- 性能 PT-PERF-13 UI 缓存命中(同图重复绑定)：median=0.634 ms / p95=1.301 / max=2.063（预算 16.0 ms）→ 达标
+- 性能 PT-PERF-14 一屏 12 图块批量绑定：median=126.751 ms / p95=134.157 / max=134.157（预算 400.0 ms）→ 达标
+- 性能 PT-PERF-02 placeholders 构建：median=87.034 ms / p95=102.622 / max=102.622（预算 3000.0 ms）→ 达标
+- 性能 PT-PERF-03 --stage all 全量构建：median=89292.581 ms / p95=90703.39 / max=90703.39（预算 240000.0 ms）→ 达标
+- 性能 PT-PERF-07 契约脚本全量(含解码)：median=27135.7 ms / p95=27944.2 / max=27944.2（预算 150000.0 ms）→ 达标
+- 性能 PT-PERF-08 契约脚本 --no-decode：median=5422.0 ms / p95=5448.6 / max=5448.6（预算 25000.0 ms）→ 达标
+- 性能 PT-PERF-10 registry load 峰值增量 RSS：median=2.125 MiB / p95=2.129 / max=2.129（预算 80.0 MiB）→ 达标
+- 性能 PT-PERF-15 冷启动到主界面：median=1246.35 ms / p95=1379.7 / max=1379.7（预算 2500.0 ms）→ 达标
+- 性能 PT-PERF-09 构建峰值 RSS(--stage all)：median=85.48 MiB / p95=85.66 / max=85.66（预算 1536.0 MiB）→ 达标
+- RSS：5 次 --stage all 峰值=[85.66, 85.47, 85.48, 85.44, 85.51]；max=85.66 MiB ≤1536；verdict_basis=max；pass=True
 - UI 100%：status=pass（approximated=False）room=128x128 card=240x336 source/desktop/game/qa/screenshots/ui_100.png
 - UI 125%：status=pass（approximated=False）room=160x160 card=300x420 source/desktop/game/qa/screenshots/ui_125.png
 - UI 150%：status=pass（approximated=False）room=192x192 card=360x504 source/desktop/game/qa/screenshots/ui_150.png
@@ -114,19 +114,19 @@ P 表执行完成（attested）。范围：桌面端 274 行 × 33 列的资源�
 
 ## 复现（A-26，§16 可复现段）
 
-- 对比基线：p-table-final-20261123T183339（compared_at=2026-11-23T19:19:56）
+- 对比基线：p-table-final-20261124T161753（compared_at=2026-11-24T17:00:18）
 - 容差口径：run4_completion_criteria.md §7.2：数据哈希/测试结果/覆盖率/RSS 与性能判定必须一致；计时/时间戳与性能中位数数值抖动可容忍；执行器/管线脚本哈希升级使两轮不构成同代码背靠背对（§7.1 R2）
 - 一致性：**identical=true（数据哈希/测试/覆盖率/RSS 与性能判定全部一致）**
-- 允许抖动：RSS max_peak_mib 85.51 -> 85.78（峰值波动，允许）
-- 允许抖动：PT-PERF-01 中位数 364.045 -> 332.522 ms（允许抖动）
-- 允许抖动：PT-PERF-02 中位数 100.91 -> 87.269 ms（允许抖动）
-- 允许抖动：PT-PERF-03 中位数 89272.021 -> 89001.356 ms（允许抖动）
-- 允许抖动：PT-PERF-04 中位数 15.783 -> 11.742 ms（允许抖动）
-- 允许抖动：PT-PERF-05 中位数 6.536 -> 6.263 ms（允许抖动）
-- 允许抖动：PT-PERF-06 中位数 11666.0 -> 11898.9 ms（允许抖动）
-- 允许抖动：PT-PERF-07 中位数 29286.7 -> 29427.2 ms（允许抖动）
-- 允许抖动：PT-PERF-08 中位数 6086.7 -> 6076.4 ms（允许抖动）
-- 允许抖动：PT-PERF-09 中位数 85.44 -> 85.47 MiB（允许抖动）
+- 允许抖动：RSS max_peak_mib 85.63 -> 85.66（峰值波动，允许）
+- 允许抖动：PT-PERF-01 中位数 380.194 -> 283.322 ms（允许抖动）
+- 允许抖动：PT-PERF-02 中位数 107.887 -> 87.034 ms（允许抖动）
+- 允许抖动：PT-PERF-03 中位数 110554.687 -> 89292.581 ms（允许抖动）
+- 允许抖动：PT-PERF-04 中位数 14.073 -> 11.165 ms（允许抖动）
+- 允许抖动：PT-PERF-05 中位数 7.463 -> 5.708 ms（允许抖动）
+- 允许抖动：PT-PERF-06 中位数 13255.1 -> 10478.5 ms（允许抖动）
+- 允许抖动：PT-PERF-07 中位数 35718.5 -> 27135.7 ms（允许抖动）
+- 允许抖动：PT-PERF-08 中位数 6931.1 -> 5422.0 ms（允许抖动）
+- 允许抖动：PT-PERF-09 中位数 85.53 -> 85.48 MiB（允许抖动）
 
 ## 声明与签发
 

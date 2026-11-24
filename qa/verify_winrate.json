@@ -24,12 +24,12 @@
     {
       "item": "C04 胜方计数闭合",
       "ok": true,
-      "detail": "英雄649 + 叛徒1661 + 无胜方0 + 未完0 = 2310，games=2310"
+      "detail": "英雄675 + 叛徒1633 + 无胜方0 + 未完2 = 2310，games=2310"
     },
     {
       "item": "C05 胜率相加 ≤ 1 且可换算",
       "ok": true,
-      "detail": "英雄率0.2810 + 叛徒率0.7190 = 1.0000（期望英雄率 0.2810，分母=2310）"
+      "detail": "英雄率0.2925 + 叛徒率0.7075 = 1.0000（期望英雄率 0.2925，分母=2308）"
     },
     {
       "item": "C06 by_haunt 覆盖剧本",
@@ -39,12 +39,12 @@
     {
       "item": "C07 by_haunt 汇总一致",
       "ok": true,
-      "detail": "games=2310 英雄649 叛徒1661 无胜方0 未完0"
+      "detail": "games=2310 英雄675 叛徒1633 无胜方0 未完2"
     },
     {
       "item": "C08 by_profile 汇总一致",
       "ok": true,
-      "detail": "档案=['dedicated', 'default']，games=2310 英雄649 叛徒1661"
+      "detail": "档案=['dedicated', 'default']，games=2310 英雄675 叛徒1633"
     },
     {
       "item": "C09 by_player_count 汇总一致",
@@ -54,17 +54,17 @@
     {
       "item": "C10 回合与耗时可信",
       "ok": true,
-      "detail": "completed=2310 avg_turns=56.58 duration_s=165.4"
+      "detail": "completed=2308 avg_turns=56.58 duration_s=217.4"
     },
     {
       "item": "C11 证据可归属到代码版本",
       "ok": true,
-      "detail": "executor='haunt_playtest.run_case' engine_sha256=9fa7a7850d6b…（64 位）"
+      "detail": "executor='haunt_playtest.run_case' engine_sha256=d00ae4c4ec62…（64 位）"
     },
     {
       "item": "C12 异常局计入未完赛",
       "ok": true,
-      "detail": "errors=0，unfinished=0"
+      "detail": "errors=0，unfinished=2"
     },
     {
       "item": "C13 种子无重复",

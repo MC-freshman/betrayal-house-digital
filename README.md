@@ -44,7 +44,7 @@ python build_exe.py                :: 产物写到项目根 release\山中小屋
 
 打包要点：`--onefile --windowed`，`assets/` 以 `source/desktop/game/assets` 结构内嵌，
 `haunts` 用 `--collect-submodules` 收集（剧本按名称动态加载，静态扫描发现不了）。
-`photos/`（母版 830 MB）不进包，发布包只带规范化后的运行时 PNG。
+`photos/`（母版 1.39 GB）不进包，发布包只带规范化后的运行时 PNG。
 
 发布包自检（无控制台，结果写 JSON，退出码 0 表示通过）：
 
@@ -110,6 +110,70 @@ python asset_pipeline.py                       :: 全量：P 表 + 占位图 + �
 
 探测缓存按 `(相对路径, 字节数, mtime_ns)` 失效，文件一变立即重算；内容不变时幂等不落盘，
 因此只读审计（SAFE-01）不会把它判成并发写入。
+
+## 如何取得母版
+
+`photos/` 不入库（404 文件 / 1388.7 MiB，压缩包 1386.5 MiB），随 v3.11 Release 以
+`photos_v3.11.zip` 分发；仓内只保留运行时产物与校验文件。三步：下载 → 校验 → 解压后跑一次
+`--stage ptable` 自检。
+
+### 1. 下载
+
+- 直链：<https://github.com/MC-freshman/betrayal-house-digital/releases/download/v3.11/photos_v3.11.zip>
+- Release 页（同页附 `SHA256SUMS_photos.txt`）：<https://github.com/MC-freshman/betrayal-house-digital/releases/tag/v3.11>
+
+清单内容只有一行，格式为 `<64 位小写 hex><两个空格><文件名>`：
+
+```text
+453d1a52c97798b03434ed0c0be82dd47d597919c46e317695138df54257e515  photos_v3.11.zip
+```
+
+### 2. 校验 SHA256（先校验再解压）
+
+```powershell
+$hash   = (Get-FileHash .\photos_v3.11.zip -Algorithm SHA256).Hash.ToLower()
+$expect = (Get-Content .\SHA256SUMS_photos.txt -Raw).Trim().Split(' ')[0]
+if ($hash -ne $expect) { Write-Error "SHA256 不符：$hash" } else { "SHA256 OK $hash" }
+```
+
+期望值 `453d1a52…4257e515`，大小 **1,453,831,428 字节 / 1386.5 MiB**。
+注意 `certutil -hashfile` 输出大写且带分组，直接与清单比对会失败，需先转小写。
+
+### 3. 解压到项目根
+
+在 zip 所在目录执行（包内路径已带 `photos/` 前缀，解压到项目根即对齐）：
+
+```powershell
+tar -x -f photos_v3.11.zip -C "D:\Game\桌游模拟器\Betrayal at House on the Hill"
+```
+
+解压后 `<项目根>\photos\` 应有 **404 个文件**：
+
+- 274 张成品 PNG —— 就是 P 表 274 个资源位的源图（11 个子目录：role 12 / room 50 / event 45 /
+  item 22 / omen 13 / monster 52 / haunt 70 / ending 2 / card_back 3 / room_back 2 / dice 3）；
+- 130 张 `photos/_source_jpeg/` 转码前 JPEG 原件 —— 扫描时按 P-11 显式排除，不参与资源位匹配。
+
+### 4. 还原自检：274 位
+
+```bat
+cd source\desktop\game
+python asset_pipeline.py --stage ptable
+```
+
+期望输出（行数必须 274，`missing` / `placeholder` 必须为 0）：
+
+```text
+P 表：274 行（usable=274 / partial=0 / missing=0 / corrupted=0）
+映射状态：matched=274
+运行时状态：ok=274
+```
+
+若行数不是 274，或出现 `missing` / `corrupted` / `placeholder`，说明母版缺文件或解压位置不对；
+此时**不要**继续跑 `--stage normalize`（会把缺图固化进 `assets/`）。
+
+> 分发侧留存证据（2026-11-24）：`photos_v3.11.zip` 解压到临时目录后，404 个文件逐个 sha256
+> 与原 `photos/` 全同（0 差异）；在该临时根重跑 `--stage ptable` 得到 274 行，与原 P 表
+> **逐行逐列 0 差异**。GitHub 侧资产 `digest` 与清单哈希一致。
 
 ## 范围说明
 

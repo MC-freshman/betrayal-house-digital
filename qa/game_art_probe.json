@@ -2,7 +2,7 @@
   "tool": "qa/game_art_probe.py",
   "mode": "real-tk",
   "seed": 20261122,
-  "generated_at": "2026-11-23T15:27:21",
+  "generated_at": "2026-11-24T16:17:46",
   "environment": {
     "python": "3.9.13",
     "tk": "8.6",
@@ -23,7 +23,7 @@
   "inputs": {
     "ui_py_sha256": "10c9c43a82d51880355a25d89b217d794eb95b8ecf98aaa9e06c389a6d62ada8",
     "ui_asset_binding_sha256": "70f5f9b6c2c927571e6380a95151353e50da969578723e598f69afcb3a13db60",
-    "p_table_sha256": "8db27f6d13a1e3f072511be5c435bcce4e98bd8921638e03613914d3650a36e1",
+    "p_table_sha256": "5ade009623a7f7be30f86b4a92f1341d3f06ba8c532d8f77a0ef994cb2e6b2c0",
     "asset_mapping_sha256": "381a23f4a229c02d7355c3c3b77a665776ac07506c32788487820e87173d1b81"
   },
   "board": {
@@ -230,10 +230,10 @@
     {
       "seq": 6,
       "surface": "board",
-      "key": "room:dusty_hallway",
+      "key": "room:furnace_room",
       "asset_type": "room",
-      "record_id": "P-ROOM-045",
-      "rel_path": "source/desktop/game/assets/rooms/dusty_hallway.png",
+      "record_id": "P-ROOM-008",
+      "rel_path": "source/desktop/game/assets/rooms/furnace_room.png",
       "placeholder": false,
       "requested": [
         102,
@@ -248,10 +248,10 @@
     {
       "seq": 7,
       "surface": "board",
-      "key": "room:bathroom",
+      "key": "room:bedroom",
       "asset_type": "room",
-      "record_id": "P-ROOM-041",
-      "rel_path": "source/desktop/game/assets/rooms/bathroom.png",
+      "record_id": "P-ROOM-032",
+      "rel_path": "source/desktop/game/assets/rooms/bedroom.png",
       "placeholder": false,
       "requested": [
         102,
@@ -266,10 +266,10 @@
     {
       "seq": 8,
       "surface": "board",
-      "key": "room:larder",
+      "key": "room:kitchen",
       "asset_type": "room",
-      "record_id": "P-ROOM-024",
-      "rel_path": "source/desktop/game/assets/rooms/larder.png",
+      "record_id": "P-ROOM-022",
+      "rel_path": "source/desktop/game/assets/rooms/kitchen.png",
       "placeholder": false,
       "requested": [
         102,
@@ -284,10 +284,10 @@
     {
       "seq": 9,
       "surface": "board",
-      "key": "room:library",
+      "key": "room:garden",
       "asset_type": "room",
-      "record_id": "P-ROOM-023",
-      "rel_path": "source/desktop/game/assets/rooms/library.png",
+      "record_id": "P-ROOM-018",
+      "rel_path": "source/desktop/game/assets/rooms/garden.png",
       "placeholder": false,
       "requested": [
         102,
@@ -302,10 +302,10 @@
     {
       "seq": 10,
       "surface": "board",
-      "key": "room:stairs_from_basement",
+      "key": "room:crypt",
       "asset_type": "room",
-      "record_id": "P-ROOM-009",
-      "rel_path": "source/desktop/game/assets/rooms/stairs_from_basement.png",
+      "record_id": "P-ROOM-007",
+      "rel_path": "source/desktop/game/assets/rooms/crypt.png",
       "placeholder": false,
       "requested": [
         102,
@@ -320,10 +320,10 @@
     {
       "seq": 11,
       "surface": "board",
-      "key": "room:tower",
+      "key": "room:game_room",
       "asset_type": "room",
-      "record_id": "P-ROOM-039",
-      "rel_path": "source/desktop/game/assets/rooms/tower.png",
+      "record_id": "P-ROOM-042",
+      "rel_path": "source/desktop/game/assets/rooms/game_room.png",
       "placeholder": false,
       "requested": [
         102,
@@ -338,10 +338,10 @@
     {
       "seq": 12,
       "surface": "board",
-      "key": "room:chapel",
+      "key": "room:abandoned_room",
       "asset_type": "room",
-      "record_id": "P-ROOM-015",
-      "rel_path": "source/desktop/game/assets/rooms/chapel.png",
+      "record_id": "P-ROOM-012",
+      "rel_path": "source/desktop/game/assets/rooms/abandoned_room.png",
       "placeholder": false,
       "requested": [
         102,
@@ -644,10 +644,10 @@
     {
       "seq": 29,
       "surface": "board",
-      "key": "room:dusty_hallway",
+      "key": "room:furnace_room",
       "asset_type": "room",
-      "record_id": "P-ROOM-045",
-      "rel_path": "source/desktop/game/assets/rooms/dusty_hallway.png",
+      "record_id": "P-ROOM-008",
+      "rel_path": "source/desktop/game/assets/rooms/furnace_room.png",
       "placeholder": false,
       "requested": [
         102,
@@ -662,10 +662,10 @@
     {
       "seq": 30,
       "surface": "board",
-      "key": "room:bathroom",
+      "key": "room:bedroom",
       "asset_type": "room",
-      "record_id": "P-ROOM-041",
-      "rel_path": "source/desktop/game/assets/rooms/bathroom.png",
+      "record_id": "P-ROOM-032",
+      "rel_path": "source/desktop/game/assets/rooms/bedroom.png",
       "placeholder": false,
       "requested": [
         102,
@@ -680,10 +680,10 @@
     {
       "seq": 31,
       "surface": "board",
-      "key": "room:larder",
+      "key": "room:kitchen",
       "asset_type": "room",
-      "record_id": "P-ROOM-024",
-      "rel_path": "source/desktop/game/assets/rooms/larder.png",
+      "record_id": "P-ROOM-022",
+      "rel_path": "source/desktop/game/assets/rooms/kitchen.png",
       "placeholder": false,
       "requested": [
         102,
@@ -698,10 +698,10 @@
     {
       "seq": 32,
       "surface": "board",
-      "key": "room:library",
+      "key": "room:garden",
       "asset_type": "room",
-      "record_id": "P-ROOM-023",
-      "rel_path": "source/desktop/game/assets/rooms/library.png",
+      "record_id": "P-ROOM-018",
+      "rel_path": "source/desktop/game/assets/rooms/garden.png",
       "placeholder": false,
       "requested": [
         102,
@@ -716,10 +716,10 @@
     {
       "seq": 33,
       "surface": "board",
-      "key": "room:stairs_from_basement",
+      "key": "room:crypt",
       "asset_type": "room",
-      "record_id": "P-ROOM-009",
-      "rel_path": "source/desktop/game/assets/rooms/stairs_from_basement.png",
+      "record_id": "P-ROOM-007",
+      "rel_path": "source/desktop/game/assets/rooms/crypt.png",
       "placeholder": false,
       "requested": [
         102,
@@ -734,10 +734,10 @@
     {
       "seq": 34,
       "surface": "board",
-      "key": "room:tower",
+      "key": "room:game_room",
       "asset_type": "room",
-      "record_id": "P-ROOM-039",
-      "rel_path": "source/desktop/game/assets/rooms/tower.png",
+      "record_id": "P-ROOM-042",
+      "rel_path": "source/desktop/game/assets/rooms/game_room.png",
       "placeholder": false,
       "requested": [
         102,
@@ -752,10 +752,10 @@
     {
       "seq": 35,
       "surface": "board",
-      "key": "room:chapel",
+      "key": "room:abandoned_room",
       "asset_type": "room",
-      "record_id": "P-ROOM-015",
-      "rel_path": "source/desktop/game/assets/rooms/chapel.png",
+      "record_id": "P-ROOM-012",
+      "rel_path": "source/desktop/game/assets/rooms/abandoned_room.png",
       "placeholder": false,
       "requested": [
         102,
@@ -824,10 +824,10 @@
     {
       "seq": 39,
       "surface": "card",
-      "key": "card:item:item_adrenaline_shot",
+      "key": "card:item:item_medical_kit",
       "asset_type": "card_item",
-      "record_id": "P-ITEM-012",
-      "rel_path": "source/desktop/game/assets/cards/item/item_adrenaline_shot.png",
+      "record_id": "P-ITEM-010",
+      "rel_path": "source/desktop/game/assets/cards/item/item_medical_kit.png",
       "placeholder": false,
       "requested": [
         240,
@@ -860,10 +860,10 @@
     {
       "seq": 41,
       "surface": "card",
-      "key": "card:event:event_creepy_puppet",
+      "key": "card:event:event_shrieking_wind",
       "asset_type": "card_event",
-      "record_id": "P-EVT-023",
-      "rel_path": "source/desktop/game/assets/cards/event/event_creepy_puppet.png",
+      "record_id": "P-EVT-012",
+      "rel_path": "source/desktop/game/assets/cards/event/event_shrieking_wind.png",
       "placeholder": false,
       "requested": [
         240,
@@ -896,10 +896,10 @@
     {
       "seq": 43,
       "surface": "haunt",
-      "key": "haunt:69",
+      "key": "haunt:37",
       "asset_type": "haunt",
-      "record_id": "P-HAUNT-069",
-      "rel_path": "source/desktop/game/assets/haunts/haunt_69.png",
+      "record_id": "P-HAUNT-037",
+      "rel_path": "source/desktop/game/assets/haunts/haunt_37.png",
       "placeholder": false,
       "requested": [
         720,
@@ -1004,10 +1004,10 @@
     {
       "seq": 49,
       "surface": "board",
-      "key": "room:dusty_hallway",
+      "key": "room:furnace_room",
       "asset_type": "room",
-      "record_id": "P-ROOM-045",
-      "rel_path": "source/desktop/game/assets/rooms/dusty_hallway.png",
+      "record_id": "P-ROOM-008",
+      "rel_path": "source/desktop/game/assets/rooms/furnace_room.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1022,10 +1022,10 @@
     {
       "seq": 50,
       "surface": "board",
-      "key": "room:bathroom",
+      "key": "room:bedroom",
       "asset_type": "room",
-      "record_id": "P-ROOM-041",
-      "rel_path": "source/desktop/game/assets/rooms/bathroom.png",
+      "record_id": "P-ROOM-032",
+      "rel_path": "source/desktop/game/assets/rooms/bedroom.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1040,10 +1040,10 @@
     {
       "seq": 51,
       "surface": "board",
-      "key": "room:larder",
+      "key": "room:kitchen",
       "asset_type": "room",
-      "record_id": "P-ROOM-024",
-      "rel_path": "source/desktop/game/assets/rooms/larder.png",
+      "record_id": "P-ROOM-022",
+      "rel_path": "source/desktop/game/assets/rooms/kitchen.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1058,10 +1058,10 @@
     {
       "seq": 52,
       "surface": "board",
-      "key": "room:library",
+      "key": "room:garden",
       "asset_type": "room",
-      "record_id": "P-ROOM-023",
-      "rel_path": "source/desktop/game/assets/rooms/library.png",
+      "record_id": "P-ROOM-018",
+      "rel_path": "source/desktop/game/assets/rooms/garden.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1076,10 +1076,10 @@
     {
       "seq": 53,
       "surface": "board",
-      "key": "room:stairs_from_basement",
+      "key": "room:crypt",
       "asset_type": "room",
-      "record_id": "P-ROOM-009",
-      "rel_path": "source/desktop/game/assets/rooms/stairs_from_basement.png",
+      "record_id": "P-ROOM-007",
+      "rel_path": "source/desktop/game/assets/rooms/crypt.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1094,10 +1094,10 @@
     {
       "seq": 54,
       "surface": "board",
-      "key": "room:tower",
+      "key": "room:game_room",
       "asset_type": "room",
-      "record_id": "P-ROOM-039",
-      "rel_path": "source/desktop/game/assets/rooms/tower.png",
+      "record_id": "P-ROOM-042",
+      "rel_path": "source/desktop/game/assets/rooms/game_room.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1112,10 +1112,10 @@
     {
       "seq": 55,
       "surface": "board",
-      "key": "room:chapel",
+      "key": "room:abandoned_room",
       "asset_type": "room",
-      "record_id": "P-ROOM-015",
-      "rel_path": "source/desktop/game/assets/rooms/chapel.png",
+      "record_id": "P-ROOM-012",
+      "rel_path": "source/desktop/game/assets/rooms/abandoned_room.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1130,10 +1130,10 @@
     {
       "seq": 56,
       "surface": "monster",
-      "key": "monster:wisp",
+      "key": "monster:shadow",
       "asset_type": "monster",
-      "record_id": "P-MONS-052",
-      "rel_path": "source/desktop/game/assets/monsters/wisp.png",
+      "record_id": "P-MONS-008",
+      "rel_path": "source/desktop/game/assets/monsters/shadow.png",
       "placeholder": false,
       "requested": [
         61,
@@ -1328,10 +1328,10 @@
     {
       "seq": 68,
       "surface": "board",
-      "key": "room:dusty_hallway",
+      "key": "room:furnace_room",
       "asset_type": "room",
-      "record_id": "P-ROOM-045",
-      "rel_path": "source/desktop/game/assets/rooms/dusty_hallway.png",
+      "record_id": "P-ROOM-008",
+      "rel_path": "source/desktop/game/assets/rooms/furnace_room.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1346,10 +1346,10 @@
     {
       "seq": 69,
       "surface": "board",
-      "key": "room:bathroom",
+      "key": "room:bedroom",
       "asset_type": "room",
-      "record_id": "P-ROOM-041",
-      "rel_path": "source/desktop/game/assets/rooms/bathroom.png",
+      "record_id": "P-ROOM-032",
+      "rel_path": "source/desktop/game/assets/rooms/bedroom.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1364,10 +1364,10 @@
     {
       "seq": 70,
       "surface": "board",
-      "key": "room:larder",
+      "key": "room:kitchen",
       "asset_type": "room",
-      "record_id": "P-ROOM-024",
-      "rel_path": "source/desktop/game/assets/rooms/larder.png",
+      "record_id": "P-ROOM-022",
+      "rel_path": "source/desktop/game/assets/rooms/kitchen.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1382,10 +1382,10 @@
     {
       "seq": 71,
       "surface": "board",
-      "key": "room:library",
+      "key": "room:garden",
       "asset_type": "room",
-      "record_id": "P-ROOM-023",
-      "rel_path": "source/desktop/game/assets/rooms/library.png",
+      "record_id": "P-ROOM-018",
+      "rel_path": "source/desktop/game/assets/rooms/garden.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1400,10 +1400,10 @@
     {
       "seq": 72,
       "surface": "board",
-      "key": "room:stairs_from_basement",
+      "key": "room:crypt",
       "asset_type": "room",
-      "record_id": "P-ROOM-009",
-      "rel_path": "source/desktop/game/assets/rooms/stairs_from_basement.png",
+      "record_id": "P-ROOM-007",
+      "rel_path": "source/desktop/game/assets/rooms/crypt.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1418,10 +1418,10 @@
     {
       "seq": 73,
       "surface": "board",
-      "key": "room:tower",
+      "key": "room:game_room",
       "asset_type": "room",
-      "record_id": "P-ROOM-039",
-      "rel_path": "source/desktop/game/assets/rooms/tower.png",
+      "record_id": "P-ROOM-042",
+      "rel_path": "source/desktop/game/assets/rooms/game_room.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1436,10 +1436,10 @@
     {
       "seq": 74,
       "surface": "board",
-      "key": "room:chapel",
+      "key": "room:abandoned_room",
       "asset_type": "room",
-      "record_id": "P-ROOM-015",
-      "rel_path": "source/desktop/game/assets/rooms/chapel.png",
+      "record_id": "P-ROOM-012",
+      "rel_path": "source/desktop/game/assets/rooms/abandoned_room.png",
       "placeholder": false,
       "requested": [
         102,
@@ -1454,10 +1454,10 @@
     {
       "seq": 75,
       "surface": "monster",
-      "key": "monster:wisp",
+      "key": "monster:shadow",
       "asset_type": "monster",
-      "record_id": "P-MONS-052",
-      "rel_path": "source/desktop/game/assets/monsters/wisp.png",
+      "record_id": "P-MONS-008",
+      "rel_path": "source/desktop/game/assets/monsters/shadow.png",
       "placeholder": false,
       "requested": [
         61,
@@ -1530,9 +1530,9 @@
     },
     {
       "kind": "item",
-      "card_id": "item_adrenaline_shot",
-      "title": "获得物品：肾上腺素针",
-      "record_id": "P-ITEM-012",
+      "card_id": "item_medical_kit",
+      "title": "获得物品：医疗包",
+      "record_id": "P-ITEM-010",
       "photo_size": [
         240,
         336
@@ -1551,16 +1551,16 @@
       "popup_opened": true,
       "screenshot": "qa/screenshots/art_card_item.png",
       "shot_size": [
-        394,
+        324,
         700
       ],
       "trigger": "engine._draw_item → prompter.notify（真实抽卡调用）"
     },
     {
       "kind": "event",
-      "card_id": "event_creepy_puppet",
-      "title": "触发事件：诡异木偶",
-      "record_id": "P-EVT-023",
+      "card_id": "event_shrieking_wind",
+      "title": "触发事件：尖啸之风",
+      "record_id": "P-EVT-012",
       "photo_size": [
         240,
         336
@@ -1579,7 +1579,7 @@
       "popup_opened": true,
       "screenshot": "qa/screenshots/art_card_event.png",
       "shot_size": [
-        363,
+        435,
         700
       ],
       "trigger": "engine._draw_event → prompter.notify（真实抽卡调用）"
@@ -1618,7 +1618,7 @@
     "monster": {
       "image_items": 1,
       "keys": [
-        "monster:wisp"
+        "monster:shadow"
       ],
       "monsters_on_board": 1,
       "monsters_total": 1,
@@ -1627,7 +1627,7 @@
     "haunt": {
       "image_items": 1,
       "keys": [
-        "haunt:69"
+        "haunt:37"
       ],
       "dialog_opened": true,
       "photo_size": [

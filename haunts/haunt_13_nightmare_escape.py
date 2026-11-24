@@ -139,6 +139,19 @@ class NightmareDreamMode(GenericModeHandler):
             return False
         return "omen_holy_symbol" in engine.state.card_decks.get("omen", [])
 
+    def item_pickup_blocked(self, engine: Any, player: Any, card_id: str) -> bool:
+        """p95：沉睡者的身体钉在原地，也不能把脚边的东西捡起来。
+
+        setup 会把沉睡者的全部物品掉落（含圣徽）；但 bot 的
+        `_pickup_room_items` 在每个回合开始时仍会让它把同一格里的圣徽捡回去。
+        沉睡者不能被攻击、不能被交易，圣徽从此锁死在一具不能动的身体上：
+        `bot_goal_rooms` 的"圣徽已在英雄手上"永远不成立，英雄胜线整条断掉。
+        seed3/3p 实测：t=68 圣徽落在地上，t=71 被沉睡者捡走，唤醒进度 0/3
+        一直到 11/11 逃满。
+        """
+        sleeper_id = engine._haunt_flags().get("sleeper_id")
+        return sleeper_id is not None and getattr(player, "id", None) == sleeper_id
+
     def _escape_room_ids(self, engine: Any) -> set[str]:
         return {r.template_id for r in engine.state.board.values()} & set(
             [*self.WINDOW_ROOMS, *self.EXTRA_ESCAPE_ROOMS]

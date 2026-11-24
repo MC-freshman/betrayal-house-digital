@@ -514,6 +514,26 @@ class LakeRescueMode(GenericModeHandler):
         else:
             engine._log("僵持不下。")
 
+    # ------------------------------------------------------------- 机器人
+    def bot_goal_rooms(self, engine: Any, player: Any) -> list[str]:
+        """p44/p115：英雄唯一的推进点是地下湖的湖面砖（就地做 4 骰+加值的搜救）。
+
+        本剧本 rule_data 既没有 key_rooms 也没有英雄侧行动，档案也写不出目标，
+        于是作祟阶段 bot 只剩"追怪/追人"两个常驻目标：抽样 4 局里两次是英雄
+        在岸上兜圈直到女孩溺亡。这里把湖面所在的房间（地下湖）钉成目标；
+        人已经站上湖面砖时返回空，交给 extra_move_options 的 `lake:` 选项
+        （_rank_move_options 对非棋盘目标有 +20 的兜底分）。
+        """
+        if player.dead or getattr(player, "role", None) != "hero":
+            return []
+        flags = engine._haunt_flags()
+        if flags.get("girl_rescued") or flags.get("girl_drowned"):
+            return []
+        if self._is_lake_tile(engine, player.room_key):
+            return []
+        lake = self._lake_room(engine)
+        return [f"__room__{lake}"] if lake else []
+
     # ------------------------------------------------------------- 胜负
     def check_victory(self, engine: Any) -> bool:
         flags = engine._haunt_flags()

@@ -1,22 +1,22 @@
 {
   "schema": "winrate-baseline/v1",
-  "generated_at": "2026-11-23T10:31:01",
+  "generated_at": "2026-11-24T15:22:52",
   "games": 2310,
   "completed": 2308,
-  "heroes_win": 661,
-  "traitor_win": 1647,
+  "heroes_win": 675,
+  "traitor_win": 1633,
   "no_winner": 0,
   "unfinished": 2,
-  "heroes_win_rate": 0.2864,
-  "traitor_win_rate": 0.7136,
-  "heroes_win_rate_all": 0.2861,
+  "heroes_win_rate": 0.2925,
+  "traitor_win_rate": 0.7075,
+  "heroes_win_rate_all": 0.2922,
   "unfinished_rate": 0.0009,
-  "avg_turns": 56.45,
-  "avg_turns_all": 56.75,
+  "avg_turns": 56.58,
+  "avg_turns_all": 56.87,
   "turns_median": 55,
   "turns_p90": 79,
   "turns_max": 277,
-  "duration_s": 254.99,
+  "duration_s": 217.37,
   "by_haunt": {
     "1": {
       "games": 33,
@@ -159,7 +159,7 @@
       "traitor_win_rate": 0.5758,
       "avg_turns": 55.3,
       "haunt_name": "放它们进来",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "12": {
       "games": 33,
@@ -177,54 +177,54 @@
     "13": {
       "games": 33,
       "completed": 33,
-      "heroes_win": 0,
-      "traitor_win": 33,
-      "no_winner": 0,
-      "unfinished": 0,
-      "heroes_win_rate": 0.0,
-      "traitor_win_rate": 1.0,
-      "avg_turns": 60.36,
-      "haunt_name": "但愿入梦",
-      "profile": "default"
-    },
-    "14": {
-      "games": 33,
-      "completed": 33,
-      "heroes_win": 11,
-      "traitor_win": 22,
-      "no_winner": 0,
-      "unfinished": 0,
-      "heroes_win_rate": 0.3333,
-      "traitor_win_rate": 0.6667,
-      "avg_turns": 56.36,
-      "haunt_name": "群星归位",
-      "profile": "default"
-    },
-    "15": {
-      "games": 33,
-      "completed": 33,
-      "heroes_win": 2,
-      "traitor_win": 31,
-      "no_winner": 0,
-      "unfinished": 0,
-      "heroes_win_rate": 0.0606,
-      "traitor_win_rate": 0.9394,
-      "avg_turns": 53.91,
-      "haunt_name": "此处有龙",
-      "profile": "default"
-    },
-    "16": {
-      "games": 33,
-      "completed": 33,
       "heroes_win": 5,
       "traitor_win": 28,
       "no_winner": 0,
       "unfinished": 0,
       "heroes_win_rate": 0.1515,
       "traitor_win_rate": 0.8485,
-      "avg_turns": 58.15,
+      "avg_turns": 59.24,
+      "haunt_name": "但愿入梦",
+      "profile": "dedicated"
+    },
+    "14": {
+      "games": 33,
+      "completed": 33,
+      "heroes_win": 12,
+      "traitor_win": 21,
+      "no_winner": 0,
+      "unfinished": 0,
+      "heroes_win_rate": 0.3636,
+      "traitor_win_rate": 0.6364,
+      "avg_turns": 56.15,
+      "haunt_name": "群星归位",
+      "profile": "dedicated"
+    },
+    "15": {
+      "games": 33,
+      "completed": 33,
+      "heroes_win": 3,
+      "traitor_win": 30,
+      "no_winner": 0,
+      "unfinished": 0,
+      "heroes_win_rate": 0.0909,
+      "traitor_win_rate": 0.9091,
+      "avg_turns": 54.09,
+      "haunt_name": "此处有龙",
+      "profile": "dedicated"
+    },
+    "16": {
+      "games": 33,
+      "completed": 33,
+      "heroes_win": 6,
+      "traitor_win": 27,
+      "no_winner": 0,
+      "unfinished": 0,
+      "heroes_win_rate": 0.1818,
+      "traitor_win_rate": 0.8182,
+      "avg_turns": 58.82,
       "haunt_name": "幻影拥抱",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "17": {
       "games": 33,
@@ -237,20 +237,20 @@
       "traitor_win_rate": 0.9697,
       "avg_turns": 52.85,
       "haunt_name": "虫群",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "18": {
       "games": 33,
       "completed": 32,
-      "heroes_win": 12,
-      "traitor_win": 20,
+      "heroes_win": 14,
+      "traitor_win": 18,
       "no_winner": 0,
       "unfinished": 1,
-      "heroes_win_rate": 0.375,
-      "traitor_win_rate": 0.625,
-      "avg_turns": 68.94,
+      "heroes_win_rate": 0.4375,
+      "traitor_win_rate": 0.5625,
+      "avg_turns": 69.03,
       "haunt_name": "后代",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "19": {
       "games": 33,
@@ -274,9 +274,9 @@
       "unfinished": 0,
       "heroes_win_rate": 0.0,
       "traitor_win_rate": 1.0,
-      "avg_turns": 68.64,
+      "avg_turns": 73.48,
       "haunt_name": "幽灵新娘",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "21": {
       "games": 33,
@@ -289,20 +289,20 @@
       "traitor_win_rate": 0.9697,
       "avg_turns": 46.76,
       "haunt_name": "活死人之屋",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "22": {
       "games": 33,
       "completed": 33,
-      "heroes_win": 16,
-      "traitor_win": 17,
+      "heroes_win": 18,
+      "traitor_win": 15,
       "no_winner": 0,
       "unfinished": 0,
-      "heroes_win_rate": 0.4848,
-      "traitor_win_rate": 0.5152,
-      "avg_turns": 53.61,
+      "heroes_win_rate": 0.5455,
+      "traitor_win_rate": 0.4545,
+      "avg_turns": 53.91,
       "haunt_name": "深渊回望",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "23": {
       "games": 33,
@@ -315,7 +315,7 @@
       "traitor_win_rate": 0.8788,
       "avg_turns": 61.18,
       "haunt_name": "触手恐怖",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "24": {
       "games": 33,
@@ -352,7 +352,7 @@
       "unfinished": 0,
       "heroes_win_rate": 0.0,
       "traitor_win_rate": 1.0,
-      "avg_turns": 52.7,
+      "avg_turns": 51.52,
       "haunt_name": "吹笛人的代价",
       "profile": "dedicated"
     },
@@ -411,15 +411,15 @@
     "31": {
       "games": 33,
       "completed": 33,
-      "heroes_win": 0,
-      "traitor_win": 33,
+      "heroes_win": 1,
+      "traitor_win": 32,
       "no_winner": 0,
       "unfinished": 0,
-      "heroes_win_rate": 0.0,
-      "traitor_win_rate": 1.0,
-      "avg_turns": 49.06,
+      "heroes_win_rate": 0.0303,
+      "traitor_win_rate": 0.9697,
+      "avg_turns": 49.15,
       "haunt_name": "它活了！",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "32": {
       "games": 33,
@@ -430,7 +430,7 @@
       "unfinished": 0,
       "heroes_win_rate": 0.0,
       "traitor_win_rate": 1.0,
-      "avg_turns": 55.73,
+      "avg_turns": 57.03,
       "haunt_name": "迷失",
       "profile": "dedicated"
     },
@@ -443,9 +443,9 @@
       "unfinished": 0,
       "heroes_win_rate": 0.0,
       "traitor_win_rate": 1.0,
-      "avg_turns": 64.52,
+      "avg_turns": 63.82,
       "haunt_name": "湖中怪物",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "34": {
       "games": 33,
@@ -471,7 +471,7 @@
       "traitor_win_rate": 0.2727,
       "avg_turns": 51.73,
       "haunt_name": "小小变化",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "36": {
       "games": 33,
@@ -495,9 +495,9 @@
       "unfinished": 0,
       "heroes_win_rate": 0.1818,
       "traitor_win_rate": 0.8182,
-      "avg_turns": 49.12,
+      "avg_turns": 49.03,
       "haunt_name": "将军",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "38": {
       "games": 33,
@@ -575,20 +575,20 @@
       "traitor_win_rate": 0.8788,
       "avg_turns": 63.73,
       "haunt_name": "阴影聚集",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "44": {
       "games": 33,
       "completed": 33,
-      "heroes_win": 10,
-      "traitor_win": 23,
+      "heroes_win": 11,
+      "traitor_win": 22,
       "no_winner": 0,
       "unfinished": 0,
-      "heroes_win_rate": 0.303,
-      "traitor_win_rate": 0.697,
-      "avg_turns": 52.64,
+      "heroes_win_rate": 0.3333,
+      "traitor_win_rate": 0.6667,
+      "avg_turns": 52.91,
       "haunt_name": "死亡终将寻来",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "45": {
       "games": 33,
@@ -599,9 +599,9 @@
       "unfinished": 0,
       "heroes_win_rate": 0.1212,
       "traitor_win_rate": 0.8788,
-      "avg_turns": 62.82,
+      "avg_turns": 63.18,
       "haunt_name": "滴答，滴答，滴答",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "46": {
       "games": 33,
@@ -664,7 +664,7 @@
       "unfinished": 0,
       "heroes_win_rate": 0.0,
       "traitor_win_rate": 1.0,
-      "avg_turns": 52.48,
+      "avg_turns": 56.24,
       "haunt_name": "夜间小谋杀",
       "profile": "dedicated"
     },
@@ -679,7 +679,7 @@
       "traitor_win_rate": 0.0606,
       "avg_turns": 50.18,
       "haunt_name": "比夜更黑",
-      "profile": "default"
+      "profile": "dedicated"
     },
     "52": {
       "games": 33,
@@ -931,61 +931,61 @@
   },
   "by_profile": {
     "default": {
-      "games": 627,
-      "completed": 626,
-      "heroes_win": 145,
-      "traitor_win": 481,
+      "games": 0,
+      "completed": 0,
+      "heroes_win": 0,
+      "traitor_win": 0,
       "no_winner": 0,
-      "unfinished": 1,
-      "heroes_win_rate": 0.2316,
-      "traitor_win_rate": 0.7684,
-      "avg_turns": 56.81
+      "unfinished": 0,
+      "heroes_win_rate": 0.0,
+      "traitor_win_rate": 0.0,
+      "avg_turns": 0.0
     },
     "dedicated": {
-      "games": 1683,
-      "completed": 1682,
-      "heroes_win": 516,
-      "traitor_win": 1166,
+      "games": 2310,
+      "completed": 2308,
+      "heroes_win": 675,
+      "traitor_win": 1633,
       "no_winner": 0,
-      "unfinished": 1,
-      "heroes_win_rate": 0.3068,
-      "traitor_win_rate": 0.6932,
-      "avg_turns": 56.32
+      "unfinished": 2,
+      "heroes_win_rate": 0.2925,
+      "traitor_win_rate": 0.7075,
+      "avg_turns": 56.58
     }
   },
   "by_player_count": {
     "3": {
       "games": 770,
       "completed": 769,
-      "heroes_win": 228,
-      "traitor_win": 541,
+      "heroes_win": 230,
+      "traitor_win": 539,
       "no_winner": 0,
       "unfinished": 1,
-      "heroes_win_rate": 0.2965,
-      "traitor_win_rate": 0.7035,
-      "avg_turns": 50.96
+      "heroes_win_rate": 0.2991,
+      "traitor_win_rate": 0.7009,
+      "avg_turns": 51.03
     },
     "4": {
       "games": 770,
       "completed": 769,
-      "heroes_win": 210,
-      "traitor_win": 559,
+      "heroes_win": 215,
+      "traitor_win": 554,
       "no_winner": 0,
       "unfinished": 1,
-      "heroes_win_rate": 0.2731,
-      "traitor_win_rate": 0.7269,
-      "avg_turns": 54.28
+      "heroes_win_rate": 0.2796,
+      "traitor_win_rate": 0.7204,
+      "avg_turns": 54.2
     },
     "5": {
       "games": 770,
       "completed": 770,
-      "heroes_win": 223,
-      "traitor_win": 547,
+      "heroes_win": 230,
+      "traitor_win": 540,
       "no_winner": 0,
       "unfinished": 0,
-      "heroes_win_rate": 0.2896,
-      "traitor_win_rate": 0.7104,
-      "avg_turns": 64.12
+      "heroes_win_rate": 0.2987,
+      "traitor_win_rate": 0.7013,
+      "avg_turns": 64.49
     }
   },
   "seeds": [
@@ -1093,19 +1093,17 @@
   "diagnosis": {
     "zero_hero_haunts": [
       10,
-      13,
       19,
       20,
       26,
       29,
-      31,
       32,
       33,
       40,
       50,
       67
     ],
-    "zero_hero_count": 12,
+    "zero_hero_count": 10,
     "incomplete_haunts": [
       {
         "haunt": 18,
@@ -1129,15 +1127,6 @@
         "avg_turns": 48.79
       },
       {
-        "haunt": 13,
-        "games": 33,
-        "heroes_win": 0,
-        "traitor_win": 33,
-        "unfinished": 0,
-        "heroes_win_rate": 0.0,
-        "avg_turns": 60.36
-      },
-      {
         "haunt": 19,
         "games": 33,
         "heroes_win": 0,
@@ -1153,7 +1142,7 @@
         "traitor_win": 33,
         "unfinished": 0,
         "heroes_win_rate": 0.0,
-        "avg_turns": 68.64
+        "avg_turns": 73.48
       },
       {
         "haunt": 26,
@@ -1162,7 +1151,16 @@
         "traitor_win": 33,
         "unfinished": 0,
         "heroes_win_rate": 0.0,
-        "avg_turns": 52.7
+        "avg_turns": 51.52
+      },
+      {
+        "haunt": 29,
+        "games": 33,
+        "heroes_win": 0,
+        "traitor_win": 33,
+        "unfinished": 0,
+        "heroes_win_rate": 0.0,
+        "avg_turns": 58.45
       }
     ],
     "highest_hero_rate_top5": [
@@ -1221,14 +1219,14 @@
     "executor_sha256": "615af5895e79ea1f7621afbd4e8f04a5aef191ca9958600bc97e2b2d32007c5f",
     "engine_sha256": "d00ae4c4ec6231560b10121236de5c86d055ab5a5d9cdd75ab9a1025d3134bcd",
     "bot_ai_sha256": "96035fdeffba00a8f6c1413bf87bd8680b37224ec612241e45d9ec33726a0b21",
-    "haunt_ai_profiles_sha256": "afdbfb019031e4ae2f98576b8b6796876065b38c6b989058e3cfe7423ce226cc",
+    "haunt_ai_profiles_sha256": "188acbe96ad699037dbcb3abc6640a50117a0a6eb3b9d23096db95a3bf49e9b2",
     "script_sha256": "1f773a1b781c426466bbd4e970f1df9a7051e8cd2d7ae6d120f8a16885e62941",
     "bot_difficulty": "hard",
     "bot_style": "balanced",
     "difficulty_flag": "hard",
     "max_turns": 400,
-    "started_at": "2026-11-23T10:26:46",
-    "finished_at": "2026-11-23T10:31:01",
-    "seconds_per_game": 0.1104
+    "started_at": "2026-11-24T15:19:15",
+    "finished_at": "2026-11-24T15:22:52",
+    "seconds_per_game": 0.0941
   }
 }
