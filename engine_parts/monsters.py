@@ -75,9 +75,9 @@ class MonsterRules:
                     if moved_room and moved_room.effect_id == "room_mystic_elevator":
                         self._apply_mystic_elevator(monster, moved_room)
             if monster.room_key == target.room_key:
-                room = self.state.board[monster.room_key]
-                if self._barrier_config(room):
-                    self._set_barrier_side(monster, room, self._barrier_side(target))
+                # p2：怪物无视障碍，不需要把它的侧归属改写成目标所在侧
+                # （此处原为绕过 entities_share_room 的临时补丁，规则缺口已在
+                # rules/barriers.py 修正）。
                 self._monster_attack(monster, target)
         self.check_victory()
 

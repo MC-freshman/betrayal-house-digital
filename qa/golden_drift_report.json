@@ -9,10 +9,10 @@
     "cases": 186,
     "drifted": 186,
     "matched": 0,
-    "winner_changed": 36,
-    "haunt_changed": 7,
-    "phase_changed": 0,
-    "turns_only": 144,
+    "winner_changed": 44,
+    "haunt_changed": 8,
+    "phase_changed": 2,
+    "turns_only": 137,
     "unattributed": 0
   },
   "attribution_method": {
@@ -368,8 +368,8 @@
       "from": "6b3fd92c",
       "to": "current",
       "compared": 186,
-      "hash_changed": 18,
-      "behavior_signature_changed": 15
+      "hash_changed": 186,
+      "behavior_signature_changed": 186
     }
   ],
   "unattributed": [],
@@ -380,13 +380,13 @@
       "players": 3,
       "forced_haunt": null,
       "expected_hash": "ce688efe9dbf36a930f2a25906728784b526992eb945d26d6b186bc214fed0cc",
-      "actual_hash": "7fa25fbbf6f482b6e7833389f4f0465ad8ab07de2dd92a17967ee4319739727f",
+      "actual_hash": "b0de689f2d22254106972d92f6b6481c4cab6b782d494435443b4f90e2c5d55c",
       "drift": true,
-      "turns_diff": -43,
+      "turns_diff": -18,
       "winner_diff": [],
       "haunt_diff": [
         44,
-        56
+        57
       ],
       "phase_diff": [],
       "completed_diff": [],
@@ -396,7 +396,8 @@
       "changed_at": [
         "da883af9",
         "4c8466b3",
-        "fcfea6f3"
+        "fcfea6f3",
+        "current"
       ]
     },
     {
@@ -405,13 +406,13 @@
       "players": 3,
       "forced_haunt": null,
       "expected_hash": "1b025976a8d881b92c367f7aa48c605e6d603f595e7f87feceae60e08ad56449",
-      "actual_hash": "a1cc37a5b1fa8baa7ddd8ae938b6828e627117744131e63bed54a21e02a5c31f",
+      "actual_hash": "a29fac42e763a8719b7eb8f3764a55452a503d17fcb11fcf42c1105fbf1f8ff1",
       "drift": true,
-      "turns_diff": 11,
+      "turns_diff": 4,
       "winner_diff": [],
       "haunt_diff": [
         24,
-        18
+        65
       ],
       "phase_diff": [],
       "completed_diff": [],
@@ -421,7 +422,8 @@
       "changed_at": [
         "da883af9",
         "4c8466b3",
-        "fcfea6f3"
+        "fcfea6f3",
+        "current"
       ]
     },
     {
@@ -430,13 +432,16 @@
       "players": 4,
       "forced_haunt": null,
       "expected_hash": "b50fc9d5c3fa1fcf985f82a3eb5c0453e4e1cd142bc1a8f8c2709d19940ffa86",
-      "actual_hash": "c177329c7fbd2030d0cf7e8ea35c83e40c2124a11149e0b799bc398ab444bf70",
+      "actual_hash": "fbbd1d8af9f6dd12373fed68b69ce3c00b3b0483fe621aabfb6192c0d05e6ec9",
       "drift": true,
-      "turns_diff": 4,
-      "winner_diff": [],
+      "turns_diff": -28,
+      "winner_diff": [
+        "heroes",
+        "traitor"
+      ],
       "haunt_diff": [
         65,
-        38
+        10
       ],
       "phase_diff": [],
       "completed_diff": [],
@@ -446,7 +451,8 @@
       "changed_at": [
         "da883af9",
         "4c8466b3",
-        "fcfea6f3"
+        "fcfea6f3",
+        "current"
       ]
     },
     {
@@ -455,11 +461,14 @@
       "players": 4,
       "forced_haunt": null,
       "expected_hash": "98730ac4355b795a6caf9461ad4f7fe557ec2aca39873b3b0db309db1e0f83ef",
-      "actual_hash": "994499cbce710138c16156dc0836a3d56c064e3c5d033e1f220b1cfb566dddfa",
+      "actual_hash": "a4e1d747d20ae01f946f66c983ffb963c02de3eeb2f018f28a8549b180b11f64",
       "drift": true,
-      "turns_diff": 3,
+      "turns_diff": 24,
       "winner_diff": [],
-      "haunt_diff": [],
+      "haunt_diff": [
+        4,
+        1
+      ],
       "phase_diff": [],
       "completed_diff": [],
       "error": "",
@@ -468,7 +477,8 @@
       "changed_at": [
         "da883af9",
         "4c8466b3",
-        "fcfea6f3"
+        "fcfea6f3",
+        "current"
       ]
     },
     {
@@ -477,16 +487,16 @@
       "players": 5,
       "forced_haunt": null,
       "expected_hash": "8e6e3756264c20a82c70515915c15e8fdee7e172626a8a11715ce1c2e4bea395",
-      "actual_hash": "7a98435957cbe3d4884340f9e8af149291f6ecf9fb8cf8af871fc835235c6a93",
+      "actual_hash": "82de4bc5b9c1cbd0edb88aeb5ce8b60cb725d91dca0515d7cc5419b4a98c3bac",
       "drift": true,
-      "turns_diff": -9,
+      "turns_diff": 16,
       "winner_diff": [
         "heroes",
         "traitor"
       ],
       "haunt_diff": [
         49,
-        17
+        50
       ],
       "phase_diff": [],
       "completed_diff": [],
@@ -497,7 +507,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -506,13 +517,13 @@
       "players": 5,
       "forced_haunt": null,
       "expected_hash": "8044d07c05b19acaff1616634ce4d25543ea7527495b1bef41984c5cd33002f7",
-      "actual_hash": "0bbff6208cca7190cdc7c852dea9b1984fbf3fa18ad535a384ed5fe7f6e1db58",
+      "actual_hash": "a683ebf2f44d171b12c406df8dce2bd518faede714fa23cc984980a9ef72f898",
       "drift": true,
-      "turns_diff": 36,
+      "turns_diff": -6,
       "winner_diff": [],
       "haunt_diff": [
         50,
-        43
+        69
       ],
       "phase_diff": [],
       "completed_diff": [],
@@ -522,7 +533,8 @@
       "changed_at": [
         "da883af9",
         "4c8466b3",
-        "fcfea6f3"
+        "fcfea6f3",
+        "current"
       ]
     },
     {
@@ -531,13 +543,13 @@
       "players": 6,
       "forced_haunt": null,
       "expected_hash": "1c8bfa9c5e5f910de54455c01abb728bf144193503e3b0f106fd035eae4ea48b",
-      "actual_hash": "5e373442e4a1eeb239cb1168d612b0a87411ad409395c6bcc0c8f0364bf03203",
+      "actual_hash": "07078868f390b56ed48ba30ea29bf3b7a3c2b11af28ceeb63011235d1ca174ce",
       "drift": true,
-      "turns_diff": -42,
+      "turns_diff": -39,
       "winner_diff": [],
       "haunt_diff": [
         18,
-        41
+        49
       ],
       "phase_diff": [],
       "completed_diff": [],
@@ -548,7 +560,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -557,13 +570,16 @@
       "players": 6,
       "forced_haunt": null,
       "expected_hash": "4e079f6f14c9b8b2979ecb43eb949f5b921ec77dc0b463f053f29db7ccdc3c0c",
-      "actual_hash": "e9adc7fdbb6a9c4aed890e0a1a7c801bf2b365d1a57971835a93b32ba39854be",
+      "actual_hash": "c897f24e41362e618396c444d3ffc4dc46aebbf87d4a89cd91a1775c0215f8ba",
       "drift": true,
-      "turns_diff": 13,
-      "winner_diff": [],
+      "turns_diff": 14,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [
         4,
-        68
+        57
       ],
       "phase_diff": [],
       "completed_diff": [],
@@ -574,7 +590,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -583,9 +600,9 @@
       "players": 3,
       "forced_haunt": 1,
       "expected_hash": "356fd47a3471135f3fdb5a3cb927e25e17edee38fe44a2eb0247fbb49e07a816",
-      "actual_hash": "cd9bc9964417eae97c6ca775c0bc82d5b35827b9eb64d027628129e841f400b7",
+      "actual_hash": "747a80cadc6a53c586236f3071d3992fa647bdd1f512da2d6b3d1ba848314eed",
       "drift": true,
-      "turns_diff": -14,
+      "turns_diff": -25,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -597,7 +614,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -606,9 +624,9 @@
       "players": 5,
       "forced_haunt": 1,
       "expected_hash": "59e84cbd52927cb3294a67331b9f24a11e82bf32638f7332e4c1a8857c0a9620",
-      "actual_hash": "11ccad8b33fa38d1a862552d31a9630c38f474429cb33b10a4265951c08fb38a",
+      "actual_hash": "053fa1de8c276d3d3b58874e808d638375fb5d7dfbd3e398c8617fbd43ac8b25",
       "drift": true,
-      "turns_diff": 51,
+      "turns_diff": 20,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -620,7 +638,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -629,9 +648,9 @@
       "players": 5,
       "forced_haunt": 1,
       "expected_hash": "4c41c82189f8046f3ebcd589be038687d4be44b10f3e82fbb5f39bec6a64821c",
-      "actual_hash": "e85432fabb005a069b41b0ac90d45a61979859004e9726dfc55d2816433b2d89",
+      "actual_hash": "e0b61b47f323848fc458bcd5c57df537760b528622411b5653bc2f69c6ff2fa4",
       "drift": true,
-      "turns_diff": -19,
+      "turns_diff": 8,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -642,7 +661,8 @@
       "changed_at": [
         "da883af9",
         "4c8466b3",
-        "fcfea6f3"
+        "fcfea6f3",
+        "current"
       ]
     },
     {
@@ -651,9 +671,9 @@
       "players": 4,
       "forced_haunt": 5,
       "expected_hash": "478916af1570b3d3e41c213ca775629c3082b965b1f5ff1d91ea286517285464",
-      "actual_hash": "2aca72f7d990688fba023bd57f78b9d2a5751e3ad6e319e1ad4537546f343af9",
+      "actual_hash": "f20263046ee36fda27961f39231e8373b01fe462fee87816bb99bc08ba8e75b0",
       "drift": true,
-      "turns_diff": -3,
+      "turns_diff": 15,
       "winner_diff": [
         "heroes",
         "traitor"
@@ -668,7 +688,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -677,9 +698,9 @@
       "players": 4,
       "forced_haunt": 5,
       "expected_hash": "d194a391f244a1bc6094b7def62d8920514c599ca5a87a03013651b234127e17",
-      "actual_hash": "e8e6eb73456e124afe0fe09f6c554e38fe175d7b31c6e24a6ea916e3b11e07c2",
+      "actual_hash": "5c8556366adaea6ab4075da10cd47645e1dee27d6678fcabf37645f8906ac666",
       "drift": true,
-      "turns_diff": 22,
+      "turns_diff": 24,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -691,7 +712,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -700,9 +722,9 @@
       "players": 3,
       "forced_haunt": 2,
       "expected_hash": "ba5f2e05ab6657e9a7a639c7382e67eb25c41c4ed0e2876eb3e468cbd7534a00",
-      "actual_hash": "6cface8e68bd2ecbe89a563dca3062d373bdc0cf2c6aaf3d923d92000fc8f6d8",
+      "actual_hash": "616003a0eb1e39e260336cd32814c65b5b46850852d071ce6f480cabe5f4bb7c",
       "drift": true,
-      "turns_diff": -22,
+      "turns_diff": -27,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -714,7 +736,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -723,9 +746,9 @@
       "players": 5,
       "forced_haunt": 2,
       "expected_hash": "57043fb4b04e5f30fb3b2b44d9590068e9283abe8d7ce3e68a545e141f6cb8d9",
-      "actual_hash": "30b161c87782c2d88ad26ee8fd32999f51037679d994e24f8ea00aef7d69124b",
+      "actual_hash": "42fe97998d0ce919c433b174d9a25dc591357f4f327ab4baedf65c4ffc397100",
       "drift": true,
-      "turns_diff": 24,
+      "turns_diff": 35,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -737,7 +760,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -746,9 +770,9 @@
       "players": 4,
       "forced_haunt": 2,
       "expected_hash": "1a00bab369b736a8b5f67b61682e5b4939c982d86b6953ccbb29638b6ac3f160",
-      "actual_hash": "f2bfc0f4c32d6b1637b6d94e02e6131dc1f23e9c79da2279c04d14528a7e01c3",
+      "actual_hash": "71a340d9dee47758fefa70e48caf13917744967fa6018c57b41279ed310108a2",
       "drift": true,
-      "turns_diff": 37,
+      "turns_diff": 38,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -760,7 +784,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -769,9 +794,9 @@
       "players": 3,
       "forced_haunt": 3,
       "expected_hash": "3315365b8635000456a2eed2fa7f28e64146ab21a6adca1eec111f628a6f7408",
-      "actual_hash": "d7beee07f826ee2a0c920441c79666bfd40ca14426038fbc1204502a6d2c2edd",
+      "actual_hash": "15f12910f8f94b2ef9eebfd61f071ac75d8df220ac1704a7aebb93e65998dd39",
       "drift": true,
-      "turns_diff": -31,
+      "turns_diff": -32,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -783,7 +808,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -792,9 +818,9 @@
       "players": 3,
       "forced_haunt": 7,
       "expected_hash": "9bf3a666e2c4d3cb0f26285f5f66e98e4010f49c8715a148689c7bbc001fe11c",
-      "actual_hash": "4ba63f41a3ee4793974e5c3bfd59a7f4e85558d57e3ccab45b39bf60a287ca36",
+      "actual_hash": "dabc4f21834d2c87d0df5963851a84635fc61c576151d531a339aee2d7d86385",
       "drift": true,
-      "turns_diff": -34,
+      "turns_diff": -39,
       "winner_diff": [
         "heroes",
         "traitor"
@@ -809,7 +835,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -818,16 +845,22 @@
       "players": 3,
       "forced_haunt": 8,
       "expected_hash": "f9db92aa0d465e1ba29c7f0ee65de4877a8f4024492275d8cd4800e832167d1c",
-      "actual_hash": "a3e7bea8e13e205cac98b393921a13b3ec47ef116065ba18863ef41fab77f967",
+      "actual_hash": "c0deafb8e6cdc5b230096223e851caaeb051ff0c53018f4ad160839d8b9f1136",
       "drift": true,
-      "turns_diff": -31,
+      "turns_diff": 332,
       "winner_diff": [
         "heroes",
-        "traitor"
+        null
       ],
       "haunt_diff": [],
-      "phase_diff": [],
-      "completed_diff": [],
+      "phase_diff": [
+        "GAME_OVER",
+        "HAUNT_PHASE"
+      ],
+      "completed_diff": [
+        true,
+        false
+      ],
       "error": "",
       "anchor_hash": "efc18ef7f5b906d136b3cdea9728cb14c213bce256becfff7596ad6043958b01",
       "attribution": "da883af9",
@@ -835,7 +868,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -844,9 +878,9 @@
       "players": 3,
       "forced_haunt": 9,
       "expected_hash": "550f7c755e4e98aa3537b78ae80e2fea3b57c216dd66646f1c40a390d59b51ec",
-      "actual_hash": "9da479ed8c35ebb6861a9d125c67402d2855e913a371661d9f64ba3d26608c93",
+      "actual_hash": "0d0ad4503412a1c3265c3de6e65dcbd4ae5f922f58fa31723071ec487bebfada",
       "drift": true,
-      "turns_diff": -28,
+      "turns_diff": -36,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -858,7 +892,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -867,9 +902,9 @@
       "players": 3,
       "forced_haunt": 10,
       "expected_hash": "3dc26e4ba07bd52e9a87e14748e725a62ba1f01ad513cfc04409532b58824fe8",
-      "actual_hash": "4c730b1fb3b6d2450f9413cee40559ec8bedc05bbe6dbbc964d51a6f2c5f416d",
+      "actual_hash": "980bc8fda447dc83108f1db7692ddb81d2a8ca911ad239456fe275cd2e8fcf09",
       "drift": true,
-      "turns_diff": -24,
+      "turns_diff": -31,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -881,7 +916,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -890,9 +926,9 @@
       "players": 3,
       "forced_haunt": 11,
       "expected_hash": "e1072ecc2b50133582f3918600f9031211109b9c38e4caa359033f0006f953ea",
-      "actual_hash": "b1ee2f82e6d7f11c99ca9f98ac98524545dd1e4c31073c58beecef0c87d4bf59",
+      "actual_hash": "4e1cb2b09216f35552effe4d74565da96046a241a49c9f24032f01b8abe49d36",
       "drift": true,
-      "turns_diff": -21,
+      "turns_diff": -37,
       "winner_diff": [
         "heroes",
         "traitor"
@@ -907,7 +943,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -916,9 +953,9 @@
       "players": 3,
       "forced_haunt": 12,
       "expected_hash": "a90d7f57d4c561bd527471353c2a62082578c27de5b7f82fd2882392de3dcc1d",
-      "actual_hash": "af858814730e3ab0651a1bb81458dae6ab20a2e140798ba08435c63ac93a7adb",
+      "actual_hash": "896b97210024e1fb8db2b050f3ad0fcda96ad3b6cac0659ce3d2317146a36329",
       "drift": true,
-      "turns_diff": -22,
+      "turns_diff": -26,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -930,7 +967,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -939,9 +977,9 @@
       "players": 3,
       "forced_haunt": 13,
       "expected_hash": "ffd33dccce00bbd5ae5a517c386c18a0905254674274e84e7e1cb5067662a0c9",
-      "actual_hash": "d0ecf22fd7cdc0585bd77b3dce465ff943ce89b17ab22296f439fd77af7301d1",
+      "actual_hash": "33ff5784302842f9508dd00817a6b02483c7dbfd6c39266e629f12d9b2941842",
       "drift": true,
-      "turns_diff": -29,
+      "turns_diff": -40,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -963,9 +1001,9 @@
       "players": 3,
       "forced_haunt": 14,
       "expected_hash": "40ba53d0071f6abe02c45761ed68384463c46ae9fc685acaebd31cadefe35da7",
-      "actual_hash": "4c51d7c2b09de092acbb48c84ef3f6625e3e80abc861bb555fc64ed3dc5d9366",
+      "actual_hash": "60d01db1392ff0611e5dd0d17d6776c7eca4567943d40342f711801cc7f7d759",
       "drift": true,
-      "turns_diff": -31,
+      "turns_diff": -30,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -977,7 +1015,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -986,9 +1025,9 @@
       "players": 3,
       "forced_haunt": 15,
       "expected_hash": "e217c60ac19856795d1045122ad1d3516750517a41df52897ba4e42df4d5f70b",
-      "actual_hash": "ba14cd940cd2faaf0691b01032434c0e1bb0492209b77ef240d1b0708b71303d",
+      "actual_hash": "483c96fdb3aa54edaa904702d0c332109eb724087034e345d6f3d1b557f6b4a9",
       "drift": true,
-      "turns_diff": -22,
+      "turns_diff": -27,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1000,7 +1039,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1009,10 +1049,13 @@
       "players": 3,
       "forced_haunt": 16,
       "expected_hash": "8e76ad522859a32b8e080bacb6c02ec008d8da575b470d21139b4f68ab9defee",
-      "actual_hash": "b0b0b853d0285f833a77a63e6f1467fa37b79a70d0160617942161c0160e9aaa",
+      "actual_hash": "72f3ffb3573ee88a61dec11e432a6b4c4eb533888dab81a48ac66c74993ce45f",
       "drift": true,
-      "turns_diff": -22,
-      "winner_diff": [],
+      "turns_diff": -16,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1023,7 +1066,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1032,9 +1076,9 @@
       "players": 3,
       "forced_haunt": 17,
       "expected_hash": "cad3891926dee1aa965fdb41a6fe08799f548bd074460991e703994d57926319",
-      "actual_hash": "e303c4cabebb589660518f110d0352316521cb2640e8ce9ce7be7f3faf24b115",
+      "actual_hash": "90b874fd9960fd7e23aa5589cd4286422b0bef2c9779e7b600d6ba56e99688f0",
       "drift": true,
-      "turns_diff": -23,
+      "turns_diff": -19,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1046,7 +1090,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1055,10 +1100,13 @@
       "players": 3,
       "forced_haunt": 18,
       "expected_hash": "81244b4928ff6f6b91d1523f563254b5c9479d7a7ab18366d54abb0d56d57ec9",
-      "actual_hash": "d576ea18d3e8af232475f21d7fcc17ee87f02674dd0430d0351c7a17758a96ce",
+      "actual_hash": "4bd48559a02c41546be4dc67d47f10be56f422c8fa97223567dddd236d9696a8",
       "drift": true,
-      "turns_diff": -33,
-      "winner_diff": [],
+      "turns_diff": -40,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1079,9 +1127,9 @@
       "players": 3,
       "forced_haunt": 19,
       "expected_hash": "ba90b65c6e8548efe5660a9464565e39290e7c6c247045eefcdb18d1aef53249",
-      "actual_hash": "2ef1fbbca251659f61bb5f82ba87b31f0cfc7c1cf5badf9005bf35d33cdd0346",
+      "actual_hash": "1d62a794cd75c97e98e3ccd42919f89b2bcedee28745a005facde58ab31e7f16",
       "drift": true,
-      "turns_diff": -25,
+      "turns_diff": -30,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1093,7 +1141,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1102,9 +1151,9 @@
       "players": 3,
       "forced_haunt": 20,
       "expected_hash": "07e981004ad35c621a104b67f826789cc74e184c3b566ecf05111d18f4a00baf",
-      "actual_hash": "ee45827171803cd0b48614c3ffc613403f7905c7400a5241b87e28b8f821e721",
+      "actual_hash": "7e618e1d5da0b9ecf85337e701571a565f4782ade15b58fb481d51ae2ff7f621",
       "drift": true,
-      "turns_diff": -18,
+      "turns_diff": -21,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1116,7 +1165,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1125,9 +1175,9 @@
       "players": 3,
       "forced_haunt": 21,
       "expected_hash": "21fdd1cedea92da07a9d064ab7b6556cbe8d3d33fed2ce13aa5311be75730ccd",
-      "actual_hash": "990e472d2eedc7912e2f5621877e2bf36e884f97f48aef83e0cf5be37bbb0f88",
+      "actual_hash": "cdc840b80ba040b982df46813d7653b327fe18e7b31ff13bd77edb75f294623e",
       "drift": true,
-      "turns_diff": -25,
+      "turns_diff": -31,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1140,7 +1190,8 @@
         "4c8466b3",
         "133c9fe6",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1149,10 +1200,13 @@
       "players": 3,
       "forced_haunt": 22,
       "expected_hash": "ed2aacaad15cfe281c586206bc147ca9415c3f0dc514a2f482071ee31341c971",
-      "actual_hash": "6d35d0f8728674bdc51d971c15d9be0661450a2e06f046221837ecddd2bf2b36",
+      "actual_hash": "d4eb6954895151fdf676682f1f399852740c24c1802d8735d5cba7960f54c373",
       "drift": true,
       "turns_diff": -30,
-      "winner_diff": [],
+      "winner_diff": [
+        "heroes",
+        "traitor"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1163,7 +1217,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1172,9 +1227,9 @@
       "players": 3,
       "forced_haunt": 23,
       "expected_hash": "78c2a2c4b6458a25defd4e220a07c0ced19679a82c6ff9b581a1fa6d89131318",
-      "actual_hash": "45fc8b8c3444d881afa6fef39cfc1deea0c062f5b95cff67b0500233f46c46b1",
+      "actual_hash": "f8676eb461cebfe3329ef5faa3257a9b8b207f733f7514c432d8395ea0463267",
       "drift": true,
-      "turns_diff": -30,
+      "turns_diff": -41,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1186,7 +1241,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1195,9 +1251,9 @@
       "players": 3,
       "forced_haunt": 24,
       "expected_hash": "9437d915716332d35c497144bd2b098d3c98504b984ad9440a27c1dba06a10e5",
-      "actual_hash": "989cfc2ca37970799420b213a10c6aed1bed7adcf5e035d7357d7e9160bb991f",
+      "actual_hash": "ec576e7778b4926f6699791476b46251c48d658155dd9c675bc3ea342687805a",
       "drift": true,
-      "turns_diff": -30,
+      "turns_diff": -38,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1209,7 +1265,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1218,13 +1275,10 @@
       "players": 3,
       "forced_haunt": 25,
       "expected_hash": "fa8e93cf3e60ee28a174256bfb8dc632bef165891e0802d77b1c04c56482df0d",
-      "actual_hash": "9c6713ee677bc345c10f93377ae53ab79b260a680547f7c5a5dc02a605e400b9",
+      "actual_hash": "a96934434aa7f5724d7bbe0401bc5bbd1757154273d936fbbde8b4981bf3cd18",
       "drift": true,
-      "turns_diff": -20,
-      "winner_diff": [
-        "heroes",
-        "traitor"
-      ],
+      "turns_diff": -29,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1235,7 +1289,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1244,9 +1299,9 @@
       "players": 4,
       "forced_haunt": 25,
       "expected_hash": "4689d0daf59ad8b2005772367c56265d13621bf61da53d5567374a9b727e24c8",
-      "actual_hash": "881d08eb1f8f1f89419cd1c0432d52f14cb8d8e5594c2e14a7530fd605da3598",
+      "actual_hash": "4069373e3b27cb635586b0763695e36d76e2951e7ef906fb9b9a5c1cd4465ab5",
       "drift": true,
-      "turns_diff": 30,
+      "turns_diff": 25,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1258,7 +1313,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1267,9 +1323,9 @@
       "players": 3,
       "forced_haunt": 26,
       "expected_hash": "de042a87f2bc81b7acdacddb326fb4aa91badefea2841958ca7365be3f9c89aa",
-      "actual_hash": "fbec4fcfe5a7f5f2ef69b35a7a7a2909d1523f9aaaf564d9306b2bb252c3c5ce",
+      "actual_hash": "45e102731cba17807e635dd21abd60431754d7195721da6beb2f1c12764b0d4a",
       "drift": true,
-      "turns_diff": -22,
+      "turns_diff": -25,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1291,9 +1347,9 @@
       "players": 4,
       "forced_haunt": 26,
       "expected_hash": "f9cdbba2a3161f02ac3d1dc1faeb27078bd4e88866db5321f4ef4484f82c2e48",
-      "actual_hash": "915280dc86a098e22ddcceab8109c2cfa2f10ec58b97e57c86eaf9deb02675d9",
+      "actual_hash": "4a05677849241650c7fe184d29d7a9a1664070d139459a38ab82438a372f2a23",
       "drift": true,
-      "turns_diff": 34,
+      "turns_diff": 39,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1305,7 +1361,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1314,9 +1371,9 @@
       "players": 3,
       "forced_haunt": 27,
       "expected_hash": "1134ae480e674b531407b0796cc0415c2571687cfaa6eecf5bc0fe92ce315fb7",
-      "actual_hash": "8c3a25ec210dccca1b28aaf7d1a42a639bf88451b2b1d06f9d5710501079b8ea",
+      "actual_hash": "054ebc73aebeb7d7c466aa447c383718431e7ad96451bfb875eba589baf7ba2f",
       "drift": true,
-      "turns_diff": -18,
+      "turns_diff": -24,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1328,7 +1385,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1337,10 +1395,13 @@
       "players": 4,
       "forced_haunt": 27,
       "expected_hash": "1ced4a8bf84d675d8a36f06e36f245f6ce84f566c0aaf1230a2902d990dca46f",
-      "actual_hash": "6e8337f0eb7b9c2283f7dfa7fe2fd6f055babcbd90f203aff346627c3de3d795",
+      "actual_hash": "1112045bca1917145bc60a91d942a4d75ff33ecac6c082ddadb98e1923c03e51",
       "drift": true,
-      "turns_diff": 20,
-      "winner_diff": [],
+      "turns_diff": 30,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1351,7 +1412,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1360,9 +1422,9 @@
       "players": 3,
       "forced_haunt": 28,
       "expected_hash": "918354296b1d5afdf8cbf31ee43dd556e735ff9ef26c998f2d5af295e26aa344",
-      "actual_hash": "b7638edb8ebfe55dabf4f5300f491d01b10f335501434c63cd59196ff1859e7f",
+      "actual_hash": "cf32345e703f26cd15309d5da96cda2706418867b2cf9b418847a3c8500409dd",
       "drift": true,
-      "turns_diff": -23,
+      "turns_diff": -31,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1374,7 +1436,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1383,9 +1446,9 @@
       "players": 4,
       "forced_haunt": 28,
       "expected_hash": "c6d447223eff677987cbdc271242f27ddc78a4bbc7e220c3adbd44fba24e994b",
-      "actual_hash": "1cb140da1956d12c7614ccf98979bd42b6aeb31b3421dba7aaae268c904cc90f",
+      "actual_hash": "79997fb0fdf339ddc3e2ce0da0402ead5c144f221e08b71e80e66f66e0b5d922",
       "drift": true,
-      "turns_diff": 41,
+      "turns_diff": 43,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1397,7 +1460,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1406,9 +1470,9 @@
       "players": 3,
       "forced_haunt": 29,
       "expected_hash": "414a1f508dd30335ebb70008fbe620f5f6e0fec3cbeb160a1dd28ffe17bd9a36",
-      "actual_hash": "0e42186cac1c5b513a849900e108809cd47d57493ae0e5eb8de841877851640a",
+      "actual_hash": "27bee99e9a3fdac289ec517f358176100d52976a4f50253f22cd4891babb4f2d",
       "drift": true,
-      "turns_diff": -21,
+      "turns_diff": -23,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1420,7 +1484,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1429,9 +1494,9 @@
       "players": 4,
       "forced_haunt": 29,
       "expected_hash": "dca66658754c2adfa5914d04c60ecd8233b656e11c35ccc782aa8025dab7a011",
-      "actual_hash": "56b46ffbd28e342b27dac3eafd8a1bdaa310f49492feb2a165b3f4f4d28eec9c",
+      "actual_hash": "6eed77088a0a6a3572e0867e267a74cd9ed619aaa1c7162b9c90cb24fedc6f10",
       "drift": true,
-      "turns_diff": 36,
+      "turns_diff": 51,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1443,7 +1508,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1452,9 +1518,9 @@
       "players": 3,
       "forced_haunt": 30,
       "expected_hash": "8d9e1c135f948dda9248187a750c0ee5141e9070bd8797ce51308d701617175b",
-      "actual_hash": "90e7bcc3f9ce892bde7e6a294b85e425e345de1604cdd3ce78053236b5b18484",
+      "actual_hash": "b84a84a690aa396e3ce9ecc4ae15599fcb9f6bde9627588ce2cbebd9079e4479",
       "drift": true,
-      "turns_diff": -26,
+      "turns_diff": -31,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1466,7 +1532,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1475,13 +1542,10 @@
       "players": 4,
       "forced_haunt": 30,
       "expected_hash": "152143120fd46539c76541bf5bc465feb8e38695ce8a737ba5ac55bccd3ddb47",
-      "actual_hash": "9b18db67f966d1cce60a934d5b8849948b84955ba2cad47d9bb141d683624b70",
+      "actual_hash": "be00a45ca54f782a5c7492133804245b2231d7a56c83c547f456f212add254e5",
       "drift": true,
-      "turns_diff": 46,
-      "winner_diff": [
-        "traitor",
-        "heroes"
-      ],
+      "turns_diff": 43,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1492,7 +1556,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1501,13 +1566,10 @@
       "players": 4,
       "forced_haunt": 3,
       "expected_hash": "ca8d0e92a4b796d730a0ed6653bd8d7d9416128f8b87c08fdeab07900649b922",
-      "actual_hash": "6be9862ef9a96a1751e2bc20a6ca8e7d0d001abf836c1c655a349c8fbb271f80",
+      "actual_hash": "42bf8921d46c4f7886d731319e4beb3f647a53ea4d2d187fb016c1c2e95495c1",
       "drift": true,
-      "turns_diff": -3,
-      "winner_diff": [
-        "heroes",
-        "traitor"
-      ],
+      "turns_diff": 41,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1518,7 +1580,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1527,9 +1590,9 @@
       "players": 4,
       "forced_haunt": 3,
       "expected_hash": "9389b44e836d36ca8cefbe48d3e149f6eddf0346fed1ada04ed958bc60db150a",
-      "actual_hash": "6fe3d04d0083ae8fd899b3d64caefa8a71b606ba3507eb1701b70a1b4f61e424",
+      "actual_hash": "c4c92af47027908e1d1a4498174c7312eebc2796926fe005c34b072008877445",
       "drift": true,
-      "turns_diff": 34,
+      "turns_diff": 41,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1541,7 +1604,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1550,9 +1614,9 @@
       "players": 3,
       "forced_haunt": 4,
       "expected_hash": "ecf11d31d63f990b17cedd6bc055abe1893584009c1296d3e7beeda9f2cc01c3",
-      "actual_hash": "a8abc524e1d09d6feb1fd7d65a261de59a92f6ce2caa0a863dfaf57deba1bd19",
+      "actual_hash": "b9f92e7c3965b987e5aca06de27c4e5e18b3c1110efc74fbcc4d1b6911ac2e15",
       "drift": true,
-      "turns_diff": -17,
+      "turns_diff": -18,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1563,7 +1627,8 @@
       "changed_at": [
         "da883af9",
         "4c8466b3",
-        "fcfea6f3"
+        "fcfea6f3",
+        "current"
       ]
     },
     {
@@ -1572,9 +1637,9 @@
       "players": 4,
       "forced_haunt": 4,
       "expected_hash": "9284b4f7b2482e929b6853e1e65e48f512737e45fdc5ec01fdfab7b6de825d53",
-      "actual_hash": "6711b48453d416319f6d91a0b564f2c457503439684ff22dde2f1cf0c39f4f28",
+      "actual_hash": "3d8d066c7294bef774b79cbdb29db1fb65b0fde95c47f7d5d78b330d5a502637",
       "drift": true,
-      "turns_diff": -5,
+      "turns_diff": 14,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1586,7 +1651,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1595,9 +1661,9 @@
       "players": 5,
       "forced_haunt": 6,
       "expected_hash": "6b17d389c63adbdc77b6854544e73a198ebeacd642a2f5380c718bf47fe60b4b",
-      "actual_hash": "b0eb289032c7c8e5eeb825e233d32f7705b84d3d47616c3b4e759e085b9da5d2",
+      "actual_hash": "5246057d95de3c2c70fce830eb827c68cb1e55863c27fbbd654b21888f0338b7",
       "drift": true,
-      "turns_diff": 29,
+      "turns_diff": 26,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1609,7 +1675,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1618,9 +1685,9 @@
       "players": 4,
       "forced_haunt": 6,
       "expected_hash": "61943b23a8b8a2e4d13fb59c6c7ab6375bf177684cdf29f8b3baabdae614fd0b",
-      "actual_hash": "de140d2f55a3bb2dea7f1af78b9bb45f403c9eb16ca715d0bdfd33f909725860",
+      "actual_hash": "02451ebabe766a41d1050a516b0375a12466995760f28cff25ae007a28a7015c",
       "drift": true,
-      "turns_diff": 42,
+      "turns_diff": 53,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1632,7 +1699,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1641,9 +1709,9 @@
       "players": 3,
       "forced_haunt": 38,
       "expected_hash": "68f3e4ba46d569f4f2810100f7f371c00e0957e7a686ee08b7f17745d0f0e100",
-      "actual_hash": "62e043d6d9e02a39fa7339da657bf2f6f0130a9e907c43e0440c4697ed8db99f",
+      "actual_hash": "c9f8e815a348cd9323c5ed304fbe17f48278efa2d220b48c4753e48dde332a16",
       "drift": true,
-      "turns_diff": -22,
+      "turns_diff": -29,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1655,7 +1723,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1664,10 +1733,13 @@
       "players": 4,
       "forced_haunt": 38,
       "expected_hash": "688cdd73b9ec3915d3f0f74c69fb1cbc1e327d7fd47c77e41f88c43a3525a0d1",
-      "actual_hash": "64d909a0dab40895d2859e39ed8076cba8b5bde1c18f7a2cfd135fa38b1c3ece",
+      "actual_hash": "0ef30b65882ce6d2082d104cf379556d3c0593fcb6037c3f979816f772021572",
       "drift": true,
-      "turns_diff": 43,
-      "winner_diff": [],
+      "turns_diff": 42,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1678,7 +1750,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1687,9 +1760,9 @@
       "players": 3,
       "forced_haunt": 31,
       "expected_hash": "15ad44538df2f33e21fc503962b111d23481dfb809fe46928f00da87c5945b84",
-      "actual_hash": "c69ae2b974cddbd8e02765016a000788094444209ca6e6baab92e26d65e80b0d",
+      "actual_hash": "357b2cba9c3f451d439e73d8ada80bef58e34ec48dd568e6cc5bcc0b9472c643",
       "drift": true,
-      "turns_diff": -25,
+      "turns_diff": -31,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1701,7 +1774,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1710,9 +1784,9 @@
       "players": 4,
       "forced_haunt": 31,
       "expected_hash": "cedce667891af5971789cb489d47203a2846243d5bca0bc7c1f8a6a78211a93a",
-      "actual_hash": "fbd5028662a1d30f553869c93078e4847905655f5f8b0b3080b07e8c34a991d0",
+      "actual_hash": "e5c90640ece2c3e650bfb42f1abc781f90f21a084222505d92c223fb05cf400f",
       "drift": true,
-      "turns_diff": 35,
+      "turns_diff": 37,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1724,7 +1798,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1733,7 +1808,7 @@
       "players": 3,
       "forced_haunt": 32,
       "expected_hash": "e8f3eccc5784d3e2a8699c19869891db250e136cfeb1c6ceb69cc0807a3b4c68",
-      "actual_hash": "9855f9ab8b8b6d546e53ab331194670e0d50df5fc42b21c9b02ec6938c52de56",
+      "actual_hash": "f11a1125b70af570245134548f091196121af7d5c82484898faba2cea8009681",
       "drift": true,
       "turns_diff": -26,
       "winner_diff": [],
@@ -1757,9 +1832,9 @@
       "players": 3,
       "forced_haunt": 33,
       "expected_hash": "ff7b1ff897ff8023a79ae28131ff185158c6f6f1a832d498c689cbb13904b772",
-      "actual_hash": "22e72f6e7b87252ec662f854d3d641f97d1f2ad9e1ac174d19a9bd735ea6fd09",
+      "actual_hash": "49b839a7b3948ef3cc3b760288a2584940f0df9ec8798ac707614518d45c5809",
       "drift": true,
-      "turns_diff": -18,
+      "turns_diff": -17,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1781,10 +1856,13 @@
       "players": 3,
       "forced_haunt": 34,
       "expected_hash": "03e22b4ad1c43d1581d9908c3f441507e7dad2cd9297122f4d69909cd2455f15",
-      "actual_hash": "8933b41b68afd41a6264e6c8e1ede58c9728a9043b49ce6b405678b170f002d0",
+      "actual_hash": "6c401bb9e7d41f681657baeca788ef53ad1ba5b4ba7123b76bdedf1aad3486ca",
       "drift": true,
-      "turns_diff": -26,
-      "winner_diff": [],
+      "turns_diff": -27,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1795,7 +1873,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1804,9 +1883,9 @@
       "players": 3,
       "forced_haunt": 35,
       "expected_hash": "9cb543e6cbc88b441dd08411abbf7311cd499b37cdc0430bff951528e7558e44",
-      "actual_hash": "855721241145349878cc9aff6663b97070108c70b14f6a0c51f379073b68e120",
+      "actual_hash": "bcacf515442fe26c270f8e78015889dbf140f4af41c88137fe95bf8636ff8085",
       "drift": true,
-      "turns_diff": -16,
+      "turns_diff": -29,
       "winner_diff": [
         "heroes",
         "traitor"
@@ -1821,7 +1900,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1830,13 +1910,10 @@
       "players": 3,
       "forced_haunt": 36,
       "expected_hash": "723a4ca9bc38c95855ba62ddb3ba42ab3cf5b0ab7e0518903f88c385c6cd4071",
-      "actual_hash": "00262f9c1562679a60cb80bb5a41708d3770ad3b3e0a08854882323536aa2ed4",
+      "actual_hash": "02e45f72e35eccfcc7c5c72d4b524fbf322a72680fc6506f235975b53cbc5139",
       "drift": true,
-      "turns_diff": -15,
-      "winner_diff": [
-        "heroes",
-        "traitor"
-      ],
+      "turns_diff": -31,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1847,7 +1924,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1856,9 +1934,9 @@
       "players": 3,
       "forced_haunt": 37,
       "expected_hash": "f60dd447ec47582745b63f71949d250db08d5234e5b5573b853d8a9eef83fcca",
-      "actual_hash": "00b010de39f8007047db9519fc70b085ba9290f7455316742e01be752aa5e4f9",
+      "actual_hash": "6aa84fbef256720eefdb2a6d89595daa92e29a291894731cb4d099580bd4fbfe",
       "drift": true,
-      "turns_diff": -31,
+      "turns_diff": -38,
       "winner_diff": [
         "heroes",
         "traitor"
@@ -1873,7 +1951,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1882,10 +1961,13 @@
       "players": 3,
       "forced_haunt": 39,
       "expected_hash": "d68a1a408e3d0c20d6cb7aedf517dfdbbf537a8bfb515fc120c446482403aca0",
-      "actual_hash": "36be74c860b7575babd2b198c087af69cb376fc696cdc0e386b80a45075b49d7",
+      "actual_hash": "d10e4045958841a295bc36d29c7d1c8aa7ce385ceac25003d7c9a1eeb9916d46",
       "drift": true,
-      "turns_diff": -19,
-      "winner_diff": [],
+      "turns_diff": 37,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1896,7 +1978,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1905,9 +1988,9 @@
       "players": 3,
       "forced_haunt": 40,
       "expected_hash": "1cfe302e66c740833af9f4c764d2d551f8bc760c8d2e6f03d004adbb3133e7fa",
-      "actual_hash": "17f9111e0bc333fc2755a5a73acdee1751bf960de189c2feb185f500d8d64ee0",
+      "actual_hash": "3e1f24002dd0c7fd6c4131b7e15eb0bf22d49a3563d45d066c1f4fbe3b15d282",
       "drift": true,
-      "turns_diff": -25,
+      "turns_diff": -27,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1919,7 +2002,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1928,9 +2012,9 @@
       "players": 5,
       "forced_haunt": 40,
       "expected_hash": "2c822247bc029777c594cc2648db3403b9b234721ce8d168525c8cdb69d78d78",
-      "actual_hash": "a99fe0c5fbc301e3f7b1e43d84b84c34cd4be27a7e7138506b71391fdb49b4ee",
+      "actual_hash": "155115aba90312234390e87d0b285dbcf76d45ee7c5d79583a3817f0d19caad2",
       "drift": true,
-      "turns_diff": 6,
+      "turns_diff": -26,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -1942,7 +2026,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1951,10 +2036,13 @@
       "players": 3,
       "forced_haunt": 41,
       "expected_hash": "0a038fa131f4ea7f6906357398e0cb1f31da7cbbbe583f173358b42e41a669a6",
-      "actual_hash": "772b2ef7fa881be9048e3d31baf2f6f8a35058f591f33a31a61955d1c11e49cc",
+      "actual_hash": "88d8056c30129575c3f67ab616b843b9ba2037e87311f288153b0f437e187fa6",
       "drift": true,
-      "turns_diff": -24,
-      "winner_diff": [],
+      "turns_diff": -22,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1965,7 +2053,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1974,10 +2063,13 @@
       "players": 3,
       "forced_haunt": 42,
       "expected_hash": "f15d6adadd28a33090b1219116275ee1666b977a795f67236a0ab1d707c4ed5e",
-      "actual_hash": "44a08d13b340b96ad16103d1d315d581b5ed04596d924416fecdca22840a710b",
+      "actual_hash": "eb6f8ac99bdf25ec33bebf2a9b218a0e9841a5fd5ec523410b2904b7fd7be437",
       "drift": true,
-      "turns_diff": -24,
-      "winner_diff": [],
+      "turns_diff": -23,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -1988,7 +2080,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -1997,9 +2090,9 @@
       "players": 3,
       "forced_haunt": 43,
       "expected_hash": "6ecdda700daac81fe9906e253eece6b9637c839be475171465f3f08956a0e8d3",
-      "actual_hash": "681698b65274e58c2230760db9a13fb12dc323b43eeb9c33a48a628512bc02e8",
+      "actual_hash": "afa256412a42172b869b8e36d442f2371390517e3995effc8d850b1a29056405",
       "drift": true,
-      "turns_diff": -28,
+      "turns_diff": -30,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2011,7 +2104,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2020,9 +2114,9 @@
       "players": 3,
       "forced_haunt": 44,
       "expected_hash": "8e3617a14b4b4f966538e9c31c401669e863f074af664c578c54a1cee8787e39",
-      "actual_hash": "5e5972e40794f47e28636aa780a187e480898e26f88ce7c4020151f19ee202c5",
+      "actual_hash": "2b5dce7c3436de7198c54d6268df04dbef59742d0a7095141aaf0d2123b38c2c",
       "drift": true,
-      "turns_diff": -18,
+      "turns_diff": -15,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2034,7 +2128,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2043,10 +2138,13 @@
       "players": 4,
       "forced_haunt": 44,
       "expected_hash": "d0f7e614876c6ef5e3c01d28e7acd1bbfba3f45fce110b0ac3e0d5020da136f1",
-      "actual_hash": "0ef785e16860523b4b6076b62da59d21b4817ec6f98e9042848a95f2f189d09d",
+      "actual_hash": "b7467fbc56092004f5d0492f63cb475670759e1de3a13942fb298c6de1923f55",
       "drift": true,
-      "turns_diff": 34,
-      "winner_diff": [],
+      "turns_diff": 42,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2057,7 +2155,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2066,9 +2165,9 @@
       "players": 3,
       "forced_haunt": 45,
       "expected_hash": "79649e5f96fa7da256d27aee145821a968ec3b6c261b3ed6691ebe2094e097e6",
-      "actual_hash": "f73f821e3881006185ccf176f4d009cbc815e1804bc1cf075b9977897d278079",
+      "actual_hash": "2767f151bbc17f2f5492fbc0960ab5363877be6b57d2744efda2ce7407ea7788",
       "drift": true,
-      "turns_diff": -26,
+      "turns_diff": -46,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2090,9 +2189,9 @@
       "players": 3,
       "forced_haunt": 46,
       "expected_hash": "f296f7f24760e6e615f02efcd7bb50785fb9d653fcc62f590ba88bb47f84f0f2",
-      "actual_hash": "da4667bfc8cae1f8534161622633c7a722aa839bdc0c4bdaa882cc508c44c429",
+      "actual_hash": "4fb944e0b7bd18770f469555c48faec5f83cf2f76036403be91ed4f0d5a637ef",
       "drift": true,
-      "turns_diff": -21,
+      "turns_diff": -22,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2104,7 +2203,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2113,9 +2213,9 @@
       "players": 4,
       "forced_haunt": 46,
       "expected_hash": "e6beb42fe5b5ba1e5abaf7ca8dcaac61926c00cc2830098fa7d1168c8d49f8cf",
-      "actual_hash": "20514e23c7fd5a7c1de154535053da6fb8ad383ca8a3a4aaf9bda7edb4887cf8",
+      "actual_hash": "83d9070c4acb2a4c4e4a093c170c895ce4c20215433db58cfa333ccd20befe9c",
       "drift": true,
-      "turns_diff": 35,
+      "turns_diff": 47,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2127,7 +2227,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2136,9 +2237,9 @@
       "players": 3,
       "forced_haunt": 47,
       "expected_hash": "d7edb94a804b3dd61a80a44365399c23a9e5c849ec260cd6136add69dbd6fd67",
-      "actual_hash": "8379183088bfb2a03bf3c1c38af7bfc7a1e3c3385a720742895d081966a7a5f6",
+      "actual_hash": "2e48f4a0b40918c8298dfaecf92515263601c111f32f14b3b28b12da254976e1",
       "drift": true,
-      "turns_diff": -24,
+      "turns_diff": -27,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2150,7 +2251,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2159,9 +2261,9 @@
       "players": 4,
       "forced_haunt": 47,
       "expected_hash": "86765e0da3feb9d229033021d94668f982cc82fd5518ef734ae5f4a2bc5a39a6",
-      "actual_hash": "14f93686d9944dfc4e8f2ce5c991477d081523b6bf6742f4d7470b90b1034482",
+      "actual_hash": "ea0b5ec65bb8f86d54660fd692f3fd1c127afea52bdf9d42ed12d13ee4382aef",
       "drift": true,
-      "turns_diff": 27,
+      "turns_diff": 30,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2173,7 +2275,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2182,10 +2285,13 @@
       "players": 3,
       "forced_haunt": 48,
       "expected_hash": "9a86bf85e8dcd400f262363b4b4c6666cb496395a62713e5216dce7c4f6ae702",
-      "actual_hash": "f7a09ed37d2257e862269c0221ff0528b067e05774a91aa864d163cf22c278de",
+      "actual_hash": "4abd6a633b8371ddb5627bd4ec922a8e00fe2ab04bc8a05fc1ee636151a887ca",
       "drift": true,
-      "turns_diff": -28,
-      "winner_diff": [],
+      "turns_diff": -27,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2196,7 +2302,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2205,9 +2312,9 @@
       "players": 4,
       "forced_haunt": 48,
       "expected_hash": "f8f2e72ebd226f068402c1cf4293390a027715bc3ae8a9ad4de521f69d02185e",
-      "actual_hash": "5de20e163f6e5e23515d6ba9287342ca0acd9014f935518834194cc3436436f7",
+      "actual_hash": "b6080c8d4957d2da97cd3a2936edd9dfd38f60969542e242b2dec38aa23ac94e",
       "drift": true,
-      "turns_diff": 17,
+      "turns_diff": 29,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2219,7 +2326,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2228,10 +2336,13 @@
       "players": 3,
       "forced_haunt": 49,
       "expected_hash": "117369fadc83d32111ba8c72d24582a88dc7b9ca8deb670b86fa2a5dfe2e06cd",
-      "actual_hash": "4cb34c6f338d33f78c36dcc1c07596fe47418b57b470673e044ffd83fd5b6148",
+      "actual_hash": "301a62e7a55565c084b4eef0b52f6112f5570136ee0c5fe47cbb5696b1415d24",
       "drift": true,
-      "turns_diff": -22,
-      "winner_diff": [],
+      "turns_diff": -32,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2242,7 +2353,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2251,9 +2363,9 @@
       "players": 4,
       "forced_haunt": 49,
       "expected_hash": "217156334cc9989a2881afec0affc4a168c059a25c46673c6b2c9558bdc736cf",
-      "actual_hash": "e99ca0cd7a4823c0827cf891903a62ddd4ca890479061489469acd6b65382dbf",
+      "actual_hash": "edab93bbeea626570665f9303541415775b70eca5d020f8f8d7d172720d0b67b",
       "drift": true,
-      "turns_diff": 42,
+      "turns_diff": 40,
       "winner_diff": [
         "traitor",
         "heroes"
@@ -2268,7 +2380,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2277,9 +2390,9 @@
       "players": 3,
       "forced_haunt": 50,
       "expected_hash": "940a7779531217e29fd2c169423f77185f2e8357f23339d5ebf62d635977b059",
-      "actual_hash": "019be2bd78f449a11f8efdfdb6bce3a4cc34f6bba2b200bd06958f295d9b3c19",
+      "actual_hash": "566f180ebddbce13657dec95ea317b9c8f00f24d7810413f0e23baaa32d30cdb",
       "drift": true,
-      "turns_diff": -24,
+      "turns_diff": -20,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2301,9 +2414,9 @@
       "players": 3,
       "forced_haunt": 51,
       "expected_hash": "12087585186caf536eb8fc6a934aad33dce28f9f03203bee445292fa85e66b71",
-      "actual_hash": "0b798c1d83cfa5bbcb315a6e0632c84d37ad70e7732f3ff09268c413a411cb9c",
+      "actual_hash": "89364063c5208c90b99090b4a4e980794e25f08da6bcd0ec8ab4c3041353b66e",
       "drift": true,
-      "turns_diff": -22,
+      "turns_diff": -26,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2315,7 +2428,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2324,9 +2438,9 @@
       "players": 3,
       "forced_haunt": 52,
       "expected_hash": "fc65faf43ec6bcfb190b8d56224f466adfe67734c70e5bf2c6b2cc2419258a96",
-      "actual_hash": "230a889e1af432cecaae172ef6e050c527cb2c1845f11ef1860d2faaae94cd5f",
+      "actual_hash": "87e419afd45f0a4f4953b95188f593e69b0be9f65d9c141b057d1b79292c1b8a",
       "drift": true,
-      "turns_diff": -30,
+      "turns_diff": -42,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2338,7 +2452,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2347,9 +2462,9 @@
       "players": 3,
       "forced_haunt": 53,
       "expected_hash": "de7a0c30ab0a1a0edcca4685c588b96fef128e386597a25d6d94a874a9348f53",
-      "actual_hash": "f460dcd685183d2d9a53de2973cb60effab946188f93e0976e7448b27c6ae8ca",
+      "actual_hash": "b09dbb2cce9deab1de44fb7ac9f5199a8fea301abf26db4f002af3097e64dd19",
       "drift": true,
-      "turns_diff": -30,
+      "turns_diff": -33,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2361,7 +2476,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2370,13 +2486,10 @@
       "players": 3,
       "forced_haunt": 54,
       "expected_hash": "474773ce66ad59efa10cd7135b383bcc51d2a6f7e9d839a1695171e76d7c1805",
-      "actual_hash": "cd64e99ac73f3455e18fe9264ce71a083085f2aec9a9a9847505286b1ce51a07",
+      "actual_hash": "45ec89450a6d1bce6cee768ad866e81ba2478c9d4d3089e1d4b54a1d39385e63",
       "drift": true,
-      "turns_diff": -21,
-      "winner_diff": [
-        "traitor",
-        "heroes"
-      ],
+      "turns_diff": -30,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2387,7 +2500,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2396,9 +2510,9 @@
       "players": 3,
       "forced_haunt": 55,
       "expected_hash": "233a2719810a08e36ca3d8d98f3c5cc04e2348a24394219ffb78b08c5837be2d",
-      "actual_hash": "5edfbe68b6ff1ffa65257a72226115288ef4165b33a5c3c3a6a63982c6e97f09",
+      "actual_hash": "fcb6e6fac038cf9ee33304c1b3262613688795b58e59ae80038f572ee4a6a31a",
       "drift": true,
-      "turns_diff": -19,
+      "turns_diff": -28,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2410,7 +2524,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2419,7 +2534,7 @@
       "players": 4,
       "forced_haunt": 51,
       "expected_hash": "3b8b52067bc0ff2c3d5c0d7a23088c9f4882cd1154cf5f58c8c7d5a69d1dfe2a",
-      "actual_hash": "cb1d3411d919abfedf6543ebad2f2d4836d7b2188efde781666cdd76ec32e078",
+      "actual_hash": "d10fb1e9284f2a3e5b585fbda7f8e7c9cb0a39caa663e828eff36544c412aa21",
       "drift": true,
       "turns_diff": 37,
       "winner_diff": [],
@@ -2433,7 +2548,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2442,9 +2558,9 @@
       "players": 4,
       "forced_haunt": 52,
       "expected_hash": "0f5cfbd14194388fd2c9fe80604151e1af7ab11ab0f74a0542c82326a37fabd6",
-      "actual_hash": "9ead35b518201aabf2c05e1d5e7b18739be469098ba687e05b4e24382a336268",
+      "actual_hash": "0cd3db2734a72357d9b97475cbaeec06ef6f5a3917f9fd7d7b8a526362c48666",
       "drift": true,
-      "turns_diff": 27,
+      "turns_diff": 48,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2456,7 +2572,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2465,9 +2582,9 @@
       "players": 4,
       "forced_haunt": 53,
       "expected_hash": "8565d7a5ece9fe63c5574e6cc7669194105d2d5a3128863c0b3e7bde97c5055f",
-      "actual_hash": "002538da0d9554932a4f6889e5be01b0031de5bf993b1d9d764626b9e109b267",
+      "actual_hash": "a0415097307e6e380b5de668341eb74f482495fd457f31bb5ca8f73d332cb738",
       "drift": true,
-      "turns_diff": 36,
+      "turns_diff": 38,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2479,7 +2596,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2488,9 +2606,9 @@
       "players": 4,
       "forced_haunt": 54,
       "expected_hash": "114cfb1a952815f82106dc6c6514a599b9e62817d3bea02e1777ee0e8a4b6d78",
-      "actual_hash": "fd0d159e0d0efbe26bce7ae42ef7ee3c6004587c88b60597364dfee156377ef2",
+      "actual_hash": "2c5cedb1b71ff69ec6ef55abbfe267c9f1168ac92cdc206f61fe397ce7d6f335",
       "drift": true,
-      "turns_diff": 38,
+      "turns_diff": 53,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2502,7 +2620,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2511,9 +2630,9 @@
       "players": 4,
       "forced_haunt": 55,
       "expected_hash": "8eb1dca2220218ac8547e44a874ed82208678f6286f1e2e6e600c73ab22e87b6",
-      "actual_hash": "dd251800bc1cf6c73081a02bffcd29e00467222e12bd5fe7ce3b3902db59c5da",
+      "actual_hash": "4710b7a81ecf5c5b4fb0398d2f3679fc96d909a61a98824903e0637a5e81a510",
       "drift": true,
-      "turns_diff": 27,
+      "turns_diff": 53,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2525,7 +2644,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2534,13 +2654,10 @@
       "players": 3,
       "forced_haunt": 56,
       "expected_hash": "30ec16639966b0ccee09bc110cd09e6c1220ea1b262043e02e9792888cde373e",
-      "actual_hash": "c092e1bf7023a0784ab98fe8ea344bb2d10ec0a1291e7d9b67daec47c7ab7135",
+      "actual_hash": "e20240b8865e996605b62bbb8a0601281bf391b78405fcdec1e3cc5e28c07946",
       "drift": true,
-      "turns_diff": -21,
-      "winner_diff": [
-        "heroes",
-        "traitor"
-      ],
+      "turns_diff": -33,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2551,7 +2668,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2560,9 +2678,9 @@
       "players": 4,
       "forced_haunt": 56,
       "expected_hash": "063722ee130aeff15a7ce9de66f964a6ff2ee24d2640664628679b46bf819dd7",
-      "actual_hash": "1f24798fd43fdda05c5c18611126f434c27d7185d2485cbcbf73c59bc2b51554",
+      "actual_hash": "71829e721f756b369004fda9fd419441b7f9c0222f7207526731d13c46f2f8bf",
       "drift": true,
-      "turns_diff": 34,
+      "turns_diff": 37,
       "winner_diff": [
         "traitor",
         "heroes"
@@ -2577,7 +2695,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2586,9 +2705,9 @@
       "players": 4,
       "forced_haunt": 50,
       "expected_hash": "345cf76b52e43d24ac5c04062dcc4c7dcdbe9d846a04debf2e2064fdb6d08870",
-      "actual_hash": "8d5aa5bc8d5a57070ff2b83daa7ae7bf918d4aa952b69c1558698805e362ef0f",
+      "actual_hash": "c2779e3aeb0251e8f8fcea5966aba3483447e002bf904752d2502ba201ab224e",
       "drift": true,
-      "turns_diff": 29,
+      "turns_diff": 45,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2610,9 +2729,9 @@
       "players": 4,
       "forced_haunt": 32,
       "expected_hash": "a1dea1b9b63c8f55489f8026864218f55ffa030aed34d9b252c6c28ec92b4e41",
-      "actual_hash": "66b8d3c09adae2e4b5d382c00108160128ef0304dcff9ac986a9c204b983c5e1",
+      "actual_hash": "825283aac188e0c1003cc475ad8321c0a387ccb0a6943408945ea12848503686",
       "drift": true,
-      "turns_diff": 32,
+      "turns_diff": 42,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2624,7 +2743,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2633,13 +2753,10 @@
       "players": 5,
       "forced_haunt": 57,
       "expected_hash": "67b2b055e3d2b0d6692b5ae36755b09ebc27263de17a59667f15e93400b4f369",
-      "actual_hash": "3fc103da9078f2987e41a390374bca723f5a759fcaa7943a576342ceabff017f",
+      "actual_hash": "3c223315fec2299e308fd4899b1257782a4c5ef79fad0106417dbedf25ee0e72",
       "drift": true,
-      "turns_diff": 23,
-      "winner_diff": [
-        "heroes",
-        "traitor"
-      ],
+      "turns_diff": -24,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2650,7 +2767,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2659,10 +2777,13 @@
       "players": 4,
       "forced_haunt": 57,
       "expected_hash": "5ea9ec6e9745878da77605208da01ff5a65bc94aa85e85c694a0a0909e425464",
-      "actual_hash": "7ea388d8e41eb87fa11a9a9df0e248e3cb903889ab5996689f6e8b8eb880cda4",
+      "actual_hash": "5ccb33087c20cdcc8bd298db007fa3893720f801ece6f1123afb2872cfc291e0",
       "drift": true,
-      "turns_diff": 4,
-      "winner_diff": [],
+      "turns_diff": 11,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2673,7 +2794,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2682,10 +2804,13 @@
       "players": 3,
       "forced_haunt": 58,
       "expected_hash": "5c66ec4d0da4cbb8b1b948527ed7f6fdd71828ff4088b5025a40c5179b0ceeae",
-      "actual_hash": "4acf7ce738e1bf25ef64c7cb7317c01da5b4b411489009c9a2e3933761fe4b1d",
+      "actual_hash": "4eba4550b0b9306887bae7ad6c4ae9f1ee563585fc5a1d37b7980986e4a3f9b4",
       "drift": true,
-      "turns_diff": -15,
-      "winner_diff": [],
+      "turns_diff": -32,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2696,7 +2821,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2705,13 +2831,10 @@
       "players": 4,
       "forced_haunt": 58,
       "expected_hash": "12f94d713da85625d39f2b357d6a5db4380ce2b915e567e237b0befb3b365a8b",
-      "actual_hash": "a191754f5f5191a7fe2e64399992b841cfdc50da52a473115fb469662e752215",
+      "actual_hash": "b3957a3a38ef3074ab970c723a864ad2b42233f461a0d2a2dbeb98f7921c2a2d",
       "drift": true,
-      "turns_diff": 38,
-      "winner_diff": [
-        "heroes",
-        "traitor"
-      ],
+      "turns_diff": 49,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2722,7 +2845,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2731,13 +2855,10 @@
       "players": 3,
       "forced_haunt": 59,
       "expected_hash": "38d995e1b9b7e7360c1e3d204c8709820f2fce812d44ffb9b357888b928d4a2e",
-      "actual_hash": "4e1df6097cbaef3edcf71b78e8accff09f4153c23ba3ed8688ed60f74f0a19a3",
+      "actual_hash": "edbda69099f734b537386d8405c09576ad6fcb94e1bed55442c3d84ae84ef728",
       "drift": true,
-      "turns_diff": -28,
-      "winner_diff": [
-        "heroes",
-        "traitor"
-      ],
+      "turns_diff": -31,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2748,7 +2869,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2757,13 +2879,10 @@
       "players": 4,
       "forced_haunt": 59,
       "expected_hash": "a20d32457fc557df3a6107961ace7f12b98b01635392061250ac5d8794f384da",
-      "actual_hash": "84f98515e2be306e67fb15a6999a96171572125846866a53326d5e9fbd3b55e9",
+      "actual_hash": "b4236c00bf98941dd9ef81bc3bfcdd475ae5e267dc0cc8abfae602e953413d8b",
       "drift": true,
-      "turns_diff": 35,
-      "winner_diff": [
-        "heroes",
-        "traitor"
-      ],
+      "turns_diff": 27,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2774,7 +2893,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2783,10 +2903,13 @@
       "players": 3,
       "forced_haunt": 60,
       "expected_hash": "6b538bade23b240a5a8fe9ff7ec496390ffaf3987887fc86bab6ca27aedd69d0",
-      "actual_hash": "76bbdb378bcdfedd099e93773aa707fff507a1e81faa5c75c21ae30b664127c2",
+      "actual_hash": "f8e97bfe5af4e8eed75b4393db1dba27e9ff2fde6f1b457ea5780adda4ff48ca",
       "drift": true,
-      "turns_diff": -20,
-      "winner_diff": [],
+      "turns_diff": -2,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2797,7 +2920,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2806,10 +2930,13 @@
       "players": 3,
       "forced_haunt": 61,
       "expected_hash": "fc22c336f5d18a00d6fa06f7b5f893792e4caf6b616bc77426e262aa96d663a3",
-      "actual_hash": "303bc4f918677bf8c564126ecf286b21ec82a42b659908b9a3069ffe28155133",
+      "actual_hash": "1ee21e1d4ecc8590c4bd6baa453bd138d49385010b306dde2b21ec20c88d04ed",
       "drift": true,
-      "turns_diff": -24,
-      "winner_diff": [],
+      "turns_diff": -15,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2820,7 +2947,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2829,9 +2957,9 @@
       "players": 3,
       "forced_haunt": 62,
       "expected_hash": "0e123b3f8157ce3a34596e2a0b0949d542aa1515ca9df53979b7a908f78779e2",
-      "actual_hash": "7e6a9344b53134c002cfab201aaeb65d9ff6baf6b63db6c376e6f256a5890e10",
+      "actual_hash": "546fde31d88adcba406498c2cba40acf2ee11b28f563bca52f36417be37ec7a9",
       "drift": true,
-      "turns_diff": -26,
+      "turns_diff": -30,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2843,7 +2971,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2852,9 +2981,9 @@
       "players": 3,
       "forced_haunt": 63,
       "expected_hash": "aedcb3e32c33a6aceaac0865c902d24a85629d1098022edcc9870f217011e453",
-      "actual_hash": "0f82f450cc1215323032e00a70b424d8521d303b4c90017daa18d4b79ad2e798",
+      "actual_hash": "7f9dbeee29e96cbacbdaec0a9cb19bd366d2901d240f35204921b4322a23b7af",
       "drift": true,
-      "turns_diff": -24,
+      "turns_diff": -28,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2866,7 +2995,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2875,10 +3005,13 @@
       "players": 3,
       "forced_haunt": 64,
       "expected_hash": "809ad92f278e0215357908e8915cb65e234132d625ca96677769a4d1e0aabbd1",
-      "actual_hash": "871aa3c3a494b01f975599a7a642bbbdc7fe503bd7ce2aaebb4199ac3de6a930",
+      "actual_hash": "975a172a17ff9ebbc9a6cc42b6d465a4f5c2bea39f49d88d88ab58025a8c2a65",
       "drift": true,
-      "turns_diff": -25,
-      "winner_diff": [],
+      "turns_diff": -28,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -2889,7 +3022,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2898,7 +3032,7 @@
       "players": 3,
       "forced_haunt": 65,
       "expected_hash": "853ca1fd076c4a9780ed8e1ee20fd4f73a190dc253e3f604364cf5c802c15864",
-      "actual_hash": "d8911677103d633e4429cf8c92f99c1bcf04d40fa58c5d1a4666d4706e4e9762",
+      "actual_hash": "a572a0f1f2c203a5dec8915235ee67836ef0cab17eadb300e264dbdd29aedcbf",
       "drift": true,
       "turns_diff": -39,
       "winner_diff": [
@@ -2915,7 +3049,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2924,9 +3059,9 @@
       "players": 3,
       "forced_haunt": 66,
       "expected_hash": "6c7e4981ebaba94795874abb2ae40acf9f79d0fe2d95cb96c13f1fe24d1af4e6",
-      "actual_hash": "8b001bdaeb0ae4b2dd6a3c012b688721b15eff155ca9e3d7993ee7a17bb4a90a",
+      "actual_hash": "724ff5bf1c8769c1b19298ac2ca9ce54a596fb24b77def3e3de4f50ed93395e2",
       "drift": true,
-      "turns_diff": -27,
+      "turns_diff": -29,
       "winner_diff": [
         "heroes",
         "traitor"
@@ -2941,7 +3076,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2950,9 +3086,9 @@
       "players": 3,
       "forced_haunt": 67,
       "expected_hash": "d65fb7774a7820f1059ff643894291b29c9c173750acb2e08dd6abd98788eee2",
-      "actual_hash": "03c984569be967afddb940899b2cc913666f6f84d1bf9d19de485ed22a7c3883",
+      "actual_hash": "5ba4b1bce53f164bf1baecdf2a7670feb78328a146631cd9f1d0f46fe50212bc",
       "drift": true,
-      "turns_diff": -24,
+      "turns_diff": -27,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -2964,7 +3100,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2973,7 +3110,7 @@
       "players": 4,
       "forced_haunt": 60,
       "expected_hash": "5a5a719f20d22cc04e29316ca136e663184a1171da4754c42b577e30334e0040",
-      "actual_hash": "fc1962554b4b7b686e29a45f80e94f890251f2c6db723319b88c2d8bbac21738",
+      "actual_hash": "ceb1d9f04ef197f81735128f38a2c21cc0cca3740bbc6bcee87bedf5c9ce2de1",
       "drift": true,
       "turns_diff": 35,
       "winner_diff": [
@@ -2990,7 +3127,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -2999,9 +3137,9 @@
       "players": 5,
       "forced_haunt": 68,
       "expected_hash": "9aeec7128d0d297b50f211d5db41b52a1a78d67877d5d0c9a95b37caa373c1ab",
-      "actual_hash": "bff1742ce4757c2c96135174f5e6ea70faeb6573089fdf68aa4c98610f499e5a",
+      "actual_hash": "bce4b88a2f155ac9b64cc492086aab041ad1131fa643705639b8ada36b0586dd",
       "drift": true,
-      "turns_diff": -19,
+      "turns_diff": 7,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3013,7 +3151,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3022,9 +3161,9 @@
       "players": 4,
       "forced_haunt": 68,
       "expected_hash": "6f4e8070762bb5e4456df591270ad4f0a78b0153f6582e3a30a17eda6e4dddc7",
-      "actual_hash": "2ac610168e98bce50f734a2f22a62099bd38f04ac716d1305aa23f3548c08ee5",
+      "actual_hash": "db565bea3b8e0b60ab4656038b88d77e542ee27529da3f8f4ffbe7d92f6ad3cb",
       "drift": true,
-      "turns_diff": 27,
+      "turns_diff": 35,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3036,7 +3175,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3045,9 +3185,9 @@
       "players": 3,
       "forced_haunt": 69,
       "expected_hash": "257347d212179132646c0e8ec0268b759f34a8664815abe114ac63b095cf5721",
-      "actual_hash": "beccb4e1a0a8d28ea678a05ec3cfffa8aa4f8bd8f15864b85fb75cf62d1ac587",
+      "actual_hash": "f5395f2ad9d98c137df914ed8a16325394679d7e6a01cfeea322de01df964d9d",
       "drift": true,
-      "turns_diff": -24,
+      "turns_diff": -29,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3059,7 +3199,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3068,10 +3209,13 @@
       "players": 4,
       "forced_haunt": 69,
       "expected_hash": "cabe8485c89ec77b60bd7edef6961b6dff37ad9628c3350eac4cd56acecce06c",
-      "actual_hash": "9c4091bea2dbd70c38ecf26f0c7b2225768031015a0ce9448054da0628a903d5",
+      "actual_hash": "28fdc1daf4adf1abbda721200413639e34cd3b286f0fcb36d3a585691313f813",
       "drift": true,
-      "turns_diff": 35,
-      "winner_diff": [],
+      "turns_diff": 40,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -3082,7 +3226,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3091,9 +3236,9 @@
       "players": 3,
       "forced_haunt": 70,
       "expected_hash": "6b736790dbde6710cea5573dc549d2d841a020311a1e5d3807d40b8f1ffd8c7d",
-      "actual_hash": "1d71ea5497f7494cae5f05036dd7cfd9a2f5138254e6d74266c9d2b4ff2e45ed",
+      "actual_hash": "7d96e85c9125f267efdb849416e0239586b98f5f69530ddaf5d6528af1bf70f5",
       "drift": true,
-      "turns_diff": -19,
+      "turns_diff": -34,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3105,7 +3250,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3114,9 +3260,9 @@
       "players": 3,
       "forced_haunt": 70,
       "expected_hash": "9c862eeba994ba524cd2ca4d2ef5bd2748862e76c03d542747d9d2ea9784db29",
-      "actual_hash": "e7619f5fa06d87556eb903e49383269a248350cc46fee7b0c84f3bc46eb065a1",
+      "actual_hash": "570b8f8638f50a9df6de74014eb329dc3ff3e7ea66b4286e126d68a2cdac130a",
       "drift": true,
-      "turns_diff": -24,
+      "turns_diff": -23,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3127,7 +3273,8 @@
       "changed_at": [
         "da883af9",
         "4c8466b3",
-        "fcfea6f3"
+        "fcfea6f3",
+        "current"
       ]
     },
     {
@@ -3136,9 +3283,9 @@
       "players": 5,
       "forced_haunt": 1,
       "expected_hash": "6d636bebba6ad1dbe4d75df05a6452d54dc25ff8ae7bb867a37a3f317a70d5fb",
-      "actual_hash": "ed5b5cb49744f3d11ed612215a06e5725e879c6c63e70f9423242ec05809f5f8",
+      "actual_hash": "cd97522c2b7c490e846dbea49d89793a03580c29a0166bfc2e9ed1c6b3439879",
       "drift": true,
-      "turns_diff": 37,
+      "turns_diff": 30,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3150,7 +3297,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3159,9 +3307,9 @@
       "players": 5,
       "forced_haunt": 2,
       "expected_hash": "62469d495be7f902e371d2331eb412a9d9cf5f2022600a718c2136d221cebc71",
-      "actual_hash": "d64021bd6cf665b166367d7825ada900385df8ffafa09e49bce29e080b706cd8",
+      "actual_hash": "a54f24c95b03fc4006eb24237264083171d2d03706ec9d0d40d2df7d93cb00f9",
       "drift": true,
-      "turns_diff": 32,
+      "turns_diff": 18,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3173,7 +3321,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3182,9 +3331,9 @@
       "players": 5,
       "forced_haunt": 3,
       "expected_hash": "d9ef7f836cdcb66838f1f78af899e58f48070deae4303313b9a18c667e4c2287",
-      "actual_hash": "7ea01e898f8c658f82b3e78eb2394e4ca5e2913d14a6e28db00aee679f8e2024",
+      "actual_hash": "ce798c2e6bb0f7fe54f7dc30e5bee3527e001678aa2d55cc9e116e75b98d929c",
       "drift": true,
-      "turns_diff": -3,
+      "turns_diff": -24,
       "winner_diff": [
         "traitor",
         "heroes"
@@ -3199,7 +3348,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3208,9 +3358,9 @@
       "players": 5,
       "forced_haunt": 4,
       "expected_hash": "0ec55fdac905e4499266b9ca6d0528c2eba8f96e0c7a1eafc737245829695351",
-      "actual_hash": "fdddfab6cd103ca4abd023e468102a894a894e0650e9afa601e1dd021a8a3289",
+      "actual_hash": "ea7727f012946f535b51ac6c980db8b4dd2495607bd29bbc6c33c88672273ff3",
       "drift": true,
-      "turns_diff": 40,
+      "turns_diff": 22,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3222,7 +3372,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3231,9 +3382,9 @@
       "players": 5,
       "forced_haunt": 5,
       "expected_hash": "0eb27d670a6e53b9c13cc68023fffa91e8a58ea22b74db433ed78ed07049a511",
-      "actual_hash": "efa2fc36e1b3c9ddb0c2d0c6ae625f465926ab3eebee6cea4950c92318efff46",
+      "actual_hash": "4ee5df45114bab9630580063d8daa70b2ea4df37e61d6b54dce48d39b42ad933",
       "drift": true,
-      "turns_diff": 47,
+      "turns_diff": 27,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3245,7 +3396,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3254,9 +3406,9 @@
       "players": 5,
       "forced_haunt": 6,
       "expected_hash": "8a989ff75d7b0b5e73923e93f0c7e1211c835eb801591a012dfe3f436036bd13",
-      "actual_hash": "a5cca4e1d5e25b21c98572d3a1eb6ad842b09eac6dbffe38a5adb8a6ad81636f",
+      "actual_hash": "cdfcf8d18cb8e7a364e8485c2db31ad41360cbe33a485a2c15c48795371c4077",
       "drift": true,
-      "turns_diff": 30,
+      "turns_diff": 19,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3268,7 +3420,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3277,9 +3430,9 @@
       "players": 5,
       "forced_haunt": 7,
       "expected_hash": "df084198df7f73e340eb946655541d9345650a03217f746a24208655e5361cb4",
-      "actual_hash": "fa4b1a357654ee7194deeb4aec6dbf38dd1a42925fdcebee72dc12be8c97f5cc",
+      "actual_hash": "467cde9cedb52bf33feef48ebdf0d7794f745445f6e6675cd6e9816320890287",
       "drift": true,
-      "turns_diff": 25,
+      "turns_diff": 33,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3291,7 +3444,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3300,9 +3454,9 @@
       "players": 5,
       "forced_haunt": 8,
       "expected_hash": "e6744c88aa10fa728ee34a0877956c0ce14c15f1398fc14c55415cbffc58a4cf",
-      "actual_hash": "3e00c58a97b08359f347ff01640c8cdc2f1f592cdd4bf2f40fa695d4b1403c94",
+      "actual_hash": "f570da2f385e29f2db114a27b034b01b65793a4b6304e15ca4e21cbddbe469b6",
       "drift": true,
-      "turns_diff": 33,
+      "turns_diff": 12,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3314,7 +3468,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3323,9 +3478,9 @@
       "players": 5,
       "forced_haunt": 9,
       "expected_hash": "4009f1ac0dbb61ce565d99a7f7f34b9c6785fd99feecfbcfbf0baecf8c32cfd1",
-      "actual_hash": "002c9ff1c278b742ff95e0dab99f30f6eea7ae76176aeb5e6b0ec9f000c38449",
+      "actual_hash": "560acb2b040d0095c0adb0e1263ae1e80911df6ecdc79e0ab12a81ac7190fa77",
       "drift": true,
-      "turns_diff": 35,
+      "turns_diff": 21,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3337,7 +3492,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3346,9 +3502,9 @@
       "players": 5,
       "forced_haunt": 10,
       "expected_hash": "d0a3a490d05b78ddd815f12e717b2fdf1e7d87633e93edf5665f240225acc0b6",
-      "actual_hash": "3d7b2245cc9ef8f5d9e569004adb7bc6a859894ad2fc57479c25a33ff4c85c38",
+      "actual_hash": "dd7fdfefb41e60eaacb452e7222928370a27862a5d1a2de790284155e30ef953",
       "drift": true,
-      "turns_diff": 39,
+      "turns_diff": 26,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3360,7 +3516,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3369,9 +3526,9 @@
       "players": 5,
       "forced_haunt": 11,
       "expected_hash": "1b41276da92d97a87e0df2c9beefdaf82073dbae74bf03bdec3b12575bffe5c3",
-      "actual_hash": "f8741d83340b3bfa976c54792b66f4be762a12124da9b29f2af49b52119bb5e0",
+      "actual_hash": "e232ec6019be3d53b5ee1725f3ab7a3ff06ee6521ca1645c6c7430335a85ffd9",
       "drift": true,
-      "turns_diff": 33,
+      "turns_diff": 28,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3383,7 +3540,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3392,9 +3550,9 @@
       "players": 5,
       "forced_haunt": 12,
       "expected_hash": "5562490f6c674c930af8724202dcc3691348f4f07282e69fcc69bf11317a90a6",
-      "actual_hash": "3e48881b354e2a76ad04d9b3787cca34a23e5fbec2ab3afba715341fd9dbce67",
+      "actual_hash": "9a3420513d0e62cbd9e3df9ef93af7f0b007b4a9101ca85468fdae2f3923fbc2",
       "drift": true,
-      "turns_diff": 34,
+      "turns_diff": 15,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3406,7 +3564,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3415,13 +3574,10 @@
       "players": 5,
       "forced_haunt": 13,
       "expected_hash": "b98053f3a41df22f4bd9d3b5e0621edeaa24b64bdcc0c2b3e87e7046bac7a270",
-      "actual_hash": "d101131a300c36b9598789611e760e50bbb4082e0fa29a190babef0e5968d100",
+      "actual_hash": "421b7cbaa80ba644dddb00d20ed3229e1ceb4580ee4ebede14fcea518f8b2297",
       "drift": true,
-      "turns_diff": 32,
-      "winner_diff": [
-        "traitor",
-        "heroes"
-      ],
+      "turns_diff": 16,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -3442,10 +3598,13 @@
       "players": 5,
       "forced_haunt": 14,
       "expected_hash": "028155736daed4f0e277d8a3524fcb97abe1f5c3f71f1bcf7cc7b22695045fc7",
-      "actual_hash": "8a2b5d08f38b9d19f3956fce385d037a3ef12cf5b6e283f0423739cf254c7764",
+      "actual_hash": "1a0bf3d0b9d71b91c334a2881f1292002cdf0899d1bf679c64f5ac281164011c",
       "drift": true,
-      "turns_diff": 34,
-      "winner_diff": [],
+      "turns_diff": 18,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -3456,7 +3615,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3465,13 +3625,10 @@
       "players": 5,
       "forced_haunt": 15,
       "expected_hash": "d98a2792286e20c0783c59002704cd4f77b5965b561affc692ad8bf61f3ee6ea",
-      "actual_hash": "da8d0c14f365c3edaae86858d6dc13538f05b9b54e96aa68437fca52ced58a9c",
+      "actual_hash": "6adc4489ec2561d86cc231609f72c7199ba29f37aaf6bfab2fddeb99853bad5b",
       "drift": true,
-      "turns_diff": 30,
-      "winner_diff": [
-        "heroes",
-        "traitor"
-      ],
+      "turns_diff": 18,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -3482,7 +3639,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3491,9 +3649,9 @@
       "players": 5,
       "forced_haunt": 16,
       "expected_hash": "e39ac03b9beea8bf8f98b3c75619fe3a443543924f29d3a187041cd269d89db0",
-      "actual_hash": "851ee8d4854985d3bcc89e0de54170f02b32dd6d2b252c18dd9809c15c3081f2",
+      "actual_hash": "9f126c32d1eef4803e6d1d8f0338c41c505ebfb1df0ecedee8b22d4a7abe076c",
       "drift": true,
-      "turns_diff": 9,
+      "turns_diff": 26,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3515,9 +3673,9 @@
       "players": 5,
       "forced_haunt": 17,
       "expected_hash": "d9bc15a3a8ed5cbab15d07d6d2441b9ebef41329b41ee6495a3427b61d8e8330",
-      "actual_hash": "34990b3491143355c52d494b9500cef79cf23f62e1d6eb86ccbe3fc7a12d5b48",
+      "actual_hash": "5d3422adae689bf9898cf64ff0d526a38321e8dac415feb27724171bff1e9958",
       "drift": true,
-      "turns_diff": 38,
+      "turns_diff": 20,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3529,7 +3687,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3538,9 +3697,9 @@
       "players": 4,
       "forced_haunt": 18,
       "expected_hash": "a21cb05320391ffa3beab9652a6c9e34d2dd83238cc04b8dd89fdeeba6b99518",
-      "actual_hash": "88f8a0b66507d0181646a1761e21847fd9d70633769020402bb4d9baf1278cc2",
+      "actual_hash": "2a452f24a4fcd8be938f2ae395beba4e4b1a0080a3f161e2e4b61005ac4f4174",
       "drift": true,
-      "turns_diff": 3,
+      "turns_diff": 37,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3562,9 +3721,9 @@
       "players": 5,
       "forced_haunt": 19,
       "expected_hash": "4e60825dd08176614c7bfa8aa88aeb728122110d1929cc5e5a0ab586df2cc03b",
-      "actual_hash": "f01f2115a2343eb54f69c40a3e4d2e979290cc5aa78f38fb0fa44b264b159aa4",
+      "actual_hash": "98fdd345b98a5a846e684e0da508ea64982f9795b710f3c40656cbcfc7d93c30",
       "drift": true,
-      "turns_diff": 34,
+      "turns_diff": 27,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3576,7 +3735,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3585,10 +3745,13 @@
       "players": 5,
       "forced_haunt": 20,
       "expected_hash": "37ce2c96dbda7202cf5cae0bc8f81b3077e6ae1e953ec31595b50c4a4cf3b4b0",
-      "actual_hash": "e2fff2db0b1c2d93884ed4bee3ee983702445469ef9b635be18d89a307c0ec84",
+      "actual_hash": "811074ec56f68f6b8256505182a804455c210bc6ce2606fb81e02b9877a6a26b",
       "drift": true,
-      "turns_diff": 27,
-      "winner_diff": [],
+      "turns_diff": 25,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -3609,9 +3772,9 @@
       "players": 5,
       "forced_haunt": 21,
       "expected_hash": "3ac04761e5322c40417c66c4197a730111a6126c0d96f1099f7e49c7094b28f7",
-      "actual_hash": "9e9f97fcc761d8ad10acd88d4ec26322a3e7eb8c67686e81216ec423197f76b9",
+      "actual_hash": "fd2873d16a6988bd309f13f09661b60b312ad3adebc059513c253cfce5dd43ca",
       "drift": true,
-      "turns_diff": 33,
+      "turns_diff": 14,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3624,7 +3787,8 @@
         "4c8466b3",
         "133c9fe6",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3633,10 +3797,13 @@
       "players": 5,
       "forced_haunt": 22,
       "expected_hash": "dd0489c9606810c352cc57964385bdc7cc78a140787d59665a7a844903341817",
-      "actual_hash": "8f936231095ad41279f6e4872062d6aec3f2a93c6bff554597265289bb453c0b",
+      "actual_hash": "443f7cafa215f7423175882b71f5b2c225d47593e2cbb9d50dbcd4758329bc1b",
       "drift": true,
-      "turns_diff": -5,
-      "winner_diff": [],
+      "turns_diff": 10,
+      "winner_diff": [
+        "heroes",
+        "traitor"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -3647,7 +3814,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3656,9 +3824,9 @@
       "players": 5,
       "forced_haunt": 23,
       "expected_hash": "907c489d25f2fc5ea215a3df0d91cb1d04e98250872d4b0ffb99f7f4bdba44d0",
-      "actual_hash": "82aadcbdac3f9f541910445ce4671c14c1dadcd255a6cdcb9849d9327d426c7a",
+      "actual_hash": "53fcb9078ca1567254f11d6f464ce9dc50c8efd16c4f02f6d274c84ddcd9f9fa",
       "drift": true,
-      "turns_diff": 46,
+      "turns_diff": 35,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3670,7 +3838,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3679,13 +3848,22 @@
       "players": 5,
       "forced_haunt": 24,
       "expected_hash": "70d0882ac3be4a32db3f3084547cf8327cc9b3db362c8d4cac82f02013aa59a1",
-      "actual_hash": "df8f7d5600f417113dc53bb4bd28516ddee9ea5e22398021fd23feea587f3e84",
+      "actual_hash": "dec4f71ce8492f6c2619ddcb7bc13b1307e48121b0504b9c004196953377ab0f",
       "drift": true,
-      "turns_diff": 34,
-      "winner_diff": [],
+      "turns_diff": 360,
+      "winner_diff": [
+        "traitor",
+        null
+      ],
       "haunt_diff": [],
-      "phase_diff": [],
-      "completed_diff": [],
+      "phase_diff": [
+        "GAME_OVER",
+        "HAUNT_PHASE"
+      ],
+      "completed_diff": [
+        true,
+        false
+      ],
       "error": "",
       "anchor_hash": "6e6f762bce0442e72bb6bcc2cdaa07c234a7fb855f67a7014a47fa2aca055172",
       "attribution": "da883af9",
@@ -3693,7 +3871,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3702,9 +3881,9 @@
       "players": 5,
       "forced_haunt": 25,
       "expected_hash": "e0ec1eb486f6a1d3453e68c9bb3add9417d40392d837c127acc74931518f3274",
-      "actual_hash": "2b19d26ae954991fc90a4a5ade6d6aaffdf8d6758571378cd0f90af1811b04d4",
+      "actual_hash": "c2ad4435c19aa55cc22a664bf7265bd4c17700f9d71d844addd72af25e61104f",
       "drift": true,
-      "turns_diff": 28,
+      "turns_diff": 14,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3716,7 +3895,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3725,9 +3905,9 @@
       "players": 5,
       "forced_haunt": 26,
       "expected_hash": "04220c0e7a43da8f19a6810c33e56310f5718f51e59997ad547c6ef434768fbe",
-      "actual_hash": "5ae10b7b861cfe33afd6bcec62bc115b22a8a5b61a57db05c4d798d7d7cd99bc",
+      "actual_hash": "7fc6e88321e0898a266c5823be1f99f1c3a8d253c3f7db16bfa06ef9c5fd01b9",
       "drift": true,
-      "turns_diff": 26,
+      "turns_diff": 17,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3749,9 +3929,9 @@
       "players": 5,
       "forced_haunt": 27,
       "expected_hash": "5a808eaf1a4ec78e56adceab403ba11613e7d1846f92653a8d8ed8cf625c446b",
-      "actual_hash": "c938998ed647df1c574bf74c6b1fb35720222078a78d369b2c7774f5b6311c4e",
+      "actual_hash": "a58cfb0453d29585e0e939c06146ee64b3564f2ffe4dbca3f5863269ccfabe37",
       "drift": true,
-      "turns_diff": 33,
+      "turns_diff": 22,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3763,7 +3943,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3772,9 +3953,9 @@
       "players": 5,
       "forced_haunt": 28,
       "expected_hash": "4f05846076f2e4435188d128f25be7dc7813ed371202a5a2f408e5449ad668a9",
-      "actual_hash": "4b7df5f64e45efcbda280e271ba28cd881c4a1a4132305675d64ef8d5ec18308",
+      "actual_hash": "043fc543c3d565bfb1b5cefb306a62841fb5ad5d60252328290c660ba3fd4dc1",
       "drift": true,
-      "turns_diff": 36,
+      "turns_diff": 20,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3786,7 +3967,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3795,9 +3977,9 @@
       "players": 5,
       "forced_haunt": 29,
       "expected_hash": "0c39948774f90be8be95c3e6398cd89c2962cbb6f07d469f55befb76364f153c",
-      "actual_hash": "2d417a7ad8cba5f69dcc738a186f7ffb54d4318cc2a6c77e8bc9b82322670e1e",
+      "actual_hash": "40bc88c128146fccdfca219ab2c56c9bbd78a30b15fda2f909d657d87fe30361",
       "drift": true,
-      "turns_diff": 34,
+      "turns_diff": 22,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3809,7 +3991,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3818,9 +4001,9 @@
       "players": 5,
       "forced_haunt": 30,
       "expected_hash": "59e7c2a1bdd1f60fd4da1887ef5aa17d1c21cefb1ca6553025b4b7d58040e564",
-      "actual_hash": "001a8c85b156e69b4eecfb26d44d42d45377d7e27a0d75c1ddce860279b1a6e3",
+      "actual_hash": "3b41bbad9a27e71eed72ab609642f6d32a83820dbb4ab8a8698e38f03e141e3c",
       "drift": true,
-      "turns_diff": 37,
+      "turns_diff": 28,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3832,7 +4015,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3841,9 +4025,9 @@
       "players": 5,
       "forced_haunt": 31,
       "expected_hash": "04726936e794d3ea3592649856df4d8a669a4cdbafbdd58635496c714e4a2342",
-      "actual_hash": "57ef9a2ca53c40f48c74d7e347dcde7a93dc61e550550456ec1ba7ac39d4f733",
+      "actual_hash": "e2bc06b80cc18e0b132fb147c6b3a30024e393798041a905a95283392511dc62",
       "drift": true,
-      "turns_diff": 35,
+      "turns_diff": 20,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3865,9 +4049,9 @@
       "players": 5,
       "forced_haunt": 32,
       "expected_hash": "4b3d7cc9bb39745e9c414a01b2f876860d6372a5bf81125b0a9abb5d210d9afc",
-      "actual_hash": "fc7b304d57f747914321ddd50912821f7106e5d92c95bd99e6089b14a0a2d500",
+      "actual_hash": "2ca0269435049d6a59d02bcca697eaa1ad46a78738f85c3617f6253f51e60925",
       "drift": true,
-      "turns_diff": 29,
+      "turns_diff": 21,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3879,7 +4063,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3888,9 +4073,9 @@
       "players": 5,
       "forced_haunt": 33,
       "expected_hash": "4fbf487531156dc6f9d95d5cb521213553451ca94d75a4e33f08b65015df2ee3",
-      "actual_hash": "8975a9f3c92e88f98d3292f8e0592ffa8539e2a06f9ed92be5a031b3e3bb6594",
+      "actual_hash": "46fed5879f787143c472be3635e575887f05473e932c587f775e1c0095d2c65e",
       "drift": true,
-      "turns_diff": 29,
+      "turns_diff": 21,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3912,10 +4097,13 @@
       "players": 5,
       "forced_haunt": 34,
       "expected_hash": "cb4fbac2bb236d7ac3fd9f55ca925a147326a3c29d84b18cff3fec6f15af19f0",
-      "actual_hash": "0407a02f63be3f5e8e9288904df66029462b3838435942103ce72d7116d16ef8",
+      "actual_hash": "afc0693b6109606125437afd3bf7137fc602fc5b5d494e82275c82498e517a8d",
       "drift": true,
-      "turns_diff": 20,
-      "winner_diff": [],
+      "turns_diff": 18,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -3926,7 +4114,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3935,9 +4124,9 @@
       "players": 5,
       "forced_haunt": 35,
       "expected_hash": "8322e13c788db46ea779be38e16181012ef682aeebb43e49debce39cfbadf2f4",
-      "actual_hash": "6818579bad2f646b21f8cd03563d49c7df2b062f38713161bffbecfc7f97211d",
+      "actual_hash": "500860807274ec9dbf6d890498069c23aa8bb58c47689a5db2e8006104b2ee67",
       "drift": true,
-      "turns_diff": 37,
+      "turns_diff": 20,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -3949,7 +4138,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3958,10 +4148,13 @@
       "players": 5,
       "forced_haunt": 36,
       "expected_hash": "df7d2d64cae945ecda126cb619ea013881c3804db8d5ba3dd59eac1d125fb0b4",
-      "actual_hash": "aa0560baa06ea360a7bc7622f634cddc270901c3dfd458fb2c85894ea6463550",
+      "actual_hash": "baa9e964b741973d7659e744d3b104c35aa2f7555f10841bd91e9fcef3c4b8d6",
       "drift": true,
-      "turns_diff": 37,
-      "winner_diff": [],
+      "turns_diff": 22,
+      "winner_diff": [
+        "heroes",
+        "traitor"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -3972,7 +4165,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -3981,13 +4175,10 @@
       "players": 5,
       "forced_haunt": 37,
       "expected_hash": "a4f8b8c6963787259d8fec81090e29245135517fe1d2ac96b125652ea52fd9a9",
-      "actual_hash": "19d7dc914d3876845429615a5417c53b91270d1361943902bb41484f1e0eaa6d",
+      "actual_hash": "efc65bcc5c87be2322171c654fbf067b61de25d11ad81e9453d96c67e6095dcb",
       "drift": true,
-      "turns_diff": 33,
-      "winner_diff": [
-        "traitor",
-        "heroes"
-      ],
+      "turns_diff": 21,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -3998,7 +4189,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4007,9 +4199,9 @@
       "players": 5,
       "forced_haunt": 38,
       "expected_hash": "68de31e757078f3bae56213e4ac379a1690f0415c68fad533a267a01a0d27e1d",
-      "actual_hash": "a515fbd7e794a7b46fe48dbba9940d5260f478da555e3c42e147c619fc86fdd6",
+      "actual_hash": "35443136feb2534da6a977d1bbff19825914fcb2e547b29c4ae91f24bfd63e42",
       "drift": true,
-      "turns_diff": 35,
+      "turns_diff": 16,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4021,7 +4213,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4030,10 +4223,13 @@
       "players": 5,
       "forced_haunt": 39,
       "expected_hash": "0ce9d9793ff374dcae1ca2da8def01f7eb5ac7d22735b45abe7e77553c34bf49",
-      "actual_hash": "9eb077f8f98f0ac3d83779810045ef24b450f6ed47572363a4631cbf128d80b7",
+      "actual_hash": "ff7bfd6d288cb8d0fa91bf9e22c6a268e136c07abbdbc7dd4b2865a4c035b192",
       "drift": true,
       "turns_diff": 34,
-      "winner_diff": [],
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -4044,7 +4240,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4053,9 +4250,9 @@
       "players": 5,
       "forced_haunt": 40,
       "expected_hash": "7318eee7f9eccb136a26f87d4f2ac2b28bc9f61e2658b20053223211e2420292",
-      "actual_hash": "2751755ad03dbcf256ceedad97cd8c06db004b19f54a6fd85ecc334a316f6cfd",
+      "actual_hash": "9afe84e87d7a724e19f4680f54178f13621d808279a43c1a953a4162e7efa515",
       "drift": true,
-      "turns_diff": 32,
+      "turns_diff": 27,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4067,7 +4264,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4076,9 +4274,9 @@
       "players": 5,
       "forced_haunt": 41,
       "expected_hash": "d1241c7a8e32c6e0fecda0e9ff2608c69ab3590a56baece22e79c1da4124e80b",
-      "actual_hash": "12918323ddf27889c46a48d22873f50778d24621b418a4e4c1d53fcdb313ba2a",
+      "actual_hash": "e1b99df39b2e8e803a39cffadefce82ba23ca73999cb9ffc9120db60476e65b7",
       "drift": true,
-      "turns_diff": 39,
+      "turns_diff": 23,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4090,7 +4288,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4099,9 +4298,9 @@
       "players": 5,
       "forced_haunt": 42,
       "expected_hash": "ff970ba7d6c28634a2a81f00a6b13d9663f9b74b5e21bbf99c1782f7c5325a50",
-      "actual_hash": "c5f3c5e3848fc3bdd54128b827d4aed12c3c615de141c1dae4b457ba584574fe",
+      "actual_hash": "ab0d628381ff8dbe7a25f17d717ab344e98edbcd7e894a8d5e01207f5eae3d7c",
       "drift": true,
-      "turns_diff": 24,
+      "turns_diff": 32,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4113,7 +4312,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4122,9 +4322,9 @@
       "players": 5,
       "forced_haunt": 43,
       "expected_hash": "015b53113f187e0e8eff2c11659229c670cfb6d5060014a96be535c92c8181ee",
-      "actual_hash": "6ed774c070ba0a777decefe53da72cfe1377ddc4f85d22381b0e23275c0e3dbe",
+      "actual_hash": "0250205511640b3d9db185931f549f456bc0b02440d137efc7dd060c9a80ff7f",
       "drift": true,
-      "turns_diff": 32,
+      "turns_diff": 23,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4136,7 +4336,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4145,9 +4346,9 @@
       "players": 5,
       "forced_haunt": 44,
       "expected_hash": "024a3f2689ec853b5c396834f0a5721668e6dfdcba660cc6e199285b858852ff",
-      "actual_hash": "1cc65df90803c87f4f48479c2d7538ecc3026c5d35ab04380e54fe76b3bb075d",
+      "actual_hash": "ecadfe3dd5bad6b18c68a8738f663b0a5f737c6d11e93d1fe223af0a97a058c5",
       "drift": true,
-      "turns_diff": 11,
+      "turns_diff": 2,
       "winner_diff": [
         "heroes",
         "traitor"
@@ -4172,9 +4373,9 @@
       "players": 5,
       "forced_haunt": 45,
       "expected_hash": "565ea78d8cc9f8d41efd87071be21126669735933a13f7c84eb99364afde8fc0",
-      "actual_hash": "4d04fd512003cc945a2fd6e3f8fbb63db443f6d63b9937c037e6701ce2251e09",
+      "actual_hash": "ce5b2231e9fa0c48143bcefa09cb2ab8659395b1b49350f7e9dbcfd346e59715",
       "drift": true,
-      "turns_diff": 43,
+      "turns_diff": 25,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4196,9 +4397,9 @@
       "players": 5,
       "forced_haunt": 46,
       "expected_hash": "f0dd926563819cf354854fafef4ecee1596efbf5b2ec8d5a3499fa7a8136281b",
-      "actual_hash": "d5a8d9efe2671508a15b3b1b531a701efb760a28f8d091fcd6693834d928eb0f",
+      "actual_hash": "a6cd8b07de1996828be1821a7e06f64024434a4372be9cd226a2f37e46b113fc",
       "drift": true,
-      "turns_diff": 30,
+      "turns_diff": 19,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4210,7 +4411,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4219,9 +4421,9 @@
       "players": 5,
       "forced_haunt": 47,
       "expected_hash": "61663b7a7dcd9266f8e50741089a5275f87b592373b11e8e1972f0f7953d1a69",
-      "actual_hash": "912fc5aea181b42d11ff8dc386734964d432e1179a34ed3c878a355e8fe96891",
+      "actual_hash": "c071b254c894ca3bccb4babe6dae3da333b4dc38740e49556b52d37bee2a486c",
       "drift": true,
-      "turns_diff": 36,
+      "turns_diff": 32,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4233,7 +4435,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4242,13 +4445,10 @@
       "players": 5,
       "forced_haunt": 48,
       "expected_hash": "899a43cc91c31e57634fcfc261be8cdd76d1f42a5f749926f08e7efcfadc6f6e",
-      "actual_hash": "bac5fb838996dfc7ea8a372c01b72229ce46255f17cd60cd849ca0ea2cd05bcc",
+      "actual_hash": "3fefcc0dfbae4e1087e67bf1b09c0b26c8eba7b75b20a04af0ba236efe2bc115",
       "drift": true,
-      "turns_diff": 28,
-      "winner_diff": [
-        "heroes",
-        "traitor"
-      ],
+      "turns_diff": 15,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -4259,7 +4459,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4268,9 +4469,9 @@
       "players": 5,
       "forced_haunt": 49,
       "expected_hash": "e9ace2cc4701f67a224438163ef639b0e4f04c0292efbce5be45a275ef8fd5eb",
-      "actual_hash": "31c833faeaffc65863167a8704a26b5168c6267f71b47bb4caafc2a8c084f1d7",
+      "actual_hash": "cc3b898a461ae7b302006289d137d5da2edaed089b8c681d2fee5d3711c1c9de",
       "drift": true,
-      "turns_diff": 36,
+      "turns_diff": 18,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4282,7 +4483,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4291,9 +4493,9 @@
       "players": 5,
       "forced_haunt": 50,
       "expected_hash": "ad83710549e550c541840437314858d95428d209fd2d4293403c8d286bc2960e",
-      "actual_hash": "44edc8603fcaa2baa756ff76ad21117b2ce4f6d75ae494c99bb17a15b9d0e158",
+      "actual_hash": "d85fc29fe857c6f1c1b027419d9b341477bf9fbc057ba7b5be5863318a8da038",
       "drift": true,
-      "turns_diff": 35,
+      "turns_diff": 20,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4315,9 +4517,9 @@
       "players": 5,
       "forced_haunt": 51,
       "expected_hash": "37feb8104da4801e4afefb9a8da0310c885a69035bf901daee2bfa87bddd60cb",
-      "actual_hash": "2cfd744c228c50415f178aa6ddd07eb799e70c4e773cea5d736580c363de1ae3",
+      "actual_hash": "b410e4a6d9a85ce9f1e7cf28c1bdbe89529c98ab7d086ec9a34126b401acdb51",
       "drift": true,
-      "turns_diff": 29,
+      "turns_diff": 13,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4329,7 +4531,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4338,9 +4541,9 @@
       "players": 5,
       "forced_haunt": 52,
       "expected_hash": "f3b96cf8998f3b0607d064a610fec504a010218896bc18b6aaa92d3f749ed501",
-      "actual_hash": "8080496006ffe7a8d3aaf261c023d36e5c1cdee5f5c13219cb696ccc63012792",
+      "actual_hash": "769f1bbf85a4c2d9f9e71be21f16a118384c7924de42b061446cc95d48614622",
       "drift": true,
-      "turns_diff": 43,
+      "turns_diff": 12,
       "winner_diff": [
         "traitor",
         "heroes"
@@ -4355,7 +4558,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4364,10 +4568,13 @@
       "players": 5,
       "forced_haunt": 53,
       "expected_hash": "e4f40b0bc676583f21a7d3496fa20d8ab5c76c0705f1e6ceca8b45e14641ffae",
-      "actual_hash": "c0f4f916cfb03a49e48865e67002d6290bee0e77544b5e8982a877455844d7f0",
+      "actual_hash": "ba6ce2c765fe12330df2a0aa62080c12a836b101e6432c370f28ed9a52de6ec5",
       "drift": true,
-      "turns_diff": 31,
-      "winner_diff": [],
+      "turns_diff": 17,
+      "winner_diff": [
+        "traitor",
+        "heroes"
+      ],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -4378,7 +4585,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4387,9 +4595,9 @@
       "players": 5,
       "forced_haunt": 54,
       "expected_hash": "6934a7e5e99729574b32e96141752ce4bbff7c265119dc5dbcc6d8c210b72c1b",
-      "actual_hash": "52925880501466b7cecdb5d4bf8f9724b649222b1cce5ab9bcf258e3b044eb10",
+      "actual_hash": "2e144d9e4ed00dfeda0d0cb210c149eab6d6763dab4ce8f48f19a3a900f8669e",
       "drift": true,
-      "turns_diff": 39,
+      "turns_diff": 24,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4401,7 +4609,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4410,9 +4619,9 @@
       "players": 5,
       "forced_haunt": 55,
       "expected_hash": "b52893980cb4e54ad0aefa7035b33e09aa1570d6dda6246d9e8b8cd5ca28ad09",
-      "actual_hash": "6d741bea23b32cbe5c07a0329d2e6eeb0f96b8758b85b5dfdd4e4b87367ba796",
+      "actual_hash": "24d97a8b9621cb9718f0c71380e65c5a22f99ec803a03b97d03ed4450740e241",
       "drift": true,
-      "turns_diff": 6,
+      "turns_diff": -16,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4424,7 +4633,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4433,9 +4643,9 @@
       "players": 5,
       "forced_haunt": 56,
       "expected_hash": "0cef96d116752c5f8b46ce2a8789709c4d47aaca7835fed5e5ea58ebce09daeb",
-      "actual_hash": "44f59b7f2e0f13214b783dc0ccabaa1ad87ed65c73369679ab77845cfff9f689",
+      "actual_hash": "7dd697d90b94d0d68cce05ee8551c766d56744101a0d9b2fd00df1fefdf3e955",
       "drift": true,
-      "turns_diff": 34,
+      "turns_diff": 15,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4447,7 +4657,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4456,9 +4667,9 @@
       "players": 5,
       "forced_haunt": 57,
       "expected_hash": "1fcdd3f9238c1c7ef5419fc6805c04936775cb6afac47e3f9dedefdbb5f46cf4",
-      "actual_hash": "90d7ed265277ccee25d510ad96096388a9db07954534087259d0687cf806683b",
+      "actual_hash": "324a287578c722f9501d7afa15e4be126fb4e6e0ef850cf1d231a2240294837b",
       "drift": true,
-      "turns_diff": 18,
+      "turns_diff": -8,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4470,7 +4681,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4479,13 +4691,10 @@
       "players": 5,
       "forced_haunt": 58,
       "expected_hash": "bf5dc0bb6ec581d7027eb9af1ee5084f41e6d89f301b444e6716f252a24aeb27",
-      "actual_hash": "3031d6d6098ca05d15b037a0a163cacbb0730d81b89d43f6236bc11329eb4bd3",
+      "actual_hash": "9c4c48fc5290d050f0480a8a3773aaa9d4d8b8b72e62c8190bfb24c0e5d692eb",
       "drift": true,
       "turns_diff": 23,
-      "winner_diff": [
-        "traitor",
-        "heroes"
-      ],
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -4496,7 +4705,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4505,9 +4715,9 @@
       "players": 5,
       "forced_haunt": 59,
       "expected_hash": "85ec56326a224cc73fbe700d9761cb75c2e90cb4d272c57e15caf911c880bbe4",
-      "actual_hash": "280c97ee5e47dd47912d15c0bc6318f233d161bf33878efa2fb93fdd945df6a4",
+      "actual_hash": "c0213c49bfabb96eb26cae196eb2b63c04bc0dd519bd23f568fb5dcdcb35a515",
       "drift": true,
-      "turns_diff": 43,
+      "turns_diff": 31,
       "winner_diff": [
         "heroes",
         "traitor"
@@ -4522,7 +4732,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4531,13 +4742,10 @@
       "players": 5,
       "forced_haunt": 60,
       "expected_hash": "b920255e3bb0d5b6501c3b1afffcb36f16b4977865c32936915494e8a968c1ea",
-      "actual_hash": "b50d7404f4711da80b8d8e5a3d0311ad7cc013b0919ba832f9d1c123bd741dfd",
+      "actual_hash": "992b50c5d1a6b7e57fff644921f3b9088560c0b58271d20340dd51e7b2271bf8",
       "drift": true,
-      "turns_diff": 29,
-      "winner_diff": [
-        "traitor",
-        "heroes"
-      ],
+      "turns_diff": 41,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -4548,7 +4756,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4557,13 +4766,10 @@
       "players": 5,
       "forced_haunt": 61,
       "expected_hash": "a6732c4e20fed184f379ace7a1abd16f34ada39f36faf3f8ae892b03b71ede26",
-      "actual_hash": "221df1a385ae9e8bf50c367d33d3ad0621569ab138403e22785709a214c16fe7",
+      "actual_hash": "75cd9553909662e198e08f05256936959fabb89cac7cb01e85318671b98ab10a",
       "drift": true,
-      "turns_diff": 31,
-      "winner_diff": [
-        "traitor",
-        "heroes"
-      ],
+      "turns_diff": 11,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -4574,7 +4780,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4583,9 +4790,9 @@
       "players": 5,
       "forced_haunt": 62,
       "expected_hash": "66bde80e980d04504ea01a3f09657dff468088de6abb6c3066ed9833ee5cba86",
-      "actual_hash": "50e12050b9c2ac5465e3baced42ceee0554023874d9898bdbc7d4e05c9891386",
+      "actual_hash": "7613e7314ce810939b8b066caf10cf3b24f842d8800ae44229e8c00164662304",
       "drift": true,
-      "turns_diff": 25,
+      "turns_diff": 15,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4597,7 +4804,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4606,9 +4814,9 @@
       "players": 5,
       "forced_haunt": 63,
       "expected_hash": "68211be7f1016a0647683bbba14c78c6583399f8f2eb7dc1137e013b17307ab5",
-      "actual_hash": "a7d6070fced8ce33b9550a74d3b76b3f7de377d972b91661bc3053cad7b71c4c",
+      "actual_hash": "87b404624bf3b16464207aadf219b231d936a7de7fea3cc98b44afc7c94a06f5",
       "drift": true,
-      "turns_diff": 35,
+      "turns_diff": 19,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4620,7 +4828,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4629,13 +4838,10 @@
       "players": 5,
       "forced_haunt": 64,
       "expected_hash": "ba95f88542dff6fafcad28e260e9d4330f9a95608a8a6cb6c43987375b1f2b2b",
-      "actual_hash": "2d24f6e2814da0dfaedbdc0e0212ba023137b5cec7a01d83b4b5765a842404c9",
+      "actual_hash": "999132fdd3040b11274705a71c64737b225394bb1ecb89eca1511f250eb99611",
       "drift": true,
-      "turns_diff": 30,
-      "winner_diff": [
-        "heroes",
-        "traitor"
-      ],
+      "turns_diff": 18,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -4646,7 +4852,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4655,13 +4862,10 @@
       "players": 5,
       "forced_haunt": 65,
       "expected_hash": "ba62b2045a798ff2469b7eb66d1dd866faba12fef91f2d72603c9f0940048953",
-      "actual_hash": "c4e7aa071fc2123d574d3c337feae77bb0599d784cd3c6132827a0e9fa572de3",
+      "actual_hash": "92b6f79523e00e2734f4d0f8c86abee694b5ffdb92306cd58253ca6b394c8b6b",
       "drift": true,
-      "turns_diff": 2,
-      "winner_diff": [
-        "heroes",
-        "traitor"
-      ],
+      "turns_diff": 1,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -4672,7 +4876,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4681,9 +4886,9 @@
       "players": 5,
       "forced_haunt": 66,
       "expected_hash": "3aee62fc9d6ef4c5d25db42721e7e50932be6c2839c23e2e55f6d6a884d5b0a9",
-      "actual_hash": "b3d97fadf1856b292dc7f622576ffe4bc04aca57341aae6a11c8a89b18b3c8a6",
+      "actual_hash": "b0354bcb2b3ebacee10b33905037a4b05d15e789184be22b9367283d18e3332c",
       "drift": true,
-      "turns_diff": 37,
+      "turns_diff": 23,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4695,7 +4900,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4704,9 +4910,9 @@
       "players": 5,
       "forced_haunt": 67,
       "expected_hash": "704e4f18a54a0d7010a8635a7bf27407a85741fca28f195baf627a1eefa170de",
-      "actual_hash": "2421499e2f5c3c2315c4926b22f4f8f42103b8afed60d391a2446887825a77ed",
+      "actual_hash": "ba857406d010344f0854f32861a98983826e3200bfa7554ba779cf2d2a531c4d",
       "drift": true,
-      "turns_diff": 35,
+      "turns_diff": 25,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4719,7 +4925,8 @@
         "4c8466b3",
         "391e2b98",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4728,9 +4935,9 @@
       "players": 5,
       "forced_haunt": 68,
       "expected_hash": "3b6009210f52a181148c3dfbd8d42f9936d4f7be0a1aba40e3a254d00deab121",
-      "actual_hash": "048ce784083d5b8a9692f4bf3fe2c9f01c2c3d65b4229265ec20c52d9c18f131",
+      "actual_hash": "f00600bc96a7d144ce76e87556796ac0927666aec1af199c2756f9e66124e6e1",
       "drift": true,
-      "turns_diff": 32,
+      "turns_diff": 12,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4742,7 +4949,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4751,9 +4959,9 @@
       "players": 5,
       "forced_haunt": 69,
       "expected_hash": "f19665e6c1cad3a9aed24c0812cbd92691d2c08e2682cf5e5873b4a870b219dd",
-      "actual_hash": "74e45194ab7b49f6ed6367f3c24811e459fa089ca0296937ff4c55df9fffe46d",
+      "actual_hash": "737102d4fe35651282b9e1a50a62f3866af0b59495719c580f297cfec478aff7",
       "drift": true,
-      "turns_diff": 28,
+      "turns_diff": 15,
       "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
@@ -4765,7 +4973,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     },
     {
@@ -4774,13 +4983,10 @@
       "players": 5,
       "forced_haunt": 70,
       "expected_hash": "1ec6b49060be28858c5bf5ae3116d103d2999734b456c6d336da8b56059e11e3",
-      "actual_hash": "baa455ce70a8d742ffe6896b1a8237ad6c0facce5ef349e47305f1f1b404648b",
+      "actual_hash": "934c7900396348875f269954e06a56d6a4964d5ab544b95bdad93f3c8d2adb4a",
       "drift": true,
-      "turns_diff": -26,
-      "winner_diff": [
-        "traitor",
-        "heroes"
-      ],
+      "turns_diff": 20,
+      "winner_diff": [],
       "haunt_diff": [],
       "phase_diff": [],
       "completed_diff": [],
@@ -4791,7 +4997,8 @@
         "da883af9",
         "4c8466b3",
         "fcfea6f3",
-        "6b3fd92c"
+        "6b3fd92c",
+        "current"
       ]
     }
   ]

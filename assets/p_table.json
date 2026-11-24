@@ -110,7 +110,7 @@
   },
   "content": {
     "path": "source/desktop/game/content.py",
-    "sha256": "02da4d250483302324126ea0db97c933ada275c676d83b26eb43dceb2173238e",
+    "sha256": "fb3c6e71344d9157416c5e12cbcb8c7c5bf978840dcff79d8715b9abf2a4b1f5",
     "collections": {
       "CHARACTER_FACES": 12,
       "ROOM_BASES": 39,

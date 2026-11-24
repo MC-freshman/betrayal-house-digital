@@ -214,7 +214,7 @@
       "title": "content.py 同步摘要",
       "priority": "P2",
       "status": "PASS",
-      "detail": "content.py sha256 与 P 表记录一致（02da4d250483…），集合计数一致"
+      "detail": "content.py sha256 与 P 表记录一致（fb3c6e71344d…），集合计数一致"
     },
     {
       "id": "C31",

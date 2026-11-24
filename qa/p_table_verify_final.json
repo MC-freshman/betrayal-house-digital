@@ -1,8 +1,8 @@
-﻿{
+{
   "tool": "verify_p_table_execution.py",
   "readonly": true,
   "root": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill",
-  "snapshot_time": "2026-11-24T17:00:30",
+  "snapshot_time": "2026-11-24T22:56:40",
   "environment": {
     "python": "3.9.13",
     "platform": "Windows-10-10.0.26300-SP0",
@@ -12,7 +12,7 @@
   },
   "inputs": {
     "p_table": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\assets\\p_table.json",
-    "p_table_sha256": "5ade009623a7f7be30f86b4a92f1341d3f06ba8c532d8f77a0ef994cb2e6b2c0",
+    "p_table_sha256": "78f8d015044fe5c6e5dceb13453f3a4e2357002d1c7e3ac6131e5525128b687f",
     "p_table_columns": 33,
     "p_table_records": 274,
     "contract_json": "D:\\Game\\桌游模拟器\\Betrayal at House on the Hill\\source\\desktop\\game\\qa\\contract_result.json",
@@ -1080,7 +1080,7 @@
       "title": "内存重建 = 磁盘 P 表",
       "priority": "P0",
       "status": "PASS",
-      "detail": "内存重建 274 行 × 33 列与磁盘逐字段一致；stats 一致（耗时 0.28s）",
+      "detail": "内存重建 274 行 × 33 列与磁盘逐字段一致；stats 一致（耗时 0.38s）",
       "evidence": []
     },
     {
@@ -1089,7 +1089,7 @@
       "title": "二次 scan/build 指纹一致",
       "priority": "P1",
       "status": "PASS",
-      "detail": "95 文件二次扫描与 274 行二次构建指纹一致（首次 0.27s）",
+      "detail": "95 文件二次扫描与 274 行二次构建指纹一致（首次 0.33s）",
       "evidence": []
     },
     {
@@ -1098,9 +1098,9 @@
       "title": "排除 generated_at 的归一化哈希",
       "priority": "P2",
       "status": "PASS",
-      "detail": "排除 generated_at 后归一化 payload 哈希稳定：4431b9961893eebb",
+      "detail": "排除 generated_at 后归一化 payload 哈希稳定：993ac39403394e83",
       "evidence": [
-        "4431b9961893eebb5a8aa94a856f0524c523583e21dfd32798f5f84ccf93de38"
+        "993ac39403394e83d567bbea6f6d6bb41187ef803a41e4c74989e570cd226894"
       ]
     },
     {
@@ -1201,9 +1201,9 @@
       "title": "AssetRegistry.load 耗时",
       "priority": "P1",
       "status": "PASS",
-      "detail": "load ×10：median=12.32ms p95=14.40ms（预算 150ms）",
+      "detail": "load ×10：median=14.97ms p95=17.13ms（预算 150ms）",
       "evidence": [
-        "load ×10：median=12.32ms p95=14.40ms（预算 150ms）"
+        "load ×10：median=14.97ms p95=17.13ms（预算 150ms）"
       ]
     },
     {
@@ -1212,9 +1212,9 @@
       "title": "10k resolve 耗时",
       "priority": "P1",
       "status": "PASS",
-      "detail": "10k resolve ×10：round p95=7.4ms（预算 500ms）；单次 p95=1.00us（预算 50us）",
+      "detail": "10k resolve ×10：round p95=11.5ms（预算 500ms）；单次 p95=1.50us（预算 50us）",
       "evidence": [
-        "10k resolve ×10：round p95=7.4ms（预算 500ms）；单次 p95=1.00us（预算 50us）"
+        "10k resolve ×10：round p95=11.5ms（预算 500ms）；单次 p95=1.50us（预算 50us）"
       ]
     },
     {
@@ -1259,9 +1259,9 @@
       "title": "load 峰值增量 RSS",
       "priority": "P1",
       "status": "PASS",
-      "detail": "load ×10 RSS 增量 11.71MB（预算 80MB；before=49.7MB after=61.4MB）",
+      "detail": "load ×10 RSS 增量 11.61MB（预算 80MB；before=49.2MB after=60.9MB）",
       "evidence": [
-        "load ×10 RSS 增量 11.71MB（预算 80MB；before=49.7MB after=61.4MB）"
+        "load ×10 RSS 增量 11.61MB（预算 80MB；before=49.2MB after=60.9MB）"
       ]
     },
     {
@@ -1376,8 +1376,8 @@
       "status": "PASS",
       "detail": "旧结果均晚于当前输入：validation_report.json, contract_result.json",
       "evidence": [
-        "{'artifact': 'validation_report.json', 'mtime': 1795510790.5655422, 'newest_input': 1795510682.7904737, 'fresh': True}",
-        "{'artifact': 'contract_result.json', 'mtime': 1795510818.673735, 'newest_input': 1795510682.5642626, 'fresh': True}"
+        "{'artifact': 'validation_report.json', 'mtime': 1795532147.0935662, 'newest_input': 1795532070.6280854, 'fresh': True}",
+        "{'artifact': 'contract_result.json', 'mtime': 1795532181.2299223, 'newest_input': 1795532070.3855858, 'fresh': True}"
       ]
     },
     {

@@ -953,7 +953,7 @@ ROOM_BASES = [
         name="地下墓穴",
         source_name="Catacombs",
         floor=-1,
-        doors=("north", "east", "west"),
+        doors=("north", "south"),
         symbol="omen",
         effect_id="room_catacombs",
         text="阴冷而潮湿，埋着许多不想被提起的东西。",
@@ -1184,7 +1184,7 @@ ROOM_BASES = [
         name="深渊",
         source_name="Chasm",
         floor=0,
-        doors=("north", "east", "west"),
+        doors=("east", "west"),
         special=True,
         effect_id="room_chasm",
         text="脚下是裂开的黑暗。",
@@ -1284,7 +1284,7 @@ ROOM_BASES = [
         name="塔楼",
         source_name="Tower",
         floor=1,
-        doors=("north", "east", "west"),
+        doors=("east", "west"),
         special=True,
         effect_id="room_tower",
         text="高处风大，视线却格外清楚。",
@@ -1303,17 +1303,60 @@ ROOM_BASES = [
 #    "target": 4,                             # 跨越检定的目标值
 #    "source": "<版次 + 卡面/规则出处>"}       # 空串或缺失会被 barriers.configure_barrier 拒绝
 #
-# **当前故意为空**：仓库里没有任何一条能同时给出这四项的依据——
-#   * photos/room/{vault,tower,chasm,catacombs}.png 只有插画，印字框是空的；
-#   * docs/BetrayalHouseHill_v4.2.pdf p2 只说明"Vault/Tower/Chasm/Catacombs 是
-#     barrier rooms；跨越不耗移动格；怪物无视障碍"，没写属性、目标值，也没写
-#     哪几扇门在同一侧（门侧只印在实体房间牌上）；
-#   * docs/执行收口-20261012.md:10 已把口径钉死：障碍门分组、门侧与卡面数值未校准，
-#     因此没有启用猜测参数。
-# 所以 engine 的接线点（GameEngine._place_room -> configure_disclosed_barrier）
-# 现在不会给任何房间加障碍，4 个障碍房继续走 room_effects 里既有的近似检定。
-# 拿到实体房间牌后，按上面四项补一条即自动生效，不需要再改引擎代码。
-BARRIER_SPECS: dict[str, dict] = {}
+# 仓库内素材仍然给不出这四项：photos/room/{vault,tower,chasm,catacombs}.png 只有
+# 插画、印字框是空的；docs/BetrayalHouseHill_v4.2.pdf p2 只说明"这四间是 barrier
+# rooms；跨越不耗移动格；怪物无视障碍"，没写属性/目标值，也没写哪几扇门在同一侧
+# （门侧只印在实体房间牌上）。
+#
+# **方案 B（2026-11-24）**：数值与门分组改用**二手来源交叉验证**补三间两门房——
+# 依据 `.codebuddy/wfat/k2_secondary_sources.md`（用户已授权接受二手交叉验证）：
+#   * stat/target：板块扫描图像直读 + Pixnet 中文规则整理 + Roll20 API 数据三方一致；
+#   * door grouping：**只有板块扫描图像一个来源**（置信度 medium，无文字来源描述分组），
+#     Tower/Chasm 仅有"可远程射击"的弱旁证，Catacombs 有"两门中间有墙"的文字旁证。
+# 因此下面三条的 ``source`` 一律写明"二手交叉验证"，**不冒充一手**：拿到实体房间牌
+# 或带版次标识的官方高清牌面后应逐条复核。
+#
+# Vault 未登记（**故意留空**）：官方板块是 **1 扇门**，而引擎现存房间全是 2–3 门，
+# 改成 1 门会产生死胡同，需先评估死路判定与房间生成。已登记为缺陷 D-06
+# （docs/延后项台账.md），能力补齐后按下面同一格式补一条即可。
+#
+# 登记后 room_effects 里既有的近似检定会自动让位（各 handler 首行都是
+# ``if self._barrier_config(room): return``），不会双重扣罚。
+BARRIER_SPECS: dict[str, dict] = {
+    "tower": {
+        "doors": {"east": 0, "west": 1},
+        "stat": "might",
+        "target": 3,
+        "source": (
+            "2nd ed 房间牌印刷句：Might 3+ 跨越；经 3 个独立二手来源交叉验证"
+            "（官方牌面扫描图像直读 / Pixnet 中文规则整理 / Roll20 API 数据集），"
+            "出处 .codebuddy/wfat/k2_secondary_sources.md，截至 2026-11-24；"
+            "门分组仅图像单源（medium 置信度），取得实体房间牌后需复核"
+        ),
+    },
+    "chasm": {
+        "doors": {"east": 0, "west": 1},
+        "stat": "speed",
+        "target": 3,
+        "source": (
+            "2nd ed 房间牌印刷句：Speed 3+ 跨越；经 3 个独立二手来源交叉验证"
+            "（官方牌面扫描图像直读 / Pixnet 中文规则整理 / Roll20 API 数据集），"
+            "出处 .codebuddy/wfat/k2_secondary_sources.md，截至 2026-11-24；"
+            "门分组仅图像单源（medium 置信度），取得实体房间牌后需复核"
+        ),
+    },
+    "catacombs": {
+        "doors": {"north": 0, "south": 1},
+        "stat": "sanity",
+        "target": 6,
+        "source": (
+            "2nd ed 房间牌印刷句：Sanity 6+ 跨越；经 3 个独立二手来源交叉验证"
+            "（官方牌面扫描图像直读 / Pixnet 中文规则整理 / Roll20 API 数据集），"
+            "出处 .codebuddy/wfat/k2_secondary_sources.md，截至 2026-11-24；"
+            "门分组有图像单源 + 中文规则「两门中间有墙」文字旁证（medium 置信度）"
+        ),
+    },
+}
 
 
 EVENT_SUPPLEMENTAL_SPECS = [

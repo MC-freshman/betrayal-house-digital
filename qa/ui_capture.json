@@ -1,8 +1,8 @@
 {
   "tool": "qa/ui_capture.py",
-  "generated_at": "2026-11-24T16:58:08",
+  "generated_at": "2026-11-24T22:54:36",
   "dpi": {
-    "system_dpi": 192,
+    "system_dpi": 168,
     "dpi_awareness": 1,
     "read_after": "GameApp 构造后（含 SetProcessDpiAwareness(1)）",
     "expected_system_dpi_by_scale": {
@@ -30,8 +30,8 @@
     "overall": "pass"
   },
   "errors": [
-    "100% 房间图 256x256，期望 128x128",
-    "100% 卡牌图 480x672，期望 240x336"
+    "100% 房间图 224x224，期望 128x128",
+    "100% 卡牌图 420x588，期望 240x336"
   ],
   "scales": [
     {

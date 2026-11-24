@@ -731,7 +731,10 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
 
         for direction in room.doors:
             barrier = self._barrier_config(room)
-            if barrier and barrier["doors"].get(direction) != self._barrier_side(player):
+            # p2：怪物无视障碍——侧门禁只拦探险者（怪物通常不走这条玩家
+            # 移动路径，这里保持判定侧也放行，避免将来接怪物寻路时被误拦）。
+            if (barrier and not self._is_monster_entity(player)
+                    and barrier["doors"].get(direction) != self._barrier_side(player)):
                 continue
             if direction not in DIRECTION_DELTAS:
                 continue
@@ -770,7 +773,8 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
                     )
                 )
 
-        if self._barrier_config(room) and self._barrier_can_attempt(player, room):
+        if (self._barrier_config(room) and self._barrier_can_attempt(player, room)
+                and not self._is_monster_entity(player)):
             options.append(ExitOption(label="跨越房间障碍", direction="cross_barrier", target_key=room.key,
                                       target_room_name=room.name, is_special=True, cost=0))
         # 已能通过门到达的目标（避免楼梯链接与门重复出现）
@@ -908,7 +912,10 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
         if option.direction == "cross_barrier":
             return option.target_key == player.room_key and self._cross_barrier(player)
         config = self._barrier_config(self.current_room(player))
-        if config and option.direction in config["doors"] and config["doors"][option.direction] != self._barrier_side(player):
+        # p2：怪物无视障碍，侧门禁只拦探险者。
+        if (config and not self._is_monster_entity(player)
+                and option.direction in config["doors"]
+                and config["doors"][option.direction] != self._barrier_side(player)):
             return False
         if player.steps_remaining <= 0 and player.moved_this_turn:
             self._log(f"{player.name} 已没有剩余移动力。")
@@ -1292,7 +1299,7 @@ class GameEngine(DamageRules, InventoryRules, RoomEffects, CombatRules, HauntAct
         self.state.board[key] = room
         self.state.pos_index[(template.floor, x, y)] = key
         # K2 接线点：只有 content.BARRIER_SPECS 明确登记过的房间才拿到两侧配置，
-        # 未登记（当前 = 全部）一律不猜，继续走 room_effects 的既有近似。
+        # 未登记（当前 = vault）一律不猜，继续走 room_effects 的既有近似。
         self.configure_disclosed_barrier(room)
         return room
 

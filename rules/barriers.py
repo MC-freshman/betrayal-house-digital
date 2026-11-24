@@ -3,9 +3,11 @@
 try:
     from ..content import BARRIER_SPECS
     from ..engine_parts.geometry import _rotate_direction
+    from ..models import Monster
 except ImportError:  # pragma: no cover - direct script execution
     from content import BARRIER_SPECS  # type: ignore
     from engine_parts.geometry import _rotate_direction  # type: ignore
+    from models import Monster  # type: ignore
 
 
 class BarrierRules:
@@ -14,7 +16,9 @@ class BarrierRules:
 
         生产环境唯一的接线点（`_place_room` 与 `_set_room_orientation` 各调一次），
         规则是"没登记 = 不配置"：宁可让 room_effects 里的既有近似继续生效，也不猜
-        门的分组/属性/阈值。登记表当前为空，原因见 ``content.BARRIER_SPECS`` 注释。
+        门的分组/属性/阈值。登记表当前有 tower/chasm/catacombs 三条（数值来自二手
+        交叉验证）；vault 因官方为 1 门、引擎无 1 门房间能力而故意留空，见
+        ``content.BARRIER_SPECS`` 注释与 docs/延后项台账.md D-06。
 
         返回 True = 该板块现在真的带 barrier 配置。
         """
@@ -54,9 +58,28 @@ class BarrierRules:
             raise ValueError("障碍侧须为 0 或 1")
         self.state.meta.setdefault("barrier_sides", {}).setdefault(room.key, {})[str(entity.id)] = side
 
+    def _is_monster_entity(self, entity) -> bool:
+        """该实体是否为怪物。
+
+        官方 2nd Ed. 规则手册 p2：**Monsters ignore barriers**（叛徒不免疫）。
+        障碍的两侧归属只约束探险者；怪物既不受侧门禁限制，也不因跨越障碍
+        而掷检定。三种写法都认，避免调用方拿到的怪物代理对象漏判：
+        显式 ``is_monster`` 标记 / ``Monster`` 类型 / ``state.monsters`` 成员。
+        """
+        if getattr(entity, "is_monster", False):
+            return True
+        if isinstance(entity, Monster):
+            return True
+        return any(monster is entity for monster in self.state.monsters)
+
     def entities_share_room(self, a, b):
         if a.room_key != b.room_key:
             return False
+        # p2：怪物无视障碍。BARRIER_SPECS 为空时这段判定是死代码，K2 落地后
+        # 第一次被走到（见 docs/延后项台账.md D-06）：英雄与德古拉分居两侧时
+        # 攻击曾被这里误拒。任一实体是怪物即视为同侧。
+        if self._is_monster_entity(a) or self._is_monster_entity(b):
+            return True
         room = self.state.board.get(a.room_key)
         return not room or not self._barrier_config(room) or self._barrier_side(a) == self._barrier_side(b)
 
@@ -69,7 +92,13 @@ class BarrierRules:
     def _cross_barrier(self, player):
         room = self.current_room(player)
         config = self._barrier_config(room)
-        if not config or not self._barrier_can_attempt(player, room):
+        if not config:
+            return False
+        # p2：怪物无视障碍，跨越不掷检定、也不消耗每回合一次的机会。
+        if self._is_monster_entity(player):
+            self._set_barrier_side(player, room, 1 - self._barrier_side(player))
+            return True
+        if not self._barrier_can_attempt(player, room):
             return False
         self.state.meta.setdefault("barrier_attempts", []).append(self._barrier_attempt_key(player, room))
         success = (player.role == "traitor" and room.template_id != "vault") or self._resolve_check(

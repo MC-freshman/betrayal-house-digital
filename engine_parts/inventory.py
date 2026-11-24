@@ -21,7 +21,8 @@ class InventoryRules:
             player.companions.remove(card_id)
         if return_to_room:
             self.state.room_items.setdefault(player.room_key, []).append(card_id)
-            if self._barrier_config(self.current_room(player)):
+            # p2：怪物无视障碍，怪物丢下的东西不该被某一侧锁住。
+            if self._barrier_config(self.current_room(player)) and not self._is_monster_entity(player):
                 self.state.meta.setdefault("barrier_item_sides", {}).setdefault(player.room_key, {})[card_id] = self._barrier_side(player)
         return True
 
@@ -44,7 +45,9 @@ class InventoryRules:
 
     def pickup_item(self, player: Player, card_id: str) -> bool:
         sides = self.state.meta.get("barrier_item_sides", {}).get(player.room_key, {})
-        if card_id in sides and sides[card_id] != self._barrier_side(player):
+        # p2：怪物无视障碍，捡东西不受物品所在的侧限制。
+        if (card_id in sides and not self._is_monster_entity(player)
+                and sides[card_id] != self._barrier_side(player)):
             return False
         # 剧本 7 p89：叛徒开局被迫丢下古书后，不能再捡起来。
         if self._mode_handler().item_pickup_blocked(self, player, card_id):

@@ -29,9 +29,9 @@ if str(GAME_DIR) not in sys.path:
     sys.path.insert(0, str(GAME_DIR))
 
 from ai.decisions import BotDecisionProvider  # noqa: E402
-from content import build_catalog  # noqa: E402
+from content import BARRIER_SPECS, build_catalog  # noqa: E402
 from engine import AutoDecisionProvider, GameEngine  # noqa: E402
-from models import Haunt  # noqa: E402
+from models import Haunt, Monster  # noqa: E402
 
 # 引擎里 _select_traitor_by_rule 认识的全部分支（含兜底 default）。
 TRAITOR_RULES = (
@@ -195,18 +195,30 @@ class BarrierWiring(unittest.TestCase):
 
     def test_no_room_is_wired_without_disclosed_data(self) -> None:
         engine = _engine(players=3)
-        configured = []
+        configured = {}
         for index, (template_id, template) in enumerate(sorted(engine.catalog.room_templates.items())):
             room = engine._place_room(template, 100 + index * 10, 100, 0)
             if "barrier" in room.data:
-                configured.append(template_id)
-        self.assertEqual(configured, [], "没有卡面依据时不允许给任何房间加障碍")
+                configured[template_id] = room.data["barrier"]
+        # 没登记的房间不允许加障碍；登记了就必须生效（两侧都出现、属性阈值与登记一致）。
+        self.assertEqual(sorted(configured), sorted(BARRIER_SPECS),
+                         "接线集合必须严格等于 BARRIER_SPECS")
+        self.assertNotIn("vault", configured, "Vault 官方 1 门、引擎无 1 门能力，见 D-06")
+        for template_id, config in configured.items():
+            self.assertEqual(set(config["doors"]),
+                             set(engine.catalog.room_templates[template_id].doors))
+            self.assertEqual(set(config["doors"].values()), {0, 1}, "两侧都必须有门")
+            self.assertEqual((config["stat"], config["target"]),
+                             (BARRIER_SPECS[template_id]["stat"],
+                              BARRIER_SPECS[template_id]["target"]))
+            self.assertTrue(config["source"])
 
     def test_disclosed_spec_is_applied_and_rotated(self) -> None:
         engine = _engine(players=3)
         template = engine.catalog.room_templates["catacombs"]
+        # 官方板块：north/south 两门（二手交叉验证，见 content.BARRIER_SPECS）。
         spec = {
-            "doors": {"north": 0, "east": 1, "west": 1},
+            "doors": {"north": 0, "south": 1},
             "stat": "speed",
             "target": 4,
             "source": "synthetic-test-fixture",
@@ -218,10 +230,91 @@ class BarrierWiring(unittest.TestCase):
         config = room.data.get("barrier")
         self.assertIsNotNone(config, "登记过的房间落位后应带两侧配置")
         self.assertEqual(set(config["doors"]), set(room.doors), "门->侧映射必须覆盖旋转后的门")
-        # north->east(0)、east->south(1)、west->north(1)：side 跟着门一起转。
-        self.assertEqual(config["doors"], {"east": 0, "south": 1, "north": 1})
+        # north->east(0)、south->west(1)：side 跟着门一起转。
+        self.assertEqual(config["doors"], {"east": 0, "west": 1})
         self.assertEqual((config["stat"], config["target"]), ("speed", 4))
         self.assertEqual(config["source"], "synthetic-test-fixture")
+
+
+class MonsterIgnoresBarrier(unittest.TestCase):
+    """p2：Monsters ignore barriers —— 两侧归属只约束探险者。
+
+    背景：``BARRIER_SPECS`` 为空时侧归属判定是死代码；K2 落地后第一次被
+    走到，英雄与同房间怪物分居两侧时攻击被误拒（30 号剧本德古拉在 chasm）。
+    规则书 p2 与 ``_apply_catacombs`` docstring 都写明怪物无视障碍。
+    """
+
+    def setUp(self) -> None:
+        self.engine = _engine(players=3)
+        self.engine.state.phase = "HAUNT_PHASE"
+        self.hero = self.engine.state.players[0]
+        self.hero.role = "hero"
+        self.hero.attack_used = False
+        self.hero.stats["might"] = 4
+        self.engine.state.turn_order = [player.id for player in self.engine.state.players]
+        self.engine.state.turn_index = 0
+        # 真实怪物模板（cat）走 state.monsters，另外断言 is_monster 标记形态。
+        self.monster = Monster("mon_test", "cat", "测试怪物", 4, 4, room_key="")
+        self.engine.state.monsters = [self.monster]
+        self.room = self.engine._place_room(
+            self.engine.catalog.room_templates["catacombs"], 90, 90, 0
+        )
+        self.engine.configure_barrier(
+            self.room,
+            {d: (1 if d == self.room.doors[-1] else 0) for d in self.room.doors},
+            "speed",
+            3,
+            "synthetic-test-fixture",
+        )
+        self.hero.room_key = self.room.key
+        self.monster.room_key = self.room.key
+        self.engine._set_barrier_side(self.hero, self.room, 1)
+        self.engine._set_barrier_side(self.monster, self.room, 0)
+        self.assertNotEqual(
+            self.engine._barrier_side(self.hero),
+            self.engine._barrier_side(self.monster),
+            "本用例的前提就是分居两侧",
+        )
+
+    def test_monster_and_hero_share_room_across_barrier(self) -> None:
+        self.assertTrue(self.engine.entities_share_room(self.hero, self.monster))
+        self.assertTrue(self.engine.entities_share_room(self.monster, self.hero))
+        # 对照：两位探险者分居两侧仍然不能交互（没有放宽探险者规则）。
+        other = self.engine.state.players[1]
+        other.room_key = self.room.key
+        self.engine._set_barrier_side(other, self.room, 0)
+        self.assertFalse(self.engine.entities_share_room(self.hero, other))
+
+    def test_hero_can_attack_monster_across_barrier(self) -> None:
+        with mock.patch.object(self.engine, "_roll_attack", return_value=5), \
+                mock.patch.object(self.engine, "_roll_monster_attack", return_value=1):
+            self.assertTrue(self.engine.attack(self.hero, self.monster))
+        self.assertTrue(self.hero.attack_used)
+
+    def test_monster_can_attack_hero_across_barrier(self) -> None:
+        with mock.patch.object(self.engine, "_roll_monster_attack", return_value=7), \
+                mock.patch.object(self.engine, "_roll_attack", return_value=1), \
+                mock.patch.object(self.engine, "_deal_damage") as deal:
+            self.engine._monster_attack(self.monster, self.hero)
+        deal.assert_called_once()
+
+    def test_monster_crosses_without_roll_and_hero_still_rolls(self) -> None:
+        # 怪物：直接翻侧，不掷检定、不占每回合一次的机会。
+        with mock.patch.object(self.engine, "_resolve_check") as check:
+            self.assertTrue(self.engine._cross_barrier(self.monster))
+            check.assert_not_called()
+        self.assertEqual(self.engine._barrier_side(self.monster), 1)
+        self.assertNotIn(
+            self.engine._barrier_attempt_key(self.monster, self.room),
+            self.engine.state.meta.get("barrier_attempts", []),
+        )
+        # 英雄：仍需检定，失败原地停步。
+        with mock.patch.object(self.engine, "_resolve_check", return_value=False) as check:
+            self.assertTrue(self.engine._cross_barrier(self.hero))
+            check.assert_called_once()
+        self.assertEqual(self.engine._barrier_side(self.hero), 1, "检定失败不能翻侧")
+        self.assertTrue(self.hero.movement_stopped)
+        self.assertEqual(self.hero.steps_remaining, 0)
 
 
 if __name__ == "__main__":

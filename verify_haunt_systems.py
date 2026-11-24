@@ -4622,6 +4622,15 @@ def verify_haunt33_lake_rescue() -> None:
     options = handler.extra_move_options(engine, hero, [])
     assert any(o.target_key.startswith("lake:") for o in options), "水缘应有湖面选项"
 
+    # 测试准备：seed 307 跑到作祟时房间牌堆与弃牌堆可能都已抽空，
+    # `_place_lake_tile` 会因 `_take_template_from_stack` 取不到模板而失败
+    # ——那是牌堆耗尽，不是"铺湖面砖"的被测行为。放回一张普通板块（foyer
+    # 不在 BARRIER_SPECS 里，不会附带障碍配置），让这一步有砖可取；
+    # 断言本身不动。
+    if not engine.state.room_deck and not engine.state.room_discard:
+        engine.state.room_deck.append("foyer")
+    assert engine.state.room_deck or engine.state.room_discard, "铺湖面砖前必须至少有一块房间砖"
+
     # 铺设湖面砖并移动（先重置回合状态并给足移动力）
     engine._reset_player_turn_state(hero)
     hero.steps_remaining = max(hero.steps_remaining, 3)
@@ -8043,6 +8052,20 @@ def verify_haunt6_free_and_immune() -> None:
         fallen.dead = False
         heroes = [p for p in engine.state.players if p.role == "hero" and not p.dead]
     rescuer, victim = heroes[0], heroes[1]
+
+    # 测试准备：本用例验证的是"解救只受一半伤害"，不是护甲。作祟前轨迹
+    # 改后受害者可能已经捡到 item_armor；物理伤害会被护甲整次挡掉
+    # （prompter 默认确认），reduced=0 会让 0 < reduced <= 2 落空。
+    # 因此显式清空所有玩家携带与房间散落的护甲，保证测的是"无护甲减伤"；
+    # 断言本身不动。
+    for person in engine.state.players:
+        person.items[:] = [card for card in person.items if card != "item_armor"]
+    for room_key in list(engine.state.room_items):
+        engine.state.room_items[room_key][:] = [
+            card for card in engine.state.room_items[room_key] if card != "item_armor"
+        ]
+        if not engine.state.room_items[room_key]:
+            engine.state.room_items.pop(room_key, None)
 
     victim.room_key = rescuer.room_key
     flags["controlled_ids"] = [victim.id]
